@@ -595,7 +595,7 @@
   $('zoomOut').addEventListener('click', function () { setZoom(state.zoom - 1); });
 
   // ── Save to GitHub 'maps' branch (same mechanism as cloud-saves.js) ──
-  var GH_REPO   = 'knightdx91-alt/pokemon-game';
+  var GH_REPO   = 'knightdx91-alt/awakened-calamity';
   var GH_BRANCH = 'maps';
   // Token stored reversed so secret scanners don't flag the source file.
   var GH_TOKEN  = 'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
