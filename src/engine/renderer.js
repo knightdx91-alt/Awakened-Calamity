@@ -66,7 +66,7 @@ window.GameRenderer = (function () {
 
         _tilesetLoadingName = name;
 
-        fetch(`data/tilesets/${name}.json`)
+        fetch(`data/tilesets/${name}.json`, { cache: 'no-cache' })
             .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
             .then(meta => {
                 const img = new Image();
@@ -84,7 +84,7 @@ window.GameRenderer = (function () {
                 // Cache-bust the PNG using metatile count so browsers reload
                 // when tilesets are regenerated (JSON is always fetched fresh).
                 const v = (meta.total_metatiles || 0) + '_' + (meta.primary_count || 0);
-                img.src = `data/tilesets/${name}.png?v=${v}`;
+                img.src = `data/tilesets/${name}.png?v=${v}&b=${(window.__BUILD__||'0')}`;
             })
             .catch(e => {
                 console.warn(`[Renderer] Failed to load tileset JSON for ${name}:`, e);
@@ -98,7 +98,7 @@ window.GameRenderer = (function () {
         if (!name) { return; }
         if (name === _overlayName || name === _overlayLoadingName) return;
         _overlayLoadingName = name;
-        fetch(`data/tilesets/${name}.json`)
+        fetch(`data/tilesets/${name}.json`, { cache: 'no-cache' })
             .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
             .then(meta => {
                 const img = new Image();
@@ -108,7 +108,7 @@ window.GameRenderer = (function () {
                 };
                 img.onerror = () => { _overlayLoadingName = null; };
                 const v = (meta.total_metatiles || 0) + '_' + (meta.primary_count || 0);
-                img.src = `data/tilesets/${name}.png?v=${v}`;
+                img.src = `data/tilesets/${name}.png?v=${v}&b=${(window.__BUILD__||'0')}`;
             })
             .catch(() => { _overlayLoadingName = null; });
     }

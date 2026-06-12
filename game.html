@@ -119,6 +119,9 @@
     </div><!-- #settings-panel -->
 
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+    <!-- Build id (CI replaces __CACHE_BUST__ with the commit SHA) — used to
+         cache-bust tileset PNGs so art updates appear immediately on deploy. -->
+    <script>window.__BUILD__ = '__CACHE_BUST__';</script>
     <!-- Scripts — load order matters: engine deps first, then ui, then main -->
     <script src="src/engine/input.js?v=__CACHE_BUST__"></script>
     <script src="src/engine/camera.js?v=__CACHE_BUST__"></script>

@@ -52,7 +52,7 @@ window.GameMap = (function () {
     async function init(region) {
         const indexFile = INDEX_FILES[region || 'kanto'] || INDEX_FILES.kanto;
         try {
-            const resp = await fetch(indexFile);
+            const resp = await fetch(indexFile, { cache: 'no-cache' });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             _nameIndex = await resp.json();
             console.log(`[Map] Loaded index (${region}): ${Object.keys(_nameIndex).length} entries`);
@@ -91,7 +91,7 @@ window.GameMap = (function () {
         try {
             let lresp = null;
             for (const path of layoutPaths) {
-                lresp = await fetch(path);
+                lresp = await fetch(path, { cache: 'no-cache' });
                 if (lresp.ok) break;
             }
             if (!lresp || !lresp.ok) throw new Error(`HTTP ${lresp ? lresp.status : 'none'}`);
@@ -103,7 +103,7 @@ window.GameMap = (function () {
             const tilesetName = layoutData.tileset;
             if (tilesetName) {
                 try {
-                    const tresp = await fetch(`data/tilesets/${tilesetName}.json`);
+                    const tresp = await fetch(`data/tilesets/${tilesetName}.json`, { cache: 'no-cache' });
                     if (tresp.ok) {
                         const tj = await tresp.json();
                         tilesetBehaviors = tj.behaviors || null;
@@ -135,7 +135,7 @@ window.GameMap = (function () {
         _encounterData = null; _encounterMapId = null; _encounterPromise = null;
         const url = `data/maps/${region}/${mapName}.json`;
         try {
-            const resp = await fetch(url);
+            const resp = await fetch(url, { cache: 'no-cache' });
             if (!resp.ok) throw new Error(`HTTP ${resp.status} loading ${url}`);
             current = await resp.json();
             await _loadLayout(current);
@@ -317,7 +317,7 @@ window.GameMap = (function () {
         _encounterMapId = mapId;
         _encounterPromise = (async () => {
         try {
-            const resp = await fetch(`data/encounters/${region}.json`);
+            const resp = await fetch(`data/encounters/${region}.json`, { cache: 'no-cache' });
             if (!resp.ok) return;
             const blob = await resp.json();
             // Flatten across wild_encounter_groups
