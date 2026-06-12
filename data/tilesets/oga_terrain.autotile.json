@@ -1,0 +1,25 @@
+{
+ "tile": 16,
+ "per_row": 16,
+ "terrains": {
+  "grass_dirt": {
+   "base_index": 0,
+   "count": 16,
+   "scheme": "edge4",
+   "fill_index": 15,
+   "behavior": 0,
+   "collision": 0
+  },
+  "grass_water": {
+   "base_index": 16,
+   "count": 16,
+   "scheme": "edge4",
+   "fill_index": 31,
+   "behavior": 16,
+   "collision": 1
+  }
+ },
+ "fills": {
+  "grass": 32
+ }
+}

@@ -1,0 +1,4 @@
+oga_terrain — autotile terrain derived from 'oga_rpg16' textures.
+Source art CC-BY-SA 3.0 (hilau / George Bailey / bluecarrot16),
+https://opengameart.org/content/16x16-rpg-tileset . This derived
+autotile set is likewise CC-BY-SA 3.0.

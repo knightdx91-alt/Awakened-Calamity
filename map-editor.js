@@ -28,6 +28,10 @@
     tool: 'pencil',            // pencil | fill | rect | pick
     collisionMode: false,
     warpMode: false,
+    autotile: null,            // parsed <tileset>.autotile.json or null
+    terrain: null,             // Array(width*height) of terrain name or '' (base)
+    terrainMode: false,
+    currentTerrain: '',        // '' = erase to base, else a terrain key
     showGrid: true,
     zoom: 2
   };
@@ -69,7 +73,64 @@
       drawPalette();
       drawMap();
       updateSelSwatch();
+      // optional autotile config for this tileset
+      return fetch('data/tilesets/' + name + '.autotile.json')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+        .then(function (cfg) { applyAutotileConfig(cfg); });
     });
+  }
+
+  // ── Autotiler (author-time, 4-bit edge blob) ──
+  function applyAutotileConfig(cfg) {
+    state.autotile = cfg && cfg.terrains ? cfg : null;
+    var group = $('terrainGroup'), sel = $('terrainSel');
+    if (!state.autotile) {
+      group.style.display = 'none';
+      state.terrainMode = false; $('terrainBtn').classList.remove('active');
+      return;
+    }
+    group.style.display = '';
+    sel.innerHTML = '';
+    var keys = Object.keys(state.autotile.terrains);
+    keys.forEach(function (k) {
+      var o = document.createElement('option'); o.value = k; o.textContent = k;
+      sel.appendChild(o);
+    });
+    var er = document.createElement('option'); er.value = ''; er.textContent = '(erase)';
+    sel.appendChild(er);
+    state.currentTerrain = keys[0] || '';
+    sel.value = state.currentTerrain;
+  }
+
+  // recompute the baked metatile/collision for a single terrain cell
+  function recomputeTerrainCell(x, y) {
+    if (!state.autotile) return;
+    var i = idx(x, y);
+    var name = state.terrain[i];
+    if (!name) {                                  // base cell -> grass fill
+      var fills = state.autotile.fills || {};
+      if (fills.grass != null) {
+        state.metatiles[i] = fills.grass; state.collision[i] = 0;
+      }
+      return;
+    }
+    var info = state.autotile.terrains[name];
+    if (!info) return;
+    var same = function (nx, ny) {
+      return inBounds(nx, ny) && state.terrain[idx(nx, ny)] === name;
+    };
+    var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
+               (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+    state.metatiles[i] = info.base_index + mask;
+    state.collision[i] = info.collision ? 1 : 0;
+  }
+
+  // recompute a cell and its 4 neighbours (edges depend on neighbours)
+  function recomputeTerrainAround(x, y) {
+    recomputeTerrainCell(x, y);
+    recomputeTerrainCell(x, y - 1); recomputeTerrainCell(x + 1, y);
+    recomputeTerrainCell(x, y + 1); recomputeTerrainCell(x - 1, y);
   }
 
   function totalMetatiles() {
@@ -160,6 +221,9 @@
     state.width = w; state.height = h;
     state.metatiles = new Int32Array(w * h);
     state.collision = new Uint8Array(w * h);
+    var oldT = keep ? state.terrain : null;
+    state.terrain = new Array(w * h);
+    for (var t = 0; t < w * h; t++) state.terrain[t] = '';
     // default fill: tile 1 (usually plain grass), passable
     for (var i = 0; i < w * h; i++) state.metatiles[i] = 1;
     if (old) {
@@ -167,6 +231,7 @@
         for (var x = 0; x < Math.min(w, old.w); x++) {
           state.metatiles[y * w + x] = old.m[y * old.w + x];
           state.collision[y * w + x] = old.c[y * old.w + x];
+          if (oldT) state.terrain[y * w + x] = oldT[y * old.w + x] || '';
         }
     }
     if (!keep) state.warps = [];
@@ -242,6 +307,11 @@
   function applyAt(x, y) {
     if (!inBounds(x, y)) return;
     if (state.warpMode) return; // handled separately on click
+    if (state.terrainMode && state.autotile) {
+      state.terrain[idx(x, y)] = state.currentTerrain; // '' = erase
+      recomputeTerrainAround(x, y);
+      return;
+    }
     if (state.collisionMode) {
       state.collision[idx(x, y)] = state.collision[idx(x, y)] ? 0 : 1;
       return;
@@ -269,6 +339,9 @@
     if (state.warpMode) {
       addWarp(p.x, p.y);
       return;
+    }
+    if (state.terrainMode && state.autotile && state.tool !== 'rect') {
+      painting = true; applyAt(p.x, p.y); drawMap(); return;
     }
     if (state.collisionMode && state.tool !== 'rect') {
       painting = true; applyAt(p.x, p.y); drawMap(); return;
@@ -301,9 +374,14 @@
       for (var y = y0; y <= y1; y++)
         for (var x = x0; x <= x1; x++) {
           if (!inBounds(x, y)) continue;
-          if (state.collisionMode) state.collision[idx(x, y)] = 1;
+          if (state.terrainMode && state.autotile) state.terrain[idx(x, y)] = state.currentTerrain;
+          else if (state.collisionMode) state.collision[idx(x, y)] = 1;
           else state.metatiles[idx(x, y)] = state.selectedTile;
         }
+      if (state.terrainMode && state.autotile) {
+        for (var ry = y0 - 1; ry <= y1 + 1; ry++)
+          for (var rx = x0 - 1; rx <= x1 + 1; rx++) recomputeTerrainCell(rx, ry);
+      }
       rectStart = null; drawMap();
     }
     painting = false;
@@ -404,6 +482,8 @@
       state.metatiles = Int32Array.from(data.metatiles);
       state.collision = data.collision ? Uint8Array.from(data.collision)
         : new Uint8Array(data.width * data.height);
+      state.terrain = new Array(data.width * data.height);
+      for (var ti = 0; ti < data.width * data.height; ti++) state.terrain[ti] = '';
       $('mapW').value = data.width; $('mapH').value = data.height;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
       $('statSize').textContent = data.width + ' × ' + data.height;
@@ -465,10 +545,25 @@
     });
   });
 
+  $('terrainBtn').addEventListener('click', function () {
+    if (!state.autotile) return;
+    state.terrainMode = !state.terrainMode;
+    this.classList.toggle('active', state.terrainMode);
+    if (state.terrainMode) {
+      state.collisionMode = false; $('collideBtn').classList.remove('active');
+      state.warpMode = false; $('warpBtn').classList.remove('active');
+    }
+    drawMap();
+  });
+  $('terrainSel').addEventListener('change', function () { state.currentTerrain = this.value; });
+
   $('collideBtn').addEventListener('click', function () {
     state.collisionMode = !state.collisionMode;
     this.classList.toggle('active', state.collisionMode);
-    if (state.collisionMode) { state.warpMode = false; $('warpBtn').classList.remove('active'); }
+    if (state.collisionMode) {
+      state.warpMode = false; $('warpBtn').classList.remove('active');
+      state.terrainMode = false; $('terrainBtn').classList.remove('active');
+    }
     drawMap();
   });
   $('warpBtn').addEventListener('click', function () {
