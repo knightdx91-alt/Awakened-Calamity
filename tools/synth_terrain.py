@@ -49,31 +49,68 @@ def rng(seed):
         for b in h: yield b/255.0
         i+=1; h=hashlib.md5(h+bytes([i&255])).digest()
 
-B=5; C=3
-def synth_tile(feat, base, m, seed):
-    """Composite feature fill over base fill with blob-edge geometry for mask m."""
-    out=feat.copy(); fp=out.load(); bp=base.load(); b=bits(m); g=rng(seed)
+B=5; C=3; ACC=2
+# Per-terrain edge accent drawn just INSIDE the feature boundary:
+#   ('foam', col) thin bright line | ('glitch', col) scattered dither |
+#   ('soft', mul) darken-blend rim
+ACCENTS={
+ 'water': ('foam',(214,240,255)),
+ 'void':  ('glitch',(196,72,228)),
+ 'sand':  ('soft',0.86),
+ 'stone': ('soft',0.74),
+}
+def _mix(a, mul):
+    return (int(a[0]*mul), int(a[1]*mul), int(a[2]*mul), a[3])
+
+def synth_tile(feat, base, m, seed, accent=None):
+    """Composite feature fill over base fill with blob-edge geometry for mask m,
+    plus an optional per-terrain accent rim just inside the feature edge."""
+    b=bits(m); g=rng(seed)
+    isbase=[[False]*T for _ in range(T)]
     for y in range(T):
         for x in range(T):
             wob=1 if next(g)<.35 else 0
-            edged=False
-            if not b['top']    and y < B-wob: edged=True
-            if not b['bottom'] and y >= T-B+wob: edged=True
-            if not b['left']   and x < B-wob: edged=True
-            if not b['right']  and x >= T-B+wob: edged=True
-            # inner concave corners
-            if b['top'] and b['left'] and not b['tl'] and x<C and y<C: edged=True
-            if b['top'] and b['right'] and not b['tr'] and x>=T-C and y<C: edged=True
-            if b['bottom'] and b['left'] and not b['bl'] and x<C and y>=T-C: edged=True
-            if b['bottom'] and b['right'] and not b['br'] and x>=T-C and y>=T-C: edged=True
-            if edged: fp[x,y]=bp[x,y]
+            e=False
+            if not b['top']    and y < B-wob: e=True
+            if not b['bottom'] and y >= T-B+wob: e=True
+            if not b['left']   and x < B-wob: e=True
+            if not b['right']  and x >= T-B+wob: e=True
+            if b['top'] and b['left'] and not b['tl'] and x<C and y<C: e=True
+            if b['top'] and b['right'] and not b['tr'] and x>=T-C and y<C: e=True
+            if b['bottom'] and b['left'] and not b['bl'] and x<C and y>=T-C: e=True
+            if b['bottom'] and b['right'] and not b['br'] and x>=T-C and y>=T-C: e=True
+            isbase[y][x]=e
+    out=feat.copy(); fp=out.load(); bp=base.load()
+    g2=rng(seed*7+3)
+    for y in range(T):
+        for x in range(T):
+            if isbase[y][x]:
+                fp[x,y]=bp[x,y]; continue
+            if not accent: continue
+            # rim = feature pixel within ACC of a base pixel
+            rim=False
+            for dy in range(-ACC,ACC+1):
+                for dx in range(-ACC,ACC+1):
+                    ny,nx=y+dy,x+dx
+                    if 0<=nx<T and 0<=ny<T and isbase[ny][nx]: rim=True; break
+                if rim: break
+            if not rim: continue
+            mode,val=accent
+            if mode=='foam':
+                if max(abs(dx),abs(dy)) and next(g2)<.7: fp[x,y]=(val[0],val[1],val[2],255)
+            elif mode=='glitch':
+                r=next(g2)
+                if r<.45: fp[x,y]=(val[0],val[1],val[2],255)
+                elif r<.6: fp[x,y]=(245,180,255,255)
+            elif mode=='soft':
+                fp[x,y]=_mix(fp[x,y], val)
     return out
 
-def pair_blob(feat, base, seed0):
+def pair_blob(feat, base, seed0, accent=None):
     """Synthesize all 256 masks for feat-over-base, dedupe, return (tiles, lut)."""
     seen={}; order=[]; lut=[]
     for m in range(256):
-        t=synth_tile(feat, base, m, seed0)    # same seed -> identical wobble -> dedupes
+        t=synth_tile(feat, base, m, seed0, accent)
         key=t.tobytes()
         if key not in seen:
             seen[key]=len(order); order.append(t)
@@ -102,7 +139,7 @@ def build():
         b,c=SPEC[fname]
         entry={'behavior':b,'collision':c,'luts':{}}
         for bname in PRIORITY[:fi]:                 # every lower-priority base
-            order,lut=pair_blob(fills[fname], fills[bname], seed); seed+=1
+            order,lut=pair_blob(fills[fname], fills[bname], seed, ACCENTS.get(fname)); seed+=1
             start=len(tiles)
             for t in order: tiles.append(t); beh.append(b); col.append(c)
             entry['luts'][bname]=[start+k for k in lut]
