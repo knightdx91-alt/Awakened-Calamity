@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>The Drowned Reach & the Four Reaches — World Map (mockup v1)</title>
+<style>
+  :root{
+    --sea:#0a1830; --sea2:#06101f; --ink:#c8d8e8; --cyan:#18b8c8; --panel:#060610;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--sea2);color:var(--ink);
+    font-family:"Courier New",Courier,monospace;overflow:hidden;-webkit-user-select:none;user-select:none}
+  #wrap{position:fixed;inset:0}
+  svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+  svg.grab{cursor:grabbing}
+  /* header */
+  #title{position:fixed;top:10px;left:50%;transform:translateX(-50%);text-align:center;
+    pointer-events:none;z-index:5;text-shadow:0 2px 8px #000}
+  #title h1{margin:0;font-size:17px;letter-spacing:1px;color:#80d0e8}
+  #title p{margin:2px 0 0;font-size:11px;color:#7c93a8}
+  /* legend */
+  #legend{position:fixed;left:10px;bottom:10px;z-index:5;background:rgba(6,6,16,.86);
+    border:1px solid #000;box-shadow:0 0 0 2px var(--cyan),0 0 0 3px #000;border-radius:5px;
+    padding:8px 10px;max-width:230px;font-size:11px;line-height:1.5}
+  #legend h2{margin:0 0 5px;font-size:11px;color:#80d0e8;border-bottom:1px solid #18b8c8;padding-bottom:3px}
+  .lg{display:flex;align-items:center;gap:7px;cursor:pointer;padding:1px 2px;border-radius:3px}
+  .lg:hover{background:rgba(24,184,200,.12)}
+  .lg.off{opacity:.32}
+  .sw{width:15px;height:15px;flex:0 0 15px;position:relative}
+  /* controls */
+  #ctrls{position:fixed;right:10px;top:10px;z-index:5;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .btn{background:rgba(6,6,16,.9);color:#c8d8e8;border:1px solid #000;
+    box-shadow:0 0 0 2px var(--cyan),0 0 0 3px #000;border-radius:5px;padding:6px 10px;
+    font-family:inherit;font-size:11px;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.on{background:#0a2a30;color:#80f0ff}
+  /* info panel */
+  #info{position:fixed;right:10px;bottom:10px;z-index:6;width:270px;max-width:78vw;
+    background:rgba(6,6,16,.94);border:1px solid #000;box-shadow:0 0 0 2px var(--cyan),0 0 0 3px #000;
+    border-radius:6px;padding:0;display:none;overflow:hidden}
+  #info.show{display:block}
+  #info .hd{background:#0a1830;border-bottom:1px solid #18b8c8;padding:7px 10px;display:flex;justify-content:space-between;align-items:center}
+  #info .hd b{color:#80d0e8;font-size:13px}
+  #info .hd span{cursor:pointer;color:#7c93a8;padding:0 4px}
+  #info .bd{padding:9px 11px;font-size:12px;line-height:1.55}
+  #info .row{margin:2px 0}
+  #info .k{color:#6fa6b8}
+  .pill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;margin-right:4px;border:1px solid #000}
+  #info .hook{margin-top:6px;color:#a9c2d4;font-style:italic}
+  .tiny{font-size:10px;color:#6f8496}
+  text{font-family:"Courier New",Courier,monospace;-webkit-user-select:none;user-select:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <svg id="map" viewBox="0 0 2400 2700" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<div id="title">
+  <h1>THE DROWNED REACH &amp; THE FOUR REACHES</h1>
+  <p>world map — build 4 · bright Pokémon-style palette · drag to pan · scroll / pinch · click a place</p>
+</div>
+
+<div id="ctrls">
+  <button class="btn" id="b-labels">Labels: Key</button>
+  <button class="btn on" id="b-threat">Overflow threat: ON</button>
+  <button class="btn" id="b-reset">Reset view</button>
+</div>
+
+<div id="legend"><h2>LEGEND — click to filter</h2><div id="legitems"></div>
+  <div class="tiny" style="margin-top:6px">◷ ring on dungeons = Overflow stage. Red dashed = a Break marching to town.</div>
+</div>
+
+<div id="info">
+  <div class="hd"><b id="i-name">—</b><span id="i-close">✕</span></div>
+  <div class="bd" id="i-body"></div>
+</div>
+
+<script>
+/* ============================================================================
+   DATA — every place from GAZETTEER.md (+ OVERFLOW threat links).
+   t = type. tier. hz = hazard. x,y world coords. link = road neighbor (id).
+   lk = link kind (land|sea|hidden). r = region. For dungeons: th = town it
+   threatens, ov = sample Overflow stage 0..4 (Stable..Break). o = hook.
+   ========================================================================== */
+const REGIONS = [
+  {n:"VERDARA",sub:"Onramp · Hrs 0–12",cx:520,cy:2120,rx:445,ry:405,c:"#1c5c3a"},
+  {n:"HALVETH",sub:"Specialization · Hrs 10–24",cx:1440,cy:2120,rx:445,ry:405,c:"#6b5410"},
+  {n:"CALDERRA",sub:"Mastery · Hrs 22–40",cx:1470,cy:1340,rx:520,ry:440,c:"#3a2a55"},
+  {n:"VAEL",sub:"Ascension / Endgame · Hrs 38–60+",cx:1000,cy:510,rx:690,ry:380,c:"#22466e"},
+];
+
+// type styles
+const TYPES = {
+  safe:     {label:"Safe Zone (rare refuge)", col:"#ffd24a"},
+  hold:     {label:"Wild Holdfast (contested)", col:"#ff9a3c"},
+  route:    {label:"Route / Wildway", col:"#5fd06a"},
+  dungeon:  {label:"Dungeon", col:"#b07cff"},
+  calamity: {label:"Calamity / Landmark", col:"#ff4d5e"},
+  hidden:   {label:"Hidden / Secret", col:"#ff5cf0"},
+  water:    {label:"Sea / Coast", col:"#46b8ff"},
+  under:    {label:"Underwater zone", col:"#37e0d0"},
+  gateway:  {label:"Gateway (crossing)", col:"#e8eef5"},
+  flotsam:  {label:"Flotsam Court (drifting)", col:"#d8a05a"},
+};
+const HZ = {Heat:"#e8632a",Cold:"#5bd0e8",Toxic:"#9be03a",Gloom:"#8a6cff",Tempest:"#e8d23a",
+            Tide:"#3aa0e8",Verdant:"#3ac06a",Stone:"#b09060",Sand:"#d8c070","":null};
+const OVCOL = ["#4caf80","#e8d23a","#ff9a3c","#ff5a3c","#ff2030"]; // Stable..Break
+const OVNAME= ["Stable","Stirring","Swelling","Breaking","BREAK!"];
+
+const N = [
+// ---------------- VERDARA ----------------
+{id:"dawnhearth",n:"Dawnhearth",t:"safe",tier:"—",hz:"",x:250,y:2380,r:0,o:"START. Origin town & System tutorial; your home. The only refuge for the whole opening trek."},
+{id:"mirevale",n:"Mirevale",t:"safe",tier:"T1",hz:"",x:455,y:2120,r:0,link:"ww06",o:"The one mid-map safe town — roads radiate five ways."},
+{id:"saltmere",n:"Saltmere",t:"safe",tier:"T1",hz:"",x:760,y:2080,r:0,link:"ww13",o:"Fishing port & dive hub; ferries to the isles."},
+{id:"volthaven",n:"Volthaven",t:"safe",tier:"T2",hz:"",x:785,y:2300,r:0,link:"ww16",o:"Industrial port — Voltcorps (engineering, X-items)."},
+{id:"greywall",n:"Greywall",t:"hold",tier:"T1",hz:"",x:215,y:2080,r:0,link:"ww04",o:"Vanguard Order fort — repels periodic wild sieges. Partial rest."},
+{id:"verdant_reach",n:"Verdant Reach",t:"hold",tier:"T2",hz:"Toxic",x:430,y:2345,r:0,link:"ww09",o:"Verdant Circle walled grove outpost; deep-marsh prices."},
+{id:"cinderhold",n:"Cinderhold",t:"hold",tier:"T2",hz:"Heat",x:910,y:2380,r:0,link:"ww20",lk:"sea",o:"Cinder Forge on the volcanic isle — remote, raidable; the only forge for miles."},
+// routes
+{id:"ww01",n:"Greenmile Trail",t:"route",tier:"T1",hz:"",x:255,y:2300,r:0,link:"dawnhearth",o:"Wildway 01 — first wilds + camp tutorial."},
+{id:"ww02",n:"the Long Furrow",t:"route",tier:"T1",hz:"",x:355,y:2360,r:0,link:"ww01"},
+{id:"ww03",n:"Mistwood Path",t:"route",tier:"T1",hz:"Verdant",x:330,y:2090,r:0,link:"greywall"},
+{id:"ww04",n:"Greywall Ascent",t:"route",tier:"T1",hz:"",x:240,y:2185,r:0,link:"ww01"},
+{id:"ww05",n:"the Quarry Track",t:"route",tier:"T2",hz:"",x:455,y:2010,r:0,link:"mirevale"},
+{id:"ww06",n:"Bloomway",t:"route",tier:"T1",hz:"",x:440,y:2235,r:0,link:"ww02"},
+{id:"ww07",n:"the Bramble Cut",t:"route",tier:"T1",hz:"",x:380,y:2175,r:0,link:"ww03",o:"Break-gated shortcut + visible-temptation cache."},
+{id:"ww08",n:"Old Orchard Lane",t:"route",tier:"T1",hz:"",x:540,y:2270,r:0,link:"mirevale"},
+{id:"ww09",n:"Marshroad",t:"route",tier:"T2",hz:"Toxic",x:470,y:2300,r:0,link:"mirevale"},
+{id:"ww10",n:"Thornreach Boardwalk",t:"route",tier:"T2",hz:"Toxic",x:540,y:2375,r:0,link:"ww09"},
+{id:"ww11",n:"the Reedwater",t:"route",tier:"T2",hz:"Toxic",x:580,y:2400,r:0,link:"ww10"},
+{id:"ww12",n:"Coast Trail",t:"route",tier:"T2",hz:"",x:620,y:2085,r:0,link:"mirevale"},
+{id:"ww13",n:"the Saltlick Flats",t:"route",tier:"T2",hz:"",x:695,y:2035,r:0,link:"ww12"},
+{id:"ww14",n:"Pylon Row",t:"route",tier:"T2",hz:"Tempest",x:600,y:2230,r:0,link:"ww08"},
+{id:"ww15",n:"the Underpass Approach",t:"route",tier:"T2",hz:"Gloom",x:700,y:2200,r:0,link:"volthaven"},
+{id:"ww16",n:"Voltway",t:"route",tier:"T2",hz:"",x:710,y:2300,r:0,link:"saltmere"},
+{id:"ww17",n:"the Switchbacks",t:"route",tier:"T3",hz:"Cold",x:470,y:1905,r:0,link:"ww05"},
+{id:"ww18",n:"the Trial Road",t:"route",tier:"T3",hz:"",x:825,y:2135,r:0,link:"volthaven",o:"High-level corridor north to Silvercrown → Halveth."},
+{id:"ww19",n:"Ashlab Access Road",t:"route",tier:"T3",hz:"Toxic",x:560,y:2300,r:0,link:"ww09"},
+{id:"ww20",n:"the Cinder Approach",t:"route",tier:"T3",hz:"Heat",x:845,y:2350,r:0,link:"volthaven"},
+// dungeons (th=threatens, ov=stage)
+{id:"hollow_vein",n:"Hollow Vein",t:"dungeon",tier:"T1–2",hz:"Stone",x:485,y:1960,r:0,link:"ww05",th:"mirevale",ov:1,alpha:"the Veinmother (brute · Stone)",o:"First mine."},
+{id:"the_underpass",n:"The Underpass",t:"dungeon",tier:"T2",hz:"Gloom",x:760,y:2200,r:0,link:"ww15",th:"volthaven",ov:2,alpha:"the Underking (brute · Gloom)"},
+{id:"the_ashlab",n:"The Ashlab",t:"dungeon",tier:"T3",hz:"Toxic",x:600,y:2340,r:0,link:"ww19",th:"verdant_reach",ov:1,alpha:"the Ashen Matriarch (caster · Toxin)",o:"OWPS first contact + first interface artifact."},
+{id:"greywall_catacombs",n:"Greywall Catacombs",t:"dungeon",tier:"T1–2",hz:"Gloom",x:180,y:2105,r:0,link:"greywall",th:"greywall",ov:0,alpha:"the Bonewarden (ambusher · Gloom)"},
+{id:"weeping_cave",n:"the Weeping Cave",t:"dungeon",tier:"T1",hz:"",x:300,y:2020,r:0,link:"ww03",th:"greywall",ov:0,alpha:"the Weeping Maw (ambusher)"},
+{id:"mistwood_warren",n:"Mistwood Warren",t:"dungeon",tier:"T1",hz:"Verdant",x:325,y:2045,r:0,link:"ww03",th:"mirevale",ov:1,alpha:"the Thornback Patriarch (swarm · Verdant)"},
+{id:"flooded_quarry",n:"the Flooded Quarry",t:"dungeon",tier:"T2",hz:"",x:420,y:1965,r:0,link:"ww05",th:"mirevale",ov:0,alpha:"the Sluicebeast (brute · Tide)"},
+{id:"old_signal_tower",n:"the Old Signal Tower",t:"dungeon",tier:"T2",hz:"",x:745,y:2360,r:0,link:"ww16",th:"volthaven",ov:1,alpha:"the Static Choir (caster · Storm)"},
+{id:"dawnhearth_cellars",n:"Dawnhearth Cellars",t:"dungeon",tier:"T1",hz:"",x:250,y:2415,r:0,link:"dawnhearth",th:"dawnhearth",ov:3,alpha:"the Cellar Brood (swarm)",o:"Gentlest tutorial Break — your first taste of Overflow."},
+{id:"thornreach_sump",n:"Thornreach Sump",t:"dungeon",tier:"T2",hz:"Toxic",x:545,y:2400,r:0,link:"ww10",th:"verdant_reach",ov:2,alpha:"the Sumpfather (brute · Toxin)"},
+{id:"verdant_grove",n:"the Verdant Grove",t:"dungeon",tier:"T2",hz:"Verdant",x:400,y:2385,r:0,link:"verdant_reach",th:"verdant_reach",ov:1,alpha:"the Bloomtyrant (caster · Verdant)"},
+{id:"marrow_pits",n:"the Marrow Pits",t:"dungeon",tier:"T2",hz:"Stone",x:520,y:1980,r:0,link:"ww05",th:"mirevale",ov:0,alpha:"the Marrow Tyrant (brute · Stone)"},
+{id:"brine_caves",n:"the Brine Caves",t:"dungeon",tier:"T2",hz:"Tide",x:660,y:2030,r:0,link:"ww12",th:"saltmere",ov:1,alpha:"the Brine Serpent (skirmisher · Tide)"},
+{id:"pylon_substation",n:"the Pylon Substation",t:"dungeon",tier:"T2",hz:"Tempest",x:612,y:2210,r:0,link:"ww14",th:"volthaven",ov:0,alpha:"the Arcbeast (skirmisher · Storm)"},
+{id:"hermits_burrow",n:"the Hermit's Burrow",t:"dungeon",tier:"T1",hz:"",x:300,y:2440,r:0,link:"ww02",th:"dawnhearth",ov:0,alpha:"the Hermit's Pet (ambusher)"},
+// calamity
+{id:"frostfoam",n:"Frostfoam Caverns",t:"calamity",tier:"T3",hz:"Cold",x:490,y:1820,r:0,link:"ww17",o:"Rime Warden \"Marie\" — lighthouse builder. “I… was Marie…”"},
+{id:"sparkworks",n:"Sparkworks",t:"calamity",tier:"T2",hz:"Tempest",x:600,y:2180,r:0,link:"ww14",o:"Storm Warden \"the Engineer\" — the one who refused to leave. (Also a dungeon.)"},
+{id:"emberreach",n:"Emberreach Isle",t:"calamity",tier:"T3",hz:"Heat",x:905,y:2120,r:0,link:"saltmere",lk:"sea",o:"Pyre Warden \"the Record-Burner.\""},
+{id:"null_hollow",n:"Null Hollow",t:"calamity",tier:"T4",hz:"Gloom",x:415,y:2055,r:0,link:"mirevale",lk:"hidden",o:"ANOMALY \"Subject Two\" — silent System experiment, recurring world boss. Hidden."},
+// water / underwater
+{id:"saltmere_harbor",n:"Saltmere Harbor",t:"water",tier:"T1",hz:"",x:790,y:2040,r:0,link:"saltmere",lk:"sea",o:"Port — ferries, dive outfitters, fish market."},
+{id:"saltmere_shallows",n:"the Saltmere Shallows",t:"water",tier:"T1",hz:"",x:855,y:2010,r:0,link:"saltmere_harbor",lk:"sea"},
+{id:"teaching_reef",n:"the Teaching Reef / “the Nursery”",t:"under",tier:"T1",hz:"Tide",x:885,y:2075,r:0,link:"saltmere_harbor",lk:"sea",o:"Swim + dive tutorial; Tide Essence, coral fiber."},
+{id:"kelpcradle",n:"Kelpcradle",t:"water",tier:"T2",hz:"",x:840,y:2130,r:0,link:"saltmere_harbor",lk:"sea"},
+{id:"tilted_wreck",n:"the Tilted Wreck",t:"under",tier:"T2",hz:"",x:915,y:2030,r:0,link:"saltmere_shallows",lk:"sea",o:"Half-sunk ship — your first dive; salvage + relic shard."},
+{id:"drowned_chapel",n:"the Drowned Chapel",t:"under",tier:"T2",hz:"Gloom",x:945,y:2085,r:0,link:"teaching_reef",lk:"hidden",o:"First underwater OWPS tease — a dead name burned in a flooded altar-UI."},
+// hidden
+{id:"vanished_house",n:"the Vanished House",t:"hidden",tier:"—",hz:"",x:230,y:2410,r:0,link:"dawnhearth",lk:"hidden",o:"First vanishing-NPC home — a note, a wrong family portrait."},
+{id:"first_glitch",n:"the First-Glitch Site",t:"hidden",tier:"—",hz:"",x:285,y:2350,r:0,link:"dawnhearth",lk:"hidden",o:"Where the frame “Welcome, [SUBJECT 4471]” recurs if you linger."},
+{id:"surveyors_cache",n:"the Surveyor's Cache",t:"hidden",tier:"T1",hz:"",x:545,y:2255,r:0,link:"ww08",lk:"hidden"},
+{id:"low_door",n:"the Low Door",t:"hidden",tier:"T2",hz:"Gloom",x:170,y:2120,r:0,link:"greywall_catacombs",lk:"hidden",o:"Opens only at LOW Surveillance — the System isn't looking."},
+
+// ---------------- HALVETH ----------------
+{id:"goldfield",n:"Goldfield",t:"safe",tier:"T2",hz:"",x:1350,y:2080,r:1,link:"h03",o:"Market metropolis — Pastoral Exchange (food/supply lifeline)."},
+{id:"loomspire",n:"Loomspire",t:"safe",tier:"T2",hz:"",x:1120,y:2360,r:1,link:"h01",o:"Forge port — Loomwright (steel-grandmaster). Ferries to Calderra."},
+{id:"skyreach",n:"Skyreach",t:"safe",tier:"T2",hz:"",x:1600,y:2060,r:1,link:"h06",o:"Tower town — Skyguard (aerial fast-travel, weather forecast)."},
+{id:"newdawn",n:"Newdawn",t:"hold",tier:"T1",hz:"",x:1120,y:2160,r:1,link:"h01",o:"Small onramp fort (arrival from Verdara's Silvercrown)."},
+{id:"wyrmgate",n:"Wyrmgate",t:"hold",tier:"T3",hz:"",x:1780,y:2050,r:1,link:"h08",o:"Highland keep — Wyrmwarden; dragon country, siege-prone."},
+{id:"bellhaven",n:"Bellhaven",t:"hold",tier:"T2",hz:"",x:1300,y:2320,r:1,link:"h13",o:"Shrine-port; boats to the Bell Islets."},
+{id:"h01",n:"Wending Trail",t:"route",tier:"T2",hz:"",x:1120,y:2260,r:1,link:"loomspire"},
+{id:"h02",n:"the Reed Road",t:"route",tier:"T2",hz:"Toxic",x:1300,y:2200,r:1,link:"goldfield"},
+{id:"h03",n:"Tanglewood",t:"route",tier:"T2",hz:"Verdant",x:1230,y:2090,r:1,link:"newdawn"},
+{id:"h04",n:"Tanglewood Deep",t:"route",tier:"T2",hz:"Verdant",x:1230,y:2040,r:1,link:"h03"},
+{id:"h05",n:"the Long Meadow",t:"route",tier:"T2",hz:"",x:1380,y:2150,r:1,link:"goldfield"},
+{id:"h06",n:"Skyway",t:"route",tier:"T2",hz:"",x:1480,y:2070,r:1,link:"goldfield"},
+{id:"h07",n:"the Bellchime Walk",t:"route",tier:"T2",hz:"",x:1250,y:2260,r:1,link:"bellhaven"},
+{id:"h08",n:"Drakepath",t:"route",tier:"T3",hz:"",x:1690,y:2050,r:1,link:"skyreach"},
+{id:"h09",n:"Wyrm Causeway",t:"route",tier:"T3",hz:"",x:1825,y:2120,r:1,link:"wyrmgate"},
+{id:"h10",n:"Mortar Track",t:"route",tier:"T3",hz:"Stone",x:1790,y:2160,r:1,link:"wyrmgate"},
+{id:"h11",n:"the Burned Approach",t:"route",tier:"T3",hz:"Heat",x:1600,y:2160,r:1,link:"skyreach"},
+{id:"h12",n:"the Cliffroad",t:"route",tier:"T3",hz:"",x:1380,y:2360,r:1,link:"bellhaven"},
+{id:"h13",n:"the Pilgrim Way",t:"route",tier:"T2",hz:"",x:1340,y:2280,r:1,link:"goldfield"},
+{id:"h14",n:"the Highland Stair",t:"route",tier:"T4",hz:"Heat",x:1500,y:1905,r:1,link:"skyreach",o:"Climb to Silvercrown Summit — bridges to Verdara."},
+{id:"h15",n:"the Mistveil Track",t:"route",tier:"T2",hz:"Gloom",x:1520,y:2120,r:1,link:"skyreach"},
+{id:"concord_cave",n:"Concord Cave",t:"dungeon",tier:"T2",hz:"Stone",x:1350,y:1980,r:1,link:"h03",th:"goldfield",ov:1,alpha:"the Stonejaw Elder (brute · Stone)"},
+{id:"drowned_well",n:"Drowned Well",t:"dungeon",tier:"T2",hz:"Toxic",x:1320,y:2240,r:1,link:"h02",th:"goldfield",ov:2,alpha:"the Welldrowned (caster · Toxin)"},
+{id:"burned_spire",n:"Burned Spire",t:"dungeon",tier:"T3",hz:"Heat",x:1620,y:2200,r:1,link:"h11",th:"skyreach",ov:2,alpha:"the Three Reburned (roaming Calamity)",o:"Phoenix echo; origin of the roaming trio."},
+{id:"drake_hollow",n:"Drake Hollow",t:"dungeon",tier:"T3",hz:"",x:1855,y:2030,r:1,link:"h09",th:"wyrmgate",ov:1,alpha:"the Marrow Wyrm (apex)"},
+{id:"mortar_deep",n:"Mortar Deep",t:"dungeon",tier:"T3",hz:"Stone",x:1800,y:2210,r:1,link:"h10",th:"wyrmgate",ov:3,alpha:"the Trialbreaker (brute · Stone)"},
+{id:"bellchime_shrine",n:"the Bellchime Shrine",t:"dungeon",tier:"T2",hz:"",x:1240,y:2300,r:1,link:"h07",th:"bellhaven",ov:1,alpha:"the Chime-Keeper (caster · Lumen)",o:"First encrypted System archive (needs Encryption)."},
+{id:"tanglewood_hollow",n:"Tanglewood Hollow",t:"dungeon",tier:"T2",hz:"Verdant",x:1200,y:2000,r:1,link:"h04",th:"goldfield",ov:0,alpha:"the Briar Matron (swarm · Verdant)"},
+{id:"forge_deeps",n:"the Forge-Deeps",t:"dungeon",tier:"T3",hz:"Heat",x:1100,y:2410,r:1,link:"loomspire",th:"loomspire",ov:1,alpha:"the Slagfather (brute · Ember)"},
+{id:"granary_cellars",n:"Goldfield Granary Cellars",t:"dungeon",tier:"T2",hz:"",x:1360,y:2120,r:1,link:"goldfield",th:"goldfield",ov:0,alpha:"the Granary Glut (swarm)"},
+{id:"wyrmgrave",n:"the Wyrmgrave",t:"dungeon",tier:"T3",hz:"Gloom",x:1830,y:2090,r:1,link:"wyrmgate",th:"wyrmgate",ov:2,alpha:"the Bonecoil Wyrm (apex · Umbral)"},
+{id:"cliffside_catacombs",n:"the Cliffside Catacombs",t:"dungeon",tier:"T3",hz:"Gloom",x:1400,y:2400,r:1,link:"h12",th:"bellhaven",ov:1,alpha:"the Cliffshade (ambusher · Gloom)"},
+{id:"mistveil_cavern",n:"the Mistveil Cavern",t:"dungeon",tier:"T2",hz:"Gloom",x:1525,y:2160,r:1,link:"h15",th:"skyreach",ov:0,alpha:"the Mistlurker (ambusher · Gloom)"},
+{id:"sunken_belfry",n:"the Sunken Belfry",t:"dungeon",tier:"T2",hz:"Tide",x:1280,y:2380,r:1,link:"bellhaven",th:"bellhaven",ov:1,alpha:"the Drowned Ringer (skirmisher · Tide)",o:"Flooded tower — entry to the underwater bell-town."},
+{id:"silvercrown",n:"Silvercrown Summit",t:"calamity",tier:"T4",hz:"Heat",x:1280,y:1880,r:1,link:"h14",o:"Pyre Sovereign \"Phoenix\" — “rebirth = trap.” Bridges Verdara ↔ Halveth."},
+{id:"maelstrom",n:"Maelstrom Isles",t:"calamity",tier:"T4",hz:"Tide",x:1180,y:2470,r:1,link:"loomspire",lk:"sea",o:"Tide Warden \"Aether\" — sealed away, before."},
+{id:"three_reburned",n:"the Three Reburned",t:"calamity",tier:"T3",hz:"",x:1660,y:2250,r:1,link:"burned_spire",o:"Gale / Spark / Cinder Wardens — siblings who died in the spire fire (roaming)."},
+{id:"loomspire_docks",n:"Loomspire Docks",t:"water",tier:"—",hz:"",x:1080,y:2400,r:1,link:"loomspire",lk:"sea"},
+{id:"tangleweed_reach",n:"the Tangleweed Reach",t:"under",tier:"T3",hz:"Tide",x:1150,y:2455,r:1,link:"loomspire_docks",lk:"sea"},
+{id:"bell_islets",n:"the Bell Islets",t:"water",tier:"T2",hz:"",x:1380,y:2440,r:1,link:"bellhaven",lk:"sea"},
+{id:"whirl_gyres",n:"the Whirl Gyres",t:"water",tier:"T4",hz:"Tempest",x:1230,y:2465,r:1,link:"maelstrom",lk:"sea"},
+{id:"drowned_shrine",n:"the Drowned Shrine",t:"under",tier:"T4",hz:"Tide",x:1180,y:2495,r:1,link:"maelstrom",lk:"hidden",o:"Tide Warden's sunken temple."},
+{id:"sunken_belltown",n:"the Sunken Bell-town",t:"under",tier:"T3",hz:"Gloom",x:1290,y:2460,r:1,link:"sunken_belfry",lk:"hidden",o:"Halveth's drowned city — an OWPS archive; bells ringing underwater."},
+
+// ---------------- CALDERRA ----------------
+{id:"tidecrown",n:"Tidecrown",t:"safe",tier:"T3",hz:"",x:1150,y:1450,r:2,link:"c01",o:"Caldera-lake capital — Tideclaw (naval supremacy)."},
+{id:"galehold",n:"Galehold",t:"safe",tier:"T3",hz:"",x:1660,y:1400,r:2,link:"c05",o:"Junction city — Stormcaller (electric/aerial). Ferries to Vael."},
+{id:"emberfall",n:"Emberfall",t:"safe",tier:"T3",hz:"Heat",x:1200,y:1625,r:2,link:"c09",o:"Volcano-foot town — Emberforge (T3+ forging)."},
+{id:"bastion",n:"Bastion",t:"hold",tier:"T3",hz:"",x:1400,y:1430,r:2,link:"c04",o:"Island fortress — Stoneheart; storm-battered."},
+{id:"stormwatch",n:"Stormwatch Platform",t:"hold",tier:"T3",hz:"Tempest",x:1700,y:1550,r:2,link:"c16",o:"Offshore rig-town; weather-institute annex, permanent squalls."},
+{id:"sablecoast",n:"Sablecoast",t:"hold",tier:"T3",hz:"Sand",x:1500,y:1600,r:2,link:"c10",o:"Black-sand desert port; salvage market, sandstorm shelter."},
+{id:"c01",n:"Reefway",t:"route",tier:"T3",hz:"Tide",x:1280,y:1440,r:2,link:"tidecrown"},
+{id:"c02",n:"the Tidewalk",t:"route",tier:"T3",hz:"Tide",x:1180,y:1400,r:2,link:"tidecrown"},
+{id:"c03",n:"the Reefwalk",t:"route",tier:"T3",hz:"Tide",x:1100,y:1385,r:2,link:"tidecrown"},
+{id:"c04",n:"Bastion Causeway",t:"route",tier:"T3",hz:"Stone",x:1500,y:1430,r:2,link:"c01"},
+{id:"c05",n:"Stormbridge",t:"route",tier:"T3",hz:"Tempest",x:1600,y:1480,r:2,link:"bastion"},
+{id:"c06",n:"Mount Cinder Switchback",t:"route",tier:"T3",hz:"Heat",x:1700,y:1450,r:2,link:"galehold"},
+{id:"c07",n:"the Ashen Climb",t:"route",tier:"T3",hz:"Heat",x:1790,y:1400,r:2,link:"c06"},
+{id:"c08",n:"Cinder Trail",t:"route",tier:"T3",hz:"Heat",x:1300,y:1605,r:2,link:"emberfall"},
+{id:"c09",n:"Origin Walk",t:"route",tier:"T3",hz:"",x:1180,y:1545,r:2,link:"tidecrown"},
+{id:"c10",n:"the Saltflats",t:"route",tier:"T3",hz:"Sand",x:1480,y:1565,r:2,link:"c08"},
+{id:"c11",n:"the Dune Sea",t:"route",tier:"T3",hz:"Sand",x:1555,y:1565,r:2,link:"sablecoast"},
+{id:"c12",n:"the Sky Stair",t:"route",tier:"T3",hz:"",x:1755,y:1310,r:2,link:"c07"},
+{id:"c13",n:"the Jungle Cut",t:"route",tier:"T3",hz:"Verdant",x:1300,y:1520,r:2,link:"c01"},
+{id:"c14",n:"the Magma Road",t:"route",tier:"T3",hz:"Heat",x:1350,y:1640,r:2,link:"emberfall"},
+{id:"c15",n:"the Coral Causeway",t:"route",tier:"T3",hz:"Tide",x:1080,y:1440,r:2,link:"c03"},
+{id:"c16",n:"the Stormwatch Run",t:"route",tier:"T3",hz:"Tempest",x:1680,y:1520,r:2,link:"c05"},
+{id:"granite_deep",n:"Granite Deep",t:"dungeon",tier:"T3",hz:"Stone",x:1520,y:1410,r:2,link:"c04",th:"bastion",ov:2,alpha:"the Dustcrusher (brute · Stone)",o:"First Cosmic Dust."},
+{id:"stormworks",n:"Stormworks",t:"dungeon",tier:"T3",hz:"Tempest",x:1620,y:1530,r:2,link:"c05",th:"galehold",ov:1,alpha:"the Tempest Engine (caster · Storm)"},
+{id:"mount_cinder",n:"Mount Cinder",t:"dungeon",tier:"T3",hz:"Heat",x:1750,y:1480,r:2,link:"c06",th:"emberfall",ov:3,alpha:"the Cinder Colossus (brute · Ember)",o:"Active volcano; Magma super-node."},
+{id:"magma_tubes",n:"the Magma Tubes",t:"dungeon",tier:"T4",hz:"Heat",x:1805,y:1520,r:2,link:"mount_cinder",th:"emberfall",ov:1,alpha:"the Magmaworm (apex · Ember)"},
+{id:"orbital_spire",n:"Orbital Spire",t:"dungeon",tier:"T3",hz:"",x:1820,y:1340,r:2,link:"c12",th:"galehold",ov:0,alpha:"the Dust Choir (caster)"},
+{id:"origin_hollow",n:"Origin Hollow",t:"dungeon",tier:"T3",hz:"",x:1180,y:1560,r:2,link:"c09",th:"tidecrown",ov:1,alpha:"the Trial Apex (apex)"},
+{id:"coral_vaults",n:"the Coral Vaults",t:"dungeon",tier:"T3",hz:"Tide",x:1050,y:1400,r:2,link:"c15",th:"tidecrown",ov:1,alpha:"the Reef Tyrant (brute · Tide)"},
+{id:"bastion_undercroft",n:"Bastion Undercroft",t:"dungeon",tier:"T3",hz:"Stone",x:1410,y:1470,r:2,link:"bastion",th:"bastion",ov:0,alpha:"the Vault Warden (ambusher · Stone)"},
+{id:"desert_tomb",n:"the Desert Tomb",t:"dungeon",tier:"T3",hz:"Sand",x:1560,y:1610,r:2,link:"c11",th:"sablecoast",ov:2,alpha:"the Sand Pharaoh (caster · Toxin)",o:"The regional Disguise uniform artifact is found here."},
+{id:"weather_institute",n:"the Weather Institute",t:"dungeon",tier:"T3",hz:"",x:1700,y:1562,r:2,link:"stormwatch",th:"stormwatch",ov:0,alpha:"the Squall (skirmisher · Storm)"},
+{id:"reef_catacombs",n:"the Reef Catacombs",t:"dungeon",tier:"T3",hz:"Tide",x:1080,y:1360,r:2,link:"c03",th:"tidecrown",ov:1,alpha:"the Drowned Chorus (swarm · Tide)"},
+{id:"cinderworks",n:"the Cinderworks",t:"dungeon",tier:"T3",hz:"Heat",x:1230,y:1640,r:2,link:"c14",th:"emberfall",ov:2,alpha:"the Forgefiend (brute · Ember)"},
+{id:"sunken_locks",n:"the Sunken Locks",t:"dungeon",tier:"T3",hz:"Tide",x:1130,y:1480,r:2,link:"c02",th:"tidecrown",ov:0,alpha:"the Lockbreaker Eel (skirmisher · Tide)"},
+{id:"jungle_ziggurat",n:"the Jungle Ziggurat",t:"dungeon",tier:"T3",hz:"Verdant",x:1320,y:1540,r:2,link:"c13",th:"galehold",ov:1,alpha:"the Vine Sovereign (caster · Verdant)"},
+{id:"sealed_chambers",n:"the Sealed Chambers",t:"calamity",tier:"T4",hz:"",x:1430,y:1505,r:2,link:"bastion",o:"the Three Wardens of the Door — “guarding the door is all I remember.”"},
+{id:"sunken_vault",n:"the Sunken Vault",t:"calamity",tier:"T4",hz:"Tide",x:1455,y:1560,r:2,link:"bastion",lk:"hidden",o:"Abyss Warden — drowned pre-Awakening archive."},
+{id:"caldera_maw",n:"the Caldera Maw",t:"calamity",tier:"T4",hz:"Heat",x:1380,y:1660,r:2,link:"c14",o:"Magma Warden — the two made to keep fighting."},
+{id:"heavens_spine",n:"Heaven's Spine",t:"calamity",tier:"T4",hz:"Tempest",x:1250,y:1700,r:2,link:"emberfall",o:"Sky Sovereign — “the sky belonged to us.”"},
+{id:"mirror_pair",n:"the Mirror Pair",t:"calamity",tier:"T4",hz:"Tide",x:1910,y:1450,r:2,link:"galehold",lk:"sea",o:"Twins who speak only to each other in death (open sea)."},
+{id:"calderan_reach",n:"the Calderan Reach",t:"water",tier:"T4",hz:"",x:1500,y:1340,r:2,link:"galehold",lk:"sea",o:"Vast open ocean — pelagic Surges, storm-seas."},
+{id:"coralspire",n:"Coralspire / “the Living City”",t:"under",tier:"T3",hz:"Tide",x:1050,y:1420,r:2,link:"c15",lk:"sea",o:"Coral metropolis; reef towns, a sea-market."},
+{id:"emberdeeps",n:"the Emberdeeps",t:"under",tier:"T4",hz:"Heat",x:1095,y:1500,r:2,link:"coralspire",lk:"hidden",o:"Hydrothermal-vent field — Ember Essence UNDERWATER (counters Cold)."},
+{id:"maw_trench",n:"the Maw Trench",t:"under",tier:"T4",hz:"Tide",x:1480,y:1600,r:2,link:"sunken_vault",lk:"hidden"},
+{id:"sunken_capital",n:"the Sunken Capital / “Old Tidecrown”",t:"under",tier:"T4",hz:"Gloom",x:1430,y:1615,r:2,link:"maw_trench",lk:"hidden",o:"Calderra's drowned city — the corporate R&D archive (major OWPS)."},
+{id:"stormwatch_waters",n:"Stormwatch Waters",t:"water",tier:"T3",hz:"Tempest",x:1720,y:1585,r:2,link:"stormwatch",lk:"sea"},
+
+// ---------------- VAEL ----------------
+{id:"hollowmere",n:"Hollowmere",t:"safe",tier:"T2",hz:"",x:1000,y:520,r:3,link:"v01",o:"Mining town — Coalstrike (mining mastery, the Spine operations)."},
+{id:"veilharrow",n:"Veilharrow",t:"safe",tier:"T3",hz:"",x:760,y:520,r:3,link:"v04",o:"Cathedral city — Veilspun (ghost alchemy)."},
+{id:"cestmark",n:"Cestmark",t:"safe",tier:"T4",hz:"",x:560,y:540,r:3,link:"v08",o:"Mythcrafters — the only OWPS-aligned guild; unlocks the buried-truth chain."},
+{id:"auronpoint",n:"Auronpoint",t:"hold",tier:"T3",hz:"Cold",x:1280,y:560,r:3,link:"v01",o:"Coastal snow port (arrival from Calderra) — Skyfracture; blizzard-exposed."},
+{id:"rimecross",n:"Rimecross",t:"hold",tier:"T3",hz:"Cold",x:880,y:460,r:3,link:"v04",o:"High Spine outpost; coldest beds, Spine-Pass gate to Calderra."},
+{id:"graveholt",n:"Graveholt",t:"hold",tier:"T4",hz:"Gloom",x:820,y:620,r:3,link:"v07",o:"Shrouded estate village; gravekeepers, gate to Greypall."},
+{id:"v01",n:"Frostway",t:"route",tier:"T3",hz:"Cold",x:1140,y:540,r:3,link:"hollowmere"},
+{id:"v02",n:"the Whiteout Pass",t:"route",tier:"T4",hz:"Cold",x:1320,y:460,r:3,link:"auronpoint"},
+{id:"v03",n:"the Lakeway",t:"route",tier:"T2",hz:"Verdant",x:920,y:620,r:3,link:"hollowmere"},
+{id:"v04",n:"the Spine Stair",t:"route",tier:"T3",hz:"Cold",x:880,y:520,r:3,link:"hollowmere"},
+{id:"v05",n:"the Spine Pass",t:"route",tier:"T4",hz:"Cold",x:1050,y:720,r:3,link:"rimecross",o:"Mountain corridor down to Calderra."},
+{id:"v06",n:"the Cathedral Walk",t:"route",tier:"T3",hz:"Gloom",x:700,y:560,r:3,link:"veilharrow"},
+{id:"v07",n:"Greypall Lane",t:"route",tier:"T4",hz:"Gloom",x:840,y:400,r:3,link:"hollowmere"},
+{id:"v08",n:"Hollow Road",t:"route",tier:"T4",hz:"Gloom",x:660,y:520,r:3,link:"veilharrow"},
+{id:"v09",n:"the Iron Causeway",t:"route",tier:"T4",hz:"Stone",x:940,y:700,r:3,link:"v03"},
+{id:"v10",n:"Distortion Approach",t:"route",tier:"T4",hz:"",x:480,y:560,r:3,link:"cestmark",o:"Reality frays here — toward the Exile."},
+{id:"v11",n:"the Frozen March",t:"route",tier:"T4",hz:"Cold",x:1180,y:460,r:3,link:"v01"},
+{id:"v12",n:"the Ossuary Road",t:"route",tier:"T4",hz:"Gloom",x:720,y:460,r:3,link:"veilharrow"},
+{id:"v13",n:"the Lake Circuit",t:"route",tier:"T4",hz:"",x:760,y:680,r:3,link:"v03"},
+{id:"v14",n:"the Glacier Walk",t:"route",tier:"T4",hz:"Cold",x:1240,y:640,r:3,link:"auronpoint"},
+{id:"v15",n:"the Veilcrook",t:"route",tier:"T3",hz:"Gloom",x:700,y:480,r:3,link:"veilharrow"},
+{id:"eldwood",n:"Eldwood",t:"dungeon",tier:"T2",hz:"Verdant",x:960,y:640,r:3,link:"v03",th:"hollowmere",ov:1,alpha:"the Eldmother (swarm · Verdant)"},
+{id:"spine_lower",n:"The Spine (lower)",t:"dungeon",tier:"T3",hz:"Cold",x:940,y:500,r:3,link:"v04",th:"hollowmere",ov:2,alpha:"the Spinecrawler (brute · Stone)"},
+{id:"spine_deep",n:"the Spine Deep",t:"dungeon",tier:"T4",hz:"Stone",x:960,y:440,r:3,link:"spine_lower",th:"rimecross",ov:1,alpha:"the Deep Tyrant (apex · Stone)"},
+{id:"greypall_estate",n:"Greypall Estate",t:"dungeon",tier:"T4",hz:"Gloom",x:860,y:360,r:3,link:"v07",th:"graveholt",ov:3,alpha:"the Manor Shade (apex · Gloom)",o:"Shadow-residue super-node; haunted manor."},
+{id:"sunken_ruins",n:"Sunken Ruins",t:"dungeon",tier:"T4",hz:"Gloom",x:520,y:460,r:3,link:"cestmark",lk:"hidden",th:"cestmark",ov:2,alpha:"guardian apex (Untethered)",o:"MAJOR OWPS site — oldest interfaces, FULL buried truth."},
+{id:"irongrave_isle",n:"Irongrave Isle",t:"dungeon",tier:"T4",hz:"Stone",x:1000,y:760,r:3,link:"v09",lk:"sea",th:"veilharrow",ov:1,alpha:"the Iron Revenant (brute · Stone)"},
+{id:"veilharrow_ossuary",n:"Veilharrow Ossuary",t:"dungeon",tier:"T4",hz:"Gloom",x:740,y:560,r:3,link:"veilharrow",th:"veilharrow",ov:1,alpha:"the Ossuary King (caster · Gloom)"},
+{id:"cathedral_crypts",n:"the Cathedral Crypts",t:"dungeon",tier:"T4",hz:"Gloom",x:720,y:600,r:3,link:"v06",th:"veilharrow",ov:2,alpha:"the Crypt Choir (swarm · Gloom)"},
+{id:"frozen_catacombs",n:"the Frozen Catacombs",t:"dungeon",tier:"T4",hz:"Cold",x:820,y:660,r:3,link:"graveholt",th:"graveholt",ov:1,alpha:"the Rimewraith (ambusher · Cold)"},
+{id:"mythcrafter_undercroft",n:"the Mythcrafter Undercroft",t:"dungeon",tier:"T4",hz:"",x:560,y:580,r:3,link:"cestmark",th:"cestmark",ov:0,alpha:"the Warden of Truths (caster · Lumen)"},
+{id:"glacier_tubes",n:"the Glacier Tubes",t:"dungeon",tier:"T4",hz:"Cold",x:1220,y:700,r:3,link:"v14",th:"auronpoint",ov:1,alpha:"the Glacial Maw (apex · Cold)"},
+{id:"buried_observatory",n:"the Buried Observatory",t:"dungeon",tier:"T4",hz:"",x:600,y:480,r:3,link:"v15",th:"cestmark",ov:0,alpha:"the Star-Eaten (caster · Umbral)",o:"Pre-Awakening interior — star-charts of the cycle."},
+{id:"shadewell",n:"the Shadewell",t:"dungeon",tier:"T4",hz:"Gloom",x:880,y:340,r:3,link:"greypall_estate",th:"graveholt",ov:2,alpha:"the Wellshade (ambusher · Gloom)"},
+{id:"iron_deeps",n:"the Iron Deeps",t:"dungeon",tier:"T4",hz:"Stone",x:1020,y:780,r:3,link:"irongrave_isle",th:"veilharrow",ov:0,alpha:"the Grandforge Golem (brute · Stone)"},
+{id:"frozen_vault",n:"Frozen Vault",t:"calamity",tier:"T4",hz:"Cold",x:1320,y:420,r:3,link:"v02",o:"Origin Warden — first Awakened of cycle −1, the previous loop's tutorial boss."},
+{id:"ledgerpoint",n:"Ledgerpoint",t:"calamity",tier:"T4",hz:"Tempest",x:740,y:420,r:3,link:"v12",o:"the Bookkeepers — run the System's time-and-space ledgers."},
+{id:"pyrecore",n:"Pyrecore",t:"calamity",tier:"T4",hz:"Heat",x:800,y:640,r:3,link:"veilharrow",o:"Forge Warden — “I crawled in to hide. I never crawled out.”"},
+{id:"three_who_saw",n:"the Three Who Saw",t:"calamity",tier:"T4",hz:"",x:700,y:700,r:3,link:"v13",o:"Children who saw too much (lake trio)."},
+{id:"severed_lovers",n:"the Severed Lovers",t:"calamity",tier:"T4",hz:"Gloom",x:840,y:720,r:3,link:"v13",o:"Lovers split by a cycle reset."},
+{id:"distortion",n:"The Distortion",t:"calamity",tier:"T4+",hz:"",x:430,y:580,r:3,link:"v10",o:"the Exile / Sidewise One — knows everything. Persistent raid, TRUE-ENDGAME entry."},
+{id:"white_reach",n:"the White Reach",t:"water",tier:"T4",hz:"Cold",x:1380,y:640,r:3,link:"auronpoint",lk:"sea",o:"Ice-sea — floes, cracking shelves, blizzard sailing."},
+{id:"ice_floes",n:"the Ice Floes",t:"water",tier:"T4",hz:"Cold",x:1300,y:700,r:3,link:"white_reach",lk:"sea"},
+{id:"frostmaw_trench",n:"the Frostmaw Trench",t:"under",tier:"T4",hz:"Cold",x:1350,y:730,r:3,link:"ice_floes",lk:"hidden"},
+{id:"glass_temple",n:"the Glass Temple",t:"under",tier:"T4",hz:"Cold",x:1320,y:765,r:3,link:"ice_floes",lk:"hidden",o:"Under-ice temple — a frozen Untethered / mythical site."},
+{id:"drowned_first_city",n:"the Drowned First City",t:"under",tier:"T4+",hz:"Gloom",x:470,y:420,r:3,link:"sunken_ruins",lk:"hidden",o:"The OLDEST drowned city — the cycle laid bare."},
+
+// ---------------- OPEN SEA (the Drowned Reach) ----------------
+{id:"flotsam",n:"the Flotsam Court",t:"flotsam",tier:"—",hz:"",x:360,y:1250,o:"Roaming Off-Grid raft-town — NO Surveillance, black market. It actually drifts the sea-routes."},
+{id:"bonereach",n:"the Bonereach",t:"water",tier:"T4",hz:"",x:1950,y:1950,o:"Shipwreck graveyard — salvage, lost-crew ghosts, relic caches."},
+{id:"deep_gyre",n:"the Deep Gyre / the Abyss",t:"under",tier:"T4+",hz:"Tide",x:2150,y:1560,o:"Farthest-from-coast pelagic — apex sea-creatures."},
+{id:"underroad",n:"the Underroad",t:"under",tier:"T4",hz:"Gloom",x:1780,y:1760,o:"A deep-sea trench “road” connecting regions underwater (hidden diver traversal)."},
+{id:"derelict_buoys",n:"Derelict System Buoys",t:"hidden",tier:"—",hz:"",x:1520,y:1820,o:"Drifting relays — lore terminals + relic shards (Surveillance hums nearby)."},
+];
+
+// extra / gateway / sea edges  [a, b, kind]
+const EDGES = [
+  ["ww18","silvercrown","land"], ["silvercrown","h14","land"],   // Verdara <-> Halveth land bridge
+  ["saltmere","loomspire_docks","sea"],                          // Verdara <-> Halveth ferry
+  ["loomspire","tidecrown","sea"],                               // Halveth <-> Calderra ferry
+  ["galehold","auronpoint","sea"],                               // Calderra <-> Vael crossing
+  ["v05","galehold","land"],                                     // Spine Pass: Vael <-> Calderra
+  ["emberreach","cinderhold","sea"],
+  ["calderan_reach","mirror_pair","sea"], ["calderan_reach","deep_gyre","sea"],
+  ["deep_gyre","bonereach","sea"], ["underroad","sunken_capital","under"], ["underroad","drowned_first_city","under"],
+  ["flotsam","saltmere","sea"], ["flotsam","loomspire_docks","sea"], ["flotsam","tidecrown","sea"], ["flotsam","auronpoint","sea"],
+];
+
+/* ============================ RENDER ============================ */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('map');
+const byId={}; N.forEach(n=>byId[n.id]=n);
+let showAllLabels=false, showThreat=true;
+const filter={}; Object.keys(TYPES).forEach(k=>filter[k]=true);
+
+function el(tag,attrs){const e=document.createElementNS(SVG,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+// layer groups
+const gSea=el('g',{}), gRegion=el('g',{}), gEdge=el('g',{}), gThreat=el('g',{}), gNode=el('g',{}), gLabel=el('g',{});
+svg.append(gSea,gRegion,gEdge,gThreat,gNode,gLabel);
+
+// ocean background + gradient
+const defs=el('defs',{});
+defs.innerHTML=`<radialGradient id="ocean" cx="44%" cy="38%" r="88%">
+  <stop offset="0%" stop-color="#93d6f0"/><stop offset="50%" stop-color="#62b5e2"/><stop offset="100%" stop-color="#3f95cb"/></radialGradient>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.5" result="b"/>
+  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="landshadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="3" dy="9" stdDeviation="9" flood-color="#0c2c40" flood-opacity="0.55"/></filter>
+  <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>`;
+svg.append(defs);
+gSea.append(el('rect',{x:-600,y:-600,width:3800,height:4000,fill:'url(#ocean)'}));
+// soft depth contour rings (subtle, clean)
+for(let i=0;i<4;i++) gSea.append(el('ellipse',{cx:1180,cy:1380,rx:1520-i*150,ry:1520-i*150,fill:'none',
+  stroke:'#d3f0fb',"stroke-width":1.5,opacity:.22}));
+
+// ---- irregular landmasses (Pokémon town-map style, clean modern palette) ----
+function smoothPath(pts){ // closed Catmull-Rom -> bezier = smooth coastline
+  const n=pts.length; let d=`M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n],p1=pts[i],p2=pts[(i+1)%n],p3=pts[(i+2)%n];
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d+'Z';
+}
+function island(cx,cy,rx,ry){const p=[],k=9;for(let i=0;i<k;i++){const a=i/k*Math.PI*2;
+  const j=0.74+0.26*(((i*37)%5)/5); p.push([cx+Math.cos(a)*rx*j, cy+Math.sin(a)*ry*j]);}return p;}
+
+// biome fills + coast colours per region
+const BIOME=[
+  {fill:"#8fd069",coast:"#56953f"}, // Verdara bright grass
+  {fill:"#cdca63",coast:"#8f8c38"}, // Halveth golden meadow
+  {fill:"#6fcb9c",coast:"#3a9468"}, // Calderra tropical
+  {fill:"#e9f2f9",coast:"#a9c4d8"}, // Vael snow
+];
+const LANDS=[
+ {r:0,pts:[[150,2200],[165,2030],[245,1915],[370,1850],[470,1795],[545,1865],[605,1815],[710,1900],[830,1985],[862,2120],[842,2245],[875,2360],[775,2450],[600,2478],[440,2468],[298,2456],[198,2372]]},
+ {r:1,pts:[[1060,2210],[1075,2020],[1185,1925],[1290,1875],[1410,1898],[1505,1900],[1575,1975],[1705,1975],[1835,1985],[1900,2090],[1875,2215],[1885,2335],[1760,2432],[1560,2452],[1380,2448],[1180,2452],[1095,2452],[1062,2340]]},
+ {r:2,pts:[[1035,1450],[1060,1350],[1180,1300],[1320,1300],[1480,1320],[1620,1308],[1740,1295],[1842,1342],[1872,1432],[1846,1532],[1800,1622],[1700,1690],[1560,1662],[1430,1702],[1300,1726],[1180,1690],[1090,1600],[1045,1520]]},
+ {r:3,pts:[[410,560],[430,440],[520,360],[640,330],[780,335],[900,330],[1000,360],[1120,355],[1240,400],[1342,470],[1356,580],[1320,662],[1240,722],[1100,746],[960,730],[820,756],[700,746],[580,710],[470,650]]},
+];
+const ISLANDS=[
+ {r:0,pts:island(905,2120,34,27)},  {r:0,pts:island(912,2382,30,24)},   // Emberreach, Cinderhold
+ {r:1,pts:island(1185,2474,42,22)}, {r:1,pts:island(1382,2452,34,18)},  // Maelstrom, Bell Islets
+ {r:2,pts:island(1912,1452,30,22)},                                     // Mirror Pair
+ {r:3,pts:island(1010,772,48,30)},                                      // Irongrave
+];
+// deterministic noise + fractal coastline roughening (characterful, not blobby)
+function hash(k){const x=Math.sin(k*127.1+311.7)*43758.5453;return x-Math.floor(x);}
+function rough(pts,amp,seed){const n=pts.length;let cx=0,cy=0;pts.forEach(p=>{cx+=p[0];cy+=p[1];});cx/=n;cy/=n;
+  const r=[];for(let i=0;i<n;i++){const p1=pts[i],p2=pts[(i+1)%n];r.push(p1);
+    const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;let dx=p2[0]-p1[0],dy=p2[1]-p1[1];const L=Math.hypot(dx,dy)||1;
+    let nx=-dy/L,ny=dx/L; if(nx*(mx-cx)+ny*(my-cy)<0){nx=-nx;ny=-ny;} // outward
+    const h=hash(i*2.1+seed)*1.3-0.3; r.push([mx+nx*amp*h, my+ny*amp*h]);}
+  return r;}
+function smoothOpen(pts){const n=pts.length;let d=`M${pts[0][0]} ${pts[0][1]}`;
+  for(let i=0;i<n-1;i++){const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n-1,i+2)];
+    d+=` C${p1[0]+(p2[0]-p0[0])/6} ${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6} ${p2[1]-(p3[1]-p1[1])/6} ${p2[0]} ${p2[1]}`;}
+  return d;}
+function polySamples(pts,step){const out=[];for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];
+  const L=Math.hypot(b[0]-a[0],b[1]-a[1]),k=Math.max(1,Math.round(L/step));
+  for(let j=0;j<k;j++){const t=j/k;out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}out.push(pts[pts.length-1]);return out;}
+
+// landmass with beach rim + shore halo + shadow
+function drawLandPath(d,b,big){
+  gRegion.append(el('path',{d,fill:b.coast,opacity:.85,filter:'url(#landshadow)'}));
+  gRegion.append(el('path',{d,fill:'none',stroke:'#eafaff',"stroke-width":big?14:8,opacity:.6,filter:'url(#soft)'})); // bright shallows
+  gRegion.append(el('path',{d,fill:'none',stroke:'#f5e7a6',"stroke-width":big?8:5,opacity:.95})); // sandy beach
+  gRegion.append(el('path',{d,fill:b.fill,stroke:b.coast,"stroke-width":big?2.5:1.8,"stroke-linejoin":"round"}));
+}
+const RD=[];
+LANDS.forEach(L=>{const rp=rough(rough(L.pts,24,L.r*3+1),12,L.r*3+7);const d=smoothPath(rp);RD[L.r]=d;drawLandPath(d,BIOME[L.r],true);});
+ISLANDS.forEach(L=>{drawLandPath(smoothPath(rough(L.pts,7,99)),BIOME[L.r],false);});
+
+// per-region clip groups so terrain never spills into the sea
+const tg=[];
+for(let i=0;i<4;i++){const cp=el('clipPath',{id:'clip'+i});cp.append(el('path',{d:RD[i]}));defs.append(cp);
+  const g=el('g',{"clip-path":`url(#clip${i})`});gRegion.append(g);tg[i]=g;}
+
+// terrain primitives
+function mountains(g,ridge,snow){const A=snow?'#d2dae1':'#c89456',B=snow?'#aab8c2':'#9c6a30',out=snow?'#8a98a4':'#7c4f24';
+  polySamples(ridge,20).forEach((p,i)=>{const w=15+hash(i*3.3)*9,h=21+hash(i*1.7)*11,x=p[0],y=p[1];
+  g.append(el('path',{d:`M${x-w} ${y+6} L${x} ${y-h} L${x+w} ${y+6} Z`,fill:A,stroke:out,"stroke-width":1,"stroke-linejoin":"round"}));
+  g.append(el('path',{d:`M${x} ${y-h} L${x+w} ${y+6} L${x} ${y+6} Z`,fill:B,opacity:.55}));
+  g.append(el('path',{d:`M${x-w*0.34} ${y-h*0.5} L${x} ${y-h} L${x+w*0.34} ${y-h*0.5} Z`,fill:'#f6fafd',opacity:snow?1:.85}));});}
+function forest(g,cx,cy,rx,ry,n){g.append(el('ellipse',{cx,cy,rx,ry,fill:'#4aa44f',opacity:.8}));
+  for(let i=0;i<n;i++){const a=hash(i*1.1+cx)*6.283,rr=Math.sqrt(hash(i*2.7+cy));
+    g.append(el('circle',{cx:cx+Math.cos(a)*rx*rr*0.92,cy:cy+Math.sin(a)*ry*rr*0.92,r:3.3+hash(i+7)*2.6,fill:hash(i)>.5?'#3f9a45':'#33863a',stroke:'#2c7333',"stroke-width":.6}));}}
+function river(g,pts){const d=smoothOpen(pts);
+  g.append(el('path',{d,fill:'none',stroke:'#4fb0e4',"stroke-width":7,"stroke-linecap":"round","stroke-linejoin":"round",opacity:.95}));
+  g.append(el('path',{d,fill:'none',stroke:'#cdeeff',"stroke-width":2.5,"stroke-linecap":"round",opacity:.85}));}
+function lake(g,cx,cy,rx,ry,ice){g.append(el('ellipse',{cx,cy,rx,ry,fill:ice?'#b3def0':'#4fb0e4',stroke:'#eafaff',"stroke-width":2.5}));}
+function desert(g,cx,cy,rx,ry){g.append(el('ellipse',{cx,cy,rx,ry,fill:'#e6cf8e',opacity:.85}));
+  for(let i=0;i<5;i++)g.append(el('path',{d:`M${cx-rx*0.5} ${cy-ry*0.3+i*ry*0.22} q ${rx*0.5} 8 ${rx} 0`,fill:'none',stroke:'#d8bd76',"stroke-width":1.5,opacity:.5}));}
+function volcano(g,cx,cy,r){
+  g.append(el('path',{d:`M${cx-r*0.95} ${cy+r*0.5} L${cx} ${cy-r} L${cx+r*0.95} ${cy+r*0.5} Z`,fill:'#6e5f57',stroke:'#463a34',"stroke-width":1.2,"stroke-linejoin":"round"}));
+  g.append(el('path',{d:`M${cx} ${cy-r} L${cx+r*0.95} ${cy+r*0.5} L${cx} ${cy+r*0.5} Z`,fill:'#544842',opacity:.6}));
+  g.append(el('ellipse',{cx,cy:cy-r*0.85,rx:r*0.32,ry:r*0.15,fill:'#ec5a1e'}));
+  g.append(el('path',{d:`M${cx-2} ${cy-r*0.8} q -6 ${r*0.5} -3 ${r*0.7}`,fill:'none',stroke:'#ff7a2a',"stroke-width":2,opacity:.8}));}
+function swamp(g,cx,cy,rx,ry){g.append(el('ellipse',{cx,cy,rx,ry,fill:'#5f7a3a',opacity:.7}));
+  for(let i=0;i<9;i++){const a=hash(i*1.3+cx)*6.283,rr=Math.sqrt(hash(i*2.1+cy));
+    g.append(el('ellipse',{cx:cx+Math.cos(a)*rx*rr*0.9,cy:cy+Math.sin(a)*ry*rr*0.9,rx:5+hash(i)*4,ry:3+hash(i+3)*2,fill:hash(i)>.5?'#3f6f5a':'#6b6b30',opacity:.8}));}}
+
+// ---- place terrain per region ----
+// VERDARA
+mountains(tg[0],[[300,1905],[395,1862],[490,1838],[565,1872],[645,1915]],false);
+mountains(tg[0],[[175,2015],[235,2046],[295,2072]],false);
+forest(tg[0],320,2055,58,40,18); forest(tg[0],420,2385,44,30,10); forest(tg[0],560,2150,40,28,9);
+swamp(tg[0],520,2380,60,34);
+river(tg[0],[[490,1885],[525,1995],[580,2090],[665,2115],[760,2078]]);
+// HALVETH
+mountains(tg[1],[[1650,2005],[1730,1982],[1808,2008],[1860,2058]],false);
+mountains(tg[1],[[1240,1905],[1282,1860],[1330,1905]],true);   // Silvercrown Summit
+mountains(tg[1],[[1598,2212],[1635,2190],[1672,2214]],false);  // Burned Spire
+forest(tg[1],1230,2062,72,44,22); forest(tg[1],1305,2122,38,26,9);
+lake(tg[1],1322,2245,30,20,false);
+river(tg[1],[[1740,2012],[1640,2120],[1520,2210],[1400,2300],[1305,2382]]);
+// CALDERRA
+volcano(tg[2],1750,1478,30); volcano(tg[2],1380,1652,22); volcano(tg[2],1205,1618,17);
+mountains(tg[2],[[1478,1410],[1540,1394],[1602,1414]],false);
+lake(tg[2],1150,1450,48,32,false);          // caldera lake (Tidecrown)
+desert(tg[2],1525,1588,74,48);              // Sablecoast / Dune Sea
+forest(tg[2],1312,1525,50,36,14);           // rainforest
+river(tg[2],[[1748,1508],[1640,1556],[1545,1592],[1485,1606]]);
+// VAEL
+mountains(tg[3],[[820,522],[888,476],[955,442],[1012,472],[1078,522],[1062,602],[1046,680]],true); // the Spine
+mountains(tg[3],[[838,378],[880,350],[922,380]],true);
+forest(tg[3],960,648,42,30,11);
+lake(tg[3],700,702,30,20,true); lake(tg[3],840,720,30,20,true); lake(tg[3],762,682,24,16,true); // frozen lake trio
+// island volcanoes (unclipped — small, centered)
+volcano(gRegion,905,2116,15); volcano(gRegion,912,2380,14);
+
+// region name labels on each landmass
+const LY=[1900,1872,1278,352];
+REGIONS.forEach((R,i)=>{
+  const t=el('text',{x:R.cx,y:LY[i],"text-anchor":"middle","font-size":30,fill:'#ffffff',opacity:.66,
+    "font-weight":"bold","letter-spacing":4,"paint-order":"stroke",stroke:'#0c3048',"stroke-width":4,"stroke-linejoin":"round"});
+  t.textContent=R.n; gRegion.append(t);
+  const s=el('text',{x:R.cx,y:LY[i]+18,"text-anchor":"middle","font-size":11,fill:'#eaf4ff',opacity:.6,
+    "paint-order":"stroke",stroke:'#0c3048',"stroke-width":3});
+  s.textContent=R.sub; gRegion.append(s);
+});
+
+function edgeStyle(kind){
+  if(kind==='sea')   return {stroke:'#1f6fa8',"stroke-width":1.8,"stroke-dasharray":"7 6",opacity:.75};
+  if(kind==='hidden')return {stroke:'#e07cf0',"stroke-width":1.6,"stroke-dasharray":"2 6",opacity:.7};
+  if(kind==='under') return {stroke:'#46e0d0',"stroke-width":1.6,"stroke-dasharray":"2 6",opacity:.6};
+  return {stroke:'#fbf1cf',"stroke-width":2.4,opacity:.85}; // land road (cream, pops on land)
+}
+function drawEdge(a,b,kind){
+  const A=byId[a],B=byId[b]; if(!A||!B)return;
+  gEdge.append(el('line',Object.assign({x1:A.x,y1:A.y,x2:B.x,y2:B.y,"stroke-linecap":"round"},edgeStyle(kind))));
+}
+// link-parent edges
+N.forEach(n=>{ if(n.link) drawEdge(n.id,n.link,n.lk||'land'); });
+// explicit edges
+EDGES.forEach(e=>drawEdge(e[0],e[1],e[2]));
+
+// node drawing
+function marker(n){
+  const T=TYPES[n.t], col=T.col, g=el('g',{class:'nd',"data-id":n.id,cursor:'pointer'});
+  const hz=HZ[n.hz];
+  // hazard halo
+  if(hz) g.append(el('circle',{cx:n.x,cy:n.y,r:11,fill:'none',stroke:hz,"stroke-width":2,opacity:.55}));
+  // overflow ring for dungeons
+  if(n.t==='dungeon'){
+    const ov=n.ov||0;
+    g.append(el('circle',{cx:n.x,cy:n.y,r:14,fill:'none',stroke:OVCOL[ov],"stroke-width":2,
+      "stroke-dasharray": ov>=3?"3 3":"1 0", opacity: ov>=3?.95:.6, filter: ov>=4?'url(#glow)':''}));
+  }
+  let shape;
+  switch(n.t){
+    case 'safe':     shape=el('path',{d:diamond(n.x,n.y,10),fill:col,stroke:'#fff',"stroke-width":1.5,filter:'url(#glow)'}); break;
+    case 'hold':     shape=el('rect',{x:n.x-7,y:n.y-7,width:14,height:14,fill:col,stroke:'#3a1d00',"stroke-width":1.5,transform:`rotate(45 ${n.x} ${n.y})`}); break;
+    case 'route':    shape=el('circle',{cx:n.x,cy:n.y,r:4.6,fill:col,stroke:'#ffffff',"stroke-width":1.4}); break;
+    case 'dungeon':  shape=el('path',{d:tri(n.x,n.y,8),fill:col,stroke:'#1c0a30',"stroke-width":1.2}); break;
+    case 'calamity': shape=el('path',{d:star(n.x,n.y,11,5),fill:col,stroke:'#3a0008',"stroke-width":1.2,filter:'url(#glow)'}); break;
+    case 'hidden':   shape=el('circle',{cx:n.x,cy:n.y,r:6,fill:'none',stroke:col,"stroke-width":2,"stroke-dasharray":"2 3"}); break;
+    case 'water':    shape=el('circle',{cx:n.x,cy:n.y,r:5,fill:'#1f7fce',stroke:'#ffffff',"stroke-width":1.4}); break;
+    case 'under':    shape=el('circle',{cx:n.x,cy:n.y,r:5.5,fill:'none',stroke:col,"stroke-width":2,"stroke-dasharray":"3 2"}); break;
+    case 'flotsam':  shape=el('path',{d:diamond(n.x,n.y,9),fill:col,stroke:'#fff',"stroke-width":1.5}); break;
+    default:         shape=el('circle',{cx:n.x,cy:n.y,r:5,fill:col});
+  }
+  g.append(shape);
+  if(n.t==='hidden'){const q=el('text',{x:n.x,y:n.y+3.2,"text-anchor":"middle","font-size":8,fill:col});q.textContent='?';g.append(q);}
+  if(n.t==='flotsam') g.insertBefore(el('circle',{cx:n.x,cy:n.y,r:18,fill:'none',stroke:col,"stroke-width":1.2,"stroke-dasharray":"2 5",opacity:.7}),shape);
+  g.addEventListener('click',ev=>{ev.stopPropagation();openInfo(n);});
+  return g;
+}
+function diamond(x,y,r){return `M${x} ${y-r} L${x+r} ${y} L${x} ${y+r} L${x-r} ${y} Z`;}
+function tri(x,y,r){return `M${x} ${y-r} L${x+r*0.9} ${y+r*0.7} L${x-r*0.9} ${y+r*0.7} Z`;}
+function star(cx,cy,R,p){let d="";for(let i=0;i<p*2;i++){const r=i%2?R*0.45:R;const a=Math.PI/p*i-Math.PI/2;d+=(i?'L':'M')+(cx+r*Math.cos(a))+' '+(cy+r*Math.sin(a))+' ';}return d+'Z';}
+
+function labelFor(n){
+  const big=['safe','hold','calamity','flotsam'].includes(n.t);
+  const t=el('text',{x:n.x+ (n.t==='safe'||n.t==='calamity'?12:9),y:n.y+3.5,
+    "font-size": big?11:9, fill: big?'#eaf4ff':'#9fb8cc',
+    "paint-order":"stroke",stroke:'#04101c',"stroke-width":3,"data-lbl":n.id,
+    "stroke-linejoin":"round"});
+  t.textContent=n.n; t.style.pointerEvents='none';
+  if(!big) t.classList.add('minor');
+  return t;
+}
+N.forEach(n=>{ gNode.append(marker(n)); gLabel.append(labelFor(n)); });
+
+// threat overlay: dungeon -> threatened town when Breaking (ov>=3)
+function buildThreat(){
+  gThreat.innerHTML='';
+  N.forEach(n=>{
+    if(n.t==='dungeon' && (n.ov||0)>=3 && n.th && byId[n.th]){
+      const A=n,B=byId[n.th];
+      gThreat.append(el('line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,stroke:'#ff2a30',"stroke-width":2.4,
+        "stroke-dasharray":"6 5",opacity:.85,filter:'url(#glow)'}));
+      // little marching arrow midpoint
+      const mx=(A.x+B.x)/2,my=(A.y+B.y)/2;
+      gThreat.append(el('path',{d:star(mx,my,6,4),fill:'#ff5a3c',opacity:.9}));
+    }
+  });
+  gThreat.style.display=showThreat?'':'none';
+}
+buildThreat();
+
+/* ===================== interactivity: filter / labels / pan-zoom ===================== */
+function applyFilter(){
+  document.querySelectorAll('.nd').forEach(g=>{
+    const n=byId[g.getAttribute('data-id')]; g.style.display=filter[n.t]?'':'none';
+  });
+  document.querySelectorAll('[data-lbl]').forEach(t=>{
+    const n=byId[t.getAttribute('data-lbl')];
+    const minor=t.classList.contains('minor');
+    const vis = filter[n.t] && (showAllLabels || !minor);
+    t.style.display=vis?'':'none';
+  });
+}
+// legend build
+const LI=document.getElementById('legitems');
+Object.keys(TYPES).forEach(k=>{
+  const row=document.createElement('div'); row.className='lg'; row.dataset.k=k;
+  const sw=document.createElement('span'); sw.className='sw';
+  sw.innerHTML=swatch(k);
+  const lab=document.createElement('span'); lab.textContent=TYPES[k].label;
+  row.append(sw,lab);
+  row.addEventListener('click',()=>{filter[k]=!filter[k];row.classList.toggle('off',!filter[k]);applyFilter();});
+  LI.append(row);
+});
+function swatch(k){const c=TYPES[k].col;
+  if(k==='safe'||k==='flotsam')return `<svg width=15 height=15><path d="M7.5 1 L14 7.5 L7.5 14 L1 7.5 Z" fill="${c}" stroke="#fff"/></svg>`;
+  if(k==='hold')return `<svg width=15 height=15><rect x=3 y=3 width=9 height=9 transform="rotate(45 7.5 7.5)" fill="${c}"/></svg>`;
+  if(k==='dungeon')return `<svg width=15 height=15><path d="M7.5 2 L13 13 L2 13 Z" fill="${c}"/></svg>`;
+  if(k==='calamity')return `<svg width=15 height=15><path d="${star(7.5,7.5,6.5,5)}" fill="${c}"/></svg>`;
+  if(k==='hidden')return `<svg width=15 height=15><circle cx=7.5 cy=7.5 r=5 fill="none" stroke="${c}" stroke-width=2 stroke-dasharray="2 2"/></svg>`;
+  if(k==='under')return `<svg width=15 height=15><circle cx=7.5 cy=7.5 r=5 fill="none" stroke="${c}" stroke-width=2 stroke-dasharray="3 2"/></svg>`;
+  return `<svg width=15 height=15><circle cx=7.5 cy=7.5 r=4.5 fill="${c}"/></svg>`;
+}
+
+// info panel
+function tierPill(t){return `<span class="pill" style="background:#10243a;color:#9fd0ff">${t||'—'}</span>`;}
+function openInfo(n){
+  document.getElementById('i-name').textContent=n.n;
+  const T=TYPES[n.t]; const hzc=HZ[n.hz];
+  let h=`<div class="row">${tierPill(n.tier)}<span class="pill" style="background:${T.col};color:#06101e;border-color:#000">${T.label}</span>`;
+  if(n.hz) h+=`<span class="pill" style="background:${hzc};color:#06101e">${n.hz}</span>`;
+  h+=`</div>`;
+  const reg=(n.r!=null)?REGIONS[n.r].n:'The Drowned Reach (open sea)';
+  h+=`<div class="row"><span class="k">Region:</span> ${reg}</div>`;
+  if(n.t==='dungeon'){
+    h+=`<div class="row"><span class="k">Alpha:</span> ${n.alpha||'—'}</div>`;
+    const ov=n.ov||0;
+    h+=`<div class="row"><span class="k">Overflow:</span> <b style="color:${OVCOL[ov]}">${OVNAME[ov]}</b>`;
+    if(n.th&&byId[n.th]) h+=` <span class="tiny">→ threatens ${byId[n.th].n}</span>`;
+    h+=`</div>`;
+  }
+  if(n.t==='safe') h+=`<div class="row tiny">Full protection · zero Stamina drain · full heal · save.</div>`;
+  if(n.t==='hold') h+=`<div class="row tiny">Contested · partial rest · no full heal · raidable.</div>`;
+  if(n.o) h+=`<div class="hook">“${n.o}”</div>`;
+  document.getElementById('i-body').innerHTML=h;
+  document.getElementById('info').classList.add('show');
+}
+document.getElementById('i-close').onclick=()=>document.getElementById('info').classList.remove('show');
+svg.addEventListener('click',()=>document.getElementById('info').classList.remove('show'));
+
+// buttons
+const bL=document.getElementById('b-labels'), bT=document.getElementById('b-threat'), bR=document.getElementById('b-reset');
+bL.onclick=()=>{showAllLabels=!showAllLabels;bL.textContent='Labels: '+(showAllLabels?'All':'Key');bL.classList.toggle('on',showAllLabels);applyFilter();};
+bT.onclick=()=>{showThreat=!showThreat;bT.textContent='Overflow threat: '+(showThreat?'ON':'OFF');bT.classList.toggle('on',showThreat);gThreat.style.display=showThreat?'':'none';};
+
+// pan + zoom via viewBox
+let vb={x:0,y:0,w:2400,h:2700}; const VB0={...vb};
+function setVB(){svg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);}
+bR.onclick=()=>{vb={...VB0};setVB();};
+let drag=null;
+svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y};svg.classList.add('grab');svg.setPointerCapture(e.pointerId);});
+svg.addEventListener('pointermove',e=>{ if(!drag)return; const r=svg.getBoundingClientRect();
+  const sx=vb.w/r.width, sy=vb.h/r.height; vb.x=drag.vx-(e.clientX-drag.x)*sx; vb.y=drag.vy-(e.clientY-drag.y)*sy; setVB();});
+function endDrag(e){drag=null;svg.classList.remove('grab');}
+svg.addEventListener('pointerup',endDrag); svg.addEventListener('pointercancel',endDrag);
+svg.addEventListener('wheel',e=>{e.preventDefault(); const r=svg.getBoundingClientRect();
+  const mx=vb.x+(e.clientX-r.left)/r.width*vb.w, my=vb.y+(e.clientY-r.top)/r.height*vb.h;
+  const f=e.deltaY<0?0.86:1.16; const nw=Math.min(3000,Math.max(420,vb.w*f)), nh=nw*(VB0.h/VB0.w);
+  vb.x=mx-(mx-vb.x)*(nw/vb.w); vb.y=my-(my-vb.y)*(nh/vb.h); vb.w=nw; vb.h=nh; setVB();
+},{passive:false});
+// pinch zoom (basic)
+let pinch=null;
+svg.addEventListener('touchmove',e=>{ if(e.touches.length===2){e.preventDefault();
+  const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  if(pinch){const f=pinch/d; const nw=Math.min(3000,Math.max(420,vb.w*f)),nh=nw*(VB0.h/VB0.w);
+    const cx=vb.x+vb.w/2,cy=vb.y+vb.h/2; vb.w=nw;vb.h=nh; vb.x=cx-nw/2; vb.y=cy-nh/2; setVB();}
+  pinch=d; }},{passive:false});
+svg.addEventListener('touchend',()=>{pinch=null;});
+
+setVB(); applyFilter();
+</script>
+</body>
+</html>

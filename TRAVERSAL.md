@@ -1,0 +1,71 @@
+# Traversal & Exploration Gating
+
+> Our original "HMs": capabilities that gate **movement and reachability** — cross water, scale
+> cliffs, light caves, break rubble, wade hazards. Shapes zone connectivity, shortcuts, and secret
+> access, so it constrains map layout. Companion to `WORLD.md`, `CRAFTING.md`, `DESIGN.md`,
+> `HIDDEN_LAYER.md`. **Status:** brainstorming / pre-implementation.
+
+---
+
+## 0. Principle — gate POCKETS, not regions
+
+Danger-by-depth means **no hard region gating** (`WORLD.md`). So traversal gating controls
+**reachability of sub-areas, shortcuts, and secrets**, not whole regions. You can walk anywhere; some
+*loot, caches, and shortcuts* need the right capability. This pairs with **visible temptation**
+(`DESIGN.md`): you can SEE the reward across the water you can't yet cross — and come back for it.
+
+---
+
+## 1. Traversal Capabilities (the vocabulary maps use)
+
+| Capability | Passes | Obtained via (multiple paths) |
+|---|---|---|
+| **Ford / Swim** | deep water | crafted Tidewalk rig · a Tide creature ferry · Beast-Kin class |
+| **Climb** | cliffs, ledges | climbing kit · Ranger/Stoneclimb skill · a climbing creature |
+| **Glide / Descend** | chasms, big drops | glider gear · a flying creature |
+| **Illuminate** | dark caves | Lumen lantern / affinity · (without it: Gloom Exposure rises + sight blinded) |
+| **Break** | rubble, boulders | crafted breaker · Might threshold · a brute creature |
+| **Hazard-wade** | lava / ice / toxic fields | the matching **affinity hazard gear** (same gear that defends Exposure) |
+
+> **Multiple paths to every capability — gear OR class OR creature.** No build is locked out: a pure
+> non-creature build crafts the gear; a Tamer build uses creatures; some classes traverse natively.
+> This protects class diversity (`CLASSES.md`).
+
+---
+
+## 2. Elegant overlaps (reuse, not new systems)
+
+- **Hazard gear = traversal gear.** The Heat gear that lets you survive a volcano's Exposure is also
+  what lets you *wade the lava field* to reach the loot. Survival prep and traversal are the same kit.
+- **Illuminate ↔ Gloom hazard.** A light source both reveals dark caves and suppresses Gloom
+  Exposure — one capability, two payoffs.
+- **Creature field-utility.** Bound creatures provide swim/fly/smash/light out of battle — making the
+  party useful beyond combat and reinforcing "creatures are one pillar, not the only one."
+- **Stealth as soft traversal.** Slipping a detection cone (`DESIGN.md`) is how you "pass" patrolled
+  routes without a tool — an Infiltrator's traversal.
+
+---
+
+## 3. Map-authoring hook
+Per zone (`WORLD.md §6`), note:
+```
+Traversal: <which capabilities gate which sub-areas / shortcuts / secret access>
+```
+Reserve the rarer capabilities (Glide, Hazard-wade for deep hazards) for later regions; Verdara
+teaches Ford/Climb/Illuminate/Break as the basics. Relic caches (`HIDDEN_LAYER.md`) often sit behind
+a traversal + skill gate.
+
+---
+
+## 4. Scope Honesty
+- **Cheap / early:** Ford/Climb/Illuminate/Break as capability flags + tile gates; gear or creature
+  grants them.
+- **Medium:** creature field-utility, hazard-wade tied to Exposure gear, Glide.
+- **Defer:** fancy traversal animations, multi-step traversal puzzles.
+
+## 5. Open Calls
+1. **Creature field-utility** — always available if the right creature is in the party, or a learned/
+   equipped slot?
+2. **How many capabilities** — the 6 above, or trim/expand?
+3. **Soft vs hard gates** — do some sub-areas allow a risky no-tool crossing (chance of damage), or
+   strict capability checks only?
