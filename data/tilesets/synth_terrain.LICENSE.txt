@@ -1,0 +1,2 @@
+synth_terrain — grass-blended autotile terrains synthesised from CC0 fills
+(grass/water/sand: ufeff CC0; void: our own art). Public-domain-clean.
