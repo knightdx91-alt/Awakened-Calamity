@@ -1,0 +1,116 @@
+<!-- @dsCard group="Game" viewport="600x620" name="Game — overworld, menu, battle, System" subtitle="The in-world GBA play screen, interactive" -->
+<!-- @startingPoint section="Awakened Calamity" subtitle="Full in-game play screen" viewport="600x620" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Awakened Calamity — Game UI</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html,body{margin:0;height:100%}
+  body{background:#181010;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--font-pixel)}
+  .device{display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px}
+  .bezel{background:#0e0e16;border:3px solid #2a2a3a;border-radius:18px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+  .screen-scale{transform:scale(2.3);transform-origin:top left;width:240px;height:208px}
+  .screen{position:relative;width:240px;height:208px;border:2px solid #333;border-radius:6px;overflow:hidden;background:#000;image-rendering:pixelated}
+  .spacer{width:552px;height:478px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:552px}
+  .ctl{font-family:var(--font-pixel);font-size:9px;color:#cdd8ec;background:#1a1a2c;border:2px solid #2a2a3e;border-radius:8px;padding:8px 12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+  .ctl:hover{background:#23233a;border-color:#3a3a55}
+  .ctl.red{background:#cc1800;border-color:#7a0e00;color:#fff}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="GameWorld.jsx"></script>
+<script type="text/babel" src="StartMenu.jsx"></script>
+<script type="text/babel" src="BattleScene.jsx"></script>
+<script type="text/babel">
+const { DialogueBox, SystemNotify, SurveillanceMeter } = window.AwakenedCalamityDesignSystem_475ed3;
+
+const LINES = [
+  { speaker: 'PROFESSOR', text: 'Welcome to Dawnhearth.\nThe System will guide you now.' },
+  { speaker: '\u00A0', text: 'Welcome, [SUBJECT 4471].' },
+  { speaker: 'PROFESSOR', text: 'Did you... see that?\nNo. Never mind. Go safely.' },
+];
+
+function App() {
+  const [mode, setMode] = React.useState('world');     // world | menu | battle
+  const [dlg, setDlg] = React.useState(0);             // index into LINES, -1 = none
+  const [notes, setNotes] = React.useState([]);
+  const [surv, setSurv] = React.useState(34);
+  const idRef = React.useRef(1);
+
+  function pushNote(type, message) {
+    const id = idRef.current++;
+    setNotes(n => [...n.slice(-2), { id, type, message }]);
+    setTimeout(() => setNotes(n => n.filter(x => x.id !== id)), 3600);
+  }
+  function raiseSurv() {
+    setSurv(s => Math.min(100, s + 14));
+    pushNote('warning', 'Surveillance +14. We noticed you.');
+  }
+  function advanceDlg() {
+    setDlg(d => (d + 1 < LINES.length ? d + 1 : -1));
+  }
+
+  return (
+    <div className="device">
+      <div className="bezel">
+        <div className="spacer">
+          <div className="screen-scale">
+            <div className="screen">
+              {window.GameWorld && (
+                <window.GameWorld>
+                  {/* HUD info */}
+                  <div style={{ position: 'absolute', top: 6, right: 5, background: 'var(--fr-body)', border: '2px solid var(--fr-border)', boxShadow: 'inset 0 0 0 2px #fff,2px 2px 0 rgba(0,0,0,.35)', borderRadius: 7, padding: '4px 7px', fontFamily: 'var(--font-pixel)', fontSize: 6.5, lineHeight: 1.9, color: 'var(--fr-text)', textAlign: 'right' }}>
+                    DAWNHEARTH<br />Day 1 · 06:12
+                  </div>
+                  {/* Surveillance, bottom-left */}
+                  <div style={{ position: 'absolute', bottom: 6, left: 5, width: 104 }}>
+                    <SurveillanceMeter value={surv} width={104} />
+                  </div>
+                  {/* map banner */}
+                  <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', background: 'var(--fr-body)', border: '2px solid var(--fr-border)', boxShadow: 'inset 0 0 0 2px #fff', borderRadius: 7, padding: '3px 9px', fontFamily: 'var(--font-pixel)', fontSize: 6.5, color: 'var(--fr-text)', whiteSpace: 'nowrap', display: mode === 'world' && dlg < 0 ? 'block' : 'none' }}>
+                    Mistwood Path
+                  </div>
+                  {/* System notify stack */}
+                  <div style={{ position: 'absolute', top: 28, right: 4, width: 122, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {notes.map(n => <SystemNotify key={n.id} type={n.type} message={n.message} style={{ fontSize: 5.5 }} />)}
+                  </div>
+                  {/* dialogue */}
+                  {mode === 'world' && dlg >= 0 && (
+                    <div style={{ position: 'absolute', left: '2%', right: '2%', bottom: '3%' }} onClick={advanceDlg}>
+                      <DialogueBox speaker={LINES[dlg].speaker} text={LINES[dlg].text} />
+                    </div>
+                  )}
+                </window.GameWorld>
+              )}
+              {mode === 'menu' && window.StartMenu && (
+                <window.StartMenu onClose={() => setMode('world')} onSystem={() => { pushNote('info', 'Surveillance ' + surv + '%. No active Audits.'); }} />
+              )}
+              {mode === 'battle' && window.BattleScene && (
+                <window.BattleScene onSurveillance={raiseSurv} onExit={() => setMode('world')} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="controls">
+        <button className="ctl" onClick={() => setMode(m => m === 'menu' ? 'world' : 'menu')}>Menu</button>
+        <button className="ctl" onClick={advanceDlg}>Talk / Advance</button>
+        <button className="ctl red" onClick={() => setMode('battle')}>Battle</button>
+        <button className="ctl" onClick={() => pushNote('info', 'Stamina increased to 64.')}>System ping</button>
+        <button className="ctl" onClick={() => pushNote('danger', 'AUDIT INBOUND. Construct sighted.')}>Trigger Audit</button>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

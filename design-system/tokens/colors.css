@@ -1,0 +1,110 @@
+/* ===================================================================
+   Awakened Calamity — Color System
+   Three coexisting palettes by design intent:
+     1. FireRed game chrome  — WARM. The comfortable in-world UI.
+     2. The System overlay   — COLD. Neon-on-black horror. The antagonist.
+     3. Hub / world map       — DARK CYBER + bright cartographic accents.
+   The tension between warm comfort (1) and cold surveillance (2) is the
+   brand. "The System helps you, and that's the horror."
+   =================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- 1. FireRed game chrome (warm, comfortable) ---- */
+  --fr-body:      #d5d5bd;  /* window body */
+  --fr-body-lt:   #f0f0d8;  /* lighter content area */
+  --fr-border:    #62737b;  /* slate window border */
+  --fr-hi:        #ffffff;  /* inner highlight */
+  --fr-red:       #e60808;  /* the FireRed accent */
+  --fr-red-dark:  #b80000;  /* hover / active red */
+  --fr-text:      #181818;  /* primary text on warm panels */
+  --fr-text-dim:  #484848;  /* secondary text */
+  --fr-tan:       #aca47b;  /* shadow / divider tan */
+  --fr-blue:      #2870c0;  /* menu description strip blue */
+
+  /* meter / health bar states */
+  --meter-green:  #58d038;
+  --meter-yellow: #f8c800;
+  --meter-red:    #f83800;
+
+  /* ---- 2. The System overlay (cold, clinical, hostile) ---- */
+  --sys-panel:      rgba(0, 6, 20, 0.93); /* near-black glass */
+  --sys-panel-solid:#02060f;
+  --sys-ink:        #80e8ff;  /* default cyan text */
+  --sys-cyan:       #00ccff;  /* info border / glow */
+  --sys-warn:       #f8d000;  /* warning border */
+  --sys-warn-ink:   #f8e880;  /* warning text */
+  --sys-danger:     #ff3030;  /* danger border */
+  --sys-danger-ink: #ff9090;  /* danger text */
+
+  /* ---- 3a. Hub / launcher (dark cyber) ---- */
+  --hub-bg-0:     #0d1326;  /* radial top */
+  --hub-bg-1:     #07070d;  /* radial bottom */
+  --hub-panel:    #11131f;  /* card body */
+  --hub-panel-2:  #060610;  /* deepest panel */
+  --hub-ink:      #c8d8e8;  /* body ink */
+  --hub-ink-dim:  #6b7a8d;  /* secondary */
+  --hub-ink-faint:#4a5a6d;  /* labels / faint */
+  --hub-cyan:     #18b8c8;  /* primary cyan */
+  --hub-cyan-lt:  #7ee0ec;  /* lighter cyan */
+  --hub-cyan-ttl: #80d0e8;  /* title cyan */
+  --hub-cyan-hot: #80f0ff;  /* hottest cyan */
+  --hub-line:     #1a2230;  /* hairline dividers */
+
+  /* ---- 3b. World map — the Four Reaches (bright cartographic) ---- */
+  --sea:          #0a1830;
+  --sea-deep:     #06101f;
+
+  --biome-verdara:  #8fd069; /* temperate grass */
+  --biome-halveth:  #cdca63; /* golden meadow */
+  --biome-calderra: #6fcb9c; /* tropical */
+  --biome-vael:     #e9f2f9; /* snow */
+
+  /* map node types */
+  --node-safe:     #ffd24a;
+  --node-hold:     #ff9a3c;
+  --node-route:    #5fd06a;
+  --node-dungeon:  #b07cff;
+  --node-calamity: #ff4d5e;
+  --node-hidden:   #ff5cf0;
+  --node-water:    #46b8ff;
+  --node-under:    #37e0d0;
+
+  /* ---- Hazards (5 player-facing categories) ---- */
+  --hz-heat:    #e8632a;
+  --hz-cold:    #5bd0e8;
+  --hz-toxic:   #9be03a;
+  --hz-gloom:   #8a6cff;
+  --hz-tempest: #e8d23a;
+
+  /* ---- Affinities (9 + 2 meta) ---- */
+  --aff-ember:      #ef6a2c;
+  --aff-tide:       #3aa0e8;
+  --aff-verdant:    #3ac06a;
+  --aff-storm:      #e8d23a;
+  --aff-stone:      #b09060;
+  --aff-frost:      #5bd0e8;
+  --aff-toxin:      #9be03a;
+  --aff-umbral:     #8a6cff;
+  --aff-lumen:      #ffe79e;
+  --aff-corruption: #ff2bd6; /* System-only meta-type */
+  --aff-untethered: #b9c6d6; /* resistance meta-type */
+
+  /* ---- Semantic aliases ---- */
+  --surface-window:    var(--fr-body);
+  --surface-window-lt: var(--fr-body-lt);
+  --surface-system:    var(--sys-panel);
+  --surface-hub:       var(--hub-panel);
+  --surface-deep:      var(--sea-deep);
+
+  --text-body:    var(--fr-text);
+  --text-dim:     var(--fr-text-dim);
+  --text-system:  var(--sys-ink);
+  --text-hub:     var(--hub-ink);
+
+  --accent:       var(--fr-red);
+  --accent-hover: var(--fr-red-dark);
+  --accent-cool:  var(--hub-cyan);
+  --border-slate: var(--fr-border);
+}

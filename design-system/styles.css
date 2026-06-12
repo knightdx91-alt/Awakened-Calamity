@@ -1,0 +1,10 @@
+/* ===================================================================
+   Awakened Calamity — Design System entry point
+   Consumers link THIS file. It is import-only; all real declarations
+   live in the token files below. Order: fonts → color → type → space.
+   =================================================================== */
+
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/effects.css');

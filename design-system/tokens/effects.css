@@ -1,0 +1,62 @@
+/* ===================================================================
+   Awakened Calamity — Spacing, Radii, Borders, Shadows, Motion
+   The product is built on a pixel grid (GBA 240×160). Spacing is small
+   and deliberate. Two shadow languages: WARM stamped drop-shadows +
+   inner highlight (FireRed windows) and COLD neon glows (the System).
+   =================================================================== */
+
+:root {
+  /* ---- spacing (pixel grid) ---- */
+  --sp-0:  0;    /* @kind spacing */
+  --sp-1:  2px;
+  --sp-2:  4px;
+  --sp-3:  6px;
+  --sp-4:  8px;
+  --sp-5:  10px;
+  --sp-6:  14px;
+  --sp-7:  16px;
+  --sp-8:  20px;
+  --sp-10: 32px;
+  --sp-12: 40px;
+
+  /* ---- radii ---- */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   10px;
+  --radius-2xl:  14px;
+  --radius-pill: 999px;
+
+  /* ---- border widths (always solid slate on warm chrome) ---- */
+  --bw-thin:   2px;
+  --bw-window: 3px;
+  --border-window: var(--bw-window) solid var(--fr-border);
+  --border-thin:   var(--bw-thin)   solid var(--fr-border);
+
+  /* ---- WARM shadows: FireRed window = inner white highlight + stamped drop ---- */
+  --shadow-inset:   inset 0 0 0 2px var(--fr-hi);
+  --shadow-drop-sm: 2px 2px 0 rgba(0,0,0,0.35);
+  --shadow-drop-md: 4px 4px 0 rgba(0,0,0,0.40);
+  --shadow-stamp:   1px 1px 0 rgba(0,0,0,0.25);   /* small buttons */
+  --shadow-window:    var(--shadow-inset), var(--shadow-drop-sm);
+  --shadow-window-lg: var(--shadow-inset), var(--shadow-drop-md);
+
+  /* ---- COLD shadows: the System's neon glow ---- */
+  --glow-cyan:        0 0 6px rgba(0,200,255,0.35), inset 0 0 0 1px rgba(0,200,255,0.15);
+  --glow-cyan-strong: 0 0 14px rgba(0,200,255,0.60);
+  --glow-warn:        0 0 6px rgba(248,208,0,0.35);
+  --glow-danger:      0 0 8px rgba(255,48,48,0.50);
+
+  /* ---- CYBER frames: hub card double-stroke ---- */
+  --cyber-frame:   0 0 0 1px var(--hub-cyan), inset 0 0 0 1px #002830;
+  --cyber-frame-hv:0 0 0 2px var(--hub-cyan), 0 8px 24px rgba(0,0,0,0.67);
+  --cyber-panel:   0 0 0 2px var(--hub-cyan), 0 0 0 3px #000;
+
+  /* ---- motion ---- */
+  --ease-snap:   cubic-bezier(0.2, 0, 0, 1); /* @kind other */
+  --dur-fast:    0.12s; /* @kind other */
+  --dur-med:     0.3s;  /* @kind other */
+  --dur-slow:    0.4s;  /* @kind other */
+
+  --pixel-render: pixelated; /* @kind other */ /* image-rendering for sprite/tile art */
+}

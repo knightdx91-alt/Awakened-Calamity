@@ -1,0 +1,44 @@
+<!-- @dsCard group="Tilesets" viewport="780x800" name="Buildings — assemblable houses" subtitle="40 roof/wall/door/window pieces · 3 roof styles + stone tower" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:#0d1326;padding:20px;font-family:var(--font-mono);color:#c8d8e8}
+  h2{font-family:var(--font-pixel);font-size:10px;color:#80d0e8;letter-spacing:1px;margin:0 0 4px}
+  .sub{font-size:11px;color:#6b7a8d;margin:0 0 14px}
+  .section{margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:repeat(8,48px);gap:3px}
+  .gt .tile{width:48px;height:48px;image-rendering:pixelated;background-image:var(--sheet);background-size:384px 240px}
+  .gt .idx{position:relative;font-size:8px;color:#fff;margin-top:-48px;margin-left:2px;text-shadow:0 0 2px #000,0 0 2px #000;pointer-events:none}
+  .gt .lab{font-size:7.5px;color:#7c93a8;text-align:center;margin-top:2px;line-height:1.15;height:20px}
+  .scene{image-rendering:pixelated;width:760px;max-width:100%;border:2px solid #000;box-shadow:0 0 0 2px #18b8c8;display:block}
+  code{color:#80e8ff;font-size:11px}
+</style>
+</head>
+<body>
+<div class="section">
+  <h2>VILLAGE · terrain + buildings + props assembled</h2>
+  <p class="sub">Everything below is stamped from 16×16 tiles — three cottages, a shop, a watchtower, well, market stall, campfire</p>
+  <img class="scene" src="../assets/tilesets/scene-village.png" alt="assembled village" />
+</div>
+<div class="section">
+  <h2>AC-BUILDINGS-16 · the kit</h2>
+  <p class="sub">128×80 px · 40 tiles · stack roof rows (top + eave) over wall rows; <code>L/R</code> pieces close the ends</p>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+document.documentElement.style.setProperty('--sheet',"url('../assets/tilesets/ac-buildings-16.png')");
+const NAMES=['roof red ◤','roof red ▲','roof red ◥','eave red ◣','eave red ▼','eave red ◢','chimney','dormer',
+'roof blue ◤','roof blue ▲','roof blue ◥','eave blue ◣','eave blue ▼','eave blue ◢','banner','lantern',
+'thatch ◤','thatch ▲','thatch ◥','thatch ◣','thatch ▼','thatch ◢','awning','awning',
+'wall','wall+window','wall ⊢','wall ⊣','door top','door','stone','stone+win',
+'stone ⊢','stone ⊣','arch top','arch door','battlement','battlement','wall','wall+win'];
+const g=document.getElementById('grid');
+NAMES.forEach((n,i)=>{const col=i%8,row=(i/8|0);const w=document.createElement('div');w.className='gt';
+  w.innerHTML=`<div class="tile" style="background-position:${-col*48}px ${-row*48}px"></div><div class="idx">${i}</div><div class="lab">${n}</div>`;g.appendChild(w);});
+</script>
+</body>
+</html>

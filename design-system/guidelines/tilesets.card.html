@@ -1,0 +1,118 @@
+<!-- @dsCard group="Tilesets" viewport="700x740" name="16×16 terrain tileset" subtitle="32 tiles · 4 biomes + corruption + structures · seamless" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:#0d1326;padding:20px;font-family:var(--font-mono);color:#c8d8e8}
+  h2{font-family:var(--font-pixel);font-size:10px;color:#80d0e8;letter-spacing:1px;margin:0 0 4px}
+  .sub{font-size:11px;color:#6b7a8d;margin:0 0 14px}
+  .section{margin-bottom:22px}
+  img,.tile,.cell{image-rendering:pixelated}
+  /* tileset grid */
+  .sheetwrap{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+  .grid{display:grid;grid-template-columns:repeat(8,48px);gap:3px}
+  .gt{position:relative}
+  .gt .tile{width:48px;height:48px;background-image:var(--sheet);background-size:512px 256px}
+  .gt .lab{font-size:8px;color:#7c93a8;text-align:center;margin-top:2px;line-height:1.2;height:18px}
+  .gt .idx{position:absolute;top:1px;left:2px;font-size:8px;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
+  /* autotiles */
+  .autorow{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end}
+  .auto{display:flex;flex-direction:column;gap:7px;align-items:center}
+  .auto .img{width:144px;height:144px;background-size:144px 144px;border:1px solid #1a2230}
+  .auto .cap{font-size:10px;color:#6b7a8d;text-align:center;max-width:160px}
+  /* sample map */
+  .map{display:grid;border:2px solid #000;box-shadow:0 0 0 2px #18b8c8;width:max-content}
+  .cell{width:34px;height:34px;background-image:var(--sheet);background-size:272px 136px}
+  .legend{font-size:11px;color:#6b7a8d;margin-top:8px;line-height:1.7}
+  code{color:#80e8ff;font-size:11px}
+</style>
+</head>
+<body>
+<div class="section">
+  <h2>AC-TERRAIN-16 · the master sheet</h2>
+  <p class="sub">128×64 px · 8 columns × 4 rows · <code>image-rendering: pixelated</code> · ground tiles tile seamlessly when repeated</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="section">
+  <h2>AUTOTILE PATCHES · stamp a region</h2>
+  <p class="sub">3×3 blob — drop the 9 cells around any rectangular area to border it cleanly</p>
+  <div class="autorow">
+    <div class="auto"><div class="img" id="road"></div><div class="cap">ac-road-autotile-16 — dirt clearing bordered by grass</div></div>
+    <div class="auto"><div class="img" id="pond"></div><div class="cap">ac-pond-autotile-16 — water pond with grassy shore</div></div>
+    <div class="auto"><div class="img" id="sampleA"></div><div class="cap">tiled 2× — proves the border wraps</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>SAMPLE MAP · assembled from the sheet</h2>
+  <p class="sub">Mistwood Path — built only from ac-terrain-16 tiles</p>
+  <div class="map" id="map"></div>
+  <div class="legend">Build maps by indexing tiles 0–31. Set a cell with <code>background-position: -(col·16·S)px -(row·16·S)px</code>.</div>
+</div>
+
+<script>
+const SHEET = "url('../assets/tilesets/ac-terrain-16.png')";
+document.documentElement.style.setProperty('--sheet', SHEET);
+
+const NAMES = ['grass','grass+flower','tall grass','bush','dirt','sand','rock','mossy rock',
+'water','deep water','ice water','snow','snow rock','meadow','tropic','lava',
+'tree','pine','palm','stump','red flower','white flower','mushroom','crystal',
+'cliff top','cliff face','stairs','fence ─','fence │','sign','corrupted','corrupt rune'];
+
+// tile grid (display 48px, sheet shown at 512x256 => 4x)
+const grid = document.getElementById('grid');
+NAMES.forEach((n,i)=>{
+  const col=i%8, row=Math.floor(i/8);
+  const wrap=document.createElement('div');wrap.className='gt';
+  wrap.innerHTML=`<div class="tile" style="background-position:${-col*64}px ${-row*64}px"></div>
+    <div class="idx">${i}</div><div class="lab">${n}</div>`;
+  grid.appendChild(wrap);
+});
+
+// autotiles
+document.getElementById('road').style.backgroundImage="url('../assets/tilesets/ac-road-autotile-16.png')";
+document.getElementById('pond').style.backgroundImage="url('../assets/tilesets/ac-pond-autotile-16.png')";
+const sa=document.getElementById('sampleA');
+sa.style.backgroundImage="url('../assets/tilesets/ac-road-autotile-16.png')";
+sa.style.backgroundSize='72px 72px';sa.style.backgroundRepeat='repeat';
+
+// sample map: 16x10, indices into sheet. display 34px, sheet at 272x136 (2.125x)
+const W=16,H=10;
+const M=new Array(W*H).fill(0);
+const set=(x,y,t)=>{if(x>=0&&x<W&&y>=0&&y<H)M[y*W+x]=t;};
+// scatter grass variety
+for(let i=0;i<M.length;i++){const r=Math.random();if(r<0.12)M[i]=1;else if(r<0.18)M[i]=2;}
+// tree line top
+for(let x=0;x<W;x++) if(Math.random()<0.6) set(x,0,16);
+set(2,0,17);set(11,0,17);set(6,1,16);set(13,1,16);
+// horizontal dirt path
+for(let x=0;x<W;x++){set(x,5,4);}
+set(8,4,4);set(8,3,4);set(8,2,4);set(8,6,4);set(8,7,4); // vertical branch
+// pond bottom-left with sand ring
+const pond=[[1,8],[2,8],[3,8],[1,9],[2,9],[3,9],[2,7]];
+[[0,7],[1,7],[3,7],[4,7],[4,8],[4,9],[0,8],[0,9]].forEach(([x,y])=>set(x,y,5));
+pond.forEach(([x,y])=>set(x,y,8));set(2,8,9);
+// flowers & bushes
+set(5,6,20);set(10,6,21);set(13,7,3);set(6,8,22);set(12,8,19);
+// rock cluster right
+set(14,4,6);set(15,4,7);set(14,3,6);
+// corruption corner
+set(15,9,30);set(14,9,31);set(15,8,30);
+// sign by path
+set(7,4,29);
+
+const map=document.getElementById('map');
+map.style.gridTemplateColumns=`repeat(${W},34px)`;
+M.forEach(t=>{
+  const col=t%8,row=Math.floor(t/8);
+  const c=document.createElement('div');c.className='cell';
+  c.style.backgroundPosition=`${-col*34}px ${-row*34}px`;
+  map.appendChild(c);
+});
+</script>
+</body>
+</html>
