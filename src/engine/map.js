@@ -277,6 +277,18 @@ window.GameMap = (function () {
         return (current && current.tileset) || null;
     }
 
+    // Optional overlay layer (a second tileset drawn on top — buildings/props
+    // over autotiled ground). layout.overlay_tileset + layout.overlay[] (-1 = none).
+    function getOverlayTilesetName() {
+        return (layoutData && layoutData.overlay_tileset) || null;
+    }
+    function getOverlay(x, y) {
+        if (!layoutData || !layoutData.overlay) return -1;
+        if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return -1;
+        const v = layoutData.overlay[y * mapWidth + x];
+        return (v === undefined || v === null) ? -1 : v;
+    }
+
     // Returns 'grass' | 'cave' | 'water' | null for the given tile
     function getTileTerrainType(x, y) {
         if (!tilesetBehaviors || !layoutData || !layoutData.metatiles) return null;
@@ -353,6 +365,8 @@ window.GameMap = (function () {
         getSign,
         getNpcAt,
         getTilesetName,
+        getOverlayTilesetName,
+        getOverlay,
         getTileTerrainType,
         getTileDebug,
         loadEncounterData,

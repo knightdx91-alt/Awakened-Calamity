@@ -15,6 +15,11 @@ window.GameRenderer = (function () {
     let _tilesetLoadingName = null;   // name being fetched (prevents duplicate loads)
     let _tilesetImg         = null;   // spritesheet for _tilesetName
     let _tilesetMeta        = null;
+    // Optional overlay tileset (buildings/props drawn over the base layer)
+    let _overlayName        = null;
+    let _overlayLoadingName = null;
+    let _overlayImg         = null;
+    let _overlayMeta        = null;
 
     // NPC sprite state
     let _npcIndex    = null;
@@ -87,6 +92,35 @@ window.GameRenderer = (function () {
             });
     }
 
+    // Overlay tileset (a second sheet drawn on top of the base — buildings/props
+    // over autotiled ground). Loaded independently of the base tileset.
+    function loadOverlayTileset(name) {
+        if (!name) { return; }
+        if (name === _overlayName || name === _overlayLoadingName) return;
+        _overlayLoadingName = name;
+        fetch(`data/tilesets/${name}.json`)
+            .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+            .then(meta => {
+                const img = new Image();
+                img.onload = () => {
+                    _overlayImg = img; _overlayMeta = meta; _overlayName = name;
+                    _overlayLoadingName = null;
+                };
+                img.onerror = () => { _overlayLoadingName = null; };
+                const v = (meta.total_metatiles || 0) + '_' + (meta.primary_count || 0);
+                img.src = `data/tilesets/${name}.png?v=${v}`;
+            })
+            .catch(() => { _overlayLoadingName = null; });
+    }
+
+    function drawOverlayMetatile(idx, sx, sy) {
+        if (!_overlayImg || idx < 0) return;
+        const col = idx % METATILES_PER_ROW;
+        const row = Math.floor(idx / METATILES_PER_ROW);
+        ctx.drawImage(_overlayImg, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX,
+            sx, sy, TILE_PX, TILE_PX);
+    }
+
     function drawMetatile(metatileIdx, sx, sy) {
         if (!_tilesetImg) return false;
         const col = metatileIdx % METATILES_PER_ROW;
@@ -139,6 +173,10 @@ window.GameRenderer = (function () {
         if (wantedTileset && wantedTileset !== _tilesetName && wantedTileset !== _tilesetLoadingName) {
             loadTileset(wantedTileset);
         }
+        const wantedOverlay = _map.getOverlayTilesetName ? _map.getOverlayTilesetName() : null;
+        if (wantedOverlay && wantedOverlay !== _overlayName && wantedOverlay !== _overlayLoadingName) {
+            loadOverlayTileset(wantedOverlay);
+        }
 
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -165,6 +203,11 @@ window.GameRenderer = (function () {
                 if (!drawn) {
                     ctx.fillStyle = _map.isWalkable(worldX, worldY) ? COLORS.walkable : COLORS.impassable;
                     ctx.fillRect(sx, sy, TILE_PX, TILE_PX);
+                }
+                // Overlay layer (buildings/props) drawn on top of the base tile
+                if (_overlayImg && _map.getOverlay) {
+                    const ov = _map.getOverlay(worldX, worldY);
+                    if (ov >= 0) drawOverlayMetatile(ov, sx, sy);
                 }
 
                 if (warpSet.has(`${worldX},${worldY}`)) {
