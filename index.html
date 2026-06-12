@@ -1,40 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Awakened Calamity</title>
-<style>
-  :root{ --bg:#07070d; --surface:#11131f; --accent:#18b8c8; --text:#c8d8e8; --muted:#6b7a8d; }
-  *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;background:radial-gradient(120% 80% at 50% 0%,#0d1326 0%,var(--bg) 70%);
-       color:var(--text);font-family:"Courier New",Courier,monospace;display:flex;flex-direction:column;align-items:center}
-  header{margin-top:14vh;text-align:center;padding:0 16px}
-  h1{font-size:clamp(28px,7vw,56px);margin:0;letter-spacing:2px;
-     background:linear-gradient(90deg,#18b8c8,#7ee0ec,#18b8c8);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .tag{color:var(--muted);margin-top:8px;font-size:14px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;
-        max-width:720px;width:100%;padding:40px 16px}
-  a.card{display:block;text-decoration:none;color:var(--text);background:var(--surface);
-        border:1px solid #000;box-shadow:0 0 0 1px var(--accent), inset 0 0 0 1px #002830;
-        border-radius:6px;padding:20px;transition:transform .12s ease, box-shadow .12s ease}
-  a.card:hover{transform:translateY(-3px);box-shadow:0 0 0 2px var(--accent), 0 8px 24px #000a}
-  a.card h2{margin:0 0 6px;font-size:18px;color:#80d0e8}
-  a.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}
-  footer{color:var(--muted);font-size:12px;margin:auto 0 20px;text-align:center;padding:0 16px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Awakened Calamity</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: radial-gradient(120% 80% at 50% 0%, #0d1326 0%, #07070d 70%);
+            color: #c8d8e8;
+            font-family: "Courier New", Courier, monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            padding: 32px 20px;
+        }
+
+        .logo { text-align: center; }
+        .logo-title {
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #18b8c8 0%, #7ee0ec 50%, #18b8c8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .logo-sub {
+            font-size: 11px;
+            color: #6b7a8d;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: #4a5a6d;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: -20px;
+        }
+
+        .card-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 340px;
+        }
+
+        .launch-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: #11131f;
+            border: 1px solid #000;
+            box-shadow: 0 0 0 1px #18b8c8, inset 0 0 0 1px #002830;
+            border-radius: 14px;
+            text-decoration: none;
+            color: #c8d8e8;
+            transition: transform 0.12s, box-shadow 0.12s;
+            touch-action: manipulation;
+        }
+        .launch-card:hover, .launch-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 2px #18b8c8, 0 8px 24px #000a;
+        }
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: #0a1830;
+            border: 1px solid #18b8c8;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .card-text { flex: 1; min-width: 0; }
+        .card-title { font-size: 14px; font-weight: 600; color: #80d0e8; }
+        .card-sub { font-size: 11px; color: #6b7a8d; margin-top: 2px; }
+        .card-arrow { font-size: 14px; color: #3a4a5a; flex-shrink: 0; }
+        .launch-card:hover .card-arrow,
+        .launch-card:active .card-arrow { color: #18b8c8; }
+
+        .divider { width: 100%; max-width: 340px; height: 1px; background: #1a2230; }
+        footer { color: #4a5a6d; font-size: 11px; text-align: center; max-width: 340px; }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>AWAKENED CALAMITY</h1>
-    <div class="tag">The System helps you — and that's the horror.</div>
-  </header>
-  <main class="grid">
-    <a class="card" href="game.html"><h2>▶ Play</h2><p>Boot the prototype — walk the Awakening Camp on the metatile engine.</p></a>
-    <a class="card" href="map-editor.html"><h2>✎ Map Editor</h2><p>Author zones with the visual metatile editor.</p></a>
-    <a class="card" href="worldmap.html"><h2>🗺 World Map</h2><p>The Drowned Reach &amp; the Four Reaches — world overview.</p></a>
-    <a class="card" href="DESIGN.md"><h2>📓 Design Docs</h2><p>Tempo combat, Surveillance, survival layer, affinities.</p></a>
-  </main>
-  <footer>Prototype build · GBA-style 2D survival LitRPG · placeholder art (see ASSETS_NOTICE.md)</footer>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) { reg.unregister(); });
+        }).then(function () {
+            navigator.serviceWorker.register('sw.js');
+        });
+    }
+</script>
+
+    <div class="logo">
+        <div class="logo-title">AWAKENED CALAMITY</div>
+        <div class="logo-sub">The System helps you</div>
+    </div>
+
+    <div class="card-stack">
+
+        <p class="section-label">Play</p>
+
+        <a class="launch-card" href="game.html?v=__CACHE_BUST__">
+            <div class="card-icon">🎮</div>
+            <div class="card-text">
+                <div class="card-title">Awakened Calamity</div>
+                <div class="card-sub">GBA-style survival LitRPG · prototype</div>
+            </div>
+            <span class="card-arrow">›</span>
+        </a>
+
+        <div class="divider"></div>
+        <p class="section-label">Create</p>
+
+        <a class="launch-card" href="map-editor.html?v=__CACHE_BUST__">
+            <div class="card-icon">✎</div>
+            <div class="card-text">
+                <div class="card-title">Map Editor</div>
+                <div class="card-sub">Author zones · saves to the maps branch</div>
+            </div>
+            <span class="card-arrow">›</span>
+        </a>
+
+        <div class="divider"></div>
+        <p class="section-label">World</p>
+
+        <a class="launch-card" href="worldmap.html?v=__CACHE_BUST__">
+            <div class="card-icon">🗺️</div>
+            <div class="card-text">
+                <div class="card-title">World Map — The Four Reaches</div>
+                <div class="card-sub">The Drowned Reach · interactive overview</div>
+            </div>
+            <span class="card-arrow">›</span>
+        </a>
+
+        <a class="launch-card" href="DESIGN.md">
+            <div class="card-icon">📓</div>
+            <div class="card-text">
+                <div class="card-title">Design Docs</div>
+                <div class="card-sub">Tempo combat · Surveillance · survival</div>
+            </div>
+            <span class="card-arrow">›</span>
+        </a>
+
+    </div>
+
+    <footer>Prototype build · placeholder art (see ASSETS_NOTICE.md)</footer>
+
 </body>
 </html>
