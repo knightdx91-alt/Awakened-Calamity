@@ -117,16 +117,43 @@
     }
     var info = state.autotile.terrains[name];
     if (!info) return;
-    var same = function (nx, ny) {
-      return inBounds(nx, ny) && state.terrain[idx(nx, ny)] === name;
+    // Priority order (low->high). Unpainted/'' counts as the base ('grass').
+    var prio = state.autotile.priority || null;
+    var prioOf = function (t) {
+      if (!prio) return 0;
+      var p = prio.indexOf(t || 'grass');
+      return p < 0 ? 0 : p;
     };
-    if (state.autotile.scheme === 'wang8_lut' && info.lut) {
+    var myP = prioOf(name);
+    var terrAt = function (nx, ny) {
+      return inBounds(nx, ny) ? (state.terrain[idx(nx, ny)] || 'grass') : 'grass';
+    };
+    // Higher-priority neighbours count as "same": this terrain extends under them.
+    var same = function (nx, ny) {
+      var t = terrAt(nx, ny);
+      return t === name || (prio && prioOf(t) > myP);
+    };
+    if (state.autotile.scheme === 'wang8_lut' && (info.luts || info.lut)) {
       // 8-direction mask: top,TR,right,BR,bottom,BL,left,TL
       var m8 = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y - 1) ? 2 : 0) |
                (same(x + 1, y) ? 4 : 0) | (same(x + 1, y + 1) ? 8 : 0) |
                (same(x, y + 1) ? 16 : 0) | (same(x - 1, y + 1) ? 32 : 0) |
                (same(x - 1, y) ? 64 : 0) | (same(x - 1, y - 1) ? 128 : 0);
-      state.metatiles[i] = info.lut[m8];
+      var lut = info.lut;
+      if (info.luts) {
+        // Edge art: blend against the highest-priority LOWER neighbour present.
+        var baseName = 'grass', baseP = -1;
+        for (var dy = -1; dy <= 1; dy++)
+          for (var dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            var t2 = terrAt(x + dx, y + dy), p2 = prioOf(t2);
+            if (t2 !== name && p2 < myP && p2 > baseP && info.luts[t2]) {
+              baseP = p2; baseName = t2;
+            }
+          }
+        lut = info.luts[baseName] || info.luts.grass || info.lut;
+      }
+      state.metatiles[i] = lut[m8];
     } else {
       // 4-bit edge blob: N,E,S,W
       var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
@@ -429,7 +456,7 @@
 
   // ── Export / Import ──
   function buildLayout() {
-    return {
+    var layout = {
       id: $('layoutId').value || 'LAYOUT_NEW_MAP',
       width: state.width,
       height: state.height,
@@ -439,6 +466,12 @@
       metatiles: Array.from(state.metatiles),
       collision: Array.from(state.collision)
     };
+    // Persist the painted terrain layer so the map stays re-editable with the
+    // Terrain brush. The engine ignores this field (it only reads metatiles).
+    if (state.terrain && state.terrain.some(function (t) { return t; })) {
+      layout.terrain = state.terrain.map(function (t) { return t || ''; });
+    }
+    return layout;
   }
 
   function buildMap() {
@@ -492,7 +525,9 @@
       state.collision = data.collision ? Uint8Array.from(data.collision)
         : new Uint8Array(data.width * data.height);
       state.terrain = new Array(data.width * data.height);
-      for (var ti = 0; ti < data.width * data.height; ti++) state.terrain[ti] = '';
+      for (var ti = 0; ti < data.width * data.height; ti++) {
+        state.terrain[ti] = (data.terrain && data.terrain[ti]) || '';
+      }
       $('mapW').value = data.width; $('mapH').value = data.height;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
       $('statSize').textContent = data.width + ' × ' + data.height;
