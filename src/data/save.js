@@ -84,6 +84,14 @@
                 null, null, null, null, null,
             ],
 
+            // Bonded creatures (Awakened Calamity). Empty at start — you Awaken
+            // alone; the System grants bonds later. Drives the BONDS start-menu
+            // item (hidden until you have bonded at least one).
+            bonds: [],
+
+            // Survival meters (DESIGN.md §7) — Surveillance is the spine mechanic.
+            survival: { surveillance: 0, stamina: 100, exposure: 0 },
+
             // PC Boxes — 20 boxes × 30 slots
             pcBoxes: Array.from({ length: 20 }, (_, i) => DEFAULT_BOX('Box ' + (i + 1))),
 

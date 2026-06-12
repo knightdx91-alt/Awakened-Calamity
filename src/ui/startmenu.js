@@ -2,17 +2,31 @@
 window.GameStartMenu = (function () {
     'use strict';
 
-    // Survival start menu (Awakened Calamity): Camp / Supplies / Affinities /
-    // System, plus Save / Options / Exit. (Was the Pokémon EE menu.)
-    const ITEMS = [
-        { id: 'CAMP',       label: 'CAMP'       },
-        { id: 'SUPPLIES',   label: 'SUPPLIES'   },
-        { id: 'AFFINITIES', label: 'AFFINITIES' },
-        { id: 'SYSTEM',     label: 'SYSTEM'     },
-        { id: 'SAVE',       label: 'SAVE'       },
-        { id: 'OPTIONS',    label: 'OPTION'     },
-        { id: 'EXIT',       label: 'EXIT'       },
-    ];
+    // Survival start menu (Awakened Calamity): Camp / [Bonds] / Supplies /
+    // Affinities / System, plus Save / Options / Exit. (Was the Pokémon EE menu.)
+    // BONDS only appears once you've bonded at least one creature.
+    const _ITEM = {
+        CAMP:       { id: 'CAMP',       label: 'CAMP'       },
+        BONDS:      { id: 'BONDS',      label: 'BONDS'      },
+        SUPPLIES:   { id: 'SUPPLIES',   label: 'SUPPLIES'   },
+        AFFINITIES: { id: 'AFFINITIES', label: 'AFFINITIES' },
+        SYSTEM:     { id: 'SYSTEM',     label: 'SYSTEM'     },
+        SAVE:       { id: 'SAVE',       label: 'SAVE'       },
+        OPTIONS:    { id: 'OPTIONS',    label: 'OPTION'     },
+        EXIT:       { id: 'EXIT',       label: 'EXIT'       },
+    };
+    function _hasBonds() {
+        return !!(window.GameSave && GameSave.state && Array.isArray(GameSave.state.bonds)
+                  && GameSave.state.bonds.length > 0);
+    }
+    let ITEMS = [];
+    function _rebuildItems() {
+        ITEMS = [_ITEM.CAMP];
+        if (_hasBonds()) ITEMS.push(_ITEM.BONDS);   // hidden until first bond
+        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.SYSTEM,
+                   _ITEM.SAVE, _ITEM.OPTIONS, _ITEM.EXIT);
+    }
+    _rebuildItems();
 
     const ICON_PATH = 'src/assets/start_menu/';
     // Use RGBA versions (palette index 0 made transparent)
@@ -252,6 +266,7 @@ window.GameStartMenu = (function () {
     // --- Render main menu — FireRed vertical list, right-side panel ---
     var ITEM_DESCS = {
         'CAMP':       'Your camp, status,\nand survival meters.',
+        'BONDS':      'The creatures you have\nbonded with.',
         'SUPPLIES':   'Open your supplies\nand use what you carry.',
         'AFFINITIES': 'Review your Affinities,\nfactions, and record.',
         'SYSTEM':     'Consult the System.\nIt is always watching.',
@@ -277,26 +292,27 @@ window.GameStartMenu = (function () {
         const panelCanvas = document.createElement('canvas');
         panelCanvas.width  = PW;
         panelCanvas.height = PH;
-        panelCanvas.style.cssText = 'display:block;flex:none;width:48%;min-width:88px;max-width:116px;height:auto;pointer-events:all;border-left:2px solid #101010;border-top:2px solid #101010;border-bottom:2px solid #101010;cursor:pointer;image-rendering:pixelated;';
+        panelCanvas.style.cssText = 'display:block;flex:none;width:48%;min-width:88px;max-width:116px;height:auto;pointer-events:all;border-left:3px solid #62737b;border-top:3px solid #62737b;border-bottom:3px solid #62737b;box-shadow:inset 0 0 0 1px #ffffff;cursor:pointer;image-rendering:pixelated;';
         const pc = panelCanvas.getContext('2d');
 
         function _drawPanel() {
             pc.clearRect(0, 0, PW, PH);
             // White background
-            pc.fillStyle = '#f8f8f0';
+            pc.fillStyle = '#f0f0d8';   // --fr-body-lt
             pc.fillRect(0, 0, PW, PH);
             // Row highlight for selected
-            pc.fillStyle = 'rgba(0,0,0,0.08)';
+            pc.fillStyle = 'rgba(230,8,8,0.13)';   // --fr-red tint
             pc.fillRect(0, selectedIdx * ROW_H, PW, ROW_H);
             // Text
             pc.font = 'bold ' + FONT_PX + 'px "Press Start 2P", monospace';
             pc.textBaseline = 'middle';
             ITEMS.forEach(function(itm, i) {
                 const y = i * ROW_H + ROW_H / 2;
-                pc.fillStyle = '#181818';
                 if (i === selectedIdx) {
+                    pc.fillStyle = '#e60808';   // --fr-red cursor
                     pc.fillText('▶', PAD_X, y);
                 }
+                pc.fillStyle = '#181818';   // --fr-text
                 const label = (itm.id === 'CAMP') ? _playerName().toUpperCase() : itm.label.toUpperCase();
                 pc.fillText(label, PAD_X + 12, y);
             });
@@ -3097,6 +3113,7 @@ window.GameStartMenu = (function () {
             case 'JOURNAL': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
             case 'POKENAV': page='pokenav';      _subIdx=0; _render(); break;
             case 'CAMP':    page='trainer_card'; _subIdx=0; _render(); break;
+            case 'BONDS':   page='pokemon';       _subIdx=0; _render(); break;
             case 'SUPPLIES':page='bag';           _subIdx=0; _render(); break;
             case 'AFFINITIES': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
             case 'SYSTEM':
@@ -3117,6 +3134,7 @@ window.GameStartMenu = (function () {
     // --- Public API ---
     function open() {
         if (!menuEl) return;
+        _rebuildItems();   // BONDS appears once you've bonded a creature
         selectedIdx=0; page='main'; _subIdx=0; _saveDone=false; isOpen=true;
         menuEl.classList.add('open'); _render();
     }
