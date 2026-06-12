@@ -1,0 +1,7 @@
+PunyWorld characters & monsters by Shade. License: CC0 1.0 (public domain).
+No attribution required. Sources:
+  https://opengameart.org/content/puny-characters
+  https://merchant-shade.itch.io/16x16-puny-characters
+Sheet format: 32x32 frames, 24 columns x 8 rows (8 facing directions; columns =
+idle/walk/attack[sword,bow,staff,throw]/hurt/death). Hero art sits in a 16x16
+footprint within each 32x32 frame.
