@@ -139,6 +139,7 @@ window.GameHUD = (function () {
                 GameSave.markDirty();
             }
         }
+        _renderMeters();
     }
 
     // Called by renderer every 500ms
@@ -217,6 +218,94 @@ window.GameHUD = (function () {
         }
     }
 
+    // --- Survival meters (DESIGN.md §7) ----------------------------------
+    // Surveillance is rendered COLD (System); Stamina/Exposure WARM (FireRed).
+    var _metersEl = null, _survFill = null, _survPct = null, _survBox = null,
+        _stamFill = null, _expoFill = null;
+
+    function _createMeters() {
+        if (!overlay) return;
+        _metersEl = document.createElement('div');
+        _metersEl.id = 'hud-meters';
+        _metersEl.style.cssText =
+            'position:absolute;left:4px;top:4px;display:flex;flex-direction:column;' +
+            'gap:3px;font-family:"Press Start 2P",monospace;z-index:6;pointer-events:none;';
+
+        // Surveillance — cold System gauge (near-black glass, cyan->danger glow)
+        _survBox = document.createElement('div');
+        _survBox.style.cssText =
+            'width:104px;background:rgba(8,10,20,0.86);border:1px solid #00ccff;' +
+            'border-radius:5px;padding:3px 4px;box-shadow:0 0 7px rgba(0,200,255,0.45);';
+        var sHead = document.createElement('div');
+        sHead.style.cssText = 'display:flex;justify-content:space-between;font-size:5px;' +
+            'letter-spacing:1px;color:#80e8ff;margin-bottom:3px;';
+        var sLbl = document.createElement('span'); sLbl.textContent = 'SURVEIL'; sLbl.style.opacity = '0.85';
+        _survPct = document.createElement('span'); _survPct.textContent = '0%';
+        sHead.appendChild(sLbl); sHead.appendChild(_survPct);
+        var sTrack = document.createElement('div');
+        sTrack.style.cssText = 'height:5px;background:rgba(0,0,0,0.6);border-radius:3px;overflow:hidden;';
+        _survFill = document.createElement('div');
+        _survFill.style.cssText = 'width:0%;height:100%;background:#00ccff;transition:width .25s ease;';
+        sTrack.appendChild(_survFill);
+        _survBox.appendChild(sHead); _survBox.appendChild(sTrack);
+
+        // Warm FireRed bars (Stamina, Exposure)
+        function warmBar(label) {
+            var box = document.createElement('div');
+            box.style.cssText = 'width:104px;';
+            var head = document.createElement('div');
+            head.style.cssText = 'font-size:5px;color:#f0f0d8;margin-bottom:2px;text-shadow:0 1px 0 #000;';
+            head.textContent = label;
+            var track = document.createElement('div');
+            track.style.cssText = 'height:5px;background:#aca47b;border:1px solid #62737b;' +
+                'border-radius:3px;overflow:hidden;';
+            var fill = document.createElement('div');
+            fill.style.cssText = 'width:100%;height:100%;background:#58d038;transition:width .25s ease;';
+            track.appendChild(fill); box.appendChild(head); box.appendChild(track);
+            return { box: box, fill: fill };
+        }
+        var stam = warmBar('STAMINA'); _stamFill = stam.fill;
+        var expo = warmBar('EXPOSURE'); _expoFill = expo.fill;
+
+        _metersEl.appendChild(_survBox);
+        _metersEl.appendChild(stam.box);
+        _metersEl.appendChild(expo.box);
+        overlay.appendChild(_metersEl);
+    }
+
+    // Public: set meter values (0-100). Survival state also persists in save.
+    function setMeters(v) {
+        v = v || {};
+        if (window.GameSave && GameSave.state) {
+            GameSave.state.survival = Object.assign(
+                { surveillance: 0, stamina: 100, exposure: 0 },
+                GameSave.state.survival, v);
+        }
+        _renderMeters();
+    }
+
+    function _renderMeters() {
+        if (!_metersEl) return;
+        var s = (window.GameSave && GameSave.state && GameSave.state.survival) ||
+                { surveillance: 0, stamina: 100, exposure: 0 };
+        var clamp = function (n) { return Math.max(0, Math.min(100, n || 0)); };
+        var sv = clamp(s.surveillance), st = clamp(s.stamina), ex = clamp(s.exposure);
+        // Surveillance: cold cyan -> warn -> danger as it climbs, glow intensifies
+        var hot = sv >= 66, mid = sv >= 33;
+        var sCol = hot ? '#ff3030' : mid ? '#f8c800' : '#00ccff';
+        _survFill.style.width = sv + '%'; _survFill.style.background = sCol;
+        _survPct.textContent = Math.round(sv) + '%'; _survPct.style.color = sCol;
+        _survBox.style.borderColor = sCol;
+        _survBox.style.boxShadow = '0 0 ' + (hot ? 11 : mid ? 8 : 7) + 'px ' +
+            (hot ? 'rgba(255,48,48,0.6)' : mid ? 'rgba(248,200,0,0.45)' : 'rgba(0,200,255,0.45)');
+        // Warm bars: green -> yellow -> red by fill (HP style)
+        var warmCol = function (p) { return p > 50 ? '#58d038' : p > 20 ? '#f8c800' : '#f83800'; };
+        _stamFill.style.width = st + '%'; _stamFill.style.background = warmCol(st);
+        // Exposure is a hazard: invert color logic (high = bad/red)
+        _expoFill.style.width = ex + '%';
+        _expoFill.style.background = ex > 66 ? '#f83800' : ex > 33 ? '#f8c800' : '#58d038';
+    }
+
     function init(map, player) {
         mapRef    = map;
         playerRef = player;
@@ -248,6 +337,11 @@ window.GameHUD = (function () {
         infoEl.appendChild(_coordLine);
         infoEl.appendChild(_fpsLine);
         overlay.appendChild(infoEl);
+
+        _createMeters();
+        // Seed starting survival state if none exists yet (gameplay updates it later)
+        var _sv = window.GameSave && GameSave.state && GameSave.state.survival;
+        setMeters(_sv || { surveillance: 18, stamina: 86, exposure: 24 });
 
         // Keep fpsEl reference non-null (CSS hides #hud-fps anyway)
         fpsEl = _fpsLine;
@@ -291,5 +385,5 @@ window.GameHUD = (function () {
         update();
     }
 
-    return { init, update, setFps };
+    return { init, update, setFps, setMeters };
 })();
