@@ -377,7 +377,7 @@
         window._mapLoaded = false;
 
         try {
-            const savedScale = localStorage.getItem('pokemon_control_scale');
+            const savedScale = localStorage.getItem('ac_control_scale');
             if (savedScale) {
                 document.documentElement.style.setProperty('--control-scale', savedScale);
             }

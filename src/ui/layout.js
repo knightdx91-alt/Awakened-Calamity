@@ -1,6 +1,6 @@
 // GameLayout — orientation detection, drag/resize, position persistence
 window.GameLayout = (function () {
-    const STORAGE_KEY = 'pokemon_layout_v1';
+    const STORAGE_KEY = 'ac_layout_v1';
 
     // Defaults per element id
     const DEFAULTS = {
@@ -205,7 +205,7 @@ window.GameLayout = (function () {
     }
 
     // --- Orientation (real CSS rotation, like EmulatorJS fullscreen) ---
-    const ORIENT_KEY = 'pokemon_orientation';
+    const ORIENT_KEY = 'ac_orientation';
     const ORIENT_CLASSES = [
         'orient-portrait', 'orient-reverse-portrait',
         'orient-landscape', 'orient-reverse-landscape'

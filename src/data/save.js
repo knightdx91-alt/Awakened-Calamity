@@ -3,12 +3,12 @@
 (function () {
     'use strict';
 
-    const SAVE_KEY = 'pokemon_save_v1';
-    const SETTINGS_KEY = 'pokemon_settings_v1';
+    const SAVE_KEY = 'ac_save_v1';
+    const SETTINGS_KEY = 'ac_settings_v1';
     const SAVE_VERSION = 1;
 
-    // --- Default Pokemon object ---
-    function DEFAULT_POKEMON() {
+    // --- Default creature (bonded/wild) ---
+    function DEFAULT_CREATURE() {
         return {
             speciesId: 0,
             nickname: '',
@@ -25,7 +25,7 @@
             friendship: 70,
             isShiny: false,
             hasPokerus: false,
-            originalTrainer: '',
+            bondedBy: '',
             caughtMapName: '',
             caughtLevel: 1,
             exp: 0
@@ -51,7 +51,7 @@
                 playerName: '',
                 playtimeSeconds: 0,
                 badgeCount: 0,
-                currentMapName: 'PalletTown',
+                currentMapName: 'AwakeningCamp',
                 lastSaved: null
             },
 
@@ -64,25 +64,10 @@
                 battlePoints: 0
             },
 
-            // Pokedex
-            pokedex: {
-                seen: [6],    // dex numbers (Charizard starter pre-seen)
-                caught: [6]   // dex numbers
-            },
 
-            // Party — up to 6 Pokemon (null = empty slot)
-            // speciesId must be lowercase string matching pokedex.json keys
-            // moves must be array of move ID strings matching moves.json keys
-            party: [
-                Object.assign(DEFAULT_POKEMON(), {
-                    speciesId: 'charizard', nickname: 'CHARIZARD', level: 50,
-                    currentHp: 153, maxHp: 153, nature: 'adamant',
-                    moves: ['flamethrower', 'air_slash', 'dragon_claw', 'earthquake'],
-                    ivs: { hp:31, atk:31, def:31, spa:31, spd:31, spe:31 },
-                    evs: { hp:0, atk:0, def:0, spa:0, spd:0, spe:0 },
-                }),
-                null, null, null, null, null,
-            ],
+            // Party — donor combat roster (null = empty). AC uses bonds[].
+                        // moves must be array of move ID strings matching moves.json keys
+            party: [ null, null, null, null, null, null ],
 
             // Bonded creatures (Awakened Calamity). Empty at start — you Awaken
             // alone; the System grants bonds later. Drives the BONDS start-menu
@@ -96,22 +81,16 @@
             pcBoxes: Array.from({ length: 20 }, (_, i) => DEFAULT_BOX('Box ' + (i + 1))),
 
             // Inventory pockets — keyed by item ID string, value = quantity
+            // Survival supplies (see SUPPLIES menu)
             inventory: {
-                items:     { potion: 5, super_potion: 1 },
-                medicine:  { antidote: 2 },
-                valuables: {},
+                items:     {},   // consumables
+                campKits:  {},
+                food:      {},
+                tethers:   {},   // Bind a weakened creature
+                tonics:    {},   // purge Exposure
+                materials: {},
+                gear:      {},
                 keyItems:  {},
-                pokeBalls: { poke_ball: 10, great_ball: 3 },
-                tms:       {},
-                berries:   { oran_berry: 3 },
-            },
-
-            // Badges per region
-            badges: {
-                kanto:  [false, false, false, false, false, false, false, false],
-                johto:  [false, false, false, false, false, false, false, false],
-                hoenn:  [false, false, false, false, false, false, false, false],
-                sinnoh: [false, false, false, false, false, false, false, false]
             },
 
             // World flags (stored as array; converted to Set on load)
@@ -122,8 +101,8 @@
 
             // Current location
             currentLocation: {
-                region: 'kanto',
-                mapName: 'PalletTown',
+                region: 'awakened',
+                mapName: 'AwakeningCamp',
                 x: 10,
                 y: 10
             },
@@ -139,13 +118,10 @@
             // Factions
             factions: {
                 standings: {
-                    naturalists:    100,
-                    students:       100,
-                    nobles:         100,
-                    pokefans:       100,
-                    outcasts:       100,
-                    professionals:  100,
-                    pokemonLeague:  100
+                    wardens:    100,
+                    scavengers: 100,
+                    untethered: 100,
+                    theSystem:  100
                 },
                 dailyQuests: {
                     lastResetDate: null,
@@ -198,15 +174,15 @@
                 activeCompanion: null  // string | null
             },
 
-            // Following Pokemon
-            followingPokemon: {
+            // Following creature (overworld companion)
+            followingCreature: {
                 speciesId: null,
                 nickname: null
             },
 
-            // Pokenav Rematch Scheduler
-            pokenav: {
-                rematchable: [] // { trainerId, availableFrom }
+            // Reaches fast-travel unlocks
+            reaches: {
+                unlocked: []
             },
 
             // Challenge modifiers
@@ -220,7 +196,7 @@
             statistics: {
                 battlesWon:       0,
                 battlesLost:      0,
-                pokemonCaught:    0,
+                creaturesBound:   0,
                 eggsHatched:      0,
                 stepsWalked:      0,
                 moneyEarned:      0,
@@ -228,7 +204,7 @@
                 berriesPlanted:   0,
                 critCaptures:     0,
                 totalDamageDealt: 0,
-                pokemonFainted:   0
+                creaturesFainted: 0
             }
         };
     }
@@ -277,7 +253,7 @@
     const GameSave = {
         SAVE_VERSION,
         DEFAULT_SLOT_DATA,
-        DEFAULT_POKEMON,
+        DEFAULT_CREATURE,
 
         currentSlot: -1,
         state: null,
@@ -294,27 +270,11 @@
             if (Array.isArray(data.visitedMaps)) data.visitedMaps = new Set(data.visitedMaps);
             // Backfill inventory pockets if missing or wrong format
             const inv = data.inventory || (data.inventory = {});
-            const POCKETS = ['items','medicine','valuables','keyItems','pokeBalls','tms','berries'];
+            const POCKETS = ['items','campKits','food','tethers','tonics','materials','gear','keyItems'];
             for (const p of POCKETS) {
                 // Migrate old array format to object format
                 if (Array.isArray(inv[p])) inv[p] = {};
                 if (!inv[p] || typeof inv[p] !== 'object') inv[p] = {};
-            }
-            if (!inv.items.potion)    inv.items.potion    = 5;
-            if (!inv.pokeBalls.poke_ball) inv.pokeBalls.poke_ball = 10;
-
-            // Backfill starter Charizard if party is completely empty
-            if (!Array.isArray(data.party) || data.party.every(s => s === null)) {
-                data.party = [
-                    Object.assign(DEFAULT_POKEMON(), {
-                        speciesId: 'charizard', nickname: 'CHARIZARD', level: 50,
-                        currentHp: 153, maxHp: 153, nature: 'adamant',
-                        moves: ['flamethrower', 'air_slash', 'dragon_claw', 'earthquake'],
-                        ivs: { hp:31, atk:31, def:31, spa:31, spd:31, spe:31 },
-                        evs: { hp:0, atk:0, def:0, spa:0, spd:0, spe:0 },
-                    }),
-                    null, null, null, null, null,
-                ];
             }
             this.currentSlot = slotIndex;
             this.state = data;
@@ -336,7 +296,7 @@
                 slotIndex,
                 playerName:      data.player ? data.player.name : '',
                 playtimeSeconds: data.player ? data.player.playtimeSeconds : 0,
-                badgeCount:      countBadges(data),
+                badgeCount:      0,
                 currentMapName:  data.currentLocation ? data.currentLocation.mapName : 'Unknown',
                 lastSaved:       now
             };

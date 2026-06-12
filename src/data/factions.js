@@ -4,13 +4,10 @@
     'use strict';
 
     const FACTIONS = {
-        naturalists:   { name: 'Naturalists',    opposes: ['nobles', 'professionals'],      achievementId: 'the_explorer'     },
-        students:      { name: 'Students',        opposes: ['outcasts'],                     achievementId: 'the_protege'      },
-        nobles:        { name: 'Nobles',          opposes: ['naturalists', 'outcasts'],      achievementId: 'the_emperor'      },
-        pokefans:      { name: 'Pokéfans',        opposes: ['professionals'],                achievementId: 'the_guardian'     },
-        outcasts:      { name: 'Outcasts',        opposes: ['nobles', 'students'],           achievementId: 'the_magician'     },
-        professionals: { name: 'Professionals',   opposes: ['naturalists', 'pokefans'],      achievementId: 'the_tradesman'    },
-        pokemonLeague: { name: 'Pokémon League',  opposes: [],                               achievementId: 'the_warrior'      }
+        wardens:    { name: 'The Wardens',   opposes: ['scavengers'],            achievementId: 'the_guardian'  },
+        scavengers: { name: 'Scavengers',    opposes: ['wardens'],               achievementId: 'the_magician'  },
+        untethered: { name: 'The Untethered',opposes: ['theSystem'],             achievementId: 'the_explorer'  },
+        theSystem:  { name: 'The System',    opposes: ['untethered'],            achievementId: 'the_warrior'   }
     };
 
     /** Get standings object from current save state (mutates in place). */

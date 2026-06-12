@@ -54,8 +54,8 @@
         { id: 'immortal',               name: 'Immortal',               desc: 'Win 100 battles without any of your Pokémon fainting.',                      tier: 'gold',     apReward: 30 },
 
         // Collection
-        { id: 'pokemon_trainer',    name: 'Pokémon Trainer',    desc: 'Catch your first Pokémon.',                                                tier: 'bronze',   apReward: 5  },
-        { id: 'pokemon_master',     name: 'Pokémon Master',     desc: 'Complete the National Pokédex.',                                           tier: 'platinum', apReward: 50 },
+        { id: 'first_bond',      name: 'First Bond',        desc: 'Bond your first creature.',                                                     tier: 'bronze',   apReward: 5  },
+        { id: 'ac_master',     name: 'Pokémon Master',     desc: 'Complete the National Pokédex.',                                           tier: 'platinum', apReward: 50 },
         { id: 'master_breeder',     name: 'Master Breeder',     desc: 'Hatch 100 eggs.',                                                          tier: 'gold',     apReward: 30 },
         { id: 'fitness_guru',       name: 'Fitness Guru',       desc: 'Fully EV-train a Pokémon.',                                               tier: 'silver',   apReward: 15 },
         { id: 'patient_zero',       name: 'Patient Zero',       desc: 'Spread Pokérus to every member of your party.',                           tier: 'silver',   apReward: 15 },
@@ -109,7 +109,7 @@
         { id: 'water_logged',     name: 'Water Logged',       desc: 'Explore every underwater route.',                    tier: 'silver', apReward: 15 },
         { id: 'through_the_fire', name: 'Through the Fire',   desc: 'Traverse the volcanic caves.',                       tier: 'silver', apReward: 15 },
         { id: 'hunting_trip',     name: 'Hunting Trip',       desc: 'Track and catch a legendary Pokémon in the wild.',   tier: 'gold',   apReward: 30 },
-        { id: 'heated_argument',  name: 'Heated Argument',    desc: 'Win a debate with a Pokémon professor.',             tier: 'silver', apReward: 15 },
+        { id: 'heated_argument',  name: 'Heated Argument',    desc: 'Win a debate with a System auditor.',               tier: 'silver', apReward: 15 },
 
         // Challenge
         { id: 'patient',      name: 'Patient',      desc: 'Complete a region without ever using a healing item in battle.',  tier: 'platinum', apReward: 50 },

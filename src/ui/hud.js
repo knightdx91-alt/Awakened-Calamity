@@ -67,7 +67,7 @@ window.GameHUD = (function () {
         });
 
         if (sizeSlider) {
-            const saved = localStorage.getItem('pokemon_control_scale');
+            const saved = localStorage.getItem('ac_control_scale');
             if (saved) {
                 sizeSlider.value = saved;
                 document.documentElement.style.setProperty('--control-scale', saved);
@@ -78,7 +78,7 @@ window.GameHUD = (function () {
                 const v = sizeSlider.value;
                 document.documentElement.style.setProperty('--control-scale', v);
                 if (sizeValue) sizeValue.textContent = parseFloat(v).toFixed(1) + '×';
-                localStorage.setItem('pokemon_control_scale', v);
+                localStorage.setItem('ac_control_scale', v);
                 if (window.GameControls) GameControls.rebuild();
             });
         }
@@ -153,7 +153,7 @@ window.GameHUD = (function () {
         const canvas = document.querySelector('#screen-primary canvas');
         if (!screen && !canvas) { alert('No game screen found.'); return; }
         const token = (document.getElementById('screenshot-token') || {}).value || '';
-        const REPO = 'knightdx91-alt/pokemon-game';
+        const REPO = 'knightdx91-alt/awakened-calamity';
         const BRANCH = 'screenshots';
         const PAT = token ||
             'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
@@ -362,14 +362,14 @@ window.GameHUD = (function () {
         const hudToggleBtn = document.createElement('button');
         hudToggleBtn.id = 'hud-toggle-btn';
         hudToggleBtn.title = 'Show/hide HUD info';
-        const _hudHidden = localStorage.getItem('pokemon_hud_hidden') === '1';
+        const _hudHidden = localStorage.getItem('ac_hud_hidden') === '1';
         if (_hudHidden) infoEl.style.display = 'none';
         hudToggleBtn.textContent = _hudHidden ? '👁' : '🙈';
         hudToggleBtn.addEventListener('click', () => {
             const hidden = infoEl.style.display === 'none';
             infoEl.style.display = hidden ? '' : 'none';
             hudToggleBtn.textContent = hidden ? '🙈' : '👁';
-            localStorage.setItem('pokemon_hud_hidden', hidden ? '0' : '1');
+            localStorage.setItem('ac_hud_hidden', hidden ? '0' : '1');
         });
         overlay.appendChild(hudToggleBtn);
 

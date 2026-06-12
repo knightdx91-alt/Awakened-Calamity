@@ -1,7 +1,7 @@
 // GameScript — Fire Red script command interpreter
 // Executes scripts from data/scripts/scripts.json
 // Supports: msgbox, setflag, clearflag, checkflag, setvar, addvar, goto,
-//           call, return, end, giveitem, givemon, special, trainerbattle_single,
+//           call, return, end, giveitem, givecreature, special, encounter,
 //           goto_if_set/unset/eq/ne, call_if_set/eq, faceplayer, lock/release
 window.GameScript = (function () {
     'use strict';
