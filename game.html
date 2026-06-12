@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="color-scheme" content="light only">
+    <meta name="darkreader-lock">
+    <title>Awakened Calamity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=__CACHE_BUST__">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div id="game-wrapper">
+
+        <!-- Primary game screen -->
+        <div id="screen-primary">
+            <div class="drag-handle" aria-label="Drag screen">&#9776;</div>
+            <canvas id="canvas-primary"></canvas>
+        </div>
+
+        <!-- Secondary screen (DS games: HeartGold, Platinum, etc.) — hidden by default -->
+        <div id="screen-secondary" class="hidden">
+            <div class="drag-handle" aria-label="Drag secondary screen">&#9776;</div>
+            <canvas id="canvas-secondary"></canvas>
+        </div>
+
+    </div><!-- #game-wrapper -->
+
+    <!-- On-screen controls — static HTML, wired by controls.js -->
+    <div id="controls-layer">
+
+        <!-- D-pad -->
+        <div id="gp-dpad">
+            <button id="gp-up"    class="gp-btn" aria-label="Up">▲</button>
+            <div id="gp-middle">
+                <button id="gp-left"  class="gp-btn" aria-label="Left">◄</button>
+                <div    id="gp-center-dot"></div>
+                <button id="gp-right" class="gp-btn" aria-label="Right">►</button>
+            </div>
+            <button id="gp-down"  class="gp-btn" aria-label="Down">▼</button>
+        </div>
+
+        <!-- Face buttons -->
+        <button id="gp-a" class="gp-btn" aria-label="A">A</button>
+        <button id="gp-b" class="gp-btn" aria-label="B">B</button>
+
+        <!-- Shoulder buttons -->
+        <button id="gp-l" class="gp-btn" aria-label="L">L</button>
+        <button id="gp-r" class="gp-btn" aria-label="R">R</button>
+
+        <!-- System buttons -->
+        <button id="gp-start"  class="gp-btn" aria-label="Start">START</button>
+        <button id="gp-select" class="gp-btn" aria-label="Select">SEL</button>
+
+    </div>
+
+    <!-- HUD overlay (map name, position, settings button) -->
+    <div id="ui-overlay"></div>
+
+    <!-- Settings panel (hidden by default) -->
+    <div id="settings-panel" class="hidden" role="dialog" aria-label="Settings">
+        <div class="settings-header">
+            <span>Settings</span>
+            <button id="settings-close" aria-label="Close settings">&times;</button>
+        </div>
+        <div class="settings-body">
+
+            <div class="setting-row">
+                <label>Controls</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="toggle-dpad" data-mode="dpad">D-pad</button>
+                    <button class="toggle-btn" id="toggle-joystick" data-mode="joystick">Joystick</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <label for="btn-size-slider">Button Size</label>
+                <input type="range" id="btn-size-slider" min="0.6" max="1.8" step="0.1" value="1.0">
+                <span id="btn-size-value">1.0&times;</span>
+            </div>
+
+            <div class="setting-row">
+                <label>Orientation</label>
+                <div class="toggle-group orient-group">
+                    <button class="toggle-btn orient-btn active" data-orient="auto">Auto</button>
+                    <button class="toggle-btn orient-btn" data-orient="portrait">Portrait</button>
+                    <button class="toggle-btn orient-btn" data-orient="reverse-portrait">Rev. Portrait</button>
+                    <button class="toggle-btn orient-btn" data-orient="landscape">Landscape</button>
+                    <button class="toggle-btn orient-btn" data-orient="reverse-landscape">Rev. Landscape</button>
+                </div>
+            </div>
+
+            <!-- Only shown when landscape orientation is active -->
+            <div class="setting-row" id="controls-opacity-row" style="display:none">
+                <label for="controls-opacity-slider">Controls Opacity</label>
+                <input type="range" id="controls-opacity-slider" min="0.1" max="1.0" step="0.05" value="0.65">
+                <span id="controls-opacity-value">65%</span>
+            </div>
+
+            <div class="setting-row">
+                <button id="customize-layout-btn" class="action-btn">Customize Buttons</button>
+                <button id="reset-layout-btn" class="action-btn">Reset Layout</button>
+            </div>
+
+            <div class="setting-row" id="screenshot-token-row">
+                <label for="screenshot-token-input">GitHub Token (screenshot)</label>
+                <input type="password" id="screenshot-token-input" placeholder="ghp_&hellip;" autocomplete="off"
+                       style="flex:1;background:#f8f8e0;color:#181818;border:2px solid #000;border-radius:4px;padding:3px 6px;font-size:9px;font-family:inherit;">
+                <button id="screenshot-token-save" class="action-btn" style="margin-left:4px;">Save</button>
+            </div>
+
+        </div>
+    </div><!-- #settings-panel -->
+
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+    <!-- Scripts — load order matters: engine deps first, then ui, then main -->
+    <script src="src/engine/input.js?v=__CACHE_BUST__"></script>
+    <script src="src/engine/camera.js?v=__CACHE_BUST__"></script>
+    <script src="src/engine/map.js?v=__CACHE_BUST__"></script>
+    <script src="src/engine/renderer.js?v=__CACHE_BUST__"></script>
+    <script src="src/engine/script.js?v=__CACHE_BUST__"></script>
+    <script src="src/assets/battle_assets.js?v=__CACHE_BUST__"></script>
+    <script src="src/engine/battle.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/summary.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/layout.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/controls.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/hud.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/system.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/startmenu.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/flymenu.js?v=__CACHE_BUST__"></script>
+    <script src="src/ui/dialogue.js?v=__CACHE_BUST__"></script>
+    <script src="src/data/save.js?v=__CACHE_BUST__"></script>
+    <script src="src/data/achievements.js?v=__CACHE_BUST__"></script>
+    <script src="src/data/factions.js?v=__CACHE_BUST__"></script>
+    <script src="src/main.js?v=__CACHE_BUST__"></script>
+</body>
+</html>

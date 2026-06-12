@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Awakened Calamity</title>
+<style>
+  :root{ --bg:#07070d; --surface:#11131f; --accent:#18b8c8; --text:#c8d8e8; --muted:#6b7a8d; }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(120% 80% at 50% 0%,#0d1326 0%,var(--bg) 70%);
+       color:var(--text);font-family:"Courier New",Courier,monospace;display:flex;flex-direction:column;align-items:center}
+  header{margin-top:14vh;text-align:center;padding:0 16px}
+  h1{font-size:clamp(28px,7vw,56px);margin:0;letter-spacing:2px;
+     background:linear-gradient(90deg,#18b8c8,#7ee0ec,#18b8c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tag{color:var(--muted);margin-top:8px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;
+        max-width:720px;width:100%;padding:40px 16px}
+  a.card{display:block;text-decoration:none;color:var(--text);background:var(--surface);
+        border:1px solid #000;box-shadow:0 0 0 1px var(--accent), inset 0 0 0 1px #002830;
+        border-radius:6px;padding:20px;transition:transform .12s ease, box-shadow .12s ease}
+  a.card:hover{transform:translateY(-3px);box-shadow:0 0 0 2px var(--accent), 0 8px 24px #000a}
+  a.card h2{margin:0 0 6px;font-size:18px;color:#80d0e8}
+  a.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}
+  footer{color:var(--muted);font-size:12px;margin:auto 0 20px;text-align:center;padding:0 16px}
+</style>
+</head>
+<body>
+  <header>
+    <h1>AWAKENED CALAMITY</h1>
+    <div class="tag">The System helps you — and that's the horror.</div>
+  </header>
+  <main class="grid">
+    <a class="card" href="game.html"><h2>▶ Play</h2><p>Boot the prototype — walk the Awakening Camp on the metatile engine.</p></a>
+    <a class="card" href="map-editor.html"><h2>✎ Map Editor</h2><p>Author zones with the visual metatile editor.</p></a>
+    <a class="card" href="worldmap.html"><h2>🗺 World Map</h2><p>The Drowned Reach &amp; the Four Reaches — world overview.</p></a>
+    <a class="card" href="DESIGN.md"><h2>📓 Design Docs</h2><p>Tempo combat, Surveillance, survival layer, affinities.</p></a>
+  </main>
+  <footer>Prototype build · GBA-style 2D survival LitRPG · placeholder art (see ASSETS_NOTICE.md)</footer>
+</body>
+</html>
