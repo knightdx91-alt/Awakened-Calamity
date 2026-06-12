@@ -1,0 +1,2 @@
+punyworld_full — PunyWorld (Shade) preserving original layout. CC0.
+index = row*27 + col. https://opengameart.org/content/16x16-puny-world-tileset

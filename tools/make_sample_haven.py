@@ -5,7 +5,7 @@ with metatiles/collision/terrain + overlay_tileset/overlay[]."""
 import json, os
 from PIL import Image
 ROOT=os.path.join(os.path.dirname(__file__),'..')
-BASE='synth_terrain'; OVER='overworld_buch'; NAME='SampleHaven'; LAYOUT_ID='LAYOUT_SAMPLE_HAVEN'
+BASE='synth_terrain'; OVER='punyworld_full'; NAME='SampleHaven'; LAYOUT_ID='LAYOUT_SAMPLE_HAVEN'
 W,H=30,22; OWC=21
 def oidx(c,r): return r*OWC+c
 bsheet=Image.open(f'{ROOT}/data/tilesets/{BASE}.png').convert('RGBA')
@@ -34,13 +34,18 @@ rect(14,0,15,H-1,'sand'); rect(2,10,W-3,11,'sand')      # roads
 rect(13,9,16,12,'sand')                                  # plaza
 blob(25,18,5,4,'water'); blob(25,19,4,3,'water')         # pond SE
 blob(3,3,5,4,'void')                                     # corruption NW corner
-# --- overlay: 2x2 houses + trees + fences ---
-ROOF=(oidx(8,0),oidx(9,0)); WALL=(oidx(8,1),oidx(9,1)); TREE=oidx(6,6)
+# --- overlay: PunyWorld 2x3 houses (roof/wall/door) + trees ---
+OWC2=27
+def pidx(c,r): return r*OWC2+c
+# brown house cols4-5 rows26-28: roof, wall, door
+HROOF=(pidx(4,26),pidx(5,26)); HWALL=(pidx(4,27),pidx(5,27)); HDOOR=(pidx(4,28),pidx(5,28))
+TREE=pidx(2,26)
 def house(x,y):
-    ov[y][x],ov[y][x+1]=ROOF; ov[y+1][x],ov[y+1][x+1]=WALL
-    for yy in(y,y+1):
-        for xx in(x,x+1): ovblock[yy][xx]=True
-for (hx,hy) in [(5,6),(9,6),(18,6),(22,6),(5,15),(9,15),(18,15)]:
+    ov[y][x],ov[y][x+1]=HROOF; ov[y+1][x],ov[y+1][x+1]=HWALL; ov[y+2][x],ov[y+2][x+1]=HDOOR
+    for yy in (y,y+1,y+2):
+        for xx in (x,x+1):
+            if 0<=yy<H and 0<=xx<W: ovblock[yy][xx]=True
+for (hx,hy) in [(5,5),(9,5),(18,5),(22,5),(5,15),(9,15),(18,15)]:
     house(hx,hy)
 for (tx,ty) in [(2,8),(12,3),(20,3),(27,4),(2,19),(12,19),(20,13),(8,12),(24,9),(17,19)]:
     if 0<=tx<W and 0<=ty<H: ov[ty][tx]=TREE; ovblock[ty][tx]=True
