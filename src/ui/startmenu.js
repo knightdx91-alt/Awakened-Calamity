@@ -10,6 +10,7 @@ window.GameStartMenu = (function () {
         BONDS:      { id: 'BONDS',      label: 'BONDS'      },
         SUPPLIES:   { id: 'SUPPLIES',   label: 'SUPPLIES'   },
         AFFINITIES: { id: 'AFFINITIES', label: 'AFFINITIES' },
+        REACHES:    { id: 'REACHES',    label: 'REACHES'    },
         SYSTEM:     { id: 'SYSTEM',     label: 'SYSTEM'     },
         SAVE:       { id: 'SAVE',       label: 'SAVE'       },
         OPTIONS:    { id: 'OPTIONS',    label: 'OPTION'     },
@@ -23,7 +24,7 @@ window.GameStartMenu = (function () {
     function _rebuildItems() {
         ITEMS = [_ITEM.CAMP];
         if (_hasBonds()) ITEMS.push(_ITEM.BONDS);   // hidden until first bond
-        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.SYSTEM,
+        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.REACHES, _ITEM.SYSTEM,
                    _ITEM.SAVE, _ITEM.OPTIONS, _ITEM.EXIT);
     }
     _rebuildItems();
@@ -265,10 +266,11 @@ window.GameStartMenu = (function () {
 
     // --- Render main menu — FireRed vertical list, right-side panel ---
     var ITEM_DESCS = {
-        'CAMP':       'Your camp, status,\nand survival meters.',
+        'CAMP':       'Your status, Class,\nand survival meters.',
         'BONDS':      'The creatures you have\nbonded with.',
-        'SUPPLIES':   'Open your supplies\nand use what you carry.',
-        'AFFINITIES': 'Review your Affinities,\nfactions, and record.',
+        'SUPPLIES':   'Camp Kits, Tethers,\ntonics and gear.',
+        'AFFINITIES': 'The nine Affinities\nand their defenses.',
+        'REACHES':    'The Four Reaches.\nFast-travel is watched.',
         'SYSTEM':     'Consult the System.\nIt is always watching.',
         'SAVE':       'Save your game with a complete record\nof your progress to take a break.',
         'OPTIONS':    'Adjust various settings\nfor your game.',
@@ -383,10 +385,11 @@ window.GameStartMenu = (function () {
             return;
         }
 
-        const titles = { journal:'Journal', trainer_card:'Trainer Card',
-                         achievements:'Achievement Atlas', pokenav:'Pokénav',
-                         save:'Save', options:'Options', pokemon:'Pokémon',
-                         pokedex:'Pokédex', pokedex_entry:'Pokédex' };
+        const titles = { camp:'CAMP', bonds:'BONDS', supplies:'SUPPLIES',
+                         affinities:'AFFINITIES', reaches:'THE FOUR REACHES',
+                         system:'[ THE SYSTEM ]',
+                         save:'Save', options:'Options',
+                         journal:'Record', achievements:'Trials' };
 
         // GBA-style dialog window — positioned over the map, not full-screen
         const win = document.createElement('div');
@@ -409,15 +412,14 @@ window.GameStartMenu = (function () {
         const content = document.createElement('div');
         content.className = 'sm-sub-content';
 
-        if      (page === 'trainer_card')  _buildTrainerCard(content);
-        else if (page === 'journal')       _buildJournal(content);
-        else if (page === 'achievements')  _buildAchievements(content);
-        else if (page === 'pokenav')       _buildPokenav(content);
-        else if (page === 'save')          _buildSave(content);
-        else if (page === 'options')       _buildOptions(content);
-        else if (page === 'pokemon')       _buildParty(content);
-        else if (page === 'pokedex')       _buildPokedex(content);
-        else if (page === 'pokedex_entry') _buildPokedexEntry(content);
+        if      (page === 'camp')        _buildCamp(content);
+        else if (page === 'bonds')       _buildBonds(content);
+        else if (page === 'supplies')    _buildSupplies(content);
+        else if (page === 'affinities')  _buildAffinities(content);
+        else if (page === 'reaches')     _buildReaches(content);
+        else if (page === 'system')      _buildSystem(content);
+        else if (page === 'save')        _buildSave(content);
+        else if (page === 'options')     _buildOptions(content);
 
         win.appendChild(content);
         subEl.appendChild(win);
@@ -471,6 +473,261 @@ window.GameStartMenu = (function () {
         ctx.fillRect(0, 0, GBA_W, GBA_H);
         if (bg) { ctx.imageSmoothingEnabled = false; ctx.drawImage(bg, 0, 0, GBA_W, GBA_H); }
         ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    }
+
+    // ===================================================================
+    // Awakened Calamity survival menus (Camp / Bonds / Supplies /
+    // Affinities / Reaches / System). DOM-based, design-system palette.
+    // ===================================================================
+    var _FR = { body:'#d5d5bd', bodyLt:'#f0f0d8', border:'#62737b', text:'#181818',
+                dim:'#484848', red:'#e60808', blue:'#2870c0', tan:'#aca47b' };
+    var _SYS = { panel:'#0a0e1a', ink:'#80e8ff', cyan:'#00ccff', warn:'#f8c800',
+                 danger:'#ff3030', dim:'#3a5a6a' };
+    var AFFINITIES_DATA = [
+        ['Ember','#ef6a2c','fire / heat','resists Cold'],
+        ['Tide','#3aa0e8','water / flood','resists Heat'],
+        ['Verdant','#3ac06a','growth / rot','resists Toxic'],
+        ['Storm','#e8d23a','lightning','resists Tempest'],
+        ['Stone','#b09060','earth / guard','resists Toxic / Tempest'],
+        ['Frost','#5bd0e8','ice / chill','resists Heat'],
+        ['Toxin','#9be03a','poison / blight','—'],
+        ['Umbral','#8a6cff','shadow / gloom','—'],
+        ['Lumen','#ffe79e','light / sear','resists Gloom'],
+        ['Corruption','#ff2bd6','System-only · strong vs. all','the System cheats'],
+        ['Untethered','#b9c6d6','resists Corruption','mythic / free creatures'],
+    ];
+    var REACHES_DATA = [
+        ['Verdara','#3ac06a','The Verdant Reach','overgrown safe-belt'],
+        ['Halveth','#5bd0e8','The Frozen Reach','cold wildlands'],
+        ['Calderra','#ef6a2c','The Burning Reach','heat / ember deep-zone'],
+        ['Vael','#8a6cff','The Drowned Reach','gloom / corruption'],
+    ];
+
+    function _row(parent, opts) {
+        var r = document.createElement('div');
+        r.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 7px;' +
+            'font:8px "Press Start 2P",monospace;' + (opts.css || '');
+        parent.appendChild(r); return r;
+    }
+    function _swatch(color) {
+        var s = document.createElement('span');
+        s.style.cssText = 'flex:none;width:9px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.4);background:' + color + ';';
+        return s;
+    }
+    function _miniMeter(parent, label, val, max, color, warmInvert) {
+        var pct = Math.max(0, Math.min(1, (val || 0) / (max || 100)));
+        var box = document.createElement('div');
+        box.style.cssText = 'margin:4px 0;';
+        var head = document.createElement('div');
+        head.style.cssText = 'display:flex;justify-content:space-between;font:7px "Press Start 2P",monospace;color:' + _FR.dim + ';margin-bottom:2px;';
+        head.innerHTML = '<span style="color:' + _FR.text + '">' + label + '</span><span>' + Math.round(val) + '/' + max + '</span>';
+        var track = document.createElement('div');
+        track.style.cssText = 'height:6px;background:' + _FR.tan + ';border:1px solid ' + _FR.border + ';border-radius:3px;overflow:hidden;';
+        var fill = document.createElement('div');
+        var col = color || (pct > .5 ? '#58d038' : pct > .2 ? '#f8c800' : '#f83800');
+        if (warmInvert) col = pct > .66 ? '#f83800' : pct > .33 ? '#f8c800' : '#58d038';
+        fill.style.cssText = 'width:' + (pct * 100) + '%;height:100%;background:' + col + ';';
+        track.appendChild(fill); box.appendChild(head); box.appendChild(track); parent.appendChild(box);
+    }
+    function _survival() {
+        return (window.GameSave && GameSave.state && GameSave.state.survival) ||
+               { surveillance: 0, stamina: 100, exposure: 0 };
+    }
+    function _subjectId() {
+        var raw = (window.GameSave && GameSave.state && GameSave.state.meta)
+            ? GameSave.state.meta.trainerId : 0;
+        return 'SUBJECT-' + String((raw || 4471)).padStart(4, '0');
+    }
+    function _credits() {
+        return (window.GameSave && GameSave.state && GameSave.state.player)
+            ? (GameSave.state.player.money || 0) : 0;
+    }
+    function _playtime() {
+        var s = (window.GameSave && GameSave.state && GameSave.state.meta)
+            ? (GameSave.state.meta.playtimeSeconds || 0) : 0;
+        var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+        return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+    }
+
+    function _buildCamp(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        var hd = document.createElement('div');
+        hd.style.cssText = 'font:9px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:6px;margin-bottom:8px;';
+        hd.textContent = _playerName().toUpperCase();
+        el.appendChild(hd);
+        var info = [
+            ['Designation', _subjectId()],
+            ['Class', (window.GameSave && GameSave.state && GameSave.state.klass) || 'Unclassed'],
+            ['Credits', 'Cr ' + _credits()],
+            ['Time Awake', _playtime()],
+            ['Bonds', String(((window.GameSave && GameSave.state && GameSave.state.bonds) || []).length)],
+        ];
+        info.forEach(function (kv) {
+            var r = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';' });
+            r.innerHTML = '<span>' + kv[0] + '</span><span style="color:' + _FR.text + '">' + kv[1] + '</span>';
+        });
+        var sub = document.createElement('div');
+        sub.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+        sub.textContent = 'SURVIVAL';
+        el.appendChild(sub);
+        var s = _survival();
+        _miniMeter(el, 'STAMINA', s.stamina, 100, null, false);
+        _miniMeter(el, 'EXPOSURE', s.exposure, 100, null, true);
+        // Surveillance shown cold even here
+        var sv = Math.max(0, Math.min(100, s.surveillance || 0));
+        var svc = sv >= 66 ? _SYS.danger : sv >= 33 ? _SYS.warn : _SYS.cyan;
+        var box = document.createElement('div');
+        box.style.cssText = 'margin-top:6px;background:' + _SYS.panel + ';border:1px solid ' + svc + ';border-radius:4px;padding:5px 6px;box-shadow:0 0 6px ' + svc + '55;';
+        box.innerHTML = '<div style="display:flex;justify-content:space-between;font:7px \'Press Start 2P\';color:' + svc + ';margin-bottom:3px;"><span>SURVEILLANCE</span><span>' + Math.round(sv) + '%</span></div>' +
+            '<div style="height:5px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + sv + '%;height:100%;background:' + svc + '"></div></div>';
+        el.appendChild(box);
+    }
+
+    function _buildBonds(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        var bonds = (window.GameSave && GameSave.state && GameSave.state.bonds) || [];
+        if (!bonds.length) {
+            var em = document.createElement('div');
+            em.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.dim + ';line-height:1.8;text-align:center;padding-top:20px;';
+            em.innerHTML = 'No bonds yet.<br><br>You Awakened alone.<br>Weaken a creature and<br>spend a Tether to Bind it.';
+            el.appendChild(em); return;
+        }
+        bonds.forEach(function (b, i) {
+            var r = _row(el, { css: 'background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
+            r.appendChild(_swatch(b.color || _FR.tan));
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
+            nm.textContent = (b.name || ('Bond ' + (i + 1))).toUpperCase();
+            r.appendChild(nm);
+            var hp = document.createElement('span'); hp.style.cssText = 'color:' + _FR.dim + ';font-size:7px;';
+            hp.textContent = (b.affinity || '—') + '  Lv' + (b.tier || 1);
+            r.appendChild(hp);
+        });
+    }
+
+    function _buildSupplies(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        var pockets = [
+            ['Camp Kits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.'],
+            ['Food', 'Cooked & raw — restores Stamina in the field.'],
+            ['Tethers', "The System's binding protocol. Spend to Bind a weakened creature."],
+            ['Tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.'],
+            ['Materials', 'Scavenge for field crafting & hazard gear.'],
+            ['Gear', 'Affinity-defended equipment vs. biome hazards.'],
+            ['Key', 'Story & landmark items.'],
+        ];
+        var inv = (window.GameSave && GameSave.state && GameSave.state.inventory) || {};
+        var counts = {
+            'Camp Kits': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
+            'Food': 0, 'Tethers': 0, 'Tonics': 0, 'Materials': 0, 'Gear': 0,
+            'Key': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
+        };
+        pockets.forEach(function (p) {
+            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
+            var top = document.createElement('div');
+            top.style.cssText = 'display:flex;justify-content:space-between;width:100%;';
+            top.innerHTML = '<span>' + p[0].toUpperCase() + '</span><span style="color:' + _FR.blue + '">×' + (counts[p[0]] || 0) + '</span>';
+            var desc = document.createElement('div');
+            desc.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
+            desc.textContent = p[1];
+            r.appendChild(top); r.appendChild(desc);
+        });
+    }
+
+    function _buildAffinities(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        var note = document.createElement('div');
+        note.style.cssText = 'font:6px "Press Start 2P";color:' + _FR.dim + ';margin-bottom:8px;line-height:1.6;';
+        note.textContent = 'Nine Affinities + two meta-types. Each is an attack flavor AND a defense domain vs. Exposure.';
+        el.appendChild(note);
+        AFFINITIES_DATA.forEach(function (a) {
+            var meta = (a[0] === 'Corruption' || a[0] === 'Untethered');
+            var r = _row(el, { css: 'background:' + (meta ? '#1a1420' : _FR.body) + ';border:1px solid ' + (meta ? a[1] : _FR.border) + ';border-radius:5px;margin-bottom:4px;' + (meta ? 'color:#d8c8e8;' : '') });
+            r.appendChild(_swatch(a[1]));
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:none;width:70px;color:' + (meta ? a[1] : _FR.text) + ';';
+            nm.textContent = a[0].toUpperCase();
+            r.appendChild(nm);
+            var role = document.createElement('span'); role.style.cssText = 'flex:1;font-size:6px;color:' + (meta ? '#b8a8c8' : _FR.dim) + ';';
+            role.innerHTML = a[2] + '<br><span style="color:' + a[1] + '">' + a[3] + '</span>';
+            r.appendChild(role);
+        });
+    }
+
+    function _buildReaches(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        var note = document.createElement('div');
+        note.style.cssText = 'font:6px "Press Start 2P";color:' + _SYS.danger + ';margin-bottom:8px;line-height:1.6;';
+        note.textContent = '⚠ Fast-travel uses System protocol. Each jump raises Surveillance.';
+        el.appendChild(note);
+        REACHES_DATA.forEach(function (r0) {
+            var r = _row(el, { css: 'background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;cursor:pointer;' });
+            r.appendChild(_swatch(r0[1]));
+            var col = document.createElement('div'); col.style.cssText = 'flex:1;';
+            col.innerHTML = '<div style="color:' + r0[1] + '">' + r0[0].toUpperCase() + '</div>' +
+                '<div style="font-size:6px;color:' + _FR.dim + '">' + r0[2] + ' · ' + r0[3] + '</div>';
+            r.appendChild(col);
+            var lock = document.createElement('span'); lock.style.cssText = 'font-size:6px;color:' + _FR.dim + ';';
+            lock.textContent = 'LOCKED';
+            r.appendChild(lock);
+        });
+    }
+
+    function _buildSystem(el) {
+        // COLD panel — near-black glass, cyan/danger, interactive services.
+        var s = _survival();
+        var sv = Math.max(0, Math.min(100, s.surveillance || 0));
+        var hot = sv >= 66, mid = sv >= 33;
+        var acc = hot ? _SYS.danger : mid ? _SYS.warn : _SYS.cyan;
+        el.style.cssText = 'background:' + _SYS.panel + ';color:' + _SYS.ink + ';padding:11px;overflow:auto;font-family:"Press Start 2P",monospace;';
+        var head = document.createElement('div');
+        head.style.cssText = 'font:7px "Press Start 2P";letter-spacing:2px;color:' + acc + ';margin-bottom:8px;';
+        head.textContent = '[ THE SYSTEM ]';
+        el.appendChild(head);
+        var greet = document.createElement('div');
+        greet.style.cssText = 'font:7px "Press Start 2P";color:' + _SYS.ink + ';opacity:.8;margin-bottom:10px;line-height:1.7;';
+        greet.textContent = 'Welcome, ' + _subjectId() + '. The System is here to help.';
+        el.appendChild(greet);
+        // Surveillance gauge
+        var box = document.createElement('div');
+        box.style.cssText = 'background:rgba(0,0,0,.45);border:1px solid ' + acc + ';border-radius:5px;padding:7px;margin-bottom:6px;box-shadow:0 0 9px ' + acc + '66;';
+        box.innerHTML = '<div style="display:flex;justify-content:space-between;font:7px \'Press Start 2P\';color:' + acc + ';margin-bottom:4px;"><span>SURVEILLANCE</span><span>' + Math.round(sv) + '%</span></div>' +
+            '<div style="height:6px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + sv + '%;height:100%;background:' + acc + '"></div></div>' +
+            '<div style="font-size:6px;color:' + acc + ';margin-top:5px;">AUDIT RISK: ' + (hot ? 'CRITICAL — Constructs may spawn' : mid ? 'ELEVATED' : 'NOMINAL') + '</div>';
+        el.appendChild(box);
+        // Interactive services (raise Surveillance)
+        var svc = document.createElement('div');
+        svc.style.cssText = 'font-size:6px;color:' + _SYS.dim + ';margin:8px 0 4px;';
+        svc.textContent = 'SERVICES — each request is logged';
+        el.appendChild(svc);
+        function service(label, sub, cost, fn) {
+            var b = document.createElement('button');
+            b.style.cssText = 'display:block;width:100%;text-align:left;background:rgba(0,40,55,.55);border:1px solid ' + _SYS.cyan + ';border-radius:5px;padding:7px;margin-bottom:5px;color:' + _SYS.ink + ';font:7px "Press Start 2P";cursor:pointer;';
+            b.innerHTML = '<div style="color:' + _SYS.cyan + '">' + label + '</div><div style="font-size:6px;color:' + _SYS.dim + ';margin-top:3px;">' + sub + ' <span style="color:' + _SYS.warn + '">(+' + cost + ' Surveillance)</span></div>';
+            b.addEventListener('click', function () { fn(cost); });
+            el.appendChild(b);
+        }
+        function raise(by, msg) {
+            if (window.GameSave && GameSave.state) {
+                var st = GameSave.state.survival || { surveillance: 0, stamina: 100, exposure: 0 };
+                st.surveillance = Math.min(100, (st.surveillance || 0) + by);
+                GameSave.state.survival = st; GameSave.markDirty();
+                if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(st);
+            }
+            if (window.GameSystem && GameSystem.notify) GameSystem.notify(msg, 'danger');
+            _render(); // refresh the panel (gauge climbs)
+        }
+        service('Emergency Restore', 'Full Stamina, one tap. We\'ve got you.', 8, function (c) {
+            if (window.GameSave && GameSave.state) {
+                var st = GameSave.state.survival || {}; st.stamina = 100; st.exposure = Math.max(0, (st.exposure || 0) - 40);
+                GameSave.state.survival = st;
+            }
+            raise(c, 'Restore applied. Surveillance noted.');
+        });
+        service('Fast-Travel', 'Jump to an unlocked landmark.', 6, function (c) {
+            raise(c, 'Transit authorized. Surveillance noted.');
+        });
+        service('Register Camp', 'Audit-proof your refuge — but flagged.', 10, function (c) {
+            raise(c, 'Camp registered. You are protected. You are watched.');
+        });
     }
 
     function _buildTrainerCard(el) {
@@ -3112,16 +3369,12 @@ window.GameStartMenu = (function () {
             case 'OPTIONS': page='options';      _subIdx=0; _render(); break;
             case 'JOURNAL': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
             case 'POKENAV': page='pokenav';      _subIdx=0; _render(); break;
-            case 'CAMP':    page='trainer_card'; _subIdx=0; _render(); break;
-            case 'BONDS':   page='pokemon';       _subIdx=0; _render(); break;
-            case 'SUPPLIES':page='bag';           _subIdx=0; _render(); break;
-            case 'AFFINITIES': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
-            case 'SYSTEM':
-                if (window.GameSystem && GameSystem.notify) {
-                    GameSystem.notify('The System is always watching. Surveillance noted.', 'danger');
-                }
-                close();
-                break;
+            case 'CAMP':       page='camp';       _subIdx=0; _render(); break;
+            case 'BONDS':      page='bonds';      _subIdx=0; _render(); break;
+            case 'SUPPLIES':   page='supplies';   _subIdx=0; _render(); break;
+            case 'AFFINITIES': page='affinities'; _subIdx=0; _render(); break;
+            case 'REACHES':    page='reaches';    _subIdx=0; _render(); break;
+            case 'SYSTEM':     page='system';     _subIdx=0; _render(); break;
             // legacy ids (kept for any external callers)
             case 'PLAYER':  page='trainer_card'; _subIdx=0; _render(); break;
             case 'BAG':     page='bag';           _subIdx=0; _render(); break;
