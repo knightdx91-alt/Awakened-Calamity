@@ -2,14 +2,16 @@
 window.GameStartMenu = (function () {
     'use strict';
 
-    // Items match EE's BuildNormalStartMenu order
+    // Survival start menu (Awakened Calamity): Camp / Supplies / Affinities /
+    // System, plus Save / Options / Exit. (Was the Pokémon EE menu.)
     const ITEMS = [
-        { id: 'POKEMON',  label: 'POKéMON'  },
-        { id: 'BAG',      label: 'BAG'      },
-        { id: 'PLAYER',   label: ''         },
-        { id: 'SAVE',     label: 'SAVE'     },
-        { id: 'OPTIONS',  label: 'OPTION'   },
-        { id: 'EXIT',     label: 'EXIT'     },
+        { id: 'CAMP',       label: 'CAMP'       },
+        { id: 'SUPPLIES',   label: 'SUPPLIES'   },
+        { id: 'AFFINITIES', label: 'AFFINITIES' },
+        { id: 'SYSTEM',     label: 'SYSTEM'     },
+        { id: 'SAVE',       label: 'SAVE'       },
+        { id: 'OPTIONS',    label: 'OPTION'     },
+        { id: 'EXIT',       label: 'EXIT'       },
     ];
 
     const ICON_PATH = 'src/assets/start_menu/';
@@ -22,7 +24,7 @@ window.GameStartMenu = (function () {
     let menuEl      = null;
     let subEl       = null;   // sub-page overlay element
     let isOpen      = false;
-    let selectedIdx = 1; // start on POKEMON
+    let selectedIdx = 0; // start on CAMP
     let page        = 'main';
     let _saveDone   = false;
     let _subIdx     = 0;
@@ -249,12 +251,13 @@ window.GameStartMenu = (function () {
 
     // --- Render main menu — FireRed vertical list, right-side panel ---
     var ITEM_DESCS = {
-        'POKEMON': 'Check the POKéMON\nyou are carrying.',
-        'BAG':     'Open your BAG\nand use items.',
-        'PLAYER':  'Check your Trainer\nCard and status.',
-        'SAVE':    'Save your game with a complete record\nof your progress to take a break.',
-        'OPTIONS': 'Adjust various settings\nfor your game.',
-        'EXIT':    'Close the menu\nand return to the game.',
+        'CAMP':       'Your camp, status,\nand survival meters.',
+        'SUPPLIES':   'Open your supplies\nand use what you carry.',
+        'AFFINITIES': 'Review your Affinities,\nfactions, and record.',
+        'SYSTEM':     'Consult the System.\nIt is always watching.',
+        'SAVE':       'Save your game with a complete record\nof your progress to take a break.',
+        'OPTIONS':    'Adjust various settings\nfor your game.',
+        'EXIT':       'Close the menu\nand return to the game.',
     };
 
     function _renderMain() {
@@ -294,7 +297,7 @@ window.GameStartMenu = (function () {
                 if (i === selectedIdx) {
                     pc.fillText('▶', PAD_X, y);
                 }
-                const label = (itm.id === 'PLAYER') ? _playerName().toUpperCase() : itm.label.toUpperCase();
+                const label = (itm.id === 'CAMP') ? _playerName().toUpperCase() : itm.label.toUpperCase();
                 pc.fillText(label, PAD_X + 12, y);
             });
         }
@@ -3093,6 +3096,16 @@ window.GameStartMenu = (function () {
             case 'OPTIONS': page='options';      _subIdx=0; _render(); break;
             case 'JOURNAL': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
             case 'POKENAV': page='pokenav';      _subIdx=0; _render(); break;
+            case 'CAMP':    page='trainer_card'; _subIdx=0; _render(); break;
+            case 'SUPPLIES':page='bag';           _subIdx=0; _render(); break;
+            case 'AFFINITIES': page='journal'; _journalPage=0; _subIdx=0; _render(); break;
+            case 'SYSTEM':
+                if (window.GameSystem && GameSystem.notify) {
+                    GameSystem.notify('The System is always watching. Surveillance noted.', 'danger');
+                }
+                close();
+                break;
+            // legacy ids (kept for any external callers)
             case 'PLAYER':  page='trainer_card'; _subIdx=0; _render(); break;
             case 'BAG':     page='bag';           _subIdx=0; _render(); break;
             case 'POKEMON': page='pokemon';       _subIdx=0; _render(); break;
