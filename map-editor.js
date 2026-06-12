@@ -120,17 +120,26 @@
     var same = function (nx, ny) {
       return inBounds(nx, ny) && state.terrain[idx(nx, ny)] === name;
     };
-    var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
-               (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
-    state.metatiles[i] = info.base_index + mask;
+    if (state.autotile.scheme === 'wang8_lut' && info.lut) {
+      // 8-direction mask: top,TR,right,BR,bottom,BL,left,TL
+      var m8 = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y - 1) ? 2 : 0) |
+               (same(x + 1, y) ? 4 : 0) | (same(x + 1, y + 1) ? 8 : 0) |
+               (same(x, y + 1) ? 16 : 0) | (same(x - 1, y + 1) ? 32 : 0) |
+               (same(x - 1, y) ? 64 : 0) | (same(x - 1, y - 1) ? 128 : 0);
+      state.metatiles[i] = info.lut[m8];
+    } else {
+      // 4-bit edge blob: N,E,S,W
+      var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
+                 (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+      state.metatiles[i] = info.base_index + mask;
+    }
     state.collision[i] = info.collision ? 1 : 0;
   }
 
-  // recompute a cell and its 4 neighbours (edges depend on neighbours)
+  // recompute a cell and its 8 neighbours (Wang edges depend on diagonals too)
   function recomputeTerrainAround(x, y) {
-    recomputeTerrainCell(x, y);
-    recomputeTerrainCell(x, y - 1); recomputeTerrainCell(x + 1, y);
-    recomputeTerrainCell(x, y + 1); recomputeTerrainCell(x - 1, y);
+    for (var dy = -1; dy <= 1; dy++)
+      for (var dx = -1; dx <= 1; dx++) recomputeTerrainCell(x + dx, y + dy);
   }
 
   function totalMetatiles() {
