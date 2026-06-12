@@ -1,25 +1,51 @@
 #!/bin/bash
-# SessionStart hook: ensure every session works on `main`.
+# SessionStart hook: force every session onto `main` for every repo.
 #
-# Claude Code on the web creates a fresh per-session branch and instructs the
-# agent to develop on it. This project's policy is to work directly on `main`
-# (see CLAUDE.md). This hook forces the working tree onto `main` at session
-# start so we never drift onto an auto-generated branch.
-set -euo pipefail
+# Policy (see each repo's CLAUDE.md): we develop directly on `main` — no
+# feature branches, no PRs, straight commits. Claude Code on the web creates a
+# fresh per-session branch and instructs the agent to use it; this hook undoes
+# that by switching every checked-out repo back to `main` at session start.
+#
+# This script is intentionally self-contained and does NOT rely on
+# $CLAUDE_PROJECT_DIR (which can be unset in multi-repo workspaces). It scans
+# the workspace for git repos and switches each one to `main`. The same script
+# is installed in every repo, so whichever one loads it, all repos get fixed.
+set -uo pipefail
 
-# Only do this in the remote (web) environment.
+# Only act in the remote (web) environment.
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-.}"
+# Workspace root that holds the repos (the primary working dir on the web).
+WORKSPACE="${CLAUDE_WORKSPACE_DIR:-/home/user}"
 
-# Fetch and switch to main, then fast-forward to the latest remote main.
-git fetch origin main --quiet || true
-git checkout main --quiet 2>/dev/null || git checkout -b main --quiet origin/main
-git pull --ff-only origin main --quiet || true
+switched=()
+for gitdir in "$WORKSPACE"/*/.git; do
+  [ -e "$gitdir" ] || continue
+  repo="$(dirname "$gitdir")"
+  name="$(basename "$repo")"
 
-# Surface a reminder into the session context.
-cat <<'JSON'
-{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Working branch forced to `main` by session-start hook. This project develops and pushes directly to `main` (no feature branches, no PRs) per CLAUDE.md."}}
+  git -C "$repo" fetch origin main --quiet 2>/dev/null || true
+
+  # Only switch if the working tree is clean, so we never clobber changes.
+  if [ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]; then
+    switched+=("$name: SKIPPED (uncommitted changes, still on $(git -C "$repo" branch --show-current))")
+    continue
+  fi
+
+  if git -C "$repo" checkout main --quiet 2>/dev/null \
+     || git -C "$repo" checkout -b main --quiet origin/main 2>/dev/null; then
+    git -C "$repo" pull --ff-only origin main --quiet 2>/dev/null || true
+    switched+=("$name -> main")
+  else
+    switched+=("$name: could not switch to main")
+  fi
+done
+
+# Build a one-line summary for the session context.
+summary="${switched[*]}"
+
+cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Session policy: work directly on \`main\` for ALL repos in this workspace - commit straight to main, NEVER create feature branches, NEVER open PRs. session-start hook result: ${summary}"}}
 JSON
