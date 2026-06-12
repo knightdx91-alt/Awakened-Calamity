@@ -74,32 +74,73 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
   species/encounter/sprite data. We ship only our own generated tileset.
 
 ## Status — what's done
-- ✅ Engine bundle imported and booting: tile renderer, map loader + connection system, camera,
-  `justPressed` input, HUD, start-menu/window system, dialogue, orientation, on-screen controls,
-  3-slot save / achievements / factions.
-- ✅ Clean **generated placeholder tileset** (grass / tall grass / path / water / rock / sand /
-  corrupted-void) + original **AwakeningCamp** starter map in the new `awakened` region.
-- ✅ Central `index.html` hub (card-stack tiles), branded `game.html`, README, ASSETS_NOTICE,
-  `.gitignore`, `.nojekyll`, Pages CI.
-- ✅ Design docs + SVG world map in repo.
+- ✅ Engine bundle booting: tile renderer, map loader + connection system, camera, `justPressed`
+  input, HUD, start-menu/window system, dialogue, orientation, on-screen controls, 3-slot save.
+- ✅ **Official design system imported** (`design-system/`) — the owner's IP-clean art + UI:
+  tokens (`tokens/colors.css` warm FireRed + cold System), components, ui_kits, guidelines,
+  scene mockups, and original **16×16 tilesets** (terrain/buildings/dungeon/props + pond/road
+  3×3 autotile patches). `game.html` links `design-system/tokens/colors.css`.
+- ✅ **Tilesets** (`data/tilesets/_index.json`): official `ac_terrain/ac_terrain2/ac_buildings/
+  ac_dungeon/ac_props`, autotile `ac_ground` (grass + pond/road 9-slice → wang8_lut). Plus
+  license-clean imports kept as palettes/options: `forest_terrain` (CC0, .tres wang8),
+  `synth_terrain` (layered grass/sand/stone/water/void synth autotiler), `coast_cc0`,
+  `overworld_buch` (CC-BY), `punyworld`/`punyworld_full` (CC0), `oga_rpg16` (CC-BY-SA),
+  `ufeff` (CC0), `puny_dungeon` (CC-BY). Each has a `.LICENSE.txt`. **Use the `ac_*` official art.**
+- ✅ **Autotiler**: editor **Terrain brush** (`map-editor.js`) bakes `wang8_lut`/`edge4` autotile
+  configs (`<tileset>.autotile.json`) into plain `metatiles[]` + persists `layout.terrain[]`.
+  Layered priorities (terrain-vs-terrain edges). `tools/build_ac_ground.py`, `synth_terrain.py`,
+  `import_forest_terrain.py` build configs.
+- ✅ **Engine overlay layer** (`renderer.js`/`map.js`): `layout.overlay_tileset` + `overlay[]`
+  draw buildings/props ON TOP of an autotiled base → towns with autotiled ground in one map.
+- ✅ **Player sprite** wired (`data/sprites/player.png` from CC0 Puny Character-Base via
+  `tools/build_player_sprite.py`). Fixed a loop-killing crash (`HUD.update` `visitedMaps.add`).
+- ✅ **HUD survival meters** — Surveillance (cold System gauge) + Stamina/Exposure (warm bars);
+  `GameHUD.setMeters({surveillance,stamina,exposure})`, persisted to `state.survival`.
+- ✅ **Start menu rebuilt to survival** (no Pokémon): **CAMP · BONDS · SUPPLIES · AFFINITIES ·
+  REACHES · SYSTEM** (+ Save/Options/Exit). BONDS hidden until `state.bonds[]` non-empty.
+  SYSTEM is the cold interactive panel (services raise Surveillance). New DOM builders on the
+  design-system palette.
+- ✅ **Source purge**: removed ~2200 lines of dead Pokémon builders + scrubbed save/factions/
+  achievements/hud; `pokemon_*` localStorage keys → `ac_*`; empty starter party. **Remaining
+  Pokémon code = donor combat only** (`battle.js`, `summary.js`, `battle_assets.*`).
+- ✅ **AwakeningCamp** (default boot map) + sample maps rebuilt on official art. Maps auto-sync
+  to the editor's `maps` branch via `tools/sync_maps_branch.sh` (editor `GH_REPO` →
+  `awakened-calamity`). Data fetches use `cache:'no-cache'` + `?b=<build>` so the live page
+  always gets the latest map/art.
 - ✅ Deployed & verified live on GitHub Pages.
 
 ## Next steps (priority)
-1. **Original tilesets** ← *owner is producing these via the Design side now.* Drop new 16×16
-   metatile sheets into `data/tilesets/` (PNG + matching JSON), run
-   `tools/build_tileset_index.py` to refresh `_index.json`, then author zones in the map editor.
-   The placeholder tileset/map can be replaced once real art exists.
-2. **HUD survival meters** — wire Surveillance / Stamina / Exposure into `src/ui/hud.js`
-   (cheap + thematic, `DESIGN.md §7`).
-3. **Start menu** — strip Pokémon-flavored items down to the survival set
-   (Camp / Supplies / Affinities / System) in `src/ui/startmenu.js`.
-4. **Replace placeholder UI art** under `src/assets/` with originals.
-5. **Battle system** — `src/engine/battle.js` is the prototype's turn-based combat (donor only);
-   `DESIGN.md §1` calls for the **Tempo + Intervention** rewrite.
-6. **Cloud saves → Cloudflare Worker** (remove token from repo).
+1. **Battle system rewrite** — replace donor `battle.js`/`summary.js`/`battle_assets.*` (the only
+   remaining Pokémon code, unreachable in AC) with **Tempo + Intervention** (`DESIGN.md §1`). This
+   is also the *true* finish of the source purge.
+2. **Wire survival systems to gameplay** — drive the HUD meters (Stamina drains in Wildlands,
+   Exposure from biome hazards, **Surveillance rises** when using System services/REACHES
+   fast-travel); real **SUPPLIES** inventory; **Bind** flow → populates `state.bonds[]`.
+3. **REACHES fast-travel** — actual warp targets (raise Surveillance), unlock landmarks.
+4. **More official-art content** — author zones with the `ac_*` tilesets + overlay (use the
+   map editor Terrain brush + building overlay); add building stamps / overlay painting to editor.
+5. **Re-skin remaining chrome** (dialogue, banners, options, hub) to the FireRed/System tokens.
+6. **Cloud saves → Cloudflare Worker** (remove embedded token from repo; still present in
+   `cloud-saves.js` + `map-editor.js`, reversed).
 
 ## Session log
-- **2026-06-12** — Created repo content from scratch: pushed design-doc bundle, then imported the
+- **2026-06-12 (1)** — Created repo content from scratch: pushed design-doc bundle, imported the
   IP-free engine + map editor + save systems, generated a clean placeholder tileset/map, built the
-  hub, wired the `awakened` region, deployed to Pages (confirmed live). Ending session; owner
-  switching to **Design** to get real tilesets made.
+  hub, wired the `awakened` region, deployed to Pages (confirmed live).
+- **2026-06-12 (2)** — Big build-out session:
+  - Fixed the `SessionStart` hook to force `main` across all repos (multi-repo, robust path).
+  - **Tilesets/autotiling:** license-vetted & imported many sets (kept the CC0/CC-BY ones as
+    palettes), built the **editor Terrain brush autotiler** (`wang8_lut`/`edge4`, layered
+    priorities, terrain-grid persistence), a **universal `synth_terrain`** synthesizer, and the
+    correct `.tres`-based `forest_terrain`. Added an **engine overlay layer** for buildings on
+    autotiled ground. Fixed live-page **caching** (no-cache + build-id PNG bust). Editor maps
+    auto-sync to the `maps` branch; repo pointer fixed to `awakened-calamity`.
+  - **Sprites/HUD:** wired the **player sprite** (CC0 Puny), fixed a loop-killing `visitedMaps`
+    crash, added **HUD survival meters** (Surveillance/Stamina/Exposure).
+  - **Owner's design system** pulled from Drive → `design-system/` + imported official `ac_*`
+    tilesets; rebuilt **AwakeningCamp** + sample maps on the official art.
+  - **Menus:** full rebuild to the survival set (Camp/Bonds/Supplies/Affinities/Reaches/System),
+    cold interactive SYSTEM panel, FireRed reskin, then a **source purge** of all Pokémon/trainer
+    references (everything except the donor combat engine).
+  - Verified throughout with headless Chromium. Ending session at usage limit. **Next: the
+    Tempo + Intervention battle rewrite (finishes the purge) and wiring survival systems to play.**
