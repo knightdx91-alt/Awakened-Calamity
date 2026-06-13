@@ -64,6 +64,16 @@ different crafting *interaction*. Plan for that:
 - Same for **crafting:** recipes / materials / what-gear-does port; the 2D menu vs. 3D bench is
   presentation.
 
+## Class generation — the discovery layer (designed, deferred)
+
+The class roster scales by **deterministic, lazy, memoized generation**, not by hand-authoring the
+permutation space: a player meets an **exact condition-set** no class claims → a **pure generator** mints
+a class, stores it in a **registry**, and serves the same class to anyone who later meets the same exact
+conditions. Pure function of (condition-set, version seed) → fully deterministic + portable; the 2D
+prototype persists the registry locally, the 3D rebuild makes it a **shared server registry**. Full spec:
+`CLASS_GENERATION.md`. Why the space is effectively endless yet cheap: `BUILD_SPACE.md` (≈10²⁰¹, emergent
+from linear content × systems).
+
 ## Why
 
 The expensive, risky part is the **design** — *does the LitRPG loop + the System story actually

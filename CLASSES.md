@@ -88,6 +88,14 @@ Specialization = { id, name,
   demand sets the size of the Skills library — designed next.)
 - Every class also has its own **stat-bonus profile** (`PROGRESSION.md §2`) and **one signature**.
 
+### Naming convention (locked)
+- **Vary the title roots across a lineage — don't lean on one suffix.** A tree where everything is
+  "-wright" / "-smith" reads as lazy. Limit any single suffix to ~2 uses across a tree; reserve an
+  obvious profession root (e.g. *-smith*) for the canonical disciplines + base only, then diversify
+  (Bladelord, Maulwarden, Plateforger, Glyphcarver, Keenedge, Quicksilver, Runebrand, …). The worked
+  **Smith** lineage (Basic→Legendary) is the reference example.
+- **Generated classes** (`CLASS_GENERATION.md`) must follow this same convention.
+
 ### Cumulative synergy — foundation skills (every class has it)
 - Each class plants **foundation skills** that act as **prerequisites AND amplifiers** for what it
   evolves into. A **Warrior → Paladin keeps Warrior + bought skills**, and the Warrior foundations

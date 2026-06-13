@@ -182,3 +182,32 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     `specializations`; `data/systems/skills.json` = **80 skills** (all class refs resolve).
   - **Next: more Basic classes toward 50**, then Advanced-tier evolutions; build the combat VIEW
     (presentation) and `src/systems/progression.js` (XP/leveling).
+  - **Class growth refined** (`CLASSES.md §1.7`): low Tier = flatter curve **not a free ride**
+    (every level still costs more, `L^2.2`). **Evolutions are PATH-GATED** — the build you played
+    (skill composition first, then stat/affinity) decides *which* branch is offered (Warrior+heal→
+    Paladin; pure-damage→Reaver). Schema gained `EvolveBranch{class,requires,default}`. **Specialization
+    steers + narrows:** `opensEvolution` hard-points a branch, `narrowsTo` restricts the post-evolution
+    skill pool to that focus (Smith→runes→Runesmith learns rune skills only).
+  - **Self-teaching skills** (`SKILLS.md §1.5`): bootstrap any non-signature skill with the right tool at
+    Rank 0 (`untrainedPenalty`), grows by use; trainers = shortcut/key, not the only door. Canonical
+    knife→skinning case. Skill schema gained `tags[]`/`selfTeachable`/`untrainedPenalty`/`toolRequired`.
+  - **Content:** **Leatherworker** base class (leather/hide armor) + the **full Smith lineage Basic→
+    Legendary** (25 nodes, all 6 tiers, branch-then-converge into 3 Legendary capstones + 1 Untethered
+    apex "The Unmade", Original-System only). Renamed to drop the repeated "-wright" → **naming
+    convention locked** (`CLASSES.md §1.5`: vary roots). Now **45 classes / 110 skills**, all refs
+    resolve, combat deterministic.
+  - **DECISION — Class Generation / Discovery Layer** (`CLASS_GENERATION.md`, designed NOT built):
+    authored classes are the backbone; beyond them, a **deterministic, lazy, memoized generator** mints a
+    class when a player meets an **EXACT condition-set** no class claims, **persists it to a registry**,
+    and serves the same class to anyone meeting the same exact conditions. Exact-match (not fuzzy) =
+    memoization, easy to code; only reached permutations ever materialize; on-theme (the System
+    catalogues new classifications). Hard part = **condition granularity** tuning; shared registry =
+    **server feature** (3D), local in 2D. Story/Claimed/Anomalous/Untethered stay hand-authored.
+  - **Build space** (`BUILD_SPACE.md` + `tools/build_space.mjs`): a single-class start yields **≈10²⁰¹**
+    distinct characters — emergent from linear content × systems (dominant term = skill composition,
+    10¹⁰⁸, a consequence of self-teaching). Justifies "endless"; strategy = **vertical slice first**.
+  - **Feasibility verdict** (solo + Claude): yes — the 10²⁰¹ is the *cheap* (emergent) part; the real
+    bottlenecks are content VOLUME, balance/feel (needs owner playtest), and presentation/asset
+    licensing. Build **vertically** (one playable loop) before widening content.
+  - **Next: pause class authoring → build the playable combat slice** (combat VIEW +
+    `src/systems/progression.js`), then resume content / prototype the discovery-layer registry.
