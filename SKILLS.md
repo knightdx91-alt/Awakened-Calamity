@@ -194,9 +194,9 @@ Three sources (cross-ref `PROGRESSION.md §2`):
 1. **Ranks per Tier — 10.**
 2. **Breakthrough gate:** Rank 10 makes a skill **eligible**; the actual Tier-up needs a
    **trainer / manual / Insight check** (a milestone gated behind guild/world content — earned, not auto).
-3. **Skill slots/cap:** **Known/passive skills = UNLIMITED** (you keep everything via cumulative class
-   evolution); **active/equipped skills = a capped loadout** brought into battle (cap grows with
-   level/attributes). Builds matter without punishing cumulative skills, and it feeds the
-   limited-action Tempo + Intervention combat (`DESIGN.md §1`). *(Confirm: capped loadout vs. no cap.)*
+3. **Skill slots/cap — LOCKED:** **Known/passive skills = UNLIMITED** (you keep everything via
+   cumulative class evolution); **active/reactive skills = a capped loadout** (~5 slots base → ~8–10
+   lategame, set at a Camp / Safe Zone). Builds matter without punishing cumulative skills, and it
+   feeds the limited-action Tempo + Intervention combat (`DESIGN.md §1`).
 4. **M(Tier) for skills = ×2.5** (skills level by use — more frequent than class XP, so a gentler
    per-Tier multiplier than the class ×3).
