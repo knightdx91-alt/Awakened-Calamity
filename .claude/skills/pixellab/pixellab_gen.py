@@ -148,13 +148,20 @@ def cmd_tileset(a):
 
 def _download_rotations(detail, outdir, stem):
     os.makedirs(outdir, exist_ok=True)
-    rot = detail.get("rotation_urls") or {}
     n = 0
+    rot = detail.get("rotation_urls") or {}
     for direction, url in rot.items():
         if url:
             dl_url(url, os.path.join(outdir, f"{stem}_{safe(direction)}.png"))
             n += 1
-    # also grab any animation frame urls if present
+    # map-objects / single-view props put the image under storage_urls instead
+    if n == 0:
+        store = detail.get("storage_urls") or {}
+        for key, url in store.items():
+            if url:
+                dl_url(url, os.path.join(outdir, f"{stem}.png"))
+                n += 1
+                break
     json.dump(detail, open(os.path.join(outdir, f"{stem}.json"), "w"), indent=2,
               default=str)
     return n
