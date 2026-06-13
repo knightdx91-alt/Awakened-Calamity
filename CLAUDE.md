@@ -237,8 +237,9 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
   - **Multi-enemy combat VIEW + target select BUILT** (`combatview.js` rewritten actor-driven): renders
     N enemy/ally/summon cards (dynamic, dims the dead), **target selection** for single-target skills
     (◄►, B to back; auto for AoE/self/heal), **AoE hits all foes**, XP **sums across all kills**.
-    `start({enemies:[{key,level},…]})` spawns multi. Headless-verified: 2 cards, target switch, Cleave
-    hits both, +118 XP→Lv2. Player loadout gained `cleave`.
+    `start({enemies:[{key,level},…]})` spawns multi; **SELECT itself now ~40% spawns a 2-3 foe pack**
+    so multi-enemy is testable in-game. Headless-verified: 2 cards, target switch, Cleave hits both,
+    +118 XP→Lv2. Player loadout gained `cleave`.
   - **Next on combat:** ally/party for the player side (summons already render & fight); `intercept`/
     `guardAlly` redirect (stubbed). Broader: wire survival meters + a real SUPPLIES inventory, encounters
     (so battles start from the world, not just SELECT), attribute-point allocation UI. Then resume class
