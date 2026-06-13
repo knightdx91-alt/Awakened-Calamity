@@ -209,5 +209,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
   - **Feasibility verdict** (solo + Claude): yes — the 10²⁰¹ is the *cheap* (emergent) part; the real
     bottlenecks are content VOLUME, balance/feel (needs owner playtest), and presentation/asset
     licensing. Build **vertically** (one playable loop) before widening content.
-  - **Next: pause class authoring → build the playable combat slice** (combat VIEW +
-    `src/systems/progression.js`), then resume content / prototype the discovery-layer registry.
+  - **Combat slice BUILT & wired** (`src/ui/combatview.js`): the **SELECT button starts a Tempo +
+    Intervention battle** (Smith vs a creature) for testing. Pure rules core (`src/systems/rng.js` +
+    `combat.js`) now **loaded in `game.html`**; the view is presentation-only (renders state, forwards
+    input — no logic), GBA-dark with a cold-cyan **SYSTEM Intervention** bar + Surveillance readout.
+    Menu shows the Smith's combat actions (Jab/Heavy Strike/Guard/Mend) with tempo costs; up/down + A
+    to act, B to flee. Headless-verified: battle starts, turns resolve, result shows, view tears down.
+    Smith (crafter, atk 16) is intentionally a weak fighter — winnable vs Emberling with Guard/Mend,
+    loses to Thornwolf; Intervention fires only when a player actor drops ≤35% HP (the bait).
+  - **Next on combat:** more skill effect types (the data references aoe/counter/taunt/summon/slow/
+    mark/partyBuff/applyToxin/sunder — only power/heal/defUp/maxHp resolved today); party/multi-actor;
+    target select; then `src/systems/progression.js` (XP/leveling) so wins grant XP. Then resume
+    content / prototype the discovery-layer registry.

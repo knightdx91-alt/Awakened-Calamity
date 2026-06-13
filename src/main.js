@@ -246,6 +246,14 @@
             } catch(_) { _mapLoading = false; }
         }
 
+        // Tempo + Intervention combat view gets first priority on all input.
+        if (window.GameCombatView && GameCombatView.isActive()) {
+            GameCombatView.consumeInput(jp);
+            GameInput.consumeJustPressed();
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+
         // Battle gets first priority on all input.
         // Exception: start menu may be open over the battle (bag access).
         if (window.GameBattle && GameBattle.isActive()) {
@@ -303,9 +311,9 @@
             if (window.GameStartMenu) GameStartMenu.toggle();
         }
 
-        // Select: open fly menu
-        if (jp.select && window.FlyMenu) {
-            FlyMenu.open(function (dest) { flyTo(dest); });
+        // Select: start a test battle (Tempo + Intervention combat slice).
+        if (jp.select && window.GameCombatView) {
+            GameCombatView.start();
         }
 
         // A button: interact
