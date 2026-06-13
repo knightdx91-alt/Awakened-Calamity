@@ -176,6 +176,55 @@ snaps an NPC to a zone center or its destination.
 
 ---
 
+## 4.5 Mortality, Repopulation & Memory (NPC death)
+
+> Non-story NPCs can **die** — permanently — and the world **remembers** them, then **repopulates
+> with genuinely new people** over time. Turns the world-brain from "who's where" into "who *was*."
+> Interlocks `OVERFLOW.md` (town sieges) + `DESIGN.md` (Surveillance) + the multi-species influx (§1).
+
+### Permanent death, living repopulation (locked)
+- Every NPC record carries **`mortal`**. **Story / quest-critical NPCs are `mortal: false`** — the
+  sim never kills them (they may be threatened/wounded in scripted beats, never lost).
+- **Death is permanent.** A dead record is flagged `alive:false` **forever** — *never restored,
+  never revived.* The individual is gone. (No System-resurrection — that was considered and rejected:
+  permanence is the point.)
+- **The world does NOT respawn the dead.** Instead the brain keeps each town/role near a target
+  population by **generating brand-new NPC records** — new name, new dialogue, often a different
+  **species** (the refugee/migrant influx, §1). A town that lost its blacksmith eventually gets a
+  *different* blacksmith who **arrived from elsewhere** and references the one before
+  (*"I took over the forge after the last smith was lost in the Break."*). Roles refill; people don't.
+
+### Causes of death (resolved abstractly in the world-brain — no rendering)
+1. **Overflow Break** — when a dungeon Breaks on a town (`OVERFLOW.md §3`), it rolls **casualties**
+   among locals: defenders and **homebodies who didn't flee**. Neglecting dungeons literally costs
+   lives — the stakes that make the upkeep loop matter.
+2. **Wild** — roaming **travelers** (adventurers, scavengers) pathing through dangerous / high-
+   Overflow zones roll a death chance scaled to their level vs. the zone. *("Bob went out to hunt
+   monsters to level — never came back.")* Homebodies don't roam, so they only die at home (Breaks).
+3. **Player** — the player can kill NPCs. **These deaths are permanent even if nothing else is.**
+   Consequences: **Warden standing drops**, the **System notices you harming subjects (+Surveillance)**,
+   and the town **fears / mourns** you. Your violence leaves a mark the world keeps.
+
+### Memory & gossip — the "feels alive" payoff
+- Each death writes a **world-memory** record `{ name, role, cause, where, when, relations }`.
+- Related / nearby NPCs gain a **dialogue hook** about it (*"Heard about Bob? Shame."*). News
+  **spreads outward over real time, speed-bounded** like all §2 movement — a far town won't know yet;
+  **travelers carry the news between towns** (*"Goldfield got hit bad, I hear."*).
+- The player is **never told directly** — they *learn* by talking / overhearing. Optional
+  environmental payoff: a fresh **grave / memorial** appears near the death site.
+- **Named vs. background:** a *named/memorable* roster (~the 150) gets individual gossip + memory;
+  generic background folk aggregate (*"the town lost six in the Break"*).
+
+### Scope / tuning
+- All of this is **abstract records** — 150+ mortal NPCs cost almost nothing; deaths resolve on the
+  offline-advancement tick (§3), not per frame. Materialized sprites just read their record's
+  `alive` on spawn.
+- **Tune death rates low** — meaningful, not a meat-grinder. Death probability rises with **zone
+  Overflow / depth** and **player neglect**, so the world's body count is a readout of how well the
+  player is keeping the wilds in check.
+
+---
+
 ## 5. Scope Honesty
 
 - **Cheap / early:** abstract NPC records + the world clock + the `lastSimTime` catch-up rule +
