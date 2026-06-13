@@ -1,0 +1,1 @@
+{"id": "MAP_GENTOWN", "name": "GenTown", "region": "awakened", "layout": "LAYOUT_GENTOWN", "music": "", "weather": "WEATHER_NONE", "map_type": "MAP_TYPE_TOWN", "allow_running": true, "allow_cycling": false, "show_map_name": true, "connections": [], "npcs": [], "warps": [], "triggers": [], "signs": []}
