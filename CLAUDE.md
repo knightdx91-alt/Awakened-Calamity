@@ -229,6 +229,17 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       folded into traits at createBattle), **bonusVsUnaware**. `tools/test_effects.mjs` = 11 checks all
       green + determinism. Test Smith loadout now shows several live (Pin Shot→SLOW, Coat Blade→toxin,
       Unmake→armor↓, Riposte counter).
-  - **Next on combat:** multi-enemy/party VIEW + target select (core already supports N actors & AoE/
-    taunt/summon); `intercept`/`guardAlly` redirect (stubbed); then `src/systems/progression.js`
-    (XP/leveling) so wins grant XP. Then resume content / prototype the discovery-layer registry.
+  - **Progression BUILT & wired** (`data/systems/progression.json` + `src/systems/progression.js`,
+    pure): XP curve (B=100,p=2.2,tierMult), mob XP (K=17,q=1.6), level-diff bands, points-per-level by
+    Tier, soft cap. `tools/test_progression.mjs` (12 checks). Combat awards level-diff-modified XP on a
+    win, auto-levels, grants attribute points, persists (save or module-static), shows `+XP / LEVEL UP`.
+    Added `dummy` (Hollow Husk) training creature for reliable SELECT testing.
+  - **Multi-enemy combat VIEW + target select BUILT** (`combatview.js` rewritten actor-driven): renders
+    N enemy/ally/summon cards (dynamic, dims the dead), **target selection** for single-target skills
+    (◄►, B to back; auto for AoE/self/heal), **AoE hits all foes**, XP **sums across all kills**.
+    `start({enemies:[{key,level},…]})` spawns multi. Headless-verified: 2 cards, target switch, Cleave
+    hits both, +118 XP→Lv2. Player loadout gained `cleave`.
+  - **Next on combat:** ally/party for the player side (summons already render & fight); `intercept`/
+    `guardAlly` redirect (stubbed). Broader: wire survival meters + a real SUPPLIES inventory, encounters
+    (so battles start from the world, not just SELECT), attribute-point allocation UI. Then resume class
+    content / prototype the discovery-layer registry.
