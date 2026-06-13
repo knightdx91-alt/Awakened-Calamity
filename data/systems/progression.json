@@ -1,0 +1,27 @@
+{
+  "_meta": "XP/leveling tuning (PROGRESSION.md §3.7, §2). All constants are data so they port + tune without code changes. Consumed by src/systems/progression.js.",
+
+  "xp": {
+    "B": 100,
+    "p": 2.2,
+    "tierMult": { "basic": 1.0, "advanced": 3.5, "master": 10, "grandmaster": 30, "heroic": 90, "legendary": 270 }
+  },
+
+  "mob": { "K": 17, "q": 1.6 },
+
+  "levelDiff": {
+    "_note": "PROGRESSION.md §5: lethal gap (mob >> you) → bonus XP; matched → full; trivial (mob << you) → near-zero. diff = mobLevel - playerLevel.",
+    "redAt": 5, "greyAt": -8,
+    "redMult": 1.5, "whiteMult": 1.0, "greyMult": 0.1
+  },
+
+  "attributes": ["might", "finesse", "endurance", "focus", "resolve", "insight", "presence"],
+
+  "pointsPerLevel": {
+    "_note": "PROGRESSION.md §2: points = base + (Tier rank above Basic). Basic 3 … Legendary 8.",
+    "base": 3, "perTierAboveBasic": 1,
+    "tierOrder": ["basic", "advanced", "master", "grandmaster", "heroic", "legendary"]
+  },
+
+  "softCap": 450
+}

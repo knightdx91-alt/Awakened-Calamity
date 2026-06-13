@@ -30,8 +30,26 @@
     function loadDB() {
         if (db) return Promise.resolve(db);
         var base = 'data/systems/';
-        return Promise.all(['combat.json', 'skills.json', 'affinities.json', 'creatures.json', 'classes.json'].map(function (f) { return fetchJSON(base + f); }))
-            .then(function (r) { db = { combat: r[0], skills: r[1], affinities: r[2], creatures: r[3], classes: r[4] }; return db; });
+        return Promise.all(['combat.json', 'skills.json', 'affinities.json', 'creatures.json', 'classes.json', 'progression.json'].map(function (f) { return fetchJSON(base + f); }))
+            .then(function (r) { db = { combat: r[0], skills: r[1], affinities: r[2], creatures: r[3], classes: r[4], progression: r[5] }; return db; });
+    }
+
+    // Persistent player progression (XP/level). Loads from the save if present,
+    // else a fresh Basic Lv1, so SELECT-testing accumulates levels across fights.
+    var prog = null, enemyMeta = null, _localProg = null;
+    function _loadProg() {
+        var saved = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
+        if (saved && saved.progress) return saved.progress;
+        if (saved) { saved.progress = saved.progress || root.GameProgression.createProgress('basic', 1); return saved.progress; }
+        // No save slot loaded (e.g. SELECT-testing): keep a module-static progress
+        // so levels persist across fights.
+        _localProg = _localProg || root.GameProgression.createProgress('basic', 1);
+        return _localProg;
+    }
+    function _saveProg() {
+        var saved = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
+        if (saved) { saved.progress = prog; if (root.GameSave.markDirty) root.GameSave.markDirty(); }
+        else { _localProg = prog; }
     }
 
     // ---- test actors (Smith vs a creature) --------------------------------
@@ -47,8 +65,9 @@
             loadout: ['jab', 'heavy_strike', 'guard', 'mend', 'pin_shot', 'coat_blade', 'unmake', 'riposte']
         };
     }
-    function buildEnemy(key) {
+    function buildEnemy(key, level) {
         var c = db.creatures[key] || db.creatures.emberling;
+        enemyMeta = { key: key, level: level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, name: c.name };
         return { id: 'e1', side: 'enemy', name: c.name, affinity: c.affinity, stats: Object.assign({}, c.stats), loadout: (c.loadout || ['jab']).slice() };
     }
 
@@ -58,9 +77,11 @@
         opts = opts || {};
         active = true;
         loadDB().then(function () {
+            prog = _loadProg();
             var enemyKey = opts.enemy || (Math.random() < 0.5 ? 'emberling' : 'thornwolf');
+            var enemyLevel = opts.level || 2;
             var seed = (Date.now() ^ (seedCounter++ * 0x9e3779b1)) >>> 0;
-            state = root.GameCombat.createBattle(db, [buildPlayer(), buildEnemy(enemyKey)], seed);
+            state = root.GameCombat.createBattle(db, [buildPlayer(), buildEnemy(enemyKey, enemyLevel)], seed);
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; logQueue = [];
             currentMsg = 'A wild ' + state.actors.e1.name + ' interrupts your work!';
             _mount();
@@ -165,8 +186,20 @@
     function _flee() { currentMsg = 'You slip away from the fight.'; awaitingClose = true; mode = 'over'; _closeMenu(); }
 
     function _finish() {
-        var msg = state.winner === 'player' ? 'You won the exchange.' : state.winner === 'enemy' ? 'You were overcome…' : 'The fight ends.';
-        currentMsg = msg + '  (Surveillance ' + state.surveillance + ')  — press A';
+        var msg;
+        if (state.winner === 'player') {
+            // Award mob XP (level-difference modified) and surface any level-ups.
+            var g = root.GameProgression.gainFromKill(prog, { level: enemyMeta.level, xpYield: enemyMeta.xpYield }, db.progression);
+            _saveProg();
+            msg = 'You won.  +' + g.xp + ' XP' + (g.mult !== 1 ? ' (×' + g.mult + ')' : '');
+            if (g.events.length) {
+                var pts = g.events.reduce(function (s, e) { return s + e.points; }, 0);
+                msg += '   ⤴ LEVEL UP → Lv' + prog.level + ' (+' + pts + ' pts)';
+            }
+        } else {
+            msg = state.winner === 'enemy' ? 'You were overcome…' : 'The fight ends.';
+        }
+        currentMsg = msg + '   (Surv ' + state.surveillance + ')  — press A';
         awaitingClose = true;
     }
 
@@ -226,8 +259,8 @@
     function _render() {
         if (!els.root) return;
         var p = state.actors.p1, e = state.actors.e1, max = state.tuning.tempoMax;
-        els.enemy.querySelector('.cv-name').textContent = e.name;
-        els.player.querySelector('.cv-name').textContent = p.name;
+        els.enemy.querySelector('.cv-name').textContent = e.name + (enemyMeta ? ' Lv' + enemyMeta.level : '');
+        els.player.querySelector('.cv-name').textContent = p.name + (prog ? ' Lv' + prog.level : '');
         _setBar(els.enemy, 'cv-hp', e.hp / e.maxHp, 'hp-fill' + (e.hp / e.maxHp < 0.3 ? ' low' : ''));
         _setBar(els.player, 'cv-hp', p.hp / p.maxHp, 'hp-fill' + (p.hp / p.maxHp < 0.3 ? ' low' : ''));
         _setBar(els.enemy, 'cv-tempo', _tempoDisp(e), 'tempo-fill' + (e.tempo >= max ? ' ready' : ''));
