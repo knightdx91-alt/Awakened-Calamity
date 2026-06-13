@@ -85,6 +85,32 @@ Class = { id, name, tier, family, affinityLean, statProfile,
 
 ---
 
+## 1.6 Lifestyles, class change, and optional combat (the game is not just killing)
+
+**Classes are lifestyles, not just combat roles.** A full, viable life is possible as a **crafter,
+healer, merchant, scholar, or townsperson** — combat is *one* pillar, not the spine.
+
+- **Class CHANGE ≠ class EVOLUTION.**
+  - **Evolution** = climbing *within a lineage* (Warrior → Paladin), gated by Trials/level, with
+    foundation-skill synergy (§1.5).
+  - **Change** = a lateral **life/career choice** — a warrior tired of killing **switches to Smith**
+    to live away from violence. Distinct mechanic, fully supported.
+  - **You KEEP your accumulated skills across a change.** A former Warriorturned-Smith is *still
+    dangerous* — he just **grows as a Smith now** (new growth focus, signature, stat lean). You don't
+    forget how to swing a sword because you took up the forge. (Still **single active class** at a
+    time — no *simultaneous* multiclass; skills simply accumulate across changes + evolutions.)
+- **Combat is universal but optional.** *Anyone* can fight — a peaceful crafter can **borrow/pick up
+  a weapon** to fend off a monster. **No class is locked out of combat**, but most aren't *built*
+  around it; non-combat classes acquire combat skills **by other means** (taught / bought / found).
+- **Progression is NOT gated on killing.** Craft / gather / espionage / social skills level **by use**
+  (`SKILLS.md §3`); expeditions + survival grant XP. A pacifist advances fully. **Fights are organic**
+  — self-defense, an Overflow Break (`OVERFLOW.md`), a chosen hunt — never a forced kill-grind.
+
+> The world reads as a real society under the System: the brave roam and risk the wilds; the
+> cautious build, craft, and heal — and *both* are real, full ways to play.
+
+---
+
 ## 2. Standard Class Families
 
 ### Combat (you fight)

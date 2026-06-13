@@ -1,6 +1,7 @@
 # Architecture & Portability — 2D prototype → 3D rebuild
 
-> **This browser game is a PROTOTYPE / proving ground** for the story, design, and LitRPG systems.
+> **This is a COMPLETE, shippable game in its own right** — not a throwaway tech demo. It *also*
+> serves as a **proving ground** for the story, design, and LitRPG systems.
 > The intended successor is a **3D rebuild (Unity, PC + consoles, full multiplayer).** Therefore
 > **all game systems live as engine-agnostic DATA + RULES, cleanly separated from presentation,** so
 > the *design and logic* port to Unity even though the *rendering* gets rebuilt. **Read this before
