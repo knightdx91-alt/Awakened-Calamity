@@ -44,6 +44,26 @@ data/systems/*.json   →   src/systems/*.js (pure rules)   →   src/ui · src/
 - **Design docs are canonical.** `DESIGN/PROGRESSION/SKILLS/CLASSES/…` define the rules; `src/systems`
   is their faithful implementation, not a separate source of truth.
 
+## Combat mechanics are the MOST volatile layer (the 3D rebuild changes them)
+
+The 3D rebuild will use a **different combat system** (real-time action, not the 2D Tempo/ATB) and a
+different crafting *interaction*. Plan for that:
+
+- **The Tempo/ATB *timing model* (`src/systems/combat.js` core) is expected to be rebuilt.** Build it
+  good enough to validate the *feel* and the **System Intervention** design — **don't over-invest in
+  ATB balance numbers** that won't carry.
+- **Skill/class/creature DATA must stay combat-agnostic *intent*, not ATB assumptions.** A skill's
+  *identity, role, category, kind, effect-intent, affinity, synergy, evolution* all port. Its cost is
+  an **abstract action `weight`** (light/medium/heavy) — the **2D engine maps weight → tempo recovery;
+  the 3D engine maps the same weight → cooldown / stamina / cast-time.** (Implemented today as the
+  `tempoCost` field = that abstract weight; same number, engine-specific interpretation.)
+- **System Intervention is a portable DESIGN PILLAR** — its *types/triggers/Surveillance costs* are
+  data that port; only its on-screen presentation changes.
+- **When authoring classes/skills, design the *identity and relationships*, not the tuning.** The
+  balance is placeholder; the design is the durable asset.
+- Same for **crafting:** recipes / materials / what-gear-does port; the 2D menu vs. 3D bench is
+  presentation.
+
 ## Why
 
 The expensive, risky part is the **design** — *does the LitRPG loop + the System story actually
