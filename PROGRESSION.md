@@ -124,10 +124,25 @@ XP_needed(L, Tier) = B * L^p * m(Tier)
 
 ### Income: mob XP must scale SLOWER than cost
 ```
-mob_XP(mobLevel) = K * mobLevel^q     // q ≈ 1.6  (vs cost's p ≈ 2.2)
+mob_XP(mobLevel, species) = K * mobLevel^q * speciesXpYield   // q ≈ 1.6 (vs cost's p ≈ 2.2)
 ```
-Because **p > q**, kills-per-level slowly rises as you climb → early levels quick, Lv400 a real wall,
-**with no hard wall**. The **level-difference modifier** layers on top:
+- **K = 17** (income base; with `B=100` this makes a *standard* creature take **~6 kills for level 1**).
+- **q ≈ 1.6** — income scales slower than cost (`p ≈ 2.2`), so kills-per-level rises as `L^0.6`:
+  early levels are quick (~6), the late game is a real wall, **with no hard cap**.
+- **`speciesXpYield`** — a **per-species stat** baked into each creature's data (like a base XP yield).
+  **A Lv5 spider ≠ a Lv5 wolf** — XP is a *species AND level* thing, not level alone. Set per species,
+  often (not always) correlated with rarity/build:
+
+| Species class | speciesXpYield |
+|---|---|
+| Common / weak (grazers, swarmers) | ~0.6 |
+| Standard | 1.0 |
+| Tanky / elite / rare | ~1.6 |
+| **Apex / Alpha** (high System-resistance) | ~3–5 |
+
+**Kills-per-level (standard species, before the level-diff modifier):** L1 ~6 · L10 ~23 · L50 ~62 ·
+L100 ~93 · L400 ~215. The Lv400 wall is tunable down by nudging `q` up. The **level-difference
+modifier** layers on top:
 - Red/lethal-gap kill → **bonus XP** · White/matched → full · Grey/trivial → **near-zero**.
 This kills low-mob farming and pushes you into appropriate-danger zones (feeds danger-by-depth).
 

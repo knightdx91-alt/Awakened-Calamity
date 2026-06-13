@@ -196,6 +196,39 @@ Camp = the moment you most feel both the comfort the System sells *and* the free
 
 ---
 
+## 6.5 The Original System — the one-time permadeath choice
+
+The North Star, made literal: **refusing the System's comfort is the hardest, truest path.**
+
+- **The offer (once, post-tutorial, irreversible).** After the tutorial, the player is told the
+  System *wasn't always this helpful* — when it first began it didn't revive you, didn't hand-hold.
+  They're offered the choice to run on the **Original System**. The screen warns **unambiguously**:
+  *"Choose the Original System and there is no going back. Death is permanent."* — with a hard,
+  deliberate confirmation, not a casual prompt. It appears **once** and can never be re-offered.
+- **What it costs (the stick) — full permadeath.**
+  - **The player dies permanently** — character death ends the run (save locks to a *fallen* state, no
+    reload).
+  - **Bonded creatures die permanently too** — a Bound creature that falls is **gone forever** (true
+    Nuzlocke; you bury it). Every battle carries real, lasting loss — and it rhymes with the world's
+    own permanent-death rule (`LIVING_WORLD.md §4.5`).
+  - **The safety nets are gone** — no Emergency Restore, no in-battle Intervention revives, costly/no
+    fast-travel & camp registration, harsher Audits. **Difficulty rises by the System WITHDRAWING its
+    help — NOT by inflating enemy numbers.** Combat math is unchanged, so every death stays *earned*
+    (the §3 rule: death traces to a fight you entered weakened, never a cheap shot). Permadeath + a
+    fair fight = tense, not unfair.
+- **What it grants (the carrot) — both story and power.**
+  - **Exclusive evolutions** — hidden **class evolutions and skill evolutions** the assisted System
+    never offers. When a class/skill would normally evolve into A or B, the Original path opens a
+    stronger/darker **C**. The reward is felt at *every* milestone, not just at the choice.
+  - **Off the leash** — **Surveillance grows far slower**; **OWPS / Untethered / Free-Bond** content
+    and the **true endings** open here (and may be reachable *only* here).
+  - **Front-loaded growth** — a progression edge (e.g. an XP multiplier or extra attribute point/level)
+    so the hard path is also the faster-growing one.
+
+The comfortable path is the trap; this is the escape that costs everything.
+
+---
+
 ## 7. Scope Honesty (build order leanings)
 
 - **Cheap / early:** System UI + Intervention/notification strings (the aesthetic backbone),
