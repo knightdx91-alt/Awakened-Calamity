@@ -58,16 +58,22 @@ Class = { id, name, tier, family, affinityLean, statProfile,
           signature,                 // the one thing only this class does
           maxLevel: null,            // null = NO hard cap (the norm); soft cap is the ~450 char ceiling
           specializations:[…],       // in-class focus picks — see schema below (§1.7 axis 2)
-          evolvesInto:[…],           // tier-up branches
+          evolvesInto:[…],           // tier-up branches, each PATH-GATED — see below
           synergyFrom:[…],           // prior classes whose skills AMPLIFY this one (see below)
           unlock:{ type:'tier'|'stat'|'quest'|'item'|'affinity'|'claimed', … },
           claimedBy: null|'<order/race/world>' }   // null = open; else see §3.6
 
+// Each evolution branch is PATH-GATED: offered only if the build satisfies `requires`
+// (skill composition first, then stat/affinity). `default:true` = the fallback branch.
+EvolveBranch  = { class:'<id>', requires:{ skillTags:[…], minCount, stat?, affinity? }, default?:bool }
+
 Specialization = { id, name,
           unlockAtLevel,             // class level where the choice is offered
-          focus,                     // the sub-domain it masters (e.g. 'light_armor', 'two_handed')
+          focus,                     // the sub-domain it masters (e.g. 'light_armor', 'runes')
           bonuses:[ {type, target, amount} ],  // mastery bonuses (craft quality/speed, combat dmg/def…)
-          grantsSkill: null|'<skillId>' }       // optional single unique skill
+          grantsSkill: null|'<skillId>',       // optional single unique skill
+          opensEvolution: null|'<id>',         // hard-points & offers this evolution branch (§1.7 axis 2)
+          narrowsTo: null|'<skillTag>' }        // post-evolution skill pool is restricted to this focus
 ```
 
 **Specialization examples** (focus *within* a class, no Tier change — `§1.7` axis 2):
@@ -90,8 +96,24 @@ Specialization = { id, name,
   makes it true *mechanically*, not just in kit size). Each evolution lists `synergyFrom` — the prior
   classes whose skills boost it. **No dead-end lineages.**
 
+### Path-gated evolution offers (your build chooses the branch)
+- Reaching the level/Trial gate makes you **eligible to evolve**; **which branch(es) you're *offered*
+  depends on the build you've actually played** — primarily your **skill composition**, then
+  specialization, stats, and affinity. This is why Warrior→Paladin should feel *earned*: you took the
+  healing/protective skills that make a Paladin make sense.
+- Each evolution declares its own offer condition (data-driven):
+  ```
+  evolvesInto: [ { class:'paladin',  requires:{ skillTags:['heal','protect','oath'], minCount:2 } },
+                 { class:'reaver',   requires:{ skillTags:['berserk','heavy'],       minCount:2 } } ]
+  ```
+  At the gate the System offers **every branch whose `requires` you satisfy** (often just one — the one
+  your build pointed at). Meet none cleanly → you still get the lineage's **default** branch.
+- **Specialization is the strongest steer:** an `opensEvolution` on a Specialization (`§1.7` axis 2)
+  hard-points the matching branch *and* flips the post-evolution skill pool to that focus only (Smith→
+  runes→**Runecrafter** learns rune skills only).
+
 ### Hidden-objective evolution unlocks
-- Beyond the normal tree, classes are **offered** by meeting buried conditions:
+- Beyond the normal tree, **off-book** classes are **offered** by meeting buried conditions:
   - **a stat threshold hit before a level-up** (e.g. Rogue + Speed ≥ X → **Ninja** offered),
   - a **quest** completed or **item** acquired,
   - an **affinity / kill-count** milestone.
@@ -139,10 +161,14 @@ not a holding pattern until you can evolve out.
 - **Lower-Tier classes level fast** (`§3.5`), so a "lifer" who never evolves still racks up many levels
   → **attribute points** (`PROGRESSION.md §2`) and **deeply-ranked skills** (`SKILLS.md §4` — Rank 10
   breakthroughs). A Basic-class veteran is a master of a *narrow* kit, which is its own power fantasy.
-- Evolving **trades that speed away** (higher Tier = slower XP per level), so there is a genuine,
-  ongoing reason to *not* evolve: raw level throughput and skill depth **now**.
+- **"Fast" is relative, and it never stays easy.** Tier only sets the *multiplier* `m(Tier)`; the
+  per-level cost still climbs with the `L^2.2` curve (`PROGRESSION.md §3.7`). So a Basic class is cheap
+  *early* but **every level is still harder than the last** — a Lv60 Basic class is a real grind, just a
+  gentler one than a Lv60 Grandmaster. Low Tier = a flatter curve, **not** a free ride.
+- Evolving **trades that speed away** (higher Tier = steeper curve), so there is a genuine, ongoing
+  reason to *not* evolve: raw level throughput and skill depth **now**.
 
-### 2. Specialize — go deep within the class (the reason to stay)
+### 2. Specialize — go deep within the class (the reason to stay, and the steering wheel for evolution)
 - At a class-mastery milestone you may choose a **Specialization** — a focus *inside* the current
   class that grants **mastery bonuses** (and sometimes **one unique skill**) without leaving the class
   or changing Tier.
@@ -151,10 +177,27 @@ not a holding pattern until you can evolve out.
   a **Warrior** picks a **stance/weapon mastery** (e.g. Two-Handed, Guardian) for combat bonuses.
 - A Specialization is **narrower than an evolution and cheaper than a class change** — it sharpens what
   you already do. (Schema + examples in `§1.5`.)
+- **A Specialization steers your next evolution — and narrows what you learn after it.** Going deep on a
+  focus is what *unlocks and offers* the matching evolution (`opensEvolution` in the schema). Example:
+  a **Smith** who specializes in **runes** is offered evolution to a **Runecrafter** — and once she
+  evolves, her growth is **rune-focused only**: the skills she learns from there are rune/inscription
+  skills, **not** the general Smith/basic pool anymore. **Specializing is the commitment that converts a
+  broad Basic class into a focused lineage** — you trade breadth for a deep, specialized end-state.
 
-### 3. Evolve — climb the lineage (Warrior → Paladin)
-- Up a **Tier** within the lineage: a **bigger kit + foundation-skill synergy** (`§1.5`, `§3.5`), gated
-  by level + a Trial/quest. **Slower leveling**, broader power. Optional, never forced.
+### 3. Evolve — climb the lineage (offered by the path you've walked)
+- Up a **Tier** within the lineage: a **bigger kit + foundation-skill synergy** (`§1.5`, `§3.5`).
+- **An evolution is *offered* because of what you've actually done, not just your level.** The
+  *specific* branch you're shown is gated on your **skill composition / specialization / playstyle**, so
+  the offer reads as *earned and thematic*:
+  - A **Warrior** who has picked up **healing / protective / oath-type skills** is offered **Paladin**
+    (the support-knight reading of "warrior") — a pure damage Warrior might instead be offered **Reaver**.
+  - A **Rogue** who leaned **Speed + stealth-kill** skills is offered **Ninja**; one who leaned **locks
+    + infiltration** is offered **Infiltrator**.
+  - A **Smith** specialized in **runes** → **Runecrafter** (axis 2 above).
+- So branches aren't a fixed menu you pick blind — **the world reads your build and offers the evolution
+  that fits it.** Level/Trial is the *gate*; your accumulated skills are the *key* that decides *which*
+  door opens. (Mechanics: `§1.5` "Path-gated evolution offers".) **Slower leveling**, broader (or, post-
+  specialization, deeper) power. Optional, never forced.
 
 ### 4. Change — lateral career switch (keep your skills)
 - A **life/career** move to a different class (Warrior → Smith), `§1.6`. **You keep all accumulated

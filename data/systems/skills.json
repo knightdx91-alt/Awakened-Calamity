@@ -91,5 +91,6 @@
   "shore_up":     { "name": "Shore Up",     "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 400, "affinity": "stone","effect": { "type": "defUp", "amount": 0.4, "turns": 3 } },
   "fish":         { "name": "Fish",         "category": "gathering","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "gather", "tag": "fish" } },
   "big_haul":     { "name": "Big Haul",     "category": "gathering","kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "yield", "tag": "fish", "amount": 0.2 } },
-  "steady_keel":  { "name": "Steady Keel",  "category": "survival", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "exposureResist", "tag": "water", "amount": 0.2 } }
+  "steady_keel":  { "name": "Steady Keel",  "category": "survival", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "exposureResist", "tag": "water", "amount": 0.2 } },
+  "inscribe":     { "name": "Inscribe",     "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "rune" } }
 }
