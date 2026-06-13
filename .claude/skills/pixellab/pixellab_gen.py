@@ -111,6 +111,14 @@ def cmd_tileset(a):
             "tile_size": {"width": a.size, "height": a.size}}
     if a.transition:
         body["transition_description"] = a.transition
+    if getattr(a, "view", ""):
+        body["view"] = a.view
+    if getattr(a, "detail", ""):
+        body["detail"] = a.detail
+    if getattr(a, "shading", ""):
+        body["shading"] = a.shading
+    if getattr(a, "outline", ""):
+        body["outline"] = a.outline
     if a.seed is not None:
         body["seed"] = a.seed
     print(f"Creating tileset: {a.lower!r} <-> {a.upper!r}")
@@ -221,6 +229,10 @@ def main():
     pt.add_argument("--upper", required=True)
     pt.add_argument("--transition", default="")
     pt.add_argument("--size", type=int, choices=[16, 32], default=16)
+    pt.add_argument("--view", default="")
+    pt.add_argument("--detail", default="")
+    pt.add_argument("--shading", default="")
+    pt.add_argument("--outline", default="")
     pt.add_argument("--seed", type=int, default=None)
     pt.add_argument("--outdir", default="data/tilesets/generated/tileset")
     pt.set_defaults(fn=cmd_tileset)
