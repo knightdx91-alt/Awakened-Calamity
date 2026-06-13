@@ -41,6 +41,10 @@ one Tier at a time** (build the Base 50 classes' shared + unique skills together
 ```
 Skill = { id, name, category, tier, ranksMax:10,
           shared:true|false,        // pool vs. class-unique
+          tags:[…],                 // gating tags (e.g. ['smithing','weapons']) — feed class evolution requires
+          selfTeachable:true,       // false for signatures / claimedBy (can't bootstrap untrained)
+          untrainedPenalty,         // quality/yield/success malus when used at Rank 0, decays with Rank
+          toolRequired:null|'<tool>',// the tool that lets you attempt it untrained (knife → skinning)
           effectPerRank, subEffectPerTier,
           evolvesInto:[…],          // §4.5 — branches at Rank 10
           synergyFrom:[…],          // skills/stats that amplify or gate an evolution
@@ -50,6 +54,28 @@ Skill = { id, name, category, tier, ranksMax:10,
 ### Acquisition
 Class-granted (on pick / evolution), **bought** (Shop / guild trainers), **found** (manuals / relics),
 or **taught** (NPCs). Claimed-lineage skills follow the §3.6 sanction rules.
+
+### Self-teaching — bootstrap any skill by just *doing* it (no trainer required)
+You are **never locked out of a skill** for lack of a teacher. If you have the **right tool and a valid
+target**, you can **attempt the action untrained** — the System grants the skill at **Rank 0 / "Untrained"**
+the first time you try, and it grows by use (§3) like any other.
+- **Example (the canonical one):** you've got un-skinned monster corpses and want **Skinning/Butchering**.
+  Grab a **knife** and try. Untrained, you **can** do it — but the result is **poor**: low-grade hide,
+  wasted material, a low **craftQuality**, so it **sells for little**. Keep at it and proficiency climbs;
+  eventually your hides rival a trained Tanner's.
+- **How it works (data):** attempting a skill you don't have, with the tool its recipe/check requires,
+  creates the skill at **Rank 0** with a steep **untrained penalty** (`untrainedPenalty` on the skill —
+  big quality/yield/success malus that decays as Rank rises). No tool / wrong tool → you simply can't
+  attempt it.
+- **Self-taught vs. taught:** a **trainer / manual** lets you **start higher** (skip the worst of the
+  untrained slog) and may grant **technique** a self-learner can't stumble into (gated evolutions). So
+  teaching is a **shortcut and a key**, never the *only* door — grinding it yourself always works, it's
+  just slower and rougher at first. (Mirrors the class rule: the journey is valid, the shortcut is nicer.)
+- **Signature / claimed skills are the exception:** truly class-unique signatures and `claimedBy`
+  lineage skills (`§3.6`) **can't** be self-taught — those need the class or the sanction.
+
+> This keeps the world honest: a determined nobody with a knife *can* become a passable skinner. The
+> System lets you — and quietly logs every new proficiency. Self-reliance is real, and it's watched.
 
 ### Active vs. Passive vs. Reactive — and the loadout
 Every skill has a **kind** (`kind: 'passive'|'active'|'reactive'|'utility'`):
