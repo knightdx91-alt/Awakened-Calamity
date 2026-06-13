@@ -113,6 +113,12 @@ window.GameStartMenu = (function () {
 
     // --- Donor combat state (battle item/switch hooks; AC combat will replace) ---
     var _bagAssets = null;   // referenced by Options theme handlers; kept as a stub
+    // These remain referenced by close()/_goBack(); under 'use strict' they must
+    // be declared or those functions throw a ReferenceError (menu won't close).
+    var _battleItemCallback  = null;
+    var _battleBagCancel     = null;
+    var _battlePartyCallback = null;
+    var _battlePartyCancel   = null;
     function _playtime() {
         const secs = (window.GameSave && GameSave.state && GameSave.state.meta)
             ? (GameSave.state.meta.playtimeSeconds || 0) : 0;
