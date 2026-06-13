@@ -144,3 +144,23 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     references (everything except the donor combat engine).
   - Verified throughout with headless Chromium. Ending session at usage limit. **Next: the
     Tempo + Intervention battle rewrite (finishes the purge) and wiring survival systems to play.**
+- **2026-06-13** — Fixes + **systems-design pass** (deliberately design-before-visuals):
+  - **Fixes:** start-menu **back button** (strict-mode `ReferenceError` from the purge — re-declared
+    the dropped `_battle*` callback vars); HUD **meters move to the RIGHT in portrait** + **hide when
+    the menu/sub-menus are open**; **landscape orientation now actually rotates 90°** (was a no-op
+    reflow). All headless-verified.
+  - **Design docs locked** (no code — pinned the systems before building combat):
+    - `LIVING_WORLD.md §4.5` — **NPC mortality**: permanent death (player kills + Overflow Breaks +
+      wild deaths), **no respawn** — the world repopulates with brand-new NPCs; **memory/gossip**
+      spreads speed-bounded; story NPCs immortal.
+    - `PROGRESSION.md §3.7` — **XP curve pinned**: `mob_XP = K·Lᵠ·speciesXpYield` (K=17, B=100,
+      p=2.2, q=1.6 → ~6 kills for level 1); **per-species** XP yield (Lv5 spider ≠ Lv5 wolf).
+    - `DESIGN.md §6.5` — the one-time **Original System** choice: irreversible **full permadeath**
+      (player + bonded creatures); difficulty from the System *withdrawing help*, not stat inflation;
+      rewards = exclusive class/skill **evolutions** + slower Surveillance + true endings.
+    - `CLASSES.md` — **class framework**: hard targets (50 Base / ~50 per Tier / 50 Special), data
+      schema, ~half-unique skill rule, **cumulative foundation-skill synergy**, **hidden-objective
+      unlocks**; **Claimed Classes & the Reckoning** (stolen order/race/world classes → a roaming
+      enforcer finds you → revoke / fight / legitimize); all Open Calls resolved.
+  - **Next: Skills** (`SKILLS.md`) — the shared skill library + per-class unique sets the class
+    framework assembles from — then build the **Tempo + Intervention combat**.
