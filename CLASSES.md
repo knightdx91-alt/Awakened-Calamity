@@ -35,6 +35,56 @@ class is the System sorting you into its framework. This means:
 
 ---
 
+## 1.5 The Class Framework — counts, schema & uniqueness (locked)
+
+The roster is **large and authored as DATA**, not bespoke code — a class is a record built from a
+shared schema, drawing skills from a shared library plus its own unique ones. This is the only way
+the counts below are buildable; uniqueness comes from the *combination* (stat profile + skill set +
+signature + synergy + unlock), not from every skill being one-of-a-kind.
+
+### Hard targets (built one Tier at a time, synergy-first)
+- **50 Base classes** — offered at the tutorial (browsable, filtered by family).
+- **~50 classes at EACH Tier** above Base (Advanced, Master, Grandmaster, Heroic, Legendary) —
+  reached by branching evolution. Each lineage offers up to ~50 reachable end-states across the tree.
+- **50 Special / Anomalous** classes — never on the start list; found via the hidden layer, hidden
+  objectives, or claimed-class events (§3.6).
+- **Build order:** lock the **Base 50 + their foundation skills first**, then design Advanced as
+  evolutions those foundations amplify, and so on up. Author per Tier, never all at once.
+
+### Class record schema (data-driven)
+```
+Class = { id, name, tier, family, affinityLean, statProfile,
+          grantsSkills:[…],          // ~6–10; ~half UNIQUE to this class/lineage, ~half shared pool
+          signature,                 // the one thing only this class does
+          evolvesInto:[…],           // tier-up branches
+          synergyFrom:[…],           // prior classes whose skills AMPLIFY this one (see below)
+          unlock:{ type:'tier'|'stat'|'quest'|'item'|'affinity'|'claimed', … },
+          claimedBy: null|'<order/race/world>' }   // null = open; else see §3.6
+```
+
+### Uniqueness rule
+- Every class grants **~6–10 skills, of which ~3–5 are unique** to it (or its lineage); the rest are
+  shared-pool. Enough genuinely-own skills that each class **plays distinctly**. (This unique-skill
+  demand sets the size of the Skills library — designed next.)
+- Every class also has its own **stat-bonus profile** (`PROGRESSION.md §2`) and **one signature**.
+
+### Cumulative synergy — foundation skills (every class has it)
+- Each class plants **foundation skills** that act as **prerequisites AND amplifiers** for what it
+  evolves into. A **Warrior → Paladin keeps Warrior + bought skills**, and the Warrior foundations
+  make the Paladin *measurably stronger* than picking Paladin cold.
+- So **the journey beats the shortcut** at every step (it already did via cumulative skills; synergy
+  makes it true *mechanically*, not just in kit size). Each evolution lists `synergyFrom` — the prior
+  classes whose skills boost it. **No dead-end lineages.**
+
+### Hidden-objective evolution unlocks
+- Beyond the normal tree, classes are **offered** by meeting buried conditions:
+  - **a stat threshold hit before a level-up** (e.g. Rogue + Speed ≥ X → **Ninja** offered),
+  - a **quest** completed or **item** acquired,
+  - an **affinity / kill-count** milestone.
+- These are the discovery thrill — you back into a class you didn't know existed.
+
+---
+
 ## 2. Standard Class Families
 
 ### Combat (you fight)
@@ -173,6 +223,36 @@ wanted).
 
 ---
 
+## 3.6 Claimed Classes & the Reckoning (stolen lineages have owners)
+
+Some classes aren't open — they **belong to an order, race, or world** (`claimedBy` in the §1.5
+schema): **Blood Priests of Kwaz**, alien **Starborn**, guild-sworn lineages. Only the legitimately
+ordained are *meant* to have them.
+
+### Acquiring one illegitimately
+You can still get a claimed class **off-book** — a hidden-objective unlock, a looted relic, a rogue
+teacher, a glitch. You receive the class and its kit, but it's flagged **unsanctioned**.
+
+### The Reckoning (the consequence — a Living-World event)
+While you hold an unsanctioned claimed class, there's a **chance a legitimate member of that order
+finds you** — a **roaming Living-World NPC** who *physically travels to your location over real time*
+(speed-bounded, `LIVING_WORLD.md §2`), not a scripted spawn. On the encounter, you choose:
+
+1. **Revoke & revert** — surrender the class, take another Basic class. Keep your bought/foundation
+   skills (cumulative rule); lose the claimed-specific ones. Clean exit.
+2. **Fight** — defeat them. Their order turns **hostile**, faction/**Surveillance** hit, more
+   enforcers may come, and (per `LIVING_WORLD.md §4.5`) **killing them is permanent**.
+3. **Legitimize** — run the order's **ordination quest line / trials**. Succeed → the class becomes
+   **sanctioned** *and* you unlock **their specific evolution tree** — the full lineage only true
+   members can climb.
+
+> A "stolen" class is a high-risk seed: flout the rules and you're hunted; earn your place and you
+> inherit an exclusive tree. It ties classes to the multi-species world, gives the roaming-NPC sim
+> real mechanical teeth, and rhymes with the System-as-classifier theme — you're wearing a
+> designation you were never assigned.
+
+---
+
 ## 4. Interlock Summary
 - **Battle (`DESIGN.md`):** classes set creature-reliance and add personal/gadget/System combat
   styles on top of Tempo + Intervention.
@@ -198,9 +278,18 @@ wanted).
 
 ---
 
-## 6. Open Calls
-1. **Creature-optional extreme:** can a build (e.g., pure Engineer/Combat) reach endgame with **zero**
-   Bound creatures, or is a minimum party always required?
-2. **Class count at launch tutorial:** how many *offered* up front vs. unlocked later.
-3. **Multiclass?** Pure single-class with subclass trees (recommended) vs. light multiclass dabbling.
-4. **Race × class gating:** which obscure classes are alien-race-locked vs. open to all.
+## 6. Decisions (resolved)
+1. **Creature-optional extreme — YES, with friction.** A pure self/gadget build (Reaver, Affinity-
+   Knight, Channeler, Engineer) can reach endgame with **zero** Bound creatures. Creatures stay the
+   *easiest* path, and a few Surge-lane / Bind-gated moments favor a party — but each has a self-only
+   alternative. The lonely, untethered no-creature run is itself thematic.
+2. **Tutorial class count — all 50 Base** offered (browsable, filtered by family); Master+ selectable
+   but glacial; obscure/Special are unlock-only.
+3. **Multiclass — NO.** Single class + deep evolution trees (breadth comes from evolving up, cumulative
+   skills + synergy). Respec available.
+4. **Race × class gating — LIGHT.** Only ~2–3 truly race-locked classes (Starborn/Hollow = alien-only,
+   Beast-Kin = part-creature races); everything else open. Race = minor affinity lean + a few exclusives.
+5. **Original-System exclusive evolutions** (`DESIGN.md §6.5`): every class's tree gains a hidden
+   **Untethered branch** reachable only in Original-System mode (or via deep OWPS) — e.g. Warrior →
+   Paladin (sanctioned) vs. Warrior → [darker C] (Untethered). Stronger/darker; pulls the buried-truth
+   thread; makes the permadeath choice pay off at *every* class milestone.
