@@ -51,6 +51,29 @@ Skill = { id, name, category, tier, ranksMax:10,
 Class-granted (on pick / evolution), **bought** (Shop / guild trainers), **found** (manuals / relics),
 or **taught** (NPCs). Claimed-lineage skills follow the §3.6 sanction rules.
 
+### Active vs. Passive vs. Reactive — and the loadout
+Every skill has a **kind** (`kind: 'passive'|'active'|'reactive'|'utility'`):
+- **Passive** — always-on (stat buffs, resistances, % mods: *Toughness* +HP, *Pathfinding* −Exposure).
+  **Always active, never counted against the cap.** This is what makes cumulative class climbing
+  *good*: you stack dozens of passives from every class you've evolved through and always benefit.
+- **Active** — explicitly used; a battle action / out-of-battle check. These fill the **capped loadout**.
+- **Reactive / triggered** — auto-fire on a condition (counter-on-hit, on-low-HP burst). Each costs a
+  loadout slot (they're "equipped" automatons).
+- **Utility** — out-of-battle actions (lockpick, craft, gather). **Don't compete for battle slots** —
+  used contextually, effectively always available.
+
+**The loadout** = **N active/reactive slots**, set at a **Camp / Safe Zone** (a prep decision, not
+swappable mid-fight). Base **~5**, +1 at milestones / attribute thresholds → ~8–10 lategame. So
+**build identity = stacked passives (broad) + the chosen active loadout (specialised per run)**.
+Feeds the limited-action Tempo + Intervention combat (`DESIGN.md §1`).
+
+### Affinity Arts — the 9 affinities AS skills
+Each affinity (Ember · Tide · Verdant · Storm · Stone · Frost · Toxin · Umbral · Lumen) has its own
+**Art tree** of personal affinity attacks (the Channeler / Affinity-Knight core; anyone can learn some).
+- **Dual role** (`DESIGN.md §2`): an Art is **offense AND Exposure defense** in its domain — ranking
+  your **Ember** Arts also hardens you vs. **Heat**. One investment, two payoffs.
+- Same Tier × Rank × evolve structure; the **Affinity Arts** category of the library.
+
 ---
 
 ## 2. Skill XP — cost to rank up
