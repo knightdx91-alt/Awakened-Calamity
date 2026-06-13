@@ -142,10 +142,16 @@
         if (!active) return;
         if (awaitingClose) { if (jp.a || jp.b || jp.start) _teardown(); return; }
         if (mode !== 'menu') return;
-        if (jp.up)   { cursor = (cursor - 1 + menuSkills.length) % menuSkills.length; _render(); }
-        if (jp.down) { cursor = (cursor + 1) % menuSkills.length; _render(); }
-        if (jp.a)    _choose();
-        if (jp.b)    _flee();
+        // 2-column grid nav (like the Pokémon fight menu): left/right within a
+        // row, up/down by a row. Clamped so an odd last row can't overshoot.
+        var COLS = 2, n = menuSkills.length;
+        if (jp.left)  { if (cursor % COLS > 0) cursor -= 1; }
+        if (jp.right) { if (cursor % COLS < COLS - 1 && cursor + 1 < n) cursor += 1; }
+        if (jp.up)    { if (cursor - COLS >= 0) cursor -= COLS; }
+        if (jp.down)  { if (cursor + COLS < n) cursor += COLS; }
+        if (jp.left || jp.right || jp.up || jp.down) _render();
+        if (jp.a) _choose();
+        if (jp.b) _flee();
     }
     function _choose() {
         var skillId = menuSkills[cursor];
@@ -208,6 +214,15 @@
         var span = card.querySelector('.' + sel + ' span');
         if (span) { span.style.width = Math.max(0, Math.min(1, ratio)) * 100 + '%'; if (cls) span.className = cls; }
     }
+    // Continuous tempo: interpolate the in-progress fraction of the next core
+    // step (acc/MS_PER_STEP) so the gauge fills smoothly every frame (MMBN-style),
+    // not in discrete tickStep jumps. Frozen (frac 0) when not ticking.
+    function _tempoDisp(a) {
+        var max = state.tuning.tempoMax;
+        var frac = (mode === 'ticking') ? Math.min(1, acc / MS_PER_STEP) : 0;
+        var gain = Math.max(0, a.speed * (1 + (a.speedMod || 0))) * (state.tuning.tickStep / 100);
+        return Math.min(1, (a.tempo + gain * frac) / max);
+    }
     function _render() {
         if (!els.root) return;
         var p = state.actors.p1, e = state.actors.e1, max = state.tuning.tempoMax;
@@ -215,8 +230,8 @@
         els.player.querySelector('.cv-name').textContent = p.name;
         _setBar(els.enemy, 'cv-hp', e.hp / e.maxHp, 'hp-fill' + (e.hp / e.maxHp < 0.3 ? ' low' : ''));
         _setBar(els.player, 'cv-hp', p.hp / p.maxHp, 'hp-fill' + (p.hp / p.maxHp < 0.3 ? ' low' : ''));
-        _setBar(els.enemy, 'cv-tempo', e.tempo / max, 'tempo-fill' + (e.tempo >= max ? ' ready' : ''));
-        _setBar(els.player, 'cv-tempo', p.tempo / max, 'tempo-fill' + (p.tempo >= max ? ' ready' : ''));
+        _setBar(els.enemy, 'cv-tempo', _tempoDisp(e), 'tempo-fill' + (e.tempo >= max ? ' ready' : ''));
+        _setBar(els.player, 'cv-tempo', _tempoDisp(p), 'tempo-fill' + (p.tempo >= max ? ' ready' : ''));
         els.enemy.querySelector('.cv-status').textContent = _statusTags(e);
         els.player.querySelector('.cv-status').textContent = _statusTags(p);
         els.iv.style.width = Math.min(1, (state._ivTempo || 0) / max) * 100 + '%';
@@ -249,8 +264,8 @@
         '.cv-enemy{top:6%;right:3%;} .cv-player{bottom:6%;left:3%;}' +
         '.cv-name{font-size:11px;font-weight:bold;color:#f2d39a;margin-bottom:3px;}' +
         '.cv-bar{height:7px;background:#1a1a24;border:1px solid #000;border-radius:3px;margin:2px 0;overflow:hidden;}' +
-        '.cv-bar span{display:block;height:100%;width:100%;transition:width 80ms linear;}' +
-        '.hp-fill{background:linear-gradient(#7bd66a,#3da13a);} .hp-fill.low{background:linear-gradient(#e06a4a,#b03020);}' +
+        '.cv-bar span{display:block;height:100%;width:100%;}' +
+        '.hp-fill{background:linear-gradient(#7bd66a,#3da13a);transition:width 140ms ease;} .hp-fill.low{background:linear-gradient(#e06a4a,#b03020);transition:width 140ms ease;}' +
         '.tempo-fill{background:linear-gradient(#e8c46a,#b88a2a);} .tempo-fill.ready{background:linear-gradient(#ffe9a0,#e8b94a);box-shadow:0 0 4px #ffd96a;}' +
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:10px;margin-top:2px;}' +
         '.cv-sprite{font-size:30px;text-align:center;margin-top:4px;}' +
