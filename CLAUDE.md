@@ -22,6 +22,11 @@ architecture, map system, save system) and is still the best reference for how t
 - **No build system.** Plain HTML/CSS/JS, all globals (`window.GameXxx`). No npm/bundler.
 - Serve over HTTP (`python3 -m http.server 8000`), not `file://`, so `fetch()` works.
 - **Handle tasks directly** — do not spawn subagents.
+- **⚠️ PORTABILITY — this is a PROTOTYPE for a 3D Unity rebuild (PC/console, multiplayer).**
+  Game **systems = engine-agnostic DATA (`data/systems/*.json`) + pure deterministic RULES
+  (`src/systems/*.js`, no DOM)**, separate from **presentation** (canvas/DOM, the throwaway layer).
+  Logic + data must port to Unity; rendering gets rebuilt. **Never put game logic in the renderer/UI.**
+  See `ARCHITECTURE.md`.
 
 ## Deploy
 - **GitHub Pages via Actions** (`.github/workflows/pages.yml`). On push to `main` it replaces
