@@ -217,7 +217,18 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     to act, B to flee. Headless-verified: battle starts, turns resolve, result shows, view tears down.
     Smith (crafter, atk 16) is intentionally a weak fighter — winnable vs Emberling with Guard/Mend,
     loses to Thornwolf; Intervention fires only when a player actor drops ≤35% HP (the bait).
-  - **Next on combat:** more skill effect types (the data references aoe/counter/taunt/summon/slow/
-    mark/partyBuff/applyToxin/sunder — only power/heal/defUp/maxHp resolved today); party/multi-actor;
-    target select; then `src/systems/progression.js` (XP/leveling) so wins grant XP. Then resume
-    content / prototype the discovery-layer registry.
+  - **Combat depth pass (real-time bars + effect types):**
+    - **Real-time Tempo bars** — view now drives the core's new `GameCombat.step()` once per ~45ms via
+      `requestAnimationFrame`, so bars FILL in real time (ATB feel); pauses on the player's turn
+      (`pause_on_act`), surfaces the System Intervention as its own beat. Headless-verified (bars seen
+      partially filled, not instant).
+    - **Effect-type framework in the pure core** (`src/systems/combat.js` rewritten): status model +
+      `step()`/`advanceToReady()` split. Implemented **AoE** (cleave splash), **slow**, **mark**,
+      **sunder** (armor shred), **applyToxin** (DoT), **taunt** (forces enemy targeting), **summon**
+      (AI ally), **partyBuff**, **selfCost**, **counter** + **evade** + **crit** (reactive/passive
+      folded into traits at createBattle), **bonusVsUnaware**. `tools/test_effects.mjs` = 11 checks all
+      green + determinism. Test Smith loadout now shows several live (Pin Shot→SLOW, Coat Blade→toxin,
+      Unmake→armor↓, Riposte counter).
+  - **Next on combat:** multi-enemy/party VIEW + target select (core already supports N actors & AoE/
+    taunt/summon); `intercept`/`guardAlly` redirect (stubbed); then `src/systems/progression.js`
+    (XP/leveling) so wins grant XP. Then resume content / prototype the discovery-layer registry.
