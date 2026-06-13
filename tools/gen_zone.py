@@ -232,6 +232,7 @@ def main():
     ap.add_argument("--fill-upper-png", default=None)
     ap.add_argument("--fill-lower-png", default=None)
     ap.add_argument("--objects-dir", default=None)
+    ap.add_argument("--building-parts", default=None, help="dir of modular house parts")
     args = ap.parse_args()
 
     corner_to_idx = bake_tileset(args.src, args.tileset_name,
@@ -242,11 +243,27 @@ def main():
 
     overlay, ov_name = None, None
     if args.objects_dir:
-        names = ["house_large", "house_medium", "house_small", "well",
-                 "tree_pine", "tree_broadleaf", "bush", "rock", "barrel", "signpost"]
+        names = ["well", "tree_pine", "tree_broadleaf", "bush", "rock",
+                 "barrel", "signpost"]
+        house_spec = []
+        if args.building_parts:
+            # MODULAR houses: assemble from parts at several sizes
+            import sys
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from build_house import load_parts, build_house
+            parts = load_parts(args.building_parts)
+            sizes = {"builtH_small": (3, 3), "builtH_med": (5, 4),
+                     "builtH_large": (7, 5)}
+            for nm, (bw, bh) in sizes.items():
+                build_house(parts, bw, bh).save(os.path.join(args.objects_dir, nm + ".png"))
+                names.insert(0, nm)
+            house_spec = [("builtH_large", 1), ("builtH_med", 2), ("builtH_small", 3)]
+        else:
+            names = ["house_large", "house_medium", "house_small"] + names
+            house_spec = [("house_large", 1), ("house_medium", 2), ("house_small", 2)]
         objmap, ov_name = bake_overlay(args.objects_dir, names,
                                        args.tileset_name + "_obj")
-        spec = [("house_large", 1), ("house_medium", 2), ("house_small", 2),
+        spec = house_spec + [
                 ("well", 1), ("signpost", 1), ("tree_pine", 6),
                 ("tree_broadleaf", 6), ("bush", 8), ("rock", 5), ("barrel", 3)]
         overlay, placed = place_objects(args.width, args.height, collision,
