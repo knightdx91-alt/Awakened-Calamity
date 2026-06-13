@@ -22,6 +22,37 @@ trainer / skill manual / quest / Insight check (a milestone, not automatic).
 
 ---
 
+## 1.5 The Skill Library — shared pool + unique sets (feeds `CLASSES.md §1.5`)
+
+Classes are **assembled from skills** (`CLASSES.md §1.5`: each grants ~6–10, ~half unique). So the
+library must be **large and data-driven** — the class roster and the skill library are **co-authored
+one Tier at a time** (build the Base 50 classes' shared + unique skills together, then Advanced, …).
+
+### Categories
+**Combat · Affinity Arts · Crafting · Gathering · Espionage · Survival · Social.**
+
+### Shared pool vs. signature
+- **Shared pool** — common skills many classes can hold (*Power Strike, First Aid, basic gathering*).
+  The "~half shared" per class; keeps the library buildable.
+- **Signature / class-unique** — tied to one class or lineage (only Reaver gets *Bloodlust*, only
+  Systemancer gets *UI Hijack*). The "~half unique" that make each class **play distinctly**.
+
+### Skill record schema (data-driven)
+```
+Skill = { id, name, category, tier, ranksMax:10,
+          shared:true|false,        // pool vs. class-unique
+          effectPerRank, subEffectPerTier,
+          evolvesInto:[…],          // §4.5 — branches at Rank 10
+          synergyFrom:[…],          // skills/stats that amplify or gate an evolution
+          claimedBy:null|'<order>'} // unique evolutions from Claimed lineages (CLASSES.md §3.6)
+```
+
+### Acquisition
+Class-granted (on pick / evolution), **bought** (Shop / guild trainers), **found** (manuals / relics),
+or **taught** (NPCs). Claimed-lineage skills follow the §3.6 sanction rules.
+
+---
+
 ## 2. Skill XP — cost to rank up
 
 Same curve *shape* as the class XP model, with its own constants:
@@ -78,6 +109,28 @@ gain = u * (1 + diffBonus)        // with a per-encounter soft cap (diminishing 
 
 ---
 
+## 4.5 Skill Evolutions — skills branch, like classes
+
+At **Rank 10**, a skill has two forward paths (mirrors `CLASSES.md` evolution):
+- **Breakthrough** — advance to the **next Tier, same skill** (§1). Linear power.
+- **Evolve** — branch into a **different skill** entirely: *Power Strike → Cleave* or *→ Sunder*.
+  Evolving keeps the skill's accrued investment as the new skill's starting Tier/Rank.
+
+**Synergy / prerequisites** (same idea as class foundation skills): an evolution can require **other
+skills or stats** — *Speed ≥ X + Stealth → Shadowstep* — so foundation skills amplify evolutions here
+too. Hidden-objective offers apply (`CLASSES.md §1.5`): hit a buried condition and the System offers
+a skill evolution you didn't know existed.
+
+**Untethered skill evolutions** (`DESIGN.md §6.5`): every skill tree has a hidden branch reachable
+**only in Original-System mode** (or deep OWPS) — the darker/stronger evolution the assisted System
+never offers. With class Untethered branches, this is what makes the permadeath choice pay off
+*continuously*, not once.
+
+> So skills are **trees, not ladders** — the breakthrough/evolve fork at every Rank 10 gives skill
+> growth the same branching identity the class system has.
+
+---
+
 ## 5. Stat Gains Through Levels
 
 Three sources (cross-ref `PROGRESSION.md §2`):
@@ -114,8 +167,13 @@ Three sources (cross-ref `PROGRESSION.md §2`):
   use triggers.
 - **Defer:** per-rank/per-tier power tables, optional training nudges, Legendary-tier skill content.
 
-## 8. Open Calls
-1. **Ranks per Tier:** 10 (assumed) or another count?
-2. **Breakthrough gate:** trainer/manual required, or auto at Rank 10 + level threshold?
-3. **Skill slots/cap:** can you level unlimited skills, or is there an equipped/active cap?
-4. **M(Tier) for skills:** ×2.5/Tier (assumed) vs. matching the class ×3 — tune against use-rates.
+## 8. Decisions (resolved)
+1. **Ranks per Tier — 10.**
+2. **Breakthrough gate:** Rank 10 makes a skill **eligible**; the actual Tier-up needs a
+   **trainer / manual / Insight check** (a milestone gated behind guild/world content — earned, not auto).
+3. **Skill slots/cap:** **Known/passive skills = UNLIMITED** (you keep everything via cumulative class
+   evolution); **active/equipped skills = a capped loadout** brought into battle (cap grows with
+   level/attributes). Builds matter without punishing cumulative skills, and it feeds the
+   limited-action Tempo + Intervention combat (`DESIGN.md §1`). *(Confirm: capped loadout vs. no cap.)*
+4. **M(Tier) for skills = ×2.5** (skills level by use — more frequent than class XP, so a gentler
+   per-Tier multiplier than the class ×3).
