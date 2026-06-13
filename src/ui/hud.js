@@ -284,8 +284,28 @@ window.GameHUD = (function () {
         _renderMeters();
     }
 
+    // True when the active layout is portrait — respects the orientation override
+    // class on <body>, falling back to the viewport aspect for 'auto'.
+    function _isPortraitLayout() {
+        var c = document.body.classList;
+        if (c.contains('orient-portrait') || c.contains('orient-reverse-portrait')) return true;
+        if (c.contains('orient-landscape') || c.contains('orient-reverse-landscape')) return false;
+        return window.innerHeight >= window.innerWidth;
+    }
+
     function _renderMeters() {
         if (!_metersEl) return;
+        // Hide the meters whenever the start menu (or any of its sub-screens) is open.
+        var menuOpen = !!(window.GameStartMenu && GameStartMenu.isOpen);
+        _metersEl.style.display = menuOpen ? 'none' : 'flex';
+        if (menuOpen) return;
+        // Portrait → right side (below the top-right info box); otherwise top-left.
+        var portrait = _isPortraitLayout();
+        if (portrait) {
+            _metersEl.style.left = 'auto'; _metersEl.style.right = '4px'; _metersEl.style.top = '58px';
+        } else {
+            _metersEl.style.right = 'auto'; _metersEl.style.left = '4px'; _metersEl.style.top = '4px';
+        }
         var s = (window.GameSave && GameSave.state && GameSave.state.survival) ||
                 { surveillance: 0, stamina: 100, exposure: 0 };
         var clamp = function (n) { return Math.max(0, Math.min(100, n || 0)); };
