@@ -178,6 +178,11 @@ from encounter rates (`ENCOUNTERS.md`), then solve B, p, K, q so cumulative XP a
   grind wall. (Optional: a steepening XP penalty past 450, but keep the real wall story-driven.)
 - **Class Tiers** (`CLASSES.md §3.5`) climb alongside level via evolution; the top Tiers (**Heroic /
   Legendary**) push you toward the soft cap — top-Tier power is exactly where conversion risk peaks.
+- **Classes have NO hard level cap** (`CLASSES.md §1.7`). You may level any class indefinitely without
+  evolving; the **~450 character soft cap above is the only ceiling**, and it's a story/Surveillance
+  pressure on the *character*, never a per-class "must evolve" wall. Staying in a low-Tier class stays
+  worthwhile because low Tiers level fast → more attribute points + deeper skill ranks, while
+  in-class **Specializations** (`CLASSES.md §1.7` axis 2) give focus bonuses for not leaving.
 
 ---
 

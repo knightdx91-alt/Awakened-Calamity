@@ -169,3 +169,16 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       enforcer finds you → revoke / fight / legitimize); all Open Calls resolved.
   - **Next: Skills** (`SKILLS.md`) — the shared skill library + per-class unique sets the class
     framework assembles from — then build the **Tempo + Intervention combat**.
+  - **Combat slice built** (portable, pure): `src/systems/rng.js` (seeded mulberry32) +
+    `src/systems/combat.js` (Tempo + System Intervention, no DOM, deterministic) +
+    `data/systems/{combat,skills,creatures,affinities,classes}.json`; `tools/test_combat.mjs`
+    verifies a full battle + same-seed determinism. `ARCHITECTURE.md` written (Data→Rules→
+    Presentation; combat = most volatile layer, skill cost = abstract `weight`).
+  - **Classes — 4 growth axes locked** (`CLASSES.md §1.7`): **level** (no forced evolution, NO
+    hard cap), **specialize** (in-class focus → mastery bonuses; the reason to stay), **evolve**
+    (climb lineage), **change** (lateral, keep skills). Schema gained `maxLevel`+`specializations`
+    (§1.5); `PROGRESSION.md §4` notes no per-class cap (only the ~450 character soft cap).
+  - **Data authored:** `data/systems/classes.json` = **19 Basic classes** (toward 50), each with
+    `specializations`; `data/systems/skills.json` = **80 skills** (all class refs resolve).
+  - **Next: more Basic classes toward 50**, then Advanced-tier evolutions; build the combat VIEW
+    (presentation) and `src/systems/progression.js` (XP/leveling).

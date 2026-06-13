@@ -56,11 +56,25 @@ signature + synergy + unlock), not from every skill being one-of-a-kind.
 Class = { id, name, tier, family, affinityLean, statProfile,
           grantsSkills:[…],          // ~6–10; ~half UNIQUE to this class/lineage, ~half shared pool
           signature,                 // the one thing only this class does
+          maxLevel: null,            // null = NO hard cap (the norm); soft cap is the ~450 char ceiling
+          specializations:[…],       // in-class focus picks — see schema below (§1.7 axis 2)
           evolvesInto:[…],           // tier-up branches
           synergyFrom:[…],           // prior classes whose skills AMPLIFY this one (see below)
           unlock:{ type:'tier'|'stat'|'quest'|'item'|'affinity'|'claimed', … },
           claimedBy: null|'<order/race/world>' }   // null = open; else see §3.6
+
+Specialization = { id, name,
+          unlockAtLevel,             // class level where the choice is offered
+          focus,                     // the sub-domain it masters (e.g. 'light_armor', 'two_handed')
+          bonuses:[ {type, target, amount} ],  // mastery bonuses (craft quality/speed, combat dmg/def…)
+          grantsSkill: null|'<skillId>' }       // optional single unique skill
 ```
+
+**Specialization examples** (focus *within* a class, no Tier change — `§1.7` axis 2):
+- **Smith → Light Armorer:** `focus:'light_armor'`, `bonuses:[{type:'craftQuality',target:'light_armor',amount:0.2},{type:'materialEff',target:'light_armor',amount:0.15}]`.
+- **Warrior → Two-Handed Master:** `focus:'two_handed'`, `bonuses:[{type:'dmg',target:'two_handed',amount:0.15}]`, `grantsSkill:'cleave'`.
+- **Warrior → Guardian:** `focus:'shield'`, `bonuses:[{type:'def',target:'self',amount:0.2}]`, `grantsSkill:'bulwark'`.
+- A class typically offers **2–4 specializations**; you pick **one** (respec-able like class change).
 
 ### Uniqueness rule
 - Every class grants **~6–10 skills, of which ~3–5 are unique** to it (or its lineage); the rest are
@@ -108,6 +122,47 @@ healer, merchant, scholar, or townsperson** — combat is *one* pillar, not the 
 
 > The world reads as a real society under the System: the brave roam and risk the wilds; the
 > cautious build, craft, and heal — and *both* are real, full ways to play.
+
+---
+
+## 1.7 The four ways a class grows (level · specialize · evolve · change)
+
+A class is **not** a forced staircase toward evolution. It grows along **four independent axes**, and
+a player can lean on any mix of them. The point: **staying in your class is a real, rewarding build**,
+not a holding pattern until you can evolve out.
+
+### 1. Level — no forced evolution, no hard max
+- You can **keep leveling your current class indefinitely.** There is **no hard level cap**; the only
+  ceiling is the **~450 soft cap + conversion risk** (`PROGRESSION.md §4`) that applies to the
+  *character*, not the class — and that is a story/Surveillance pressure, never a "you must evolve now"
+  wall.
+- **Lower-Tier classes level fast** (`§3.5`), so a "lifer" who never evolves still racks up many levels
+  → **attribute points** (`PROGRESSION.md §2`) and **deeply-ranked skills** (`SKILLS.md §4` — Rank 10
+  breakthroughs). A Basic-class veteran is a master of a *narrow* kit, which is its own power fantasy.
+- Evolving **trades that speed away** (higher Tier = slower XP per level), so there is a genuine,
+  ongoing reason to *not* evolve: raw level throughput and skill depth **now**.
+
+### 2. Specialize — go deep within the class (the reason to stay)
+- At a class-mastery milestone you may choose a **Specialization** — a focus *inside* the current
+  class that grants **mastery bonuses** (and sometimes **one unique skill**) without leaving the class
+  or changing Tier.
+- Specializations are how "staying is worth it" pays off mechanically: a **Smith** who specializes in
+  **Light Armor** gets a crafting-quality/speed/material-efficiency bonus to light armor specifically;
+  a **Warrior** picks a **stance/weapon mastery** (e.g. Two-Handed, Guardian) for combat bonuses.
+- A Specialization is **narrower than an evolution and cheaper than a class change** — it sharpens what
+  you already do. (Schema + examples in `§1.5`.)
+
+### 3. Evolve — climb the lineage (Warrior → Paladin)
+- Up a **Tier** within the lineage: a **bigger kit + foundation-skill synergy** (`§1.5`, `§3.5`), gated
+  by level + a Trial/quest. **Slower leveling**, broader power. Optional, never forced.
+
+### 4. Change — lateral career switch (keep your skills)
+- A **life/career** move to a different class (Warrior → Smith), `§1.6`. **You keep all accumulated
+  skills**; only your *growth focus / signature / stat lean* changes.
+
+> **Level vs. Specialize vs. Evolve vs. Change are orthogonal.** A player can level a Basic class to a
+> high level, take a Specialization for focus bonuses, and **never evolve** — that is a fully valid,
+> deep build. Evolution is *a* path, not *the* path.
 
 ---
 
