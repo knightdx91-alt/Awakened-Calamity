@@ -1,150 +1,181 @@
-# Full Tilesheet Generation Checklist (RPG-Maker-MZ-style)
+# Full Tilesheet Generation Checklist — modeled on RPG Maker MZ's RTP
 
-A target list for building a **complete town/outdoor tilesheet** for Awakened
-Calamity, organized the way RPG Maker MZ structures its tilesets. Use it as the
-"is it complete?" reference when generating art with the `pixellab` skill.
+This enumerates **what actually sits on RPG Maker MZ's tilesheets**, sheet by
+sheet, so we have an exact reference for what a "complete" tilesheet must cover.
+It is modeled on the MZ **Outside** (town/overworld) RTP set; Inside and Dungeon
+follow the same sheet structure and are listed at the end.
 
-## How to read this
-Each item notes the **PixelLab mode** to generate it and a **rough credit cost**
-(trial/subscription "generations"):
+Each line maps to the `pixellab` skill mode that produces it, with a rough credit
+cost. We are NOT copying MZ's art (it's copyrighted) — we're matching its
+*coverage* with our own generated tiles.
 
-| PixelLab mode | Use for | ~credits each |
-|---|---|---|
-| `tileset` | seamless terrain autotiles (A1–A2) | **~4** |
-| `image` | flat ground tiles, single props, UI | **~1** |
-| `mapobject` | buildings/props placed on the map (B–E, A3) | ~1–? (verify) |
-| `object` | multi-direction interactable objects | ~1–? (verify) |
+## How MZ splits a tileset (the 9 sheets)
+| Sheet | Pixels | Holds | Autotile? | Our gen mode |
+|------|--------|-------|-----------|--------------|
+| **A1** | 768×576 | **animated** terrain (water/waterfall/lava) | yes | `tileset` (+manual anim) |
+| **A2** | 768×576 | ground/floor terrain | yes (autotile) | `tileset` |
+| **A3** | 768×384 | building **roofs & walls** | yes (building) | `mapobject`/`tileset` |
+| **A4** | 768×720 | **walls** (wall-top + wall-side) | yes (wall) | `mapobject`/`tileset` |
+| **A5** | 384×768 | plain ground, stairs, ledges | no | `image` |
+| **B** | 768×768 | objects/decoration (256 cells) | no | `mapobject`/`object` |
+| **C** | 768×768 | objects/nature (256 cells) | no | `mapobject`/`object` |
+| **D** | 768×768 | extra objects (optional) | no | `mapobject`/`object` |
+| **E** | 768×768 | extra objects (optional) | no | `mapobject`/`object` |
 
-> Credit costs: `image` is confirmed = 1; `tileset` measured ≈ 4. `mapobject`/
-> `object` are async multi-step — confirm actual cost on first run.
-
-Prompt tips learned so far:
-- The `tileset` generator biases the **upper** terrain toward a *paved/brick*
-  pattern. For plain ground (dirt/soil), generate it as a **flat `image` tile**
-  (A5 style) instead of forcing it through the Wang transition.
-- Use literal material words ("muddy trail", "tilled farmland", "molten lava
-  river") rather than generic ones ("dirt", "lava").
-- Keep a consistent **style** across assets: reuse `--view "high top-down"`,
-  the same detail/shading/outline flags, and (on paid tiers) a color reference.
+Credit costs: `image` = 1 (confirmed); `tileset` ≈ 4 (measured); `mapobject`/
+`object` are async multi-step — confirm on first run.
 
 ---
 
-## A. TERRAIN — autotiles & ground  (`tileset` + `image`)
-The self-bordering ground layers. *(Our first batch covered most of A1–A2.)*
+## OUTSIDE_A1 — animated terrain autotiles  (`tileset`)
+The bottom-most water/lava layers; MZ animates them over 3 frames.
+- [x] sea / ocean (deep water)            — have `02` pond water (reuse/adapt)
+- [ ] shallow water / shore (over sea)
+- [ ] waterfall (vertical, animated)
+- [ ] waterfall basin / foam
+- [ ] swamp / poison water (tinted)
+- [ ] lava (animated)                       — have `09_stone_lava_v2` ✅
 
-### A1/A2 — terrain transitions (`tileset`)
-- [x] grass ↔ water (pond)            — `02_grass_water` ✅
-- [x] sand ↔ sea (shore)              — `04_sand_sea` ✅
-- [x] grass ↔ sand                    — `03_grass_sand` ✅
-- [x] grass ↔ forest floor            — `07_grass_forest` ✅
-- [x] grass ↔ cobblestone             — `05_grass_cobble` ✅
-- [x] dirt/ground ↔ cliff/stone       — `06_dirt_cliff` ✅
-- [x] stone floor ↔ lava              — `09_stone_lava_v2` ✅
-- [ ] grass ↔ deep water (darker)
-- [ ] snow ↔ ice (needs more contrast — `08` was low-contrast)
-- [ ] grass ↔ muddy trail / path (redo "dirt" — see prompt tips)
-- [ ] farmland / tilled soil ↔ grass
-- [ ] water ↔ waterfall (animated, optional)
+## OUTSIDE_A2 — ground/floor autotiles  (`tileset`)
+The walkable ground terrains with auto-borders. *Most of our first batch is here.*
+- [x] grass (standard)                      — `02/03` grass ✅
+- [ ] grass — flowered / variant
+- [ ] grass — dark / forest                 — `07_grass_forest` (close) ✅
+- [ ] dirt / bare earth                     — ⚠️ redo (came out brick; use `image` A5 instead)
+- [ ] dirt path / trail (over grass)        — ⚠️ redo as "muddy trail"
+- [ ] stone / cobblestone road             — `05_grass_cobble` (cobble) ✅
+- [x] sand / beach                           — `03_grass_sand`, `04_sand_sea` ✅
+- [ ] desert sand (dunes)                    — `10` (too orange, redo)
+- [ ] farmland / tilled soil
+- [ ] snow                                   — `08_snow_ice` (low contrast, redo)
+- [ ] wasteland / cracked earth
 
-### A5 — plain (non-auto) ground fills (`image`, ~1 each)
-- [ ] plain dirt / packed earth floor
-- [ ] wooden plank floor
-- [ ] stone/brick floor
-- [ ] grass fill (flat)
-- [ ] cave/dungeon floor fill
+## OUTSIDE_A3 — building roofs & walls  (autotile pairs)
+Buildings in MZ = a **roof autotile** + a **wall autotile**, in color variants.
+- [ ] roof — red/orange tile
+- [ ] roof — blue tile
+- [ ] roof — green / grey
+- [ ] roof — thatch / straw
+- [ ] wall — brick / stone
+- [ ] wall — wood plank / log
+- [ ] wall — plaster / stucco (with windows)
+
+## OUTSIDE_A4 — tall walls  (wall-top + wall-side autotile)
+- [ ] stone castle wall (tall)
+- [ ] rock cliff face (vertical)            — `06_dirt_cliff` partial ✅
+- [ ] city/town wall
+- [ ] wooden palisade wall
+
+## OUTSIDE_A5 — plain ground & stairs  (`image`, ~1 each)
+Non-auto flat fills and steps.
+- [ ] flat grass fill
+- [ ] flat dirt fill
+- [ ] flat sand fill
+- [ ] flat stone/pavement fill
+- [ ] wooden plank fill
+- [ ] stairs (stone, up/down)
+- [ ] stairs (wood)
+- [ ] ledge / cliff edge strip
 
 ---
 
-## B–E. OBJECTS — buildings, props, nature  (`mapobject` / `object`)
-The non-tiling stamps placed on top of terrain. **This is the bulk of "a full
-sheet"** and what's still entirely to do.
-
-### Buildings & structure parts (`mapobject`)
-- [ ] small house (whole)
-- [ ] medium house (whole)
-- [ ] large house (whole)
-- [ ] roof pieces (variants/colors)
-- [ ] wall sections (with door gap)
-- [ ] door (closed) / door (open)
-- [ ] windows (lit / unlit)
-- [ ] chimney
-- [ ] awning / shopfront
-- [ ] stairs (stone / wood)
-- [ ] bridge (wood / stone)
-- [ ] signpost / shop sign
-
-### Special town buildings (`mapobject`)
-- [ ] inn
-- [ ] general shop
-- [ ] blacksmith / forge
-- [ ] temple / shrine
-- [ ] town hall
-- [ ] barn / stable
-- [ ] tower / watchtower
-- [ ] market stall
-
-### Town props / furniture (`mapobject` or `object`)
-- [ ] fence (straight + corner)
+## OUTSIDE_B — town objects & structure props  (`mapobject` / `object`)
+The big decoration sheet. Actual MZ Outside_B inventory:
+- [ ] door — wood (closed / open)
+- [ ] door — double / large
+- [ ] window (lit / unlit)
+- [ ] awning / shop canopy
+- [ ] signboard / hanging sign
+- [ ] signpost (directional)
+- [ ] fence — wood (straight + corners)
+- [ ] fence — hedge
 - [ ] gate
 - [ ] well
-- [ ] lamp post / lantern
-- [ ] barrel, crate
+- [ ] lamp post / street lantern
+- [ ] barrel
+- [ ] crate / box
+- [ ] jar / pot / urn
+- [ ] sacks / bags
+- [ ] market stall / vendor table
 - [ ] cart / wagon
-- [ ] bench, table, chair
+- [ ] bench
+- [ ] mailbox / post
+- [ ] flag / banner
+- [ ] bridge — wood (horizontal/vertical)
+- [ ] bridge — stone
+- [ ] dock / pier planks
+- [ ] tent
+- [ ] campfire
+- [ ] hay bale / haystack
 - [ ] fountain
 - [ ] statue / monument
-- [ ] crops / planter boxes
-- [ ] hanging banner / flag
+- [ ] flower bed / planter
 
-### Nature (`mapobject`)
-- [ ] tree — pine (S/M/L)
-- [ ] tree — broadleaf (S/M/L)
-- [ ] tree — dead/bare
+## OUTSIDE_C — nature objects  (`mapobject`)
+Actual MZ Outside_C inventory (trees, rocks, foliage):
+- [ ] tree — broadleaf (small / medium / large)
+- [ ] tree — pine/fir (small / medium / large)
+- [ ] tree — palm
+- [ ] tree — dead / bare
+- [ ] tree — autumn / colored variant
 - [ ] bush / shrub
-- [ ] flowers (clusters, a few colors)
+- [ ] hedge clump
+- [ ] flowers (clusters, 3–4 colors)
 - [ ] tall grass tuft
-- [ ] rock (small / large)
-- [ ] stump / fallen log
+- [ ] reeds / cattails (waterside)
+- [ ] rock — small
+- [ ] rock — large / boulder
+- [ ] stone pile / rubble
+- [ ] stump
+- [ ] fallen log
 - [ ] mushrooms
+- [ ] cactus / desert plant
+- [ ] snow-covered tree / bush (winter variants)
+- [ ] gravestone / cross
 
-### Interactables (`object`, 8-direction where useful)
-- [ ] treasure chest (closed/open)
-- [ ] torch / brazier (lit)
-- [ ] pot / urn (breakable)
-- [ ] lever / switch
-- [ ] door (dungeon)
-
----
-
-## OTHER THEMED SHEETS (future, same structure)
-- [ ] **Inside** — floors, walls, furniture, rugs, beds, shelves, fireplaces.
-- [ ] **Dungeon** — cave/stone autotiles, pillars, traps, bones, crystals.
-- [ ] **World map** — overworld grass/forest/mountain/sea autotiles + town/cave icons.
+## OUTSIDE_D / E — extras (optional)  (`mapobject`)
+MZ leaves these for expansion; ours could hold:
+- [ ] ruins / broken pillars
+- [ ] crops (rows: wheat, corn, etc.)
+- [ ] ship / boat pieces
+- [ ] large landmark buildings (church, tower, windmill)
+- [ ] System-themed props (your setting: terminals, glyphs, anomalies)
 
 ---
 
-## MVP — a minimal but complete TOWN sheet (do this first)
-A focused subset that yields one fully buildable town, in priority order:
-1. Terrain: grass↔dirt-path, grass↔water, grass↔cobble  *(have 2 of 3)*
-2. Ground fills: grass, dirt, plank, stone  (`image` ×4)
-3. Buildings: small/medium/large house, door, window, roof  (`mapobject` ×6)
-4. Town props: fence, well, lamp, barrel, signpost, market stall  (`mapobject` ×6)
-5. Nature: tree ×2, bush, flowers, rock  (`mapobject` ×5)
-6. Interactable: chest  (`object` ×1)
+## OTHER SETS (same 9-sheet structure, future)
+- [ ] **Inside** — A1 (none/animated), A2 floors/carpets, A4 inside walls, A5
+  floors; B/C = furniture (beds, tables, chairs, shelves, fireplaces, rugs,
+  doors, stairs, kitchen, clutter).
+- [ ] **Dungeon** — A1 lava/water, A2 cave floor, A4 cave/stone walls, A5 floors;
+  B/C = pillars, torches, chests, traps, bones, crystals, statues, doors.
+- [ ] **World map** — A1 sea, A2 grass/forest/desert/snow/mountain autotiles,
+  B = town/cave/castle map icons.
 
-**MVP rough budget:** ~3 tilesets (~12) + ~22 object/image gens (~22+) ≈ **35–45
-generations** → about **one ~$9 PixelLab month**.
+---
 
-## Full town sheet budget
-Everything in sections A + B–E ≈ **50–70 assets**, and with 2–3 re-rolls each for
-quality/consistency, realistically **100–180 generations**. Still well within a
-single paid month's credit allotment; the real cost is iteration time + my
-assembly of the pieces into engine-ready tilesets/overlays.
+## Budgets (with our gen modes)
+- **Outside_A (terrain, A1–A5):** ~20 autotiles+fills. Autotiles ≈ 12 × ~4 +
+  fills ≈ 8 × 1 → **~55 generations**.
+- **Outside_B+C (objects/nature):** ~55 items × (1–3 rolls) → **~80–150**.
+- **One complete Outside set:** **~135–205 generations** → comfortably inside a
+  single ~$9 PixelLab month's credit allotment.
+- **Town MVP (subset that builds one playable town):** see list below ≈ **35–45**.
+
+### Town MVP (do first)
+Terrain: grass↔water, grass↔path, grass↔cobble · Fills: grass, dirt, plank,
+stone · Buildings: small/medium/large house (roof+wall), door, window ·
+Props: fence, well, lamp, barrel, signpost, market stall · Nature: tree ×2,
+bush, flowers, rock · Interactable: chest.
 
 ---
 
 ## After generation — engine integration (my side, no credits)
-1. Terrain `tileset` output → pack tiles into a sheet + write
-   `<tileset>.autotile.json` (`wang8_lut`), register in `data/tilesets/_index.json`.
+1. `tileset` output → pack into a sheet + write `<tileset>.autotile.json`
+   (`wang8_lut`); register in `data/tilesets/_index.json`.
 2. Buildings/props → import as overlay tiles / map-editor stamps.
-3. Wire into a real map (layout + map JSON) and deploy to Pages to walk it.
+3. Place into a real map (layout + map JSON), deploy to Pages, walk it.
+
+## Sources (structure reference)
+- RPG Maker MV/MZ tileset sheet specs (A1–A5 dims & roles, B–E objects):
+  community guide + RPG Maker Wiki.
