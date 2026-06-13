@@ -1,0 +1,5 @@
+{
+  "list": ["ember","tide","verdant","storm","stone","frost","toxin","umbral","lumen","corruption","untethered"],
+  "_note": "Effectiveness chart is a DESIGN decision (DESIGN.md §2) — TBD. Empty chart = all neutral (x1.0).",
+  "chart": {}
+}

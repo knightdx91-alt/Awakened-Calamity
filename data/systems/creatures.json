@@ -1,0 +1,4 @@
+{
+  "emberling": { "name": "Emberling", "affinity": "ember",   "xpYield": 1.0, "stats": { "hp": 62, "atk": 22, "def": 14, "speed": 62 }, "loadout": ["jab","ember_bolt"] },
+  "thornwolf": { "name": "Thornwolf", "affinity": "verdant", "xpYield": 1.3, "stats": { "hp": 78, "atk": 26, "def": 17, "speed": 70 }, "loadout": ["jab","heavy_strike"] }
+}

@@ -1,0 +1,8 @@
+{
+  "warrior": {
+    "name": "Warrior", "tier": "basic", "family": "combat", "affinityLean": "ember",
+    "statProfile": { "hp": 90, "atk": 24, "def": 18, "speed": 58 },
+    "grantsSkills": ["jab","heavy_strike","guard","toughness"],
+    "signature": "Frontline self-combat; foundation for Paladin/Reaver evolutions."
+  }
+}

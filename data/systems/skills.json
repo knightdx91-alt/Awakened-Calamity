@@ -1,0 +1,8 @@
+{
+  "jab":          { "name": "Jab",          "category": "combat",   "kind": "active",  "power": 0.85, "tempoCost": 320, "affinity": null,    "effect": null },
+  "heavy_strike": { "name": "Heavy Strike", "category": "combat",   "kind": "active",  "power": 1.7,  "tempoCost": 760, "affinity": null,    "effect": null },
+  "ember_bolt":   { "name": "Ember Bolt",   "category": "affinity", "kind": "active",  "power": 1.25, "tempoCost": 520, "affinity": "ember", "effect": null },
+  "guard":        { "name": "Guard",        "category": "combat",   "kind": "active",  "power": 0,    "tempoCost": 300, "affinity": null,    "effect": { "type": "defUp", "amount": 0.5, "turns": 2 } },
+  "mend":         { "name": "Mend",         "category": "survival", "kind": "active",  "power": 0,    "tempoCost": 600, "affinity": "tide",  "effect": { "type": "heal", "amount": 0.35 } },
+  "toughness":    { "name": "Toughness",    "category": "combat",   "kind": "passive", "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "maxHp", "amount": 0.15 } }
+}

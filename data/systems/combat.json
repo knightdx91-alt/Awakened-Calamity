@@ -1,0 +1,7 @@
+{
+  "tempoMax": 1000,
+  "tickStep": 25,
+  "mode": "pause_on_act",
+  "variance": [0.85, 1.0],
+  "intervention": { "enabled": true, "speed": 30, "surveillancePerHelp": 4, "helpThreshold": 0.35 }
+}
