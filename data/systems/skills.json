@@ -1,8 +1,49 @@
 {
-  "jab":          { "name": "Jab",          "category": "combat",   "kind": "active",  "power": 0.85, "tempoCost": 320, "affinity": null,    "effect": null },
-  "heavy_strike": { "name": "Heavy Strike", "category": "combat",   "kind": "active",  "power": 1.7,  "tempoCost": 760, "affinity": null,    "effect": null },
-  "ember_bolt":   { "name": "Ember Bolt",   "category": "affinity", "kind": "active",  "power": 1.25, "tempoCost": 520, "affinity": "ember", "effect": null },
-  "guard":        { "name": "Guard",        "category": "combat",   "kind": "active",  "power": 0,    "tempoCost": 300, "affinity": null,    "effect": { "type": "defUp", "amount": 0.5, "turns": 2 } },
-  "mend":         { "name": "Mend",         "category": "survival", "kind": "active",  "power": 0,    "tempoCost": 600, "affinity": "tide",  "effect": { "type": "heal", "amount": 0.35 } },
-  "toughness":    { "name": "Toughness",    "category": "combat",   "kind": "passive", "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "maxHp", "amount": 0.15 } }
+  "_meta": {
+    "note": "Skill library — Basic tier (in progress toward the full pool CLASSES.md §1.5 assembles from). Each class draws ~6-10, ~half unique. effect types implemented by the combat rules engine: power/heal/defUp/maxHp/evade/critUp. Other effect types (craft/gather/lockpick/social/etc.) are DATA HOOKS for systems built later (crafting, survival, social).",
+    "kinds": "active | passive | reactive | utility"
+  },
+
+  "jab":          { "name": "Jab",          "category": "combat",   "kind": "active",  "shared": true,  "power": 0.85, "tempoCost": 320, "affinity": null,    "effect": null },
+  "heavy_strike": { "name": "Heavy Strike", "category": "combat",   "kind": "active",  "shared": false, "power": 1.7,  "tempoCost": 760, "affinity": null,    "effect": null },
+  "guard":        { "name": "Guard",        "category": "combat",   "kind": "active",  "shared": true,  "power": 0,    "tempoCost": 300, "affinity": null,    "effect": { "type": "defUp", "amount": 0.5, "turns": 2 } },
+  "toughness":    { "name": "Toughness",    "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "maxHp", "amount": 0.15 } },
+  "quick_shot":   { "name": "Quick Shot",   "category": "combat",   "kind": "active",  "shared": false, "power": 0.7,  "tempoCost": 270, "affinity": null,    "effect": null },
+  "backstab":     { "name": "Backstab",     "category": "combat",   "kind": "active",  "shared": false, "power": 1.45, "tempoCost": 470, "affinity": null,    "effect": { "type": "bonusVsUnaware", "amount": 0.6 } },
+  "evade":        { "name": "Evade",        "category": "combat",   "kind": "reactive","shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "evade", "chance": 0.22 } },
+  "keen_eye":     { "name": "Keen Eye",     "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "critUp", "amount": 0.1 } },
+  "sturdy":       { "name": "Sturdy",       "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "def", "amount": 0.1 } },
+  "light_step":   { "name": "Light Step",   "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "evade", "amount": 0.1 } },
+
+  "ember_bolt":   { "name": "Ember Bolt",   "category": "affinity", "kind": "active",  "shared": true,  "power": 1.25, "tempoCost": 520, "affinity": "ember", "effect": null },
+  "affinity_focus":{ "name":"Affinity Focus","category":"affinity", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "affinityPower", "amount": 0.15 } },
+  "mana_well":    { "name": "Mana Well",    "category": "affinity", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "resourceRegen", "amount": 0.1 } },
+
+  "mend":         { "name": "Mend",         "category": "survival", "kind": "active",  "shared": true,  "power": 0,    "tempoCost": 600, "affinity": "tide",  "effect": { "type": "heal", "amount": 0.35 } },
+  "first_aid":    { "name": "First Aid",    "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 420, "affinity": null,    "effect": { "type": "heal", "amount": 0.22 } },
+  "triage":       { "name": "Triage",       "category": "survival", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "healBoost", "amount": 0.2 } },
+  "trail_sense":  { "name": "Trail Sense",  "category": "survival", "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "exposureResist", "amount": 0.2 } },
+
+  "forge":        { "name": "Forge",        "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "gear" } },
+  "repair":       { "name": "Repair",       "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "repair" } },
+  "brew":         { "name": "Brew",         "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "tonic" } },
+  "identify":     { "name": "Identify",     "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "identify" } },
+  "camp_craft":   { "name": "Camp Craft",   "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "campkit" } },
+  "steady_hands": { "name": "Steady Hands", "category": "crafting", "kind": "passive", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craftQuality", "amount": 0.15 } },
+
+  "forage":       { "name": "Forage",       "category": "gathering","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "gather", "tag": "food" } },
+  "gather_herb":  { "name": "Gather Herb",  "category": "gathering","kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "gather", "tag": "herb" } },
+  "track":        { "name": "Track",        "category": "gathering","kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "track" } },
+
+  "haggle":       { "name": "Haggle",       "category": "social",   "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "price", "amount": 0.12 } },
+  "appraise":     { "name": "Appraise",     "category": "social",   "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "appraise" } },
+  "network":      { "name": "Network",      "category": "social",   "kind": "passive", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "repGain", "amount": 0.15 } },
+  "persuade":     { "name": "Persuade",     "category": "social",   "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "social" } },
+
+  "sneak":        { "name": "Sneak",        "category": "espionage","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "stealth" } },
+  "pick_lock":    { "name": "Pick Lock",    "category": "espionage","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "lockpick" } },
+
+  "bind_focus":   { "name": "Bind Focus",   "category": "tamer",    "kind": "passive", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "bindChance", "amount": 0.2 } },
+  "beast_call":   { "name": "Beast Call",   "category": "tamer",    "kind": "active",  "shared": false, "power": 0, "tempoCost": 500, "affinity": null, "effect": { "type": "creatureAssist" } },
+  "pack_sense":   { "name": "Pack Sense",   "category": "tamer",    "kind": "passive", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "creatureBuff", "amount": 0.1 } }
 }
