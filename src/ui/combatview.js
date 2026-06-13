@@ -50,7 +50,14 @@
     function buildEnemies(opts) {
         // opts.enemies = [{key, level}] OR single opts.enemy/opts.level. Default one.
         var list = opts.enemies;
-        if (!list) list = [{ key: opts.enemy || (Math.random() < 0.5 ? 'emberling' : 'thornwolf'), level: opts.level || 2 }];
+        if (!list && opts.enemy) list = [{ key: opts.enemy, level: opts.level || 2 }];
+        if (!list) {
+            // SELECT test: usually one foe, sometimes a pack of 2-3, so the
+            // multi-enemy view + target select are exercisable from the button.
+            var pool = ['emberling', 'thornwolf'], n = Math.random() < 0.4 ? (Math.random() < 0.5 ? 2 : 3) : 1;
+            list = [];
+            for (var k = 0; k < n; k++) list.push({ key: pool[Math.floor(Math.random() * pool.length)], level: 2 });
+        }
         enemyMeta = {};
         return list.map(function (spec, i) {
             var c = db.creatures[spec.key] || db.creatures.emberling;
