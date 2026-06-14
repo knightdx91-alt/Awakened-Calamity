@@ -229,6 +229,14 @@ window.GameStartMenu = (function () {
                 const label = (itm.id === 'CAMP') ? _playerName().toUpperCase() : itm.label.toUpperCase();
                 pc.fillText(label, PAD_X + 12, y);
             });
+            // SysPanel corner brackets (cyan L-shapes)
+            pc.fillStyle = '#00ccff';
+            var bl = 6;
+            function _cbr(cx, cy, dx, dy) {
+                pc.fillRect(dx > 0 ? cx : cx - bl, dy > 0 ? cy : cy - 2, bl, 2);
+                pc.fillRect(dx > 0 ? cx : cx - 2, dy > 0 ? cy : cy - bl, 2, bl);
+            }
+            _cbr(0, 0, 1, 1); _cbr(PW, 0, -1, 1); _cbr(0, PH, 1, -1); _cbr(PW, PH, -1, -1);
         }
         _drawPanel();
 
@@ -313,6 +321,7 @@ window.GameStartMenu = (function () {
         titleBar.appendChild(titleEl);
         titleBar.appendChild(backBtn);
         win.appendChild(titleBar);
+        _addBrackets(win);
 
         const content = document.createElement('div');
         content.className = 'sm-sub-content';
@@ -388,6 +397,26 @@ window.GameStartMenu = (function () {
     // every sub-screen built from _FR.* (CAMP/SUPPLIES/AFFINITIES/REACHES/…).
     var _FR = { body:'#0a1224', bodyLt:'#06101f', border:'#00ccff', text:'#bfeeff',
                 dim:'#5f86a0', red:'#00ccff', blue:'#37e0d0', tan:'rgba(0,0,0,0.5)' };
+
+    // SysPanel cyan corner brackets — 4 L-shapes inset into a positioned element.
+    function _addBrackets(el) {
+        var corners = [
+            { top: '2px', left: '2px', bt: 1, bl: 1 },
+            { top: '2px', right: '2px', bt: 1, br: 1 },
+            { bottom: '2px', left: '2px', bb: 1, bl: 1 },
+            { bottom: '2px', right: '2px', bb: 1, br: 1 },
+        ];
+        corners.forEach(function (c) {
+            var s = document.createElement('span');
+            var css = 'position:absolute;width:7px;height:7px;pointer-events:none;z-index:11;';
+            if (c.top) css += 'top:' + c.top + ';'; if (c.bottom) css += 'bottom:' + c.bottom + ';';
+            if (c.left) css += 'left:' + c.left + ';'; if (c.right) css += 'right:' + c.right + ';';
+            if (c.bt) css += 'border-top:2px solid #00ccff;'; if (c.bb) css += 'border-bottom:2px solid #00ccff;';
+            if (c.bl) css += 'border-left:2px solid #00ccff;'; if (c.br) css += 'border-right:2px solid #00ccff;';
+            s.style.cssText = css;
+            el.appendChild(s);
+        });
+    }
     var _SYS = { panel:'#0a0e1a', ink:'#80e8ff', cyan:'#00ccff', warn:'#f8c800',
                  danger:'#ff3030', dim:'#3a5a6a' };
     var AFFINITIES_DATA = [

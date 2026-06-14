@@ -289,6 +289,12 @@ window.GameMap = (function () {
         return (v === undefined || v === null) ? -1 : v;
     }
 
+    // Per-map render cell size in px (default 16). A layout may declare
+    // tileSize: 32 to render bigger cells (fewer tiles on screen).
+    function getTileSize() {
+        return (layoutData && layoutData.tileSize) || 16;
+    }
+
     // Returns 'grass' | 'cave' | 'water' | null for the given tile
     function getTileTerrainType(x, y) {
         if (!tilesetBehaviors || !layoutData || !layoutData.metatiles) return null;
@@ -367,6 +373,7 @@ window.GameMap = (function () {
         getTilesetName,
         getOverlayTilesetName,
         getOverlay,
+        getTileSize,
         getTileTerrainType,
         getTileDebug,
         loadEncounterData,

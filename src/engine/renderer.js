@@ -1,7 +1,8 @@
 // GameRenderer — renders game world to #screen-primary canvas
 window.GameRenderer = (function () {
-    const TILE_PX          = 16;
+    const TILE_PX          = 16;     // default render cell + fallback source size
     const METATILES_PER_ROW = 16;
+    let _rt = TILE_PX;               // active render cell size (per-map tileSize)
 
     let canvas = null;
     let ctx    = null;
@@ -126,7 +127,7 @@ window.GameRenderer = (function () {
         const col = idx % pr;
         const row = Math.floor(idx / pr);
         ctx.drawImage(_overlayImg, col * st, row * st, st, st,
-            sx, sy, TILE_PX, TILE_PX);
+            sx, sy, _rt, _rt);
     }
 
     function drawMetatile(metatileIdx, sx, sy) {
@@ -137,7 +138,7 @@ window.GameRenderer = (function () {
         ctx.drawImage(
             _tilesetImg,
             col * st, row * st, st, st,
-            sx, sy, TILE_PX, TILE_PX
+            sx, sy, _rt, _rt
         );
         return true;
     }
@@ -160,6 +161,11 @@ window.GameRenderer = (function () {
 
         resizeCanvas();
 
+        // Per-map render cell size (default 16). Drives the camera viewport so a
+        // 32px-cell map shows fewer, bigger tiles on the same 240x208 canvas.
+        _rt = (_map.getTileSize && _map.getTileSize()) || TILE_PX;
+        if (_camera.setRenderTile) _camera.setRenderTile(_rt);
+
         const vw = _camera.viewportW;
         const vh = _camera.viewportH;
 
@@ -174,8 +180,8 @@ window.GameRenderer = (function () {
 
         const tileStartX = Math.floor(vcamX);
         const tileStartY = Math.floor(vcamY);
-        const subX = -(vcamX - tileStartX) * TILE_PX;
-        const subY = -(vcamY - tileStartY) * TILE_PX;
+        const subX = -(vcamX - tileStartX) * _rt;
+        const subY = -(vcamY - tileStartY) * _rt;
 
         // Kick off tileset load if needed (non-blocking; keeps old image until ready)
         const wantedTileset = _map.getTilesetName ? _map.getTilesetName() : null;
@@ -201,8 +207,8 @@ window.GameRenderer = (function () {
             for (let tx = -1; tx <= vw; tx++) {
                 const worldX = tileStartX + tx;
                 const worldY = tileStartY + ty;
-                const sx = tx * TILE_PX + subX;
-                const sy = ty * TILE_PX + subY;
+                const sx = tx * _rt + subX;
+                const sy = ty * _rt + subY;
 
                 const metatileIdx = _map.getTile(worldX, worldY);
                 let drawn = false;
@@ -211,7 +217,7 @@ window.GameRenderer = (function () {
                 }
                 if (!drawn) {
                     ctx.fillStyle = _map.isWalkable(worldX, worldY) ? COLORS.walkable : COLORS.impassable;
-                    ctx.fillRect(sx, sy, TILE_PX, TILE_PX);
+                    ctx.fillRect(sx, sy, _rt, _rt);
                 }
                 // Overlay layer (buildings/props) drawn on top of the base tile
                 if (_overlayImg && _map.getOverlay) {
@@ -221,10 +227,10 @@ window.GameRenderer = (function () {
 
                 if (warpSet.has(`${worldX},${worldY}`)) {
                     ctx.fillStyle = 'rgba(249,168,37,0.45)';
-                    ctx.fillRect(sx, sy, TILE_PX, TILE_PX);
+                    ctx.fillRect(sx, sy, _rt, _rt);
                 } else if (signSet.has(`${worldX},${worldY}`)) {
                     ctx.fillStyle = 'rgba(141,110,99,0.45)';
-                    ctx.fillRect(sx, sy, TILE_PX, TILE_PX);
+                    ctx.fillRect(sx, sy, _rt, _rt);
                 }
             }
         }
@@ -234,17 +240,17 @@ window.GameRenderer = (function () {
             for (const npc of _map.current.npcs) {
                 if (npc.x < tileStartX - 1 || npc.x > tileStartX + vw + 1) continue;
                 if (npc.y < tileStartY - 1 || npc.y > tileStartY + vh + 1) continue;
-                const sx = (npc.x - tileStartX) * TILE_PX + subX;
-                const sy = (npc.y - tileStartY) * TILE_PX + subY;
+                const sx = (npc.x - tileStartX) * _rt + subX;
+                const sy = (npc.y - tileStartY) * _rt + subY;
                 const stem = _gfxToStem(npc.graphics_id);
                 const img  = stem ? _getNpcImg(stem) : null;
                 if (img) {
                     // 16x16 objects (items, props) draw at tile; 16x32 characters draw one tile up
                     const isTall = img.naturalHeight >= 32;
                     if (isTall) {
-                        ctx.drawImage(img, 0, 0, 16, 32, sx, sy - TILE_PX, TILE_PX, TILE_PX * 2);
+                        ctx.drawImage(img, 0, 0, 16, 32, sx, sy - _rt, _rt, _rt * 2);
                     } else {
-                        ctx.drawImage(img, 0, 0, 16, 16, sx, sy, TILE_PX, TILE_PX);
+                        ctx.drawImage(img, 0, 0, 16, 16, sx, sy, _rt, _rt);
                     }
                 } else if (_npcIndex && stem && _npcIndex[stem] !== undefined) {
                     // Sprite in index but not yet loaded — skip silently this frame
@@ -252,14 +258,14 @@ window.GameRenderer = (function () {
                     // Unknown sprite — draw a generic person silhouette placeholder
                     const pad = 3;
                     ctx.fillStyle = '#888888';
-                    ctx.fillRect(sx + pad, sy + pad, TILE_PX - pad * 2, TILE_PX - pad * 2);
+                    ctx.fillRect(sx + pad, sy + pad, _rt - pad * 2, _rt - pad * 2);
                 }
             }
         }
 
         // Player
-        const playerSX = (vx - vcamX) * TILE_PX;
-        const playerSY = (vy - vcamY) * TILE_PX;
+        const playerSX = (vx - vcamX) * _rt;
+        const playerSY = (vy - vcamY) * _rt;
         if (_playerImg) {
             const dir = _player.direction || 'down';
             const wf  = _player.walkFrame || 0;
@@ -270,18 +276,18 @@ window.GameRenderer = (function () {
                 ctx.save();
                 ctx.scale(-1, 1);
                 ctx.drawImage(_playerImg, srcX, 0, 16, 32,
-                    -(playerSX + TILE_PX), playerSY - TILE_PX, TILE_PX, TILE_PX * 2);
+                    -(playerSX + _rt), playerSY - _rt, _rt, _rt * 2);
                 ctx.restore();
             } else {
                 ctx.drawImage(_playerImg, srcX, 0, 16, 32,
-                    playerSX, playerSY - TILE_PX, TILE_PX, TILE_PX * 2);
+                    playerSX, playerSY - _rt, _rt, _rt * 2);
             }
         } else {
             const pad = 2;
             ctx.fillStyle = COLORS.player;
-            ctx.fillRect(playerSX + pad, playerSY + pad, TILE_PX - pad * 2, TILE_PX - pad * 2);
+            ctx.fillRect(playerSX + pad, playerSY + pad, _rt - pad * 2, _rt - pad * 2);
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(playerSX + Math.floor(TILE_PX / 2) - 1, playerSY + pad + 1, 3, 3);
+            ctx.fillRect(playerSX + Math.floor(_rt / 2) - 1, playerSY + pad + 1, 3, 3);
         }
     }
 
