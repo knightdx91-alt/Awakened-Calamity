@@ -89,13 +89,11 @@ window.GameStartMenu = (function () {
         if (preset && PRESETS[preset]) return PRESETS[preset];
 
         if (theme === 'LIGHT' || theme === 'VANILLA') {
-            // From 1.gbapal: fill=index5=#f8f8f8, hi=index14=#c0b8d8, border=index13=#6860d0
-            // From hatlighttheme.gbapal: text=index2=#000000, dim=index3=#b8b8b8
-            return { bg:'#f0e8c8', text:'#181818', dim:'#484848', border:'#000000', hi:'#e83030', titleBg:'#e83030' };
+            // Light System OS variant (pale glass) — still cyan-accented.
+            return { bg:'#dfeefb', text:'#0a2030', dim:'#4a6678', border:'#0090c0', hi:'#0090c0', titleBg:'#bfe0f0' };
         }
-        // DARK (default) — from 1d.gbapal: fill=index1=#181818, hi=index14=#18c0f8, border=index13=#0070a8
-        // From ryudarktheme.gbapal: text=index2=#d8d8f0, dim=index3=#787888
-        return { bg:'#f8f8e0', text:'#181818', dim:'#484848', border:'#000000', hi:'#ee3100', titleBg:'#ee3100' };
+        // DARK (default) = The System OS — cold holographic glass + cyan.
+        return { bg:'#06101f', text:'#bfeeff', dim:'#5f86a0', border:'#00ccff', hi:'#00ccff', titleBg:'#0a1224' };
     }
 
     function _applyThemeCSS() {
@@ -724,7 +722,7 @@ window.GameStartMenu = (function () {
             var ry = (104 + idx * 18) * S;
             var isSel = idx === _subIdx;
             if (isSel) {
-                ctx.fillStyle = 'rgba(230,8,8,0.12)';
+                ctx.fillStyle = 'rgba(0,200,255,0.12)';
                 ctx.fillRect(0, ry, GBA_W, 14*S);
                 ctx.fillStyle = COL_CYAN;
                 ctx.fillRect(0, ry, 2*S, 14*S);
