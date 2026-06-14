@@ -210,7 +210,18 @@ This is the readout that makes "danger by depth" legible and lets a player judge
 - **Defer:** soft-cap conversion mechanic + elite Audits, ending-tilt bookkeeping.
 
 ## 8. Open Calls
-1. **XP curve** — how steep 1→500 is, and how era tiers pace it across the 60h.
-2. **Creature XP sharing** — party-wide share, active-only, or an Exp-Share-style craftable?
-3. **Attribute points per level** — flat, or scaling with tier?
-4. **Respec scope** — does the Shop respec token reset attributes too, or only class/skills?
+
+**LOCKED:**
+1. **XP curve** — pinned in `data/systems/progression.json`: `cost = B·Lᵖ` (B=100, p=2.2) × class
+   **tierMult** (Basic 1.0 → Legendary 270×); mob yield K=17, q=1.6. Shape done; numbers tune in playtest.
+2. **Creature XP = active-only, each creature earns its OWN.** No sharing of any kind. A creature is
+   treated like a party member: it gains XP **only if it was in the fight**. Combined with permanent
+   creature death (`ENCOUNTERS §4`), fielding a creature is the only way to grow it *and* the only way
+   it can die — so committing a creature to combat is a genuine risk/reward decision.
+3. **Attribute points per level** — pinned in `progression.json`: scales with Tier (`base 3 + 1 per
+   tier above Basic`, Basic 3 → Legendary 8).
+
+**Open:**
+4. **Attribute SET** — revisit the actual attributes (see §2) toward a conventional LitRPG spread
+   (Strength/Agility/Charisma-style) instead of the current might/finesse/… naming.
+5. **Respec scope** — does the Shop respec token reset attributes too, or only class/skills?
