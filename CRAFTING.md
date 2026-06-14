@@ -139,15 +139,26 @@ progression.
    - **At 0 it BREAKS** — the item becomes unusable (not silently weaker). A broken weapon stops
      working; broken hazard gear stops protecting (and Exposure starts climbing). The break is a
      *felt* event mid-expedition, a real reason to carry spares / turn back.
-   - **Repair, don't ignore** — repairable at Camp/town with **materials** (a fraction of the craft
-     cost) via the relevant discipline. Repair is the steady crafting sink that keeps gathering and
-     the craft loop alive the whole game.
+   - **Repair, don't ignore** — repairable with **materials** (a fraction of the craft cost) via the
+     relevant discipline. Repair is the steady crafting sink that keeps gathering and the craft loop
+     alive the whole game. **Two ways to repair:**
+     - **DIY** — if you have the relevant crafting skill you can attempt the repair yourself (at
+       Camp/town). Per self-teaching (`SKILLS.md §1.5`), you can even *try* without training at an
+       `untrainedPenalty` (risk a worse result / wasted mats), improving with use.
+     - **Pay an NPC** — if you can't or won't, take it to a **smith / crafter NPC** who repairs it
+       **for a fee** (Credits). Gives the roaming/town craftspeople an economic role and a money sink.
    - **Soft cap on repair (recommended, tune in playtest):** each repair may shave a little off **max**
      durability, so gear eventually needs **re-crafting**, not infinite patching — keeps high-end mats
      flowing and stops one perfect item lasting forever. (Open: how steep, or whether repair is lossless.)
    - **Theme fit:** your *character* is permanent (no respec, permadeath stakes), but your *gear* is a
      maintained, consumable resource — crafting stays the survival backbone, never one-and-done.
 
+2. **Gear slots = LOCKED. Player 6, Creature 2.**
+   - **Player (6):** Weapon · Armor (body) · Head · Hands/Trinket · Boots · **Hazard-gear slot**
+     (the survival slot — Cold/Heat/Storm protection, ties equipment into the Exposure layer).
+   - **Creature (2):** Gear (armor/barding) · Rune/Charm (Inscription buff). Lean on purpose —
+     creatures are defined mostly by species + level + skills; gear is a light augment, not a second
+     character sheet.
+
 **Open:**
-2. **Gear slots** — how many equip slots for player and per creature.
 4. **Node density** — how many nodes per zone (affects expedition pacing + Stamina budget).
