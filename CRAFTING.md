@@ -15,7 +15,8 @@ utilities — `ECONOMY.md`). So crafting is the backbone of the survival loop, n
 
 - Material rarity uses the **game-wide rarity ladder** (`ECONOMY.md §5`): trash mats abundant, rare
   mats deep/hazard-gated. Trash loot's value is **here** (crafting), not in selling.
-- Recipes are gated by **era tier** (T1–T4) and learned via class, guild, or Shop recipe scrolls.
+- Recipes gate on **material tier, class/discipline rank, and discovery** (no "era" gating —
+  see §8.1b) — learned via class, guild, experimentation, or Shop recipe scrolls.
 
 ---
 
@@ -29,7 +30,7 @@ utilities — `ECONOMY.md`). So crafting is the backbone of the survival loop, n
 | **Cooking** | **Stamina food**, expedition rations, camp meals | Cook |
 | **Inscription** | Affinity rune-buffs onto gear/party | Runesmith |
 
-Anyone can craft basics; the class/guild unlocks the deep recipes and quality bonuses (Insight stat
+Anyone can craft basics; the class/guild unlocks the deep recipes and quality bonuses (Perception
 raises craft quality — `PROGRESSION.md`).
 
 ---
@@ -75,11 +76,19 @@ This is what zone authoring needs. Each zone's spec (`WORLD.md §6` "scavenge no
 
 ---
 
-## 5. Capture Tech (Tethers) — crafted, not bought
+## 5. Capture Tech (Tethers) — the TOOL is crafted; the ABILITY is gated
 
-Binding uses **Tethers** (`DESIGN.md §4`), which are **Engineering** crafts — tiered like everything
-else (basic Tether → high-grade → Ghost Tether for Free-Bond/Off-Grid). Capture viability is a
-crafting progression, not a store purchase.
+Binding uses **Tethers** (`DESIGN.md §4`), which are **Engineering** crafts — a tiered lineage
+(basic Tether → high-grade → Ghost Tether for Free-Bond/Off-Grid). The *tool* is a crafting
+progression.
+
+> **But the ABILITY to capture/Bind at all is gated — it is NOT universal.**
+> - **Capture-capable classes** (the Tamer/Binder lineage) can Bind **innately** — it's their thing.
+> - **Everyone else must purchase the Bind capability from the System Shop** as a System ability.
+>   Until you have it (by class or by purchase), holding a crafted Tether does nothing.
+>
+> So capturing is gated **on the player's class/abilities, not just on the creature**. A non-Tamer
+> who wants a party pays the System for the privilege — another way the System sells you power.
 
 ---
 
@@ -88,19 +97,41 @@ crafting progression, not a store purchase.
 - **Economy:** trash mats = crafting inputs (near-worthless to sell); rare drops gate recipes.
 - **World/Maps:** the node table above is the placement vocabulary for every zone.
 - **Hidden Layer:** Relic Components unlock anti-System/Off-Grid gear.
-- **Classes:** each discipline has a class home; Insight raises quality.
+- **Classes:** each discipline has a class home; Perception raises quality.
 
 ---
 
 ## 7. Scope Honesty
 - **Cheap / early:** material families + node types as **data**; basic gather interaction; a simple
   craft menu; tiered Tethers + a starter recipe set.
-- **Medium:** affinity-essence → hazard-gear chains, discipline depth, quality/Insight scaling,
+- **Medium:** affinity-essence → hazard-gear chains, discipline depth, quality/Perception scaling,
   real-time node respawns.
-- **Defer:** relic/Off-Grid gear, full era-4 master recipes, Inscription depth.
+- **Defer:** relic/Off-Grid gear, full top-tier master recipes, Inscription depth.
 
 ## 8. Open Calls
-1. **Recipe count target** per era (how deep the craft tree goes).
+
+**LOCKED:**
+1. **Recipe depth = EXPANDS LIKE THE CLASS SYSTEM. Go deep — a LOT.** Crafting is **not** a flat
+   "N recipes per era." It mirrors `CLASSES.md`:
+   - **Tiered lineages, Basic → Legendary** (same Tier ladder as classes), per discipline. A recipe
+     line *evolves/branches* — e.g. a Smithing weapon line deepens and branches the way a class
+     lineage does (branch-then-converge, capstones).
+   - **Discovery / experimentation** — like self-teaching skills (`SKILLS.md §1.5`) and the class
+     **discovery layer** (`CLASS_GENERATION.md`): players can find/derive recipes, not only buy
+     scrolls. New material+method combinations can mint new recipes.
+   - **A lot of content** — ambition comparable to the class catalog; this is the survival backbone,
+     so it should feel as deep as the class tree, not a side menu.
+   - **No "era" gating** (see #1b). Recipes gate on **material tier, class/discipline rank, and
+     discovery**, not on a world "era."
+   - *(Build vertically: author one full discipline lineage Basic→Legendary first as the slice, the
+     way the Smith class lineage was built, then replicate.)*
+
+1b. **"Era" is REMOVED game-wide — it was a prototype holdover.** Decided: drop the **word** "era"
+   everywhere, but **keep the T1–T4 tier bands** (now called **level / depth tiers**). Zones,
+   encounters, and materials still scale by depth tier; only the "era" label is gone. Reworded across
+   `PROGRESSION`, `WORLD`, `ECONOMY`, `CRAFTING`.
+
+**Open:**
 2. **Gear slots** — how many equip slots for player and per creature.
 3. **Durability?** — do crafted items wear out (survival pressure) or are they permanent?
 4. **Node density** — how many nodes per zone (affects expedition pacing + Stamina budget).

@@ -14,7 +14,7 @@
   *player* power, `CLASSES.md`).
 - **Creatures level** independently — your Bound party has its own levels/stats (the catch-and-battle
   pillar).
-- Both share the **1 → 500+** scale and the **era tiers** (T1 1–125 · T2 126–250 · T3 251–375 ·
+- Both share the **1 → 500+** scale and the **level tiers** (T1 1–125 · T2 126–250 · T3 251–375 ·
   T4 376–500+) used by zones and recipes.
 
 ---
@@ -161,7 +161,7 @@ with its full base kit immediately; an evolved character has more *total* skills
 Tiers. (Power-per-level numbers are a separate tuning pass; this section defines the XP side only.)
 
 ### Tuning methodology
-To finalize constants: pick target hours per era band (T1 ~0–12h … T4 ~38–60h), estimate kills/hour
+To finalize constants: pick target hours per tier band (T1 ~0–12h … T4 ~38–60h), estimate kills/hour
 from encounter rates (`ENCOUNTERS.md`), then solve B, p, K, q so cumulative XP at each band boundary
 (Lv125/250/375/500) lands on the target hours for a reference Basic playthrough.
 
@@ -202,7 +202,7 @@ This is the readout that makes "danger by depth" legible and lets a player judge
 - **Survival:** Constitution scales Stamina/Exposure; Wisdom resists System effects. Stats *are* part
   of survival.
 - **Classes:** attribute spreads + the player-leveling track make non-creature builds real.
-- **World/Encounters:** the 1–500 scale + era tiers + level-diff coloring define every zone's danger.
+- **World/Encounters:** the 1–500 scale + level tiers + level-diff coloring define every zone's danger.
 - **Surveillance/Endings:** the soft cap turns "max level" into a story/Surveillance decision.
 
 ---

@@ -154,6 +154,9 @@ a +40-level patrol = a real "push or extract" call); death is always the player'
 ## 4. Capture — **Bind** (IP-divergent)
 
 No Poké Balls. You **Bind** a weakened creature via the System's protocol.
+- **The ability to Bind is GATED — not universal** (`CRAFTING.md §5`). Only **capture-capable classes**
+  (the Tamer/Binder lineage) can Bind innately; **everyone else must purchase the Bind capability from
+  the System Shop**. Without it, a Tether does nothing. (The System sells you the right to a party.)
 - Weaken (low HP / status), then spend a **Tether** (your consumable, your art) on your Tempo turn.
 - Bind chance scales with HP%, affinity, and the creature's **resistance to the System** — rarer
   creatures resist control (lore: the System claims things), so they're harder to Bind.

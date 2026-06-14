@@ -37,7 +37,7 @@ keeps you in.** Hours come from seven pillars, not from walking distance.
 
 ## 2. The World — Four Reaches
 
-Four open regions, each dominated by one era-tier but containing pockets of all four.
+Four open regions, each dominated by one level tier but containing pockets of all four.
 "Safe" towns are System-protected; everything else is Wildlands.
 
 | Region | Terrain character | Role | Hour band | Dominant tier | Signature hazards |
@@ -48,7 +48,7 @@ Four open regions, each dominated by one era-tier but containing pockets of all 
 | **Vael** | snow highlands, the great Spine & ancient ruins | Ascension / endgame | 38–60+ | T4 (~50%) | Cold, Gloom |
 
 Hazard legend (player-facing): **Heat · Cold · Toxic · Gloom · Tempest** (defended by affinity
-gear/creatures — see `DESIGN.md §3`). Tiers T1–T4 = era danger bands.
+gear/creatures — see `DESIGN.md §3`). Tiers T1–T4 = depth/danger bands.
 
 > **The population is multi-species.** When the System spawned on Earth it recruited *across worlds*
 > — other planets' populations could migrate here to take part. Towns are cosmopolitan melting pots

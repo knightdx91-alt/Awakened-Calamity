@@ -30,7 +30,7 @@
 
 Credits feel like **events**, not a faucet (locked decision from the Drive doc §8). Sources are
 mostly one-time and discovery-driven:
-- First-clear Calamity / first-clear deep dungeon (one-time, scales with era)
+- First-clear Calamity / first-clear deep dungeon (one-time, scales with tier)
 - Discovery milestones, hidden caches, OWPS/hidden quest rewards
 - **Selling valuable loot** (see §3) — the main repeatable trickle, but deliberately thin
 - No daily quests, no grind loops, no meaningful income from common materials.
