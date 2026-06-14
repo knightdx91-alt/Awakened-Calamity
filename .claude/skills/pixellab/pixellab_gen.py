@@ -69,6 +69,13 @@ def dl_url(url, out):
     return out
 
 
+def _b64img(path):
+    """Load a PNG as a PixelLab Base64Image (for color/style references)."""
+    with open(path, "rb") as f:
+        return {"type": "base64", "base64": base64.b64encode(f.read()).decode(),
+                "format": "png"}
+
+
 def poll(job_id, timeout_s=900):
     start, last = time.time(), None
     while time.time() - start < timeout_s:
@@ -94,6 +101,8 @@ def cmd_image(a):
         body["no_background"] = True
     if a.view:
         body["view"] = a.view
+    if getattr(a, "color_image", ""):
+        body["color_image"] = _b64img(a.color_image)   # force palette
     if a.seed is not None:
         body["seed"] = a.seed
     print(f"Generating image: {a.description!r}")
@@ -119,6 +128,8 @@ def cmd_tileset(a):
         body["shading"] = a.shading
     if getattr(a, "outline", ""):
         body["outline"] = a.outline
+    if getattr(a, "color_image", ""):
+        body["color_image"] = _b64img(a.color_image)   # force palette
     if a.seed is not None:
         body["seed"] = a.seed
     print(f"Creating tileset: {a.lower!r} <-> {a.upper!r}")
@@ -226,6 +237,7 @@ def main():
     pi.add_argument("--width", type=int, default=128)
     pi.add_argument("--height", type=int, default=128)
     pi.add_argument("--no-background", action="store_true")
+    pi.add_argument("--color-image", default="", help="palette reference PNG")
     pi.add_argument("--view", default="")
     pi.add_argument("--seed", type=int, default=None)
     pi.add_argument("--out", default="data/art/image.png")
@@ -240,6 +252,7 @@ def main():
     pt.add_argument("--detail", default="")
     pt.add_argument("--shading", default="")
     pt.add_argument("--outline", default="")
+    pt.add_argument("--color-image", default="", help="palette reference PNG")
     pt.add_argument("--seed", type=int, default=None)
     pt.add_argument("--outdir", default="data/tilesets/generated/tileset")
     pt.set_defaults(fn=cmd_tileset)
