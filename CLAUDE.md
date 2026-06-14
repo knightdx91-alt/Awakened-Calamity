@@ -21,7 +21,9 @@ architecture, map system, save system) and is still the best reference for how t
   itself). Push directly.
 - **No build system.** Plain HTML/CSS/JS, all globals (`window.GameXxx`). No npm/bundler.
 - Serve over HTTP (`python3 -m http.server 8000`), not `file://`, so `fetch()` works.
-- **Handle tasks directly** — do not spawn subagents.
+- **NO agents / subagents — EVER.** Always run and handle every task yourself directly.
+  Do not spawn the Task tool or any subagent. (Enforced in `.claude/settings.json` →
+  `permissions.deny: ["Task"]`.)
 - **⚠️ PORTABILITY — this is a PROTOTYPE for a 3D Unity rebuild (PC/console, multiplayer).**
   Game **systems = engine-agnostic DATA (`data/systems/*.json`) + pure deterministic RULES
   (`src/systems/*.js`, no DOM)**, separate from **presentation** (canvas/DOM, the throwaway layer).
