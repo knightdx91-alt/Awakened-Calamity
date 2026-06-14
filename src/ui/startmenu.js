@@ -870,32 +870,13 @@ window.GameStartMenu = (function () {
         }
 
         // EE option_menu.c: 18 items in order
-        list.appendChild(makeToggleRow('Text Speed',      ['SLOW','MED','FAST'],         savedTextSpeed, function(v){localStorage.setItem('ac_text_speed',v);}));
-        list.appendChild(makeToggleRow('Battle Scene',    ['ON','OFF'],                  savedBScene,    function(v){localStorage.setItem('ac_battle_scene',v);}));
-        list.appendChild(makeToggleRow('Force Set Battle',['ON','OFF'],                  savedForceSet,  function(v){localStorage.setItem('ac_force_set',v);}));
-        list.appendChild(makeToggleRow('Damage Numbers',  ['ON','OFF'],                  savedDmgNums,   function(v){localStorage.setItem('ac_damage_nums',v);}));
-        list.appendChild(makeToggleRow('Theme UI',        ['MODERN','CLASSIC','VANILLA'],savedThemeUI,   function(v){localStorage.setItem('ac_theme_ui',v); _bagAssets=null; _applyThemeCSS(); _render();}));
-        list.appendChild(makeToggleRow('Theme',           ['DARK','LIGHT','VANILLA','USER'],savedTheme,  function(v){localStorage.setItem('ac_theme',v); localStorage.removeItem('ac_theme_preset'); _bagAssets=null; _applyThemeCSS(); _render();}));
-        // Theme Presets — matches EE's PRESETTHEME_* values from custom_interface.c
-        list.appendChild(makeToggleRow('Preset',
-            ['None','BlueSteel','RoyalPurple','Synthwave','Mocha'],
-            localStorage.getItem('ac_theme_preset') || 'None',
-            function(v) {
-                if (v === 'None') localStorage.removeItem('ac_theme_preset');
-                else localStorage.setItem('ac_theme_preset', v);
-                // Presets force USER theme mode like EE's ApplyPresetRGBUserTheme
-                localStorage.setItem('ac_theme', 'USER');
-                _bagAssets = null; _applyThemeCSS(); _render();
-            }
-        ));
-        list.appendChild(makeNumberRow('Frame',       'ac_frame',      savedFrame,    1, 20));
-        list.appendChild(makeNumberRow('Theme Ball',  'ac_theme_ball', savedThemeBall,1, 31));
-        list.appendChild(makeToggleRow('Random Music', ['ON','OFF'],                  savedRandMusic, function(v){localStorage.setItem('ac_random_music',v);}));
-        list.appendChild(makeToggleRow('Disable Music',['ON','OFF'],                  savedDisMusic,  function(v){localStorage.setItem('ac_disable_music',v);}));
-        list.appendChild(makeNumberRow('Bar Speed',   'ac_bar_speed',  savedBarSpeed, 1, 11));
-        list.appendChild(makeToggleRow('Transition',   ['ON','OFF'],                  savedTransition,function(v){localStorage.setItem('ac_transition',v);}));
-        list.appendChild(makeToggleRow('Lv Cap 100',   ['ON','OFF'],                  savedLvCap,     function(v){localStorage.setItem('ac_lv_cap',v);}));
-        list.appendChild(makeToggleRow('Auto Run',     ['OFF','ON'],                  savedAutoRun,   function(v){localStorage.setItem('ac_auto_run',v);}));
+        // System OS options — legacy Pokémon/GBA battle + theme-picker rows removed
+        // (System OS is the only UI look). Kept: display, audio, controls, saving.
+        list.appendChild(makeToggleRow('Text Speed',   ['SLOW','MED','FAST'],          savedTextSpeed, function(v){localStorage.setItem('ac_text_speed',v);}));
+        list.appendChild(makeToggleRow('Transition',   ['ON','OFF'],                   savedTransition,function(v){localStorage.setItem('ac_transition',v);}));
+        list.appendChild(makeToggleRow('Auto Run',     ['OFF','ON'],                   savedAutoRun,   function(v){localStorage.setItem('ac_auto_run',v);}));
+        list.appendChild(makeToggleRow('Random Music', ['ON','OFF'],                   savedRandMusic, function(v){localStorage.setItem('ac_random_music',v);}));
+        list.appendChild(makeToggleRow('Disable Music',['ON','OFF'],                   savedDisMusic,  function(v){localStorage.setItem('ac_disable_music',v);}));
         list.appendChild(makeToggleRow('Autosave',     ['OFF','15s','30s','1m','2m','5m','10m'],savedAutosave, function(v){localStorage.setItem('ac_autosave_int',v);}));
         // SAVE row (last)
         (function(){
