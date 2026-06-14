@@ -160,5 +160,10 @@ progression.
      creatures are defined mostly by species + level + skills; gear is a light augment, not a second
      character sheet.
 
-**Open:**
-4. **Node density** — how many nodes per zone (affects expedition pacing + Stamina budget).
+4. **Node density = TUNE IN PLAYTEST, locked direction.** Density **scales inversely with depth**:
+   - **Shallow / safe-ish zones:** denser, lower-tier nodes — easy farming, teaches gathering.
+   - **Deep / hazardous zones:** sparser but **higher-value** nodes — each one a real detour decision;
+     plus the **visible-temptation Super-nodes** (§4) you can see across a patrol (risk/reward).
+   - **Starting target:** ~**8–15 nodes** along a typical ~800-tile expedition route — gathering is a
+     constant low-level activity without overwhelming the Stamina budget. Finalize once Stamina-drain
+     numbers exist (same gate as the encounter-rate baseline, `ENCOUNTERS §7.4`).
