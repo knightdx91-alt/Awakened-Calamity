@@ -29,7 +29,9 @@ class is the System sorting you into its framework. This means:
 - **Surveillance interaction** — some classes raise/lower Surveillance or change how the System sees you.
 
 ### Not a 60-hour trap
-- **Respec** exists (the Shop's Re-spec Token).
+- **No respec** (`PROGRESSION.md §8.5`). You are not undone — instead, **class change** (the lateral
+  axis, `§1.7`) lets you shift direction *forward* while keeping your skills, and classes never close
+  doors. Your build is permanent; redirection is growth, not an undo.
 - Classes **branch into advanced subclasses** at guild-reputation milestones (e.g., Skirmisher →
   Bladedancer / Tempo-Reaver). Picking opens a tree, it doesn't close doors.
 
@@ -80,7 +82,8 @@ Specialization = { id, name,
 - **Smith → Light Armorer:** `focus:'light_armor'`, `bonuses:[{type:'craftQuality',target:'light_armor',amount:0.2},{type:'materialEff',target:'light_armor',amount:0.15}]`.
 - **Warrior → Two-Handed Master:** `focus:'two_handed'`, `bonuses:[{type:'dmg',target:'two_handed',amount:0.15}]`, `grantsSkill:'cleave'`.
 - **Warrior → Guardian:** `focus:'shield'`, `bonuses:[{type:'def',target:'self',amount:0.2}]`, `grantsSkill:'bulwark'`.
-- A class typically offers **2–4 specializations**; you pick **one** (respec-able like class change).
+- A class typically offers **2–4 specializations**; you pick **one** — **permanent** (no respec). A
+  later **class change** can redirect you, but the specialization choice itself is not undone.
 
 ### Uniqueness rule
 - Every class grants **~6–10 skills, of which ~3–5 are unique** to it (or its lineage); the rest are
@@ -401,7 +404,7 @@ finds you** — a **roaming Living-World NPC** who *physically travels to your l
 ## 5. Scope Honesty
 - **Cheap / early:** the class-select screen + a handful of starter classes with stat/skill leans
   (data-driven). Affinity lean + starting skill is mostly a data table.
-- **Medium:** signature mechanics per class, advanced subclass branches at rep tiers, respec.
+- **Medium:** signature mechanics per class, advanced subclass branches at rep tiers, class **change** (lateral redirect — there is no respec).
 - **Defer:** the obscure/glitch tier (especially Systemtouched admin access, Null's hidden path),
   alien-race-exclusive classes, ending-tilt bookkeeping.
 
@@ -418,7 +421,8 @@ finds you** — a **roaming Living-World NPC** who *physically travels to your l
 2. **Tutorial class count — all 50 Base** offered (browsable, filtered by family); Master+ selectable
    but glacial; obscure/Special are unlock-only.
 3. **Multiclass — NO.** Single class + deep evolution trees (breadth comes from evolving up, cumulative
-   skills + synergy). Respec available.
+   skills + synergy). **No respec** — lateral **class change** (`§1.7`) is the only redirect, and it's
+   forward growth, not an undo.
 4. **Race × class gating — LIGHT.** Only ~2–3 truly race-locked classes (Starborn/Hollow = alien-only,
    Beast-Kin = part-creature races); everything else open. Race = minor affinity lean + a few exclusives.
 5. **Original-System exclusive evolutions** (`DESIGN.md §6.5`): every class's tree gains a hidden

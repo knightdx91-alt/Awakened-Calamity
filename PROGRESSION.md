@@ -224,7 +224,13 @@ This is the readout that makes "danger by depth" legible and lets a player judge
 3. **Attribute points per level** — pinned in `progression.json`: scales with Tier (`base 3 + 1 per
    tier above Basic`, Basic 3 → Legendary 8).
 
-**Open:**
-4. **Attribute SET** — revisit the actual attributes (see §2) toward a conventional LitRPG spread
-   (Strength/Agility/Charisma-style) instead of the current might/finesse/… naming.
-5. **Respec scope** — does the Shop respec token reset attributes too, or only class/skills?
+4. **Attribute SET = conventional 8-stat LitRPG spread** (§2): **Strength, Agility, Constitution,
+   Intelligence, Wisdom, Perception, Charisma, Luck**. Renamed from the original might/finesse/… set;
+   mechanics unchanged except **Luck** split out into its own attribute. Pinned in `progression.json`.
+5. **Respec = NONE.** There is **no respec** of any kind — no Shop token, no item, no System service.
+   Allocated attributes, chosen class path, and skill choices are **permanent**. Your build *is* your
+   character; every choice carries weight and is lived with (consistent with permanent creature death
+   and everything-at-risk-on-death). Mistakes are part of the run. *(Implication: `ECONOMY.md` must
+   drop the respec-token catalog entry; class **change** — the lateral axis in `CLASSES.md §1.7` that
+   keeps your skills — remains the only way to shift direction, and it is a forward growth choice, not
+   an undo.)*

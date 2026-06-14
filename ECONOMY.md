@@ -20,7 +20,8 @@
   town leans food/supply; espionage towns stock skill manuals, etc. → you **travel to shop**, which
   feeds the living world and gives each town a purpose.
 - **The Shop sells what nothing else can:** rare recipes, relic-adjacent gear, System utilities
-  (inventory/box/warp/breeding/respec), and **access to rare classes** (see §4).
+  (inventory/box/warp/breeding — **no respec; builds are permanent**, `PROGRESSION.md §8.5`), and
+  **access to rare classes** (see §4).
 - Roster rotates on the real-time clock (weekly in-world).
 
 ---
