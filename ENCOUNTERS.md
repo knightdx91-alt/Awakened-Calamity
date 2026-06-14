@@ -103,8 +103,16 @@ the only "death" that can be permanent, and it's a story event (the Submit path)
 - **Defer:** Audit spawns, soft-cap conversion death, apex mini-events.
 
 ## 7. Open Calls
-1. **Wipe vs. single-down** — does the player go down only on full party wipe, or can *you* be
-   targeted directly in self-combat builds?
+
+**LOCKED:**
+1. **Down trigger = the PLAYER, not the party.** The player character is a targetable actor with
+   their own HP bar. The run ends the moment **you** are downed — regardless of any creatures still
+   standing. Enemies *can* target the back-line player even while a creature is out (so self-combat
+   builds have real stakes and the Intervention bait at ≤35% player HP stays coherent), but creature
+   aggro/taunt draws hits, so a well-managed creature build rarely exposes the player. Exposure-cap
+   down and full wipe both still resolve through this same single rule.
+
+**Open:**
 2. **Material-loss scope** — 10% per material of everything carried, or only the run's new scavenge?
 3. **Revive economy** — how scarce are crafted Revives (affects deep-expedition risk)?
 4. **Encounter rate baseline** — tune against the ~800-tile Stamina expedition target.
