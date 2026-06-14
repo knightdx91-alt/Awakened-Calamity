@@ -112,7 +112,13 @@ the only "death" that can be permanent, and it's a story event (the Submit path)
    aggro/taunt draws hits, so a well-managed creature build rarely exposes the player. Exposure-cap
    down and full wipe both still resolve through this same single rule.
 
+2. **Material-loss scope = EVERYTHING carried.** On a player-down, every material stack in your
+   bags rolls the **10% loss chance** — not just the current run's scavenge. Carrying a fat
+   stockpile into danger is genuinely risky, so banking at town (depositing instead of hauling) is a
+   real, pressured decision. Implication for inventory: a town **stash/deposit** is the safe store;
+   anything *on your person* is exposed. Camps respawn you forward but do **not** shield carried mats
+   from the roll.
+
 **Open:**
-2. **Material-loss scope** — 10% per material of everything carried, or only the run's new scavenge?
 3. **Revive economy** — how scarce are crafted Revives (affects deep-expedition risk)?
 4. **Encounter rate baseline** — tune against the ~800-tile Stamina expedition target.
