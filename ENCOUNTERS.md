@@ -63,7 +63,9 @@ Authored per zone (affects Stamina budget + pacing):
 Consistent with **soft survival** — knockout is never permadeath; it's a setback with teeth.
 
 ### Distinctions
-- **Creature faints** — removed from the fight; revived at a Safe Zone or with a crafted Revive item.
+- **Creature dies — PERMANENTLY.** When a bonded creature drops to 0 HP it is **gone for good**:
+  no revive item exists, and a Safe Zone does **not** bring it back. Bonds are high-stakes; losing a
+  creature is a real, unrecoverable loss (consistent with the world's permadeath tone, `LIVING_WORLD`).
 - **Player downed** — happens via self-combat HP loss, full party wipe, or Exposure cap depleting
   you. Triggers the **recovery** below.
 
@@ -73,8 +75,9 @@ Consistent with **soft survival** — knockout is never permadeath; it's a setba
   - **~5% XP loss** on carried creatures.
   - **10% chance per carried material** to be lost (scavenged haul is at risk — the real sting).
   - **No item-drop-on-death** — nothing is left in the world to lose/grief (multiplayer-safe).
-- **Restored on respawn:** Stamina (Safe Zone) / partial (Camp). Exposure decays. Bound party revived
-  at base HP.
+- **Restored on respawn:** Stamina (Safe Zone) / partial (Camp). Exposure decays. **Surviving** bound
+  creatures heal to base HP — but any creature that **died** during the run stays dead (no respawn
+  revival).
 - **Surveillance is NOT reset** by death — it's the antagonist's memory, not a combat stat.
 
 ### Camps reduce the sting
@@ -119,6 +122,11 @@ the only "death" that can be permanent, and it's a story event (the Submit path)
    anything *on your person* is exposed. Camps respawn you forward but do **not** shield carried mats
    from the roll.
 
+3. **Revive economy = NONE. Creature death is PERMANENT.** No Revive items exist and Safe Zones do
+   not resurrect. A fainted creature is dead for good. This raises deep-expedition stakes the way the
+   §4 risk model wants (without a revive crutch), makes the **Bind** flow and party composition
+   weighty, and keeps the survival loop honest: retreat is the only way to protect a hurt creature,
+   because once it's at 0 there is no getting it back.
+
 **Open:**
-3. **Revive economy** — how scarce are crafted Revives (affects deep-expedition risk)?
 4. **Encounter rate baseline** — tune against the ~800-tile Stamina expedition target.
