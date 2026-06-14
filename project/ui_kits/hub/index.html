@@ -1,0 +1,67 @@
+<!-- @dsCard group="Hub" viewport="700x560" name="Hub — the launcher" subtitle="Dark-cyber landing / card-stack hub" -->
+<!-- @startingPoint section="Awakened Calamity" subtitle="Launcher / hub landing" viewport="700x560" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Awakened Calamity — Hub</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html,body{margin:0;min-height:100%}
+  body{background:radial-gradient(120% 80% at 50% 0%, #0d1326 0%, #07070d 70%);color:#c8d8e8;font-family:var(--font-mono);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:40px 20px}
+  .logo{text-align:center}
+  .logo-title{font-family:var(--font-pixel);font-size:30px;letter-spacing:2px;background:linear-gradient(90deg,#18b8c8,#7ee0ec,#18b8c8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .logo-sub{font-size:11px;color:#6b7a8d;letter-spacing:3px;text-transform:uppercase;margin-top:10px}
+  .stack{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px}
+  .section-label{font-size:10px;color:#4a5a6d;letter-spacing:3px;text-transform:uppercase;margin:6px 0 -2px}
+  .divider{height:1px;background:#1a2230;margin:4px 0}
+  footer{color:#4a5a6d;font-size:11px;text-align:center}
+  .boot{min-height:16px;font-size:10px;color:#80e8ff;text-align:center}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { LaunchCard, MapMarker } = window.AwakenedCalamityDesignSystem_475ed3;
+
+function Hub() {
+  const [boot, setBoot] = React.useState('');
+  const say = (m) => setBoot(m);
+  return (
+    <React.Fragment>
+      <div className="logo">
+        <div className="logo-title">AWAKENED CALAMITY</div>
+        <div className="logo-sub">The System helps you</div>
+      </div>
+      <div className="stack">
+        <div className="section-label">Play</div>
+        <LaunchCard title="Awakened Calamity" subtitle="GBA-style survival LitRPG · prototype"
+          icon={<MapMarker type="safe" size={22} />}
+          onClick={() => say('> Booting AwakeningCamp in region «awakened»…')} />
+        <div className="divider" />
+        <div className="section-label">Create</div>
+        <LaunchCard title="Map Editor" subtitle="Author zones · saves to the maps branch"
+          icon={<MapMarker type="route" size={22} />}
+          onClick={() => say('> Opening metatile editor…')} />
+        <div className="divider" />
+        <div className="section-label">World</div>
+        <LaunchCard title="The Four Reaches" subtitle="The Drowned Reach · interactive overview"
+          icon={<MapMarker type="calamity" size={22} />}
+          onClick={() => say('> Loading world atlas…')} />
+        <LaunchCard title="Design Docs" subtitle="Tempo combat · Surveillance · survival"
+          icon={<MapMarker type="hidden" size={22} />}
+          onClick={() => say('> The comfortable path is the trap.')} />
+      </div>
+      <div className="boot">{boot}</div>
+      <footer>Prototype build · clean original art</footer>
+    </React.Fragment>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Hub />);
+</script>
+</body>
+</html>

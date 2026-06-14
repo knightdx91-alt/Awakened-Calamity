@@ -1,0 +1,110 @@
+/* ===================================================================
+   Awakened Calamity — Color System
+   Two palette families, by intent:
+     1. The System OS UI  — COLD. Dark holographic glass + neon cyan. The
+        entire interface is the surveillance intelligence. Menus, HUD, hub,
+        dialogue, notifications all live here.
+     2. The cartographic world — the BRIGHT pixel world the UI sits on top of:
+        biome terrain, hazards, affinities, map nodes.
+   "The System helps you, and that's the horror": there is no UI that isn't
+   the interface watching you.
+   =================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- meter / health-bar states (generic) ---- */
+  --meter-green:  #58d038;
+  --meter-yellow: #f8c800;
+  --meter-red:    #f83800;
+
+  /* ---- The System overlay accents (cold, clinical, hostile) ---- */
+  --sys-panel:      rgba(0, 6, 20, 0.93); /* near-black glass */
+  --sys-panel-solid:#02060f;
+  --sys-ink:        #80e8ff;  /* default cyan text */
+  --sys-cyan:       #00ccff;  /* info border / glow */
+  --sys-warn:       #f8d000;  /* warning border */
+  --sys-warn-ink:   #f8e880;  /* warning text */
+  --sys-danger:     #ff3030;  /* danger border */
+  --sys-danger-ink: #ff9090;  /* danger text */
+
+  /* ---- Hub / launcher (dark cyber — part of the System OS family) ---- */
+  --hub-bg-0:     #0d1326;  /* radial top */
+  --hub-bg-1:     #07070d;  /* radial bottom */
+  --hub-panel:    #11131f;  /* card body */
+  --hub-panel-2:  #060610;  /* deepest panel */
+  --hub-ink:      #c8d8e8;  /* body ink */
+  --hub-ink-dim:  #6b7a8d;  /* secondary */
+  --hub-ink-faint:#4a5a6d;  /* labels / faint */
+  --hub-cyan:     #18b8c8;  /* primary cyan */
+  --hub-cyan-lt:  #7ee0ec;  /* lighter cyan */
+  --hub-cyan-ttl: #80d0e8;  /* title cyan */
+  --hub-cyan-hot: #80f0ff;  /* hottest cyan */
+  --hub-line:     #1a2230;  /* hairline dividers */
+
+  /* ---- The cartographic world — the Four Reaches (bright) ---- */
+  --sea:          #0a1830;
+  --sea-deep:     #06101f;
+
+  --biome-verdara:  #8fd069; /* temperate grass */
+  --biome-halveth:  #cdca63; /* golden meadow */
+  --biome-calderra: #6fcb9c; /* tropical */
+  --biome-vael:     #e9f2f9; /* snow */
+
+  /* map node types */
+  --node-safe:     #ffd24a;
+  --node-hold:     #ff9a3c;
+  --node-route:    #5fd06a;
+  --node-dungeon:  #b07cff;
+  --node-calamity: #ff4d5e;
+  --node-hidden:   #ff5cf0;
+  --node-water:    #46b8ff;
+  --node-under:    #37e0d0;
+
+  /* ---- Hazards (5 player-facing categories) ---- */
+  --hz-heat:    #e8632a;
+  --hz-cold:    #5bd0e8;
+  --hz-toxic:   #9be03a;
+  --hz-gloom:   #8a6cff;
+  --hz-tempest: #e8d23a;
+
+  /* ---- Affinities (9 + 2 meta) ---- */
+  --aff-ember:      #ef6a2c;
+  --aff-tide:       #3aa0e8;
+  --aff-verdant:    #3ac06a;
+  --aff-storm:      #e8d23a;
+  --aff-stone:      #b09060;
+  --aff-frost:      #5bd0e8;
+  --aff-toxin:      #9be03a;
+  --aff-umbral:     #8a6cff;
+  --aff-lumen:      #ffe79e;
+  --aff-corruption: #ff2bd6; /* System-only meta-type */
+  --aff-untethered: #b9c6d6; /* resistance meta-type */
+
+  /* ---- Player vitals (the minimal on-screen HUD) ---- */
+  --vital-hp:       #ff3b54;  /* health */
+  --vital-hp-low:   #ff7a3c;  /* HP critical flash */
+  --vital-mana:     #3aa0ff;  /* mana */
+  --vital-stamina:  #ffc23a;  /* stamina */
+
+  /* ---- System OS surface (the in-game interface = the antagonist) ---- */
+  --os-glass:    rgba(6,10,20,0.92);   /* dark holographic panel */
+  --os-glass-2:  rgba(3,6,14,0.96);    /* deeper inset */
+  --os-scrim:    rgba(2,4,10,0.62);    /* contrast scrim behind HUD/menus */
+  --os-line:     rgba(0,200,255,0.22); /* hairline / scanline cyan */
+  --os-edge:     #00ccff;              /* panel edge */
+  --os-ink:      #bfeeff;              /* body ink on glass */
+  --os-ink-dim:  #5f86a0;              /* secondary ink */
+  --os-glow:     0 0 12px rgba(0,200,255,0.28), 0 6px 22px rgba(0,0,0,0.6);
+
+  /* ---- Semantic aliases ---- */
+  --surface-system:    var(--sys-panel);
+  --surface-hub:       var(--hub-panel);
+  --surface-deep:      var(--sea-deep);
+
+  --text-system:  var(--sys-ink);
+  --text-hub:     var(--hub-ink);
+
+  --accent:       var(--hub-cyan);
+  --accent-cool:  var(--hub-cyan);
+}

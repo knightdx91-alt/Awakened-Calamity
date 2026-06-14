@@ -1,0 +1,9 @@
+/* ===================================================================
+   Awakened Calamity — Webfonts
+   Press Start 2P is the GBA-era pixel face used across all game chrome,
+   the hub logo, and headings. It is loaded from Google Fonts (the source
+   game references it by family name only). Body / terminal text uses the
+   platform monospace stack — matching the hub + world map's Courier feel.
+   =================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');

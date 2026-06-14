@@ -1,0 +1,200 @@
+<!-- @dsCard group="Map Editor" viewport="900x600" name="Map Editor — all tilesets, any size" subtitle="Every sheet · variable tile size (16–64) & map W×H · ground + object layers" -->
+<!-- @startingPoint section="Awakened Calamity" subtitle="Tile map editor" viewport="900x600" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Awakened Calamity — Map Editor</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  html,body{margin:0;height:100%}
+  body{background:radial-gradient(120% 100% at 30% 0%, #0d1f2e, #060a12 75%);color:var(--os-ink);font-family:var(--font-mono),monospace;overflow:hidden}
+  *{box-sizing:border-box}
+  .app{display:flex;height:100vh;gap:8px;padding:8px}
+  .panel{background:var(--os-glass);border:1px solid var(--os-edge);border-radius:5px;box-shadow:var(--os-glow);display:flex;flex-direction:column;min-height:0}
+  .panel-h{font-family:var(--font-pixel);font-size:8px;letter-spacing:2px;color:var(--os-edge);text-shadow:0 0 6px var(--os-edge);padding:8px 9px;border-bottom:1px solid var(--os-edge);flex:none}
+  .side{width:298px;flex:none}
+  .tabs{display:flex;flex-wrap:wrap;gap:3px;padding:7px;border-bottom:1px solid var(--os-line);flex:none}
+  .tab{font-family:var(--font-pixel);font-size:6.5px;color:var(--os-ink-dim);background:rgba(0,40,55,.4);border:1px solid #1a3a47;border-radius:3px;padding:4px 5px;cursor:pointer}
+  .tab.on{color:#04141a;background:var(--os-edge);border-color:var(--os-edge)}
+  .pal-meta{font-size:9px;color:var(--os-ink-dim);padding:5px 8px 0}
+  .pal-wrap{overflow:auto;padding:8px;flex:1;min-height:0}
+  .pal{display:grid;gap:2px}
+  .pcell{width:32px;height:32px;image-rendering:pixelated;cursor:pointer;border:1px solid transparent;background-repeat:no-repeat}
+  .pcell:hover{border-color:#2a6f7a}
+  .pcell.sel{border-color:var(--os-edge);box-shadow:0 0 6px var(--os-edge)}
+  .main{flex:1;min-width:0}
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 9px;border-bottom:1px solid var(--os-line);flex:none}
+  .toolbar label{font-size:10px;color:var(--os-ink-dim)}
+  .toolbar input[type=number]{width:46px;background:#061018;color:var(--os-ink);border:1px solid var(--os-edge);border-radius:3px;padding:3px 4px;font-family:var(--font-mono);font-size:11px}
+  .toolbar select{background:#061018;color:var(--os-ink);border:1px solid var(--os-edge);border-radius:3px;padding:3px 4px;font-family:var(--font-mono);font-size:11px}
+  .btn{font-family:var(--font-pixel);font-size:7px;color:var(--os-ink);background:rgba(0,40,55,.5);border:1px solid var(--os-edge);border-radius:4px;padding:5px 7px;cursor:pointer}
+  .btn:hover{background:rgba(0,80,110,.5)}
+  .btn.on{color:#04141a;background:var(--os-edge)}
+  .sep{width:1px;height:18px;background:var(--os-line)}
+  .canvas-wrap{flex:1;overflow:auto;min-height:0;background:#05060a;display:flex;align-items:flex-start;justify-content:flex-start;padding:14px}
+  #map{image-rendering:pixelated;cursor:crosshair;box-shadow:0 0 0 1px var(--os-edge),0 0 18px rgba(0,0,0,.6)}
+  .hint{font-size:10px;color:var(--os-ink-dim);padding:6px 9px;border-top:1px solid var(--os-line);flex:none}
+  .swatch{display:inline-block;width:22px;height:22px;image-rendering:pixelated;border:1px solid var(--os-edge);vertical-align:middle;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="panel side">
+    <div class="panel-h">TILE PALETTE</div>
+    <div class="tabs" id="tabs"></div>
+    <div class="pal-meta" id="pal-meta"></div>
+    <div class="pal-wrap"><div class="pal" id="pal"></div></div>
+  </div>
+  <div class="panel main">
+    <div class="panel-h">[ MAP EDITOR ] · AWAKENED CALAMITY</div>
+    <div class="toolbar">
+      <label>W <input type="number" id="mw" value="28" min="4" max="200"></label>
+      <label>H <input type="number" id="mh" value="18" min="4" max="200"></label>
+      <button class="btn" id="resize">Resize</button>
+      <span class="sep"></span>
+      <label>Tile <select id="tilesize">
+        <option value="16">16px</option><option value="24">24px</option>
+        <option value="32" selected>32px</option><option value="48">48px</option><option value="64">64px</option>
+      </select></label>
+      <span class="sep"></span>
+      <button class="btn on" id="layer-ground">Ground</button>
+      <button class="btn" id="layer-object">Object</button>
+      <span class="sep"></span>
+      <button class="btn on" id="tool-paint">Paint</button>
+      <button class="btn" id="tool-fill">Fill</button>
+      <button class="btn" id="tool-erase">Erase</button>
+      <span class="sep"></span>
+      <label>Zoom</label>
+      <button class="btn" id="zoom-out">−</button>
+      <button class="btn" id="zoom-in">+</button>
+      <span class="sep"></span>
+      <button class="btn" id="clear">Clear</button>
+      <button class="btn" id="export">Export JSON</button>
+      <span style="margin-left:auto;font-size:10px;color:var(--os-ink-dim)">selected<span class="swatch" id="sel-sw"></span></span>
+    </div>
+    <div class="canvas-wrap"><canvas id="map"></canvas></div>
+    <div class="hint" id="hint">Variable tile size: pick a map cell size (16–64px) — 16px art scales up crisply; the 32px "Large" sheet maps 1:1 at 32. Maps are any W×H. Object layer draws over ground.</div>
+  </div>
+</div>
+
+<script>
+// Each sheet declares its NATIVE tile size + column count, so 16px and 32px
+// (and future sizes) coexist. The MAP has its own cell size (tile), and every
+// tile is scaled to fill one cell — true variable tile size.
+const SHEETS = [
+  { key:'terrain',   name:'Biomes',    path:'../../assets/tilesets/ac-terrain-16.png',   tile:16, cols:8, count:32 },
+  { key:'terrain2',  name:'Terrain+',  path:'../../assets/tilesets/ac-terrain2-16.png',  tile:16, cols:8, count:32 },
+  { key:'buildings', name:'Buildings', path:'../../assets/tilesets/ac-buildings-16.png', tile:16, cols:8, count:40 },
+  { key:'props',     name:'Props',     path:'../../assets/tilesets/ac-props-16.png',     tile:16, cols:8, count:32 },
+  { key:'dungeon',   name:'Dungeon',   path:'../../assets/tilesets/ac-dungeon-16.png',   tile:16, cols:8, count:32 },
+  { key:'corrupted', name:'Corrupted', path:'../../assets/tilesets/ac-corrupted-16.png', tile:16, cols:8, count:32 },
+  { key:'wasteland', name:'Wasteland', path:'../../assets/tilesets/ac-wasteland-16.png', tile:16, cols:8, count:32 },
+  { key:'enemies',   name:'Enemies',   path:'../../assets/tilesets/ac-enemies-16.png',   tile:16, cols:8, count:32 },
+  { key:'large',     name:'Large 32',  path:'../../assets/tilesets/ac-large-32.png',     tile:32, cols:4, count:8  },
+];
+const sheet = k => SHEETS.find(s=>s.key===k);
+const imgs = {};
+let activeSheet='terrain';
+let selected={ sheet:'terrain', idx:0 };
+let layer='ground', tool='paint';
+let zoom=2;
+let mapTile=32;          // map CELL size in px (variable)
+let mapW=28, mapH=18;
+let ground=[], object=[];
+const DISP=32;           // palette swatch px
+
+function blankMap(w,h){ const g=[],o=[]; for(let y=0;y<h;y++){g.push(new Array(w).fill(null));o.push(new Array(w).fill(null));} return [g,o]; }
+[ground,object]=blankMap(mapW,mapH);
+for(let y=0;y<mapH;y++)for(let x=0;x<mapW;x++) ground[y][x]={sheet:'terrain',idx:(Math.random()<0.12?1:0)};
+
+function loadAll(cb){ let n=SHEETS.length; SHEETS.forEach(s=>{ const im=new Image(); im.onload=()=>{imgs[s.key]=im; if(--n===0)cb();}; im.onerror=()=>{if(--n===0)cb();}; im.src=s.path; }); }
+
+// ---- palette ----
+function buildTabs(){
+  const t=document.getElementById('tabs'); t.innerHTML='';
+  SHEETS.forEach(s=>{ const b=document.createElement('button'); b.className='tab'+(s.key===activeSheet?' on':''); b.textContent=s.name;
+    b.onclick=()=>{ activeSheet=s.key; buildTabs(); buildPalette(); }; t.appendChild(b); });
+}
+function tileBg(sheetKey, idx, disp){
+  const s=sheet(sheetKey); const col=idx%s.cols, row=(idx/s.cols|0);
+  const scale=disp/s.tile, rows=Math.ceil(s.count/s.cols);
+  return { backgroundImage:`url('${s.path}')`, backgroundSize:`${s.cols*s.tile*scale}px ${rows*s.tile*scale}px`,
+    backgroundPosition:`${-col*disp}px ${-row*disp}px` };
+}
+function buildPalette(){
+  const p=document.getElementById('pal'); p.innerHTML=''; const s=sheet(activeSheet);
+  p.style.gridTemplateColumns='repeat('+s.cols+',32px)';
+  document.getElementById('pal-meta').textContent=s.name+' · '+s.tile+'px native · '+s.count+' tiles';
+  for(let i=0;i<s.count;i++){
+    const c=document.createElement('div'); c.className='pcell'+(selected.sheet===activeSheet&&selected.idx===i?' sel':'');
+    Object.assign(c.style,tileBg(activeSheet,i,DISP));
+    if(['props','enemies','large'].includes(activeSheet)) c.style.backgroundColor='#0c1420';
+    c.title=activeSheet+' #'+i;
+    c.onclick=()=>{ selected={sheet:activeSheet,idx:i}; buildPalette(); updateSel(); };
+    p.appendChild(c);
+  }
+}
+function updateSel(){ const sw=document.getElementById('sel-sw'); Object.assign(sw.style,tileBg(selected.sheet,selected.idx,22)); sw.style.backgroundColor='#0c1420'; }
+
+// ---- map canvas ----
+const cv=document.getElementById('map'), ctx=cv.getContext('2d');
+function cellPx(){ return mapTile*zoom; }
+function resizeCanvas(){ cv.width=mapW*cellPx(); cv.height=mapH*cellPx(); ctx.imageSmoothingEnabled=false; draw(); }
+function drawCell(cell,x,y){ if(!cell||!imgs[cell.sheet])return; const s=sheet(cell.sheet); const col=cell.idx%s.cols,row=(cell.idx/s.cols|0);
+  ctx.drawImage(imgs[cell.sheet], col*s.tile,row*s.tile,s.tile,s.tile, x*cellPx(),y*cellPx(),cellPx(),cellPx()); }
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height); ctx.fillStyle='#05060a'; ctx.fillRect(0,0,cv.width,cv.height);
+  for(let y=0;y<mapH;y++)for(let x=0;x<mapW;x++) drawCell(ground[y][x],x,y);
+  for(let y=0;y<mapH;y++)for(let x=0;x<mapW;x++) drawCell(object[y][x],x,y);
+  // grid
+  ctx.strokeStyle='rgba(0,200,255,0.10)'; ctx.lineWidth=1;
+  for(let x=0;x<=mapW;x++){ ctx.beginPath(); ctx.moveTo(x*cellPx()+0.5,0); ctx.lineTo(x*cellPx()+0.5,cv.height); ctx.stroke(); }
+  for(let y=0;y<=mapH;y++){ ctx.beginPath(); ctx.moveTo(0,y*cellPx()+0.5); ctx.lineTo(cv.width,y*cellPx()+0.5); ctx.stroke(); }
+}
+function cellAt(e){ const r=cv.getBoundingClientRect(); const x=Math.floor((e.clientX-r.left)/cellPx()), y=Math.floor((e.clientY-r.top)/cellPx()); return (x>=0&&x<mapW&&y>=0&&y<mapH)?{x,y}:null; }
+function paintAt(x,y){ const grid=layer==='ground'?ground:object;
+  if(tool==='erase') grid[y][x]=null; else if(tool==='paint') grid[y][x]={sheet:selected.sheet,idx:selected.idx}; else if(tool==='fill') flood(x,y); draw(); }
+function flood(x,y){ const grid=layer==='ground'?ground:object; const target=grid[y][x]; const repl={sheet:selected.sheet,idx:selected.idx};
+  const same=(a,b)=>(!a&&!b)||(a&&b&&a.sheet===b.sheet&&a.idx===b.idx); if(same(target,repl))return; const st=[[x,y]];
+  while(st.length){ const [cx,cy]=st.pop(); if(cx<0||cx>=mapW||cy<0||cy>=mapH)continue; if(!same(grid[cy][cx],target))continue; grid[cy][cx]={...repl}; st.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]); } }
+let painting=false;
+cv.addEventListener('mousedown',e=>{ const c=cellAt(e); if(c){painting=true;paintAt(c.x,c.y);} });
+cv.addEventListener('mousemove',e=>{ if(!painting||tool==='fill')return; const c=cellAt(e); if(c)paintAt(c.x,c.y); });
+window.addEventListener('mouseup',()=>painting=false);
+
+// ---- toolbar ----
+function setBtn(ids,onId){ ids.forEach(id=>document.getElementById(id).classList.toggle('on',id===onId)); }
+document.getElementById('layer-ground').onclick=()=>{layer='ground';setBtn(['layer-ground','layer-object'],'layer-ground');};
+document.getElementById('layer-object').onclick=()=>{layer='object';setBtn(['layer-ground','layer-object'],'layer-object');};
+document.getElementById('tool-paint').onclick=()=>{tool='paint';setBtn(['tool-paint','tool-fill','tool-erase'],'tool-paint');};
+document.getElementById('tool-fill').onclick=()=>{tool='fill';setBtn(['tool-paint','tool-fill','tool-erase'],'tool-fill');};
+document.getElementById('tool-erase').onclick=()=>{tool='erase';setBtn(['tool-paint','tool-fill','tool-erase'],'tool-erase');};
+document.getElementById('zoom-in').onclick=()=>{zoom=Math.min(5,zoom+1);resizeCanvas();};
+document.getElementById('zoom-out').onclick=()=>{zoom=Math.max(1,zoom-1);resizeCanvas();};
+document.getElementById('tilesize').onchange=(e)=>{ mapTile=parseInt(e.target.value); resizeCanvas();
+  document.getElementById('hint').textContent='Map cell size set to '+mapTile+'px. Each tile (any native size) is scaled to fill one '+mapTile+'px cell. Map is '+mapW+'×'+mapH+' = '+(mapW*mapTile)+'×'+(mapH*mapTile)+'px.'; };
+document.getElementById('resize').onclick=()=>{
+  const nw=Math.max(4,Math.min(200,parseInt(document.getElementById('mw').value)||mapW));
+  const nh=Math.max(4,Math.min(200,parseInt(document.getElementById('mh').value)||mapH));
+  const [ng,no]=blankMap(nw,nh);
+  for(let y=0;y<Math.min(nh,mapH);y++)for(let x=0;x<Math.min(nw,mapW);x++){ ng[y][x]=ground[y][x]; no[y][x]=object[y][x]; }
+  for(let y=0;y<nh;y++)for(let x=0;x<nw;x++) if(!ng[y][x]) ng[y][x]={sheet:'terrain',idx:0};
+  mapW=nw;mapH=nh;ground=ng;object=no;resizeCanvas();
+  document.getElementById('hint').textContent='Map resized to '+nw+'×'+nh+' cells ('+(nw*mapTile)+'×'+(nh*mapTile)+'px at '+mapTile+'px tiles).';
+};
+document.getElementById('clear').onclick=()=>{ [ground,object]=blankMap(mapW,mapH); for(let y=0;y<mapH;y++)for(let x=0;x<mapW;x++)ground[y][x]={sheet:'terrain',idx:0}; draw(); };
+document.getElementById('export').onclick=()=>{
+  const data={ tileSize:mapTile, width:mapW, height:mapH,
+    sheets:SHEETS.map(s=>({key:s.key,path:s.path.split('/').pop(),tile:s.tile,cols:s.cols})),
+    ground:ground.map(r=>r.map(c=>c?c.sheet+':'+c.idx:'.')), object:object.map(r=>r.map(c=>c?c.sheet+':'+c.idx:'.')) };
+  const json=JSON.stringify(data); const blob=new Blob([json],{type:'application/json'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='ac-map-'+mapW+'x'+mapH+'-t'+mapTile+'.json'; a.click(); URL.revokeObjectURL(url);
+  document.getElementById('hint').textContent='Exported ac-map-'+mapW+'x'+mapH+'-t'+mapTile+'.json. tileSize='+mapTile+'; each sheet carries its native tile px. Cells are "sheet:idx" ("." = empty).';
+};
+
+buildTabs(); buildPalette(); updateSel();
+loadAll(()=>{ resizeCanvas(); });
+</script>
+</body>
+</html>

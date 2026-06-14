@@ -1,0 +1,435 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/dialogue/**",
+              "components/hub/**",
+              "components/hud/**",
+              "components/meters/**",
+              "components/system/**",
+              "components/world/**",
+              "ui_kits/game-system/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Press Start 2P))/i]",
+        "message": "Font not provided by the design system. Available: Press Start 2P."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AffinityBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:affinity|label|size|key|ref|className|style|children)$/]",
+        "message": "<AffinityBadge> doesn't accept that prop. Declared props: affinity, label, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AffinityBadge'] > JSXAttribute[name.name='affinity'] > Literal[value!=/^(?:ember|tide|verdant|storm|stone|frost|toxin|umbral|lumen|corruption|untethered)$/]",
+        "message": "<AffinityBadge> affinity must be one of 'ember' | 'tide' | 'verdant' | 'storm' | 'stone' | 'frost' | 'toxin' | 'umbral' | 'lumen' | 'corruption' | 'untethered'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AffinityBadge'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<AffinityBadge> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DialogueBox'] > JSXAttribute > JSXIdentifier[name!=/^(?:text|speaker|showArrow|key|ref|className|style|children)$/]",
+        "message": "<DialogueBox> doesn't accept that prop. Declared props: text, speaker, showArrow."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ExposureTag'] > JSXAttribute > JSXIdentifier[name!=/^(?:hazard|value|width|key|ref|className|style|children)$/]",
+        "message": "<ExposureTag> doesn't accept that prop. Declared props: hazard, value, width."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='HazardChip'] > JSXAttribute > JSXIdentifier[name!=/^(?:hazard|showLabel|size|key|ref|className|style|children)$/]",
+        "message": "<HazardChip> doesn't accept that prop. Declared props: hazard, showLabel, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='HazardChip'] > JSXAttribute[name.name='hazard'] > Literal[value!=/^(?:heat|cold|toxic|gloom|tempest)$/]",
+        "message": "<HazardChip> hazard must be one of 'heat' | 'cold' | 'toxic' | 'gloom' | 'tempest'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='HazardChip'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<HazardChip> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LaunchCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|subtitle|icon|href|key|ref|className|style|children)$/]",
+        "message": "<LaunchCard> doesn't accept that prop. Declared props: title, subtitle, icon, href."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MapMarker'] > JSXAttribute > JSXIdentifier[name!=/^(?:type|hazard|label|size|key|ref|className|style|children)$/]",
+        "message": "<MapMarker> doesn't accept that prop. Declared props: type, hazard, label, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MapMarker'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:safe|hold|route|dungeon|calamity|hidden|water|under)$/]",
+        "message": "<MapMarker> type must be one of 'safe' | 'hold' | 'route' | 'dungeon' | 'calamity' | 'hidden' | 'water' | 'under'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MapMarker'] > JSXAttribute[name.name='hazard'] > Literal[value!=/^(?:heat|cold|toxic|gloom|tempest)$/]",
+        "message": "<MapMarker> hazard must be one of 'heat' | 'cold' | 'toxic' | 'gloom' | 'tempest'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MeterBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|max|label|color|showText|width|key|ref|className|style|children)$/]",
+        "message": "<MeterBar> doesn't accept that prop. Declared props: value, max, label, color, showText, width."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SurveillanceMeter'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|max|label|width|key|ref|className|style|children)$/]",
+        "message": "<SurveillanceMeter> doesn't accept that prop. Declared props: value, max, label, width."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SysMenuItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|glyph|right|selected|accent|key|ref|className|style|children)$/]",
+        "message": "<SysMenuItem> doesn't accept that prop. Declared props: label, glyph, right, selected, accent."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SysPanel'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|accent|width|brackets|scanlines|bodyStyle|children|key|ref|className|style|children)$/]",
+        "message": "<SysPanel> doesn't accept that prop. Declared props: title, accent, width, brackets, scanlines, bodyStyle, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SystemNotify'] > JSXAttribute > JSXIdentifier[name!=/^(?:type|label|message|children|key|ref|className|style|children)$/]",
+        "message": "<SystemNotify> doesn't accept that prop. Declared props: type, label, message, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SystemNotify'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:info|warning|danger)$/]",
+        "message": "<SystemNotify> type must be one of 'info' | 'warning' | 'danger'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='VitalBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:kind|value|max|width|showValue|key|ref|className|style|children)$/]",
+        "message": "<VitalBar> doesn't accept that prop. Declared props: kind, value, max, width, showValue."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='VitalBar'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:hp|mana|stamina)$/]",
+        "message": "<VitalBar> kind must be one of 'hp' | 'mana' | 'stamina'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AffinityBadge": {
+        "replaces": []
+      },
+      "DialogueBox": {
+        "replaces": []
+      },
+      "ExposureTag": {
+        "replaces": []
+      },
+      "HazardChip": {
+        "replaces": []
+      },
+      "LaunchCard": {
+        "replaces": []
+      },
+      "MapMarker": {
+        "replaces": []
+      },
+      "MeterBar": {
+        "replaces": []
+      },
+      "SurveillanceMeter": {
+        "replaces": []
+      },
+      "SysMenuItem": {
+        "replaces": []
+      },
+      "SysPanel": {
+        "replaces": []
+      },
+      "SystemNotify": {
+        "replaces": []
+      },
+      "VitalBar": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-cool",
+      "--aff-corruption",
+      "--aff-ember",
+      "--aff-frost",
+      "--aff-lumen",
+      "--aff-stone",
+      "--aff-storm",
+      "--aff-tide",
+      "--aff-toxin",
+      "--aff-umbral",
+      "--aff-untethered",
+      "--aff-verdant",
+      "--biome-calderra",
+      "--biome-halveth",
+      "--biome-vael",
+      "--biome-verdara",
+      "--bw-thin",
+      "--bw-window",
+      "--cyber-frame",
+      "--cyber-frame-hv",
+      "--cyber-panel",
+      "--dur-fast",
+      "--dur-med",
+      "--dur-slow",
+      "--ease-snap",
+      "--font-mono",
+      "--font-pixel",
+      "--glow-cyan",
+      "--glow-cyan-strong",
+      "--glow-danger",
+      "--glow-warn",
+      "--hub-bg-0",
+      "--hub-bg-1",
+      "--hub-cyan",
+      "--hub-cyan-hot",
+      "--hub-cyan-lt",
+      "--hub-cyan-ttl",
+      "--hub-ink",
+      "--hub-ink-dim",
+      "--hub-ink-faint",
+      "--hub-line",
+      "--hub-panel",
+      "--hub-panel-2",
+      "--hz-cold",
+      "--hz-gloom",
+      "--hz-heat",
+      "--hz-tempest",
+      "--hz-toxic",
+      "--lh-loose",
+      "--lh-normal",
+      "--lh-snug",
+      "--lh-tight",
+      "--ls-normal",
+      "--ls-tight",
+      "--ls-wide",
+      "--ls-wider",
+      "--meter-green",
+      "--meter-red",
+      "--meter-yellow",
+      "--node-calamity",
+      "--node-dungeon",
+      "--node-hidden",
+      "--node-hold",
+      "--node-route",
+      "--node-safe",
+      "--node-under",
+      "--node-water",
+      "--os-edge",
+      "--os-glass",
+      "--os-glass-2",
+      "--os-glow",
+      "--os-ink",
+      "--os-ink-dim",
+      "--os-line",
+      "--os-scrim",
+      "--pixel-render",
+      "--radius-2xl",
+      "--radius-lg",
+      "--radius-md",
+      "--radius-pill",
+      "--radius-sm",
+      "--radius-xl",
+      "--sea",
+      "--sea-deep",
+      "--sp-0",
+      "--sp-1",
+      "--sp-10",
+      "--sp-12",
+      "--sp-2",
+      "--sp-3",
+      "--sp-4",
+      "--sp-5",
+      "--sp-6",
+      "--sp-7",
+      "--sp-8",
+      "--surface-deep",
+      "--surface-hub",
+      "--surface-system",
+      "--sys-cyan",
+      "--sys-danger",
+      "--sys-danger-ink",
+      "--sys-ink",
+      "--sys-panel",
+      "--sys-panel-solid",
+      "--sys-warn",
+      "--sys-warn-ink",
+      "--text-2xl",
+      "--text-2xs",
+      "--text-3xl",
+      "--text-4xl",
+      "--text-5xl",
+      "--text-hub",
+      "--text-lg",
+      "--text-md",
+      "--text-sm",
+      "--text-system",
+      "--text-xl",
+      "--text-xs",
+      "--vital-hp",
+      "--vital-hp-low",
+      "--vital-mana",
+      "--vital-stamina",
+      "--weight-bold",
+      "--weight-normal"
+    ],
+    "tokenKinds": {
+      "--meter-green": "color",
+      "--meter-yellow": "color",
+      "--meter-red": "color",
+      "--sys-panel": "color",
+      "--sys-panel-solid": "color",
+      "--sys-ink": "color",
+      "--sys-cyan": "color",
+      "--sys-warn": "color",
+      "--sys-warn-ink": "color",
+      "--sys-danger": "color",
+      "--sys-danger-ink": "color",
+      "--hub-bg-0": "color",
+      "--hub-bg-1": "color",
+      "--hub-panel": "color",
+      "--hub-panel-2": "color",
+      "--hub-ink": "color",
+      "--hub-ink-dim": "color",
+      "--hub-ink-faint": "color",
+      "--hub-cyan": "color",
+      "--hub-cyan-lt": "color",
+      "--hub-cyan-ttl": "color",
+      "--hub-cyan-hot": "color",
+      "--hub-line": "color",
+      "--sea": "color",
+      "--sea-deep": "color",
+      "--biome-verdara": "color",
+      "--biome-halveth": "color",
+      "--biome-calderra": "color",
+      "--biome-vael": "color",
+      "--node-safe": "color",
+      "--node-hold": "color",
+      "--node-route": "color",
+      "--node-dungeon": "color",
+      "--node-calamity": "color",
+      "--node-hidden": "color",
+      "--node-water": "color",
+      "--node-under": "color",
+      "--hz-heat": "color",
+      "--hz-cold": "color",
+      "--hz-toxic": "color",
+      "--hz-gloom": "color",
+      "--hz-tempest": "color",
+      "--aff-ember": "color",
+      "--aff-tide": "color",
+      "--aff-verdant": "color",
+      "--aff-storm": "color",
+      "--aff-stone": "color",
+      "--aff-frost": "color",
+      "--aff-toxin": "color",
+      "--aff-umbral": "color",
+      "--aff-lumen": "color",
+      "--aff-corruption": "color",
+      "--aff-untethered": "color",
+      "--vital-hp": "color",
+      "--vital-hp-low": "color",
+      "--vital-mana": "color",
+      "--vital-stamina": "color",
+      "--os-glass": "color",
+      "--os-glass-2": "color",
+      "--os-scrim": "color",
+      "--os-line": "color",
+      "--os-edge": "color",
+      "--os-ink": "color",
+      "--os-ink-dim": "color",
+      "--os-glow": "shadow",
+      "--surface-system": "color",
+      "--surface-hub": "color",
+      "--surface-deep": "color",
+      "--text-system": "font",
+      "--text-hub": "font",
+      "--accent": "color",
+      "--accent-cool": "color",
+      "--font-pixel": "font",
+      "--font-mono": "font",
+      "--text-2xs": "font",
+      "--text-xs": "font",
+      "--text-sm": "font",
+      "--text-md": "font",
+      "--text-lg": "font",
+      "--text-xl": "font",
+      "--text-2xl": "font",
+      "--text-3xl": "font",
+      "--text-4xl": "font",
+      "--text-5xl": "font",
+      "--lh-tight": "other",
+      "--lh-snug": "other",
+      "--lh-normal": "other",
+      "--lh-loose": "other",
+      "--ls-tight": "other",
+      "--ls-normal": "spacing",
+      "--ls-wide": "spacing",
+      "--ls-wider": "spacing",
+      "--weight-normal": "font",
+      "--weight-bold": "font",
+      "--sp-0": "spacing",
+      "--sp-1": "spacing",
+      "--sp-2": "spacing",
+      "--sp-3": "spacing",
+      "--sp-4": "spacing",
+      "--sp-5": "spacing",
+      "--sp-6": "spacing",
+      "--sp-7": "spacing",
+      "--sp-8": "spacing",
+      "--sp-10": "spacing",
+      "--sp-12": "spacing",
+      "--radius-sm": "radius",
+      "--radius-md": "radius",
+      "--radius-lg": "radius",
+      "--radius-xl": "radius",
+      "--radius-2xl": "radius",
+      "--radius-pill": "radius",
+      "--bw-thin": "spacing",
+      "--bw-window": "spacing",
+      "--glow-cyan": "shadow",
+      "--glow-cyan-strong": "shadow",
+      "--glow-warn": "shadow",
+      "--glow-danger": "shadow",
+      "--cyber-frame": "color",
+      "--cyber-frame-hv": "color",
+      "--cyber-panel": "color",
+      "--ease-snap": "other",
+      "--dur-fast": "other",
+      "--dur-med": "other",
+      "--dur-slow": "other",
+      "--pixel-render": "other"
+    },
+    "fontFamilies": [
+      "Press Start 2P"
+    ]
+  }
+}

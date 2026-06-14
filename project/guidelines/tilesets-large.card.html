@@ -1,0 +1,29 @@
+<!-- @dsCard group="Tilesets" viewport="700x260" name="Large 32×32 features" subtitle="Higher-res tiles — proves variable tile size" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:#0b1018;padding:20px;font-family:var(--font-mono);color:#c8d8e8}
+  h2{font-family:var(--font-pixel);font-size:10px;color:#80d0e8;letter-spacing:1px;margin:0 0 4px}
+  .sub{font-size:11px;color:#6b7a8d;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(8,72px);gap:4px}
+  .gt .tile{width:72px;height:72px;image-rendering:pixelated;background-color:#0c1420;background-image:var(--sheet);background-size:288px 144px}
+  .gt .lab{font-size:8px;color:#7c93a8;text-align:center;margin-top:3px}
+</style>
+</head>
+<body>
+  <h2>AC-LARGE-32 · 32×32 native</h2>
+  <p class="sub">128×64 px · 8 tiles · 4 cols · drop into the map editor at 32px cells for 1:1, or any cell size to scale</p>
+  <div class="grid" id="grid"></div>
+<script>
+document.documentElement.style.setProperty('--sheet',"url('../assets/tilesets/ac-large-32.png')");
+const NAMES=['big oak','big pine','dead tree','boulder','statue','fountain','bonfire','boss construct'];
+const g=document.getElementById('grid');
+NAMES.forEach((n,i)=>{const col=i%4,row=(i/4|0);const w=document.createElement('div');w.className='gt';
+  w.innerHTML='<div class="tile" style="background-position:'+(-col*72)+'px '+(-row*72)+'px"></div><div class="lab">'+n+'</div>';g.appendChild(w);});
+</script>
+</body>
+</html>

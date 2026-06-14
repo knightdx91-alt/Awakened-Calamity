@@ -1,0 +1,44 @@
+/* ===================================================================
+   Awakened Calamity — Typography
+   Two faces only:
+     --font-pixel : Press Start 2P. Every piece of game chrome, the hub
+                    logo, headings, labels. Pixel-perfect, never anti-alias
+                    smoothing the personality away. Use sparingly + LARGE
+                    for display; tiny (7–10px) for in-game UI.
+     --font-mono  : the platform monospace (Courier feel). Hub body copy,
+                    the System overlay, world-map labels, long-form text.
+   The GBA logical screen is 240×160 — in-game text lives at 7–10px. The
+   larger sizes here are for specimen cards, hubs, and marketing surfaces.
+   =================================================================== */
+
+:root {
+  --font-pixel: 'Press Start 2P', 'Courier New', monospace;
+  --font-mono:  'Courier New', Courier, ui-monospace, 'SFMono-Regular', monospace;
+
+  /* type scale (px — this is a pixel-grid product) */
+  --text-2xs: 7px;   /* sub-labels, status flags */
+  --text-xs:  8px;   /* menu rows, dialogue */
+  --text-sm:  9px;   /* panel headers */
+  --text-md:  10px;  /* in-game base */
+  --text-lg:  12px;  /* hub card body */
+  --text-xl:  14px;  /* hub card titles */
+  --text-2xl: 17px;  /* world-map title */
+  --text-3xl: 22px;  /* section display */
+  --text-4xl: 30px;  /* hub logo */
+  --text-5xl: 44px;  /* hero display */
+
+  /* line-heights — pixel text needs air */
+  --lh-tight:  1.2;   /* @kind other */
+  --lh-snug:   1.5;   /* @kind other */
+  --lh-normal: 1.7;   /* @kind other */
+  --lh-loose:  2;     /* @kind other */
+
+  /* letter-spacing — wide tracking reads as "system terminal" */
+  --ls-tight:  0;     /* @kind other */
+  --ls-normal: 0.5px; /* @kind spacing */
+  --ls-wide:   2px;   /* @kind spacing */
+  --ls-wider:  3px;   /* @kind spacing */
+
+  --weight-normal: 400;
+  --weight-bold:   700;
+}

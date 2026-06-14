@@ -1,0 +1,30 @@
+<!-- @dsCard group="Tilesets" viewport="780x360" name="Corrupted / System-overrun" subtitle="32 tiles · the System bleeding into the world" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:#0a0613;padding:20px;font-family:var(--font-mono);color:#c8d8e8}
+  h2{font-family:var(--font-pixel);font-size:10px;color:#80d0e8;letter-spacing:1px;margin:0 0 4px}
+  .sub{font-size:11px;color:#6b7a8d;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(8,48px);gap:3px}
+  .gt .tile{width:48px;height:48px;image-rendering:pixelated;background-image:var(--sheet);background-size:384px 192px}
+  .gt .idx{position:relative;font-size:8px;color:#fff;margin-top:-48px;margin-left:2px;text-shadow:0 0 2px #000,0 0 2px #000}
+  .gt .lab{font-size:7px;color:#7c93a8;text-align:center;margin-top:2px;line-height:1.15;height:20px}
+</style>
+</head>
+<body>
+  <h2>CORRUPTED / SYSTEM-OVERRUN</h2>
+  <p class="sub">32 tiles · the System bleeding into the world · 128×64 px · index 0–31</p>
+  <div class="grid" id="grid"></div>
+<script>
+document.documentElement.style.setProperty('--sheet',"url('../assets/tilesets/ac-corrupted-16.png')");
+const NAMES=["corrupt grass","corrupt dirt","void","corrupt water","glitch","hex floor","circuit","rune floor","spread I","spread II","corrupt cryst","cyan cryst","infected tree","withered tree","blight bush","void crack","corrupt cobble","corrupt brick","monolith","scan pylon","glitch wall","data wall","corrupt lava","tar pit","pixel-sort","void rock","corrupt flower","eye cluster","cables","portal rift","corrupt snow","corrupt ash"];
+const g=document.getElementById('grid');
+NAMES.forEach((n,i)=>{const col=i%8,row=(i/8|0);const w=document.createElement('div');w.className='gt';
+  w.innerHTML='<div class="tile" style="background-position:'+(-col*48)+'px '+(-row*48)+'px"></div><div class="idx">'+i+'</div><div class="lab">'+n+'</div>';g.appendChild(w);});
+</script>
+</body>
+</html>

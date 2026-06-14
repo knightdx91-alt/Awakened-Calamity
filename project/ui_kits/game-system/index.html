@@ -1,0 +1,120 @@
+<!-- @dsCard group="Game" viewport="620x640" name="Game UI — revamped (System OS)" subtitle="Minimal HUD + System-interface menus" -->
+<!-- @startingPoint section="Awakened Calamity" subtitle="Revamped in-game UI (System OS)" viewport="620x640" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Awakened Calamity — Game UI (System OS)</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html,body{margin:0;height:100%}
+  body{background:#0a0a12;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--font-pixel)}
+  .device{display:flex;flex-direction:column;align-items:center;gap:16px;padding:22px}
+  .bezel{background:#0e0e16;border:3px solid #2a2a3a;border-radius:18px;padding:14px;box-shadow:0 14px 44px rgba(0,0,0,.62)}
+  .screen{position:relative;width:560px;height:336px;border:2px solid #333;border-radius:6px;overflow:hidden;background:#05060a;image-rendering:pixelated}
+  .world{position:absolute;inset:0;image-rendering:pixelated;background-repeat:no-repeat;background-position:center;background-size:cover;transition:background-image .2s}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:560px}
+  .ctl{font-family:var(--font-pixel);font-size:9px;color:#bfeeff;background:#10131f;border:1px solid #244;border-radius:8px;padding:8px 12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+  .ctl:hover{background:#16202e;border-color:#2a6f7a}
+  .ctl.on{background:#00ccff;border-color:#00ccff;color:#04141a}
+  .hint{font-family:var(--font-mono);font-size:11px;color:#5f86a0;max-width:560px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="SystemMenu.jsx"></script>
+<script type="text/babel">
+const { VitalBar, ExposureTag, SystemNotify, DialogueBox } = window.AwakenedCalamityDesignSystem_475ed3;
+
+const SCENES = {
+  village: '../../assets/tilesets/scene-village.png',
+  dungeon: '../../assets/tilesets/scene-dungeon.png',
+};
+
+function App() {
+  const [scene, setScene] = React.useState('village');
+  const [menu, setMenu] = React.useState(false);
+  const [vitals, setVitals] = React.useState({ hp: 72, mana: 34, stamina: 88 });
+  const [exposure, setExposure] = React.useState({ hazard: null, value: 0 });
+  const [survey, setSurvey] = React.useState(34);
+  const [notes, setNotes] = React.useState([]);
+  const [dlg, setDlg] = React.useState(false);
+  const idRef = React.useRef(1);
+
+  function pushNote(type, message) {
+    const id = idRef.current++;
+    setNotes(n => [...n.slice(-2), { id, type, message }]);
+    setTimeout(() => setNotes(n => n.filter(x => x.id !== id)), 3600);
+  }
+  function service(cost, label) {
+    setSurvey(s => Math.min(100, s + cost));
+    if (label === 'Emergency Restore') setVitals({ hp: 100, mana: 60, stamina: 100 });
+    pushNote('danger', label + ' applied. Surveillance noted.');
+  }
+  function toggleExposure() {
+    const order = [null, 'heat', 'cold', 'gloom'];
+    setExposure(e => {
+      const i = (order.indexOf(e.hazard) + 1) % order.length;
+      const hz = order[i];
+      if (hz) pushNote('warning', 'Exposure rising: ' + hz.toUpperCase() + '. Find shelter.');
+      return { hazard: hz, value: hz ? 58 : 0 };
+    });
+  }
+
+  return (
+    <div className="device">
+      <div className="bezel">
+        <div className="screen">
+          <div className="world" style={{ backgroundImage: `url('${SCENES[scene]}')` }} />
+
+          {/* ---- MINIMAL HUD: only HP / Mana / Stamina / Exposure ---- */}
+          {!menu && (
+            <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', flexDirection: 'column', gap: 4, zIndex: 20 }}>
+              <VitalBar kind="hp" value={vitals.hp} max={100} width={140} />
+              <VitalBar kind="mana" value={vitals.mana} max={60} width={140} />
+              <VitalBar kind="stamina" value={vitals.stamina} max={100} width={140} />
+              <ExposureTag hazard={exposure.hazard} value={exposure.value} width={140} />
+            </div>
+          )}
+
+          {/* System notification stack */}
+          {!menu && (
+            <div style={{ position: 'absolute', top: 8, right: 8, width: 168, display: 'flex', flexDirection: 'column', gap: 5, zIndex: 20 }}>
+              {notes.map(n => <SystemNotify key={n.id} type={n.type} message={n.message} style={{ fontSize: '6px' }} />)}
+            </div>
+          )}
+
+          {/* Dialogue */}
+          {!menu && dlg && (
+            <div style={{ position: 'absolute', left: '3%', right: '3%', bottom: '4%', zIndex: 25 }} onClick={() => setDlg(false)}>
+              <DialogueBox speaker="MARIE" text={'I... was Marie...\nWasn\u2019t I?'} />
+            </div>
+          )}
+
+          {/* The System menu */}
+          {menu && window.SystemMenu && (
+            <window.SystemMenu vitals={vitals} survey={survey} onService={service} onClose={() => setMenu(false)} />
+          )}
+        </div>
+      </div>
+
+      <div className="controls">
+        <button className={'ctl' + (menu ? ' on' : '')} onClick={() => setMenu(m => !m)}>{menu ? 'Close menu' : 'Open System menu'}</button>
+        <button className={'ctl' + (scene === 'village' ? ' on' : '')} onClick={() => setScene('village')}>Bright scene</button>
+        <button className={'ctl' + (scene === 'dungeon' ? ' on' : '')} onClick={() => setScene('dungeon')}>Dark scene</button>
+        <button className="ctl" onClick={toggleExposure}>Toggle exposure</button>
+        <button className="ctl" onClick={() => setDlg(d => !d)}>Dialogue</button>
+        <button className="ctl" onClick={() => pushNote('info', 'Stamina increased to 64.')}>System ping</button>
+      </div>
+      <div className="hint">On-screen: only HP · Mana · Stamina · Exposure (when active). Everything else — designation, location, surveillance, build — lives in the System menu's STATUS screen. Try the menu over both the bright and dark scene to see the dark-glass HUD hold contrast.</div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

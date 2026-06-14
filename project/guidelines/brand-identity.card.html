@@ -1,0 +1,38 @@
+<!-- @dsCard group="Brand" viewport="700x230" name="The System OS" subtitle="The whole interface is the surveillance intelligence" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{margin:0;min-height:230px;font-family:var(--font-pixel);
+    background:linear-gradient(135deg,#5ea845 0%,#67b34d 30%,#357fc5 62%,#2a1840 100%);
+    display:flex;align-items:center;justify-content:center;padding:24px;gap:18px}
+  .panel{position:relative;background:rgba(6,10,20,0.92);border:1px solid #00ccff;border-radius:5px;
+    box-shadow:0 0 12px rgba(0,200,255,.28),0 6px 22px rgba(0,0,0,.6);padding:14px 16px;max-width:280px}
+  .panel::before,.panel::after{content:'';position:absolute;width:9px;height:9px;border:2px solid #00ccff}
+  .panel::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .panel::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+  .scan{position:absolute;inset:0;border-radius:5px;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,200,255,.22) 0 1px,transparent 1px 3px);opacity:.5;mix-blend-mode:screen}
+  .lbl{font-size:6px;letter-spacing:2px;color:#00ccff;text-shadow:0 0 6px #00ccff;margin-bottom:8px}
+  .msg{font-size:7.5px;line-height:1.9;color:#bfeeff}
+  .tag{font-size:6px;letter-spacing:2px;color:#fff;text-shadow:0 1px 2px #000;margin-bottom:10px}
+  .side{max-width:230px}
+  .side .tag{color:#04141a;text-shadow:none}
+  .side p{font-family:var(--font-mono);font-size:11px;line-height:1.6;color:#06222e;margin:0}
+</style>
+</head>
+<body>
+<div class="side">
+  <div class="tag">ONE AESTHETIC</div>
+  <p>The bright pixel world is the only warmth. Every panel laid over it — menus, HUD, dialogue, alerts — is the System: dark glass, cyan glow. There is no UI that isn't the interface watching you.</p>
+</div>
+<div class="panel">
+  <div class="scan"></div>
+  <div class="lbl">[ THE SYSTEM ]</div>
+  <div class="msg">Unauthorized Safe Zone detected.<br/>Register for protection?<br/>(Cr + Surveillance)</div>
+</div>
+</body>
+</html>
