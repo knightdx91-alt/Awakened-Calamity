@@ -22,8 +22,8 @@ TS_DIR = os.path.join(ROOT, "data/tilesets")
 TILE = 16
 # fixed sheet order so layouts can reference indices reliably
 ORDER = ["roof_tl", "roof_t", "roof_tr", "roof_l", "roof_c", "roof_r",
-         "roof_bl", "roof_b", "roof_br", "wall_c", "wall_l", "wall_r",
-         "wall_door", "wall_window"]
+         "roof_bl", "roof_b", "roof_br", "roof_ine", "roof_inw", "roof_ise",
+         "roof_isw", "wall_c", "wall_l", "wall_r", "wall_door", "wall_window"]
 
 
 def _load(d, n):
@@ -58,6 +58,11 @@ def synth_pieces(material_dir):
         "roof_tr": _shade(ridge, 0.88),
         "roof_bl": _shade(eave, 0.9),
         "roof_br": _shade(eave, 0.9),
+        # inner corners (for L-shaped roofs): fill with a soft corner shade
+        "roof_ine": _shade(roof_fill, 0.9),
+        "roof_inw": _shade(roof_fill, 0.9),
+        "roof_ise": _shade(roof_fill, 0.9),
+        "roof_isw": _shade(roof_fill, 0.9),
         "wall_c": wall,
         "wall_l": _shade(wall, 0.9),
         "wall_r": _shade(wall, 0.9),
