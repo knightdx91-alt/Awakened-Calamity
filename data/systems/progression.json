@@ -15,7 +15,7 @@
     "redMult": 1.5, "whiteMult": 1.0, "greyMult": 0.1
   },
 
-  "attributes": ["might", "finesse", "endurance", "focus", "resolve", "insight", "presence"],
+  "attributes": ["strength", "agility", "constitution", "intelligence", "wisdom", "perception", "charisma", "luck"],
 
   "pointsPerLevel": {
     "_note": "PROGRESSION.md §2: points = base + (Tier rank above Basic). Basic 3 … Legendary 8.",

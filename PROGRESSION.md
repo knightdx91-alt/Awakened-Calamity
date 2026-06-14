@@ -19,32 +19,35 @@
 
 ---
 
-## 2. Player Attributes (original set — 6)
+## 2. Player Attributes (conventional LitRPG set — 8)
 
 The System grants attribute points on level-up; you allocate them (class nudges the spread).
+**Standard LitRPG-readable names** — a System screen anyone instantly understands.
 
 | Attribute | Governs |
 |---|---|
-| **Might** | Physical self-combat damage, carry capacity |
-| **Finesse** | Tempo regen/speed, accuracy, stealth |
-| **Endurance** | **Vigor pool (HP) + its regen/min**, Stamina pool & drain resistance, Exposure resistance |
-| **Focus** | **Affinity-Energy pool size**, affinity/arcane power, Bind strength |
-| **Resolve** | **Affinity-Energy regen/min**, damage resistances, resistance to System effects (Surveillance, conversion) |
-| **Insight** | Skill effectiveness, crafting quality, detection range, Appraisal/luck (luck folded here) |
-| **Presence** | NPC disposition, persuasion/dialogue options, **reputation gain rate**, shop prices (haggling), creature **trust/loyalty & Free-Bond**, party morale/leadership in lane battles |
+| **Strength** | Physical self-combat damage, carry capacity |
+| **Agility** | Tempo regen/speed, accuracy, stealth |
+| **Constitution** | **Vigor pool (HP) + its regen/min**, Stamina pool & drain resistance, Exposure resistance |
+| **Intelligence** | **Affinity-Energy pool size**, affinity/arcane power, Bind strength |
+| **Wisdom** | **Affinity-Energy regen/min**, damage resistances, resistance to System effects (Surveillance, conversion) |
+| **Perception** | Skill effectiveness, crafting quality, detection range, Appraisal |
+| **Charisma** | NPC disposition, persuasion/dialogue options, **reputation gain rate**, shop prices (haggling), creature **trust/loyalty & Free-Bond**, party morale/leadership in lane battles |
+| **Luck** | Drop quality/quantity, crit chance, rare-spawn odds, Appraisal windfalls, favorable System rolls |
 
-> **7 attributes, held there.** Presence is the social/leadership stat (Envoy/Broker, guilds,
-> multi-species, economy, creature bonding). No separate Luck/Wisdom — luck → Insight, willpower →
-> Resolve. More than 7 just dilutes each point.
+> **8 attributes.** Charisma is the social/leadership stat (Envoy/Broker, guilds, multi-species,
+> economy, creature bonding). **Luck** is its own stat (split out from the old Insight) — drops, crits,
+> rare spawns. Constitution and Wisdom are the **survival/anti-System** stats — they tie attributes
+> directly into the survival layer and the Surveillance theme, not just combat.
 >
-> Endurance and Resolve are the **survival/anti-System** stats — they tie attributes directly into the
-> survival layer and the Surveillance theme, not just combat.
+> *Naming note:* renamed from the original might/finesse/endurance/focus/resolve/insight/presence set;
+> mechanics are unchanged except luck splitting from Perception into its own attribute.
 
 ### Two-pool model — size vs. regen are separate stats
 Each resource pool has one attribute for its **size** and another for its **regen-per-minute**, so
 power and recovery are independent:
-- **Vigor (HP):** size + regen both from **Endurance**.
-- **Affinity-Energy (the "mana" you spend on abilities):** size from **Focus**, regen from **Resolve**.
+- **Vigor (HP):** size + regen both from **Constitution**.
+- **Affinity-Energy (the "mana" you spend on abilities):** size from **Intelligence**, regen from **Wisdom**.
 
 ### Vigor = System-embedded energy, not flesh (theme mechanic)
 Your "HP" is **Vigor** — the System's energy woven into your body. It works as a **damage-absorption
@@ -61,7 +64,7 @@ stop a true instakill, but a large pool defrays ordinary damage.
   strictly more total stats.
 - **Milestone bonuses:** a bonus lump (+ often a **Perk**) every **25 levels**, plus a chunk on each
   **class evolution / Tier-up**.
-- *(Optional)* **training nudges:** sustained activity gives tiny attribute XP (running → Finesse),
+- *(Optional)* **training nudges:** sustained activity gives tiny attribute XP (running → Agility),
   hard-capped — flavor, not a grind path.
 - **Player-assigned** (LitRPG agency). Class sets a recommended spread and small starting bonuses.
 - Framing: *the System "awards" your points* — another act of it classifying/shaping you.
@@ -76,7 +79,7 @@ Three categories of acquired power:
 | Category | What it is | Source | Cost |
 |---|---|---|---|
 | **Class Skills** | Active abilities that break ordinary physics (conjure flame, plate your body, blink a step). The "cool" toolkit. | Class + Designation Grade (`CLASSES.md`) | Affinity-Energy |
-| **Affinity Arts** | The caster magic — ranged/utility affinity effects for Arcane builds | Class/Focus, learned/scrolls | Affinity-Energy |
+| **Affinity Arts** | The caster magic — ranged/utility affinity effects for Arcane builds | Class/Intelligence, learned/scrolls | Affinity-Energy |
 | **Perks** | **Passive** edges — small or large advantages | Quests, relics (`HIDDEN_LAYER.md`), discovery, "wrong place at the wrong time" | none (passive) |
 
 > We deliberately keep Skills and Arts as **one fuel** (Affinity-Energy) and don't over-split them —
@@ -171,7 +174,7 @@ from encounter rates (`ENCOUNTERS.md`), then solve B, p, K, q so cumulative XP a
   - Past it: **Surveillance spikes hard**, elite Audits escalate, and a **conversion risk** begins —
     the System tries to remake you into a construct (the lore behind every Calamity Boss).
 - **Endings hook:** pushing past the cap unprotected is the path to the *Submit* ending (you become
-  next cycle's boss). Surviving past it requires Off-Grid / Resolve / hidden-layer protection —
+  next cycle's boss). Surviving past it requires Off-Grid / Wisdom / hidden-layer protection —
   which ties the cap into the finale rather than being a flat wall.
 - It is a **soft** cap (consistent with the soft-survival philosophy): not a hard stop, a rising danger.
 - **XP past 450** uses the same §3.7 formula — the barrier is **conversion risk (narrative)**, not a
@@ -196,7 +199,7 @@ This is the readout that makes "danger by depth" legible and lets a player judge
 ---
 
 ## 6. Interlock Summary
-- **Survival:** Endurance scales Stamina/Exposure; Resolve resists System effects. Stats *are* part
+- **Survival:** Constitution scales Stamina/Exposure; Wisdom resists System effects. Stats *are* part
   of survival.
 - **Classes:** attribute spreads + the player-leveling track make non-creature builds real.
 - **World/Encounters:** the 1–500 scale + era tiers + level-diff coloring define every zone's danger.
