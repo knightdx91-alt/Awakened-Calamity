@@ -250,12 +250,11 @@ def main():
             # MODULAR houses: assemble from parts at several sizes
             import sys
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from build_house import load_parts, build_house
-            parts = load_parts(args.building_parts)
+            from build_house import build_house
             sizes = {"builtH_small": (3, 4, 2), "builtH_med": (5, 5, 2),
                      "builtH_large": (7, 7, 3)}
             for nm, (bw, bh, wr) in sizes.items():
-                build_house(parts, bw, bh, wr).save(os.path.join(args.objects_dir, nm + ".png"))
+                build_house(args.building_parts, bw, bh, wr).save(os.path.join(args.objects_dir, nm + ".png"))
                 names.insert(0, nm)
             house_spec = [("builtH_large", 1), ("builtH_med", 2), ("builtH_small", 3)]
         else:
