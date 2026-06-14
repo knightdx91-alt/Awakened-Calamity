@@ -42,6 +42,11 @@ rarity, drops}` and slots into any matching entry — **no map rework needed.** 
 
 > Deeper zones lean on **visible roaming + cones + Surges**, not random grass — so danger is seen and
 > chosen, and stealth/scavenger play is viable.
+>
+> **Roaming = the primary method (Tales of the World: Radiant Mythology model):** monster-icons walk
+> the field with detection cones; on detection they **actively chase the player**, and **contact
+> triggers the battle**. A deliberate minority of encounters are **surprise ambushes** (Surges, audit
+> spawns, hidden spots) so the field is never fully safe — a *mixture* of chosen-roaming + ambush.
 
 ### Level bands by tier
 T1 = 1–125 · T2 = 126–250 · T3 = 251–375 · T4 = 376–500+. Each zone picks a **sub-band** within its
@@ -128,5 +133,14 @@ the only "death" that can be permanent, and it's a story event (the Submit path)
    weighty, and keeps the survival loop honest: retreat is the only way to protect a hurt creature,
    because once it's at 0 there is no getting it back.
 
-**Open:**
-4. **Encounter rate baseline** — tune against the ~800-tile Stamina expedition target.
+4. **Encounter rate baseline = TUNE IN PLAYTEST** (can't finalize before Stamina drain + fight
+   duration exist). Locked *direction*, **Tales of the World: Radiant Mythology** model:
+   - **Visible roaming enemies are the primary method.** Creatures are monster-icons on the field
+     with detection cones; on detection they **actively chase the player** (Radiant-Mythology style),
+     and **contact triggers the battle**. Engaging is mostly a *choice* — outrun/stealth past them.
+   - **Surprise ambushes are a deliberate spice** — a minority of encounters are scripted/triggered
+     ambushes (Surge lanes, audit spawns, hidden spots) where the player *gets jumped*, so the field
+     is never fully safe.
+   - **Mixture, not either/or:** roaming-chase as the backbone + ambush spikes for tension.
+   - Random grass spawns stay low / confined to safe-ish T1–T2; deep zones lean roaming + Surges.
+   - Tuned against the ~800-tile Stamina expedition once the numbers exist.
