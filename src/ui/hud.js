@@ -114,20 +114,12 @@ window.GameHUD = (function () {
         _bannerEl.style.display = 'block';
     }
 
-    let _mapLine   = null;
-    let _coordLine = null;
-    let _fpsLine   = null;
-
     // --- Update display ---
+    // Minimal HUD (System OS, per design): the play screen shows only vitals.
+    // Map name still flashes as a transition banner; everything else (version,
+    // coords, fps, designation, Surveillance) lives in the STATUS menu.
     function update() {
-        if (!infoEl) return;
         const mapName = window._mapName || (mapRef && mapRef.current ? mapRef.current.name : '—');
-        const coords  = playerRef ? playerRef.x + ', ' + playerRef.y : '—';
-        const ji = window.GameInput && window.GameInput.justPressed;
-        const inputDbg = ji ? [ji.up?'U':'',ji.down?'D':'',ji.left?'L':'',ji.right?'R':'',ji.a?'A':'',ji.start?'ST':''].filter(Boolean).join('') : '';
-        if (_mapLine)   _mapLine.textContent   = mapName;
-        if (_coordLine) _coordLine.textContent = coords + (window._encDbg ? ' enc:' + window._encDbg : '');
-
         if (mapName !== _lastMapName && mapName !== '—') {
             _lastMapName = mapName;
             _showBanner(mapName);
@@ -142,10 +134,8 @@ window.GameHUD = (function () {
         _renderMeters();
     }
 
-    // Called by renderer every 500ms
-    function setFps(fps) {
-        if (_fpsLine) _fpsLine.textContent = fps + ' FPS';
-    }
+    // Called by renderer every 500ms — FPS is no longer shown on-screen.
+    function setFps(fps) { /* minimal HUD: fps lives in STATUS menu */ }
 
     // --- Screenshot ---
     function _takeScreenshot() {
@@ -218,10 +208,35 @@ window.GameHUD = (function () {
         }
     }
 
-    // --- Survival meters (DESIGN.md §7) ----------------------------------
-    // Surveillance is rendered COLD (System); Stamina/Exposure WARM (FireRed).
-    var _metersEl = null, _survFill = null, _survPct = null, _survBox = null,
-        _stamFill = null, _expoFill = null;
+    // --- The System OS HUD — MINIMAL BY RULE (design IMPLEMENTATION §3d) ------
+    // On-screen: HP / Mana / Stamina VitalBars always; Exposure ONLY while a
+    // hazard is active. Surveillance + everything else moves to the STATUS menu.
+    // System OS palette (tokens/colors.css): cold holographic glass + cyan.
+    var OS = {
+        scrim: 'rgba(2,4,10,0.62)', edge: '#00ccff', ink: '#bfeeff',
+        glow: '0 0 10px rgba(0,200,255,0.28), 0 4px 14px rgba(0,0,0,0.6)',
+        hp: '#ff3b54', hpLow: '#ff7a3c', mana: '#3aa0ff', stamina: '#ffc23a'
+    };
+    var _metersEl = null, _vitals = {}, _expoTag = null, _expoFill = null, _expoLbl = null;
+
+    function _vitalBar(tag, color) {
+        var box = document.createElement('div');
+        box.style.cssText =
+            'display:flex;align-items:center;gap:4px;width:108px;background:' + OS.scrim +
+            ';border:1px solid ' + OS.edge + ';border-radius:4px;padding:2px 4px;' +
+            'box-shadow:' + OS.glow + ';';
+        var lbl = document.createElement('span');
+        lbl.textContent = tag;
+        lbl.style.cssText = 'font-size:5px;letter-spacing:1px;color:' + OS.ink + ';width:14px;';
+        var track = document.createElement('div');
+        track.style.cssText = 'flex:1;height:5px;background:rgba(0,0,0,0.55);border-radius:3px;overflow:hidden;';
+        var fill = document.createElement('div');
+        fill.style.cssText = 'width:100%;height:100%;background:' + color + ';transition:width .2s ease;';
+        var num = document.createElement('span');
+        num.style.cssText = 'font-size:5px;color:' + OS.ink + ';min-width:16px;text-align:right;';
+        track.appendChild(fill); box.appendChild(lbl); box.appendChild(track); box.appendChild(num);
+        return { box: box, fill: fill, num: num, color: color };
+    }
 
     function _createMeters() {
         if (!overlay) return;
@@ -230,55 +245,36 @@ window.GameHUD = (function () {
         _metersEl.style.cssText =
             'position:absolute;left:4px;top:4px;display:flex;flex-direction:column;' +
             'gap:3px;font-family:"Press Start 2P",monospace;z-index:6;pointer-events:none;';
+        _vitals.hp = _vitalBar('HP', OS.hp);
+        _vitals.mana = _vitalBar('MP', OS.mana);
+        _vitals.stamina = _vitalBar('SP', OS.stamina);
+        _metersEl.appendChild(_vitals.hp.box);
+        _metersEl.appendChild(_vitals.mana.box);
+        _metersEl.appendChild(_vitals.stamina.box);
 
-        // Surveillance — cold System gauge (near-black glass, cyan->danger glow)
-        _survBox = document.createElement('div');
-        _survBox.style.cssText =
-            'width:104px;background:rgba(8,10,20,0.86);border:1px solid #00ccff;' +
-            'border-radius:5px;padding:3px 4px;box-shadow:0 0 7px rgba(0,200,255,0.45);';
-        var sHead = document.createElement('div');
-        sHead.style.cssText = 'display:flex;justify-content:space-between;font-size:5px;' +
-            'letter-spacing:1px;color:#80e8ff;margin-bottom:3px;';
-        var sLbl = document.createElement('span'); sLbl.textContent = 'SURVEIL'; sLbl.style.opacity = '0.85';
-        _survPct = document.createElement('span'); _survPct.textContent = '0%';
-        sHead.appendChild(sLbl); sHead.appendChild(_survPct);
-        var sTrack = document.createElement('div');
-        sTrack.style.cssText = 'height:5px;background:rgba(0,0,0,0.6);border-radius:3px;overflow:hidden;';
-        _survFill = document.createElement('div');
-        _survFill.style.cssText = 'width:0%;height:100%;background:#00ccff;transition:width .25s ease;';
-        sTrack.appendChild(_survFill);
-        _survBox.appendChild(sHead); _survBox.appendChild(sTrack);
+        // Exposure tag — hidden unless a hazard is active (exposure > 0)
+        _expoTag = document.createElement('div');
+        _expoTag.style.cssText =
+            'display:none;align-items:center;gap:4px;width:108px;background:' + OS.scrim +
+            ';border:1px solid #e8632a;border-radius:4px;padding:2px 4px;box-shadow:' + OS.glow + ';';
+        _expoLbl = document.createElement('span');
+        _expoLbl.textContent = 'EXPO'; _expoLbl.style.cssText = 'font-size:5px;color:#ffce9e;width:14px;';
+        var et = document.createElement('div');
+        et.style.cssText = 'flex:1;height:5px;background:rgba(0,0,0,0.55);border-radius:3px;overflow:hidden;';
+        _expoFill = document.createElement('div');
+        _expoFill.style.cssText = 'width:0%;height:100%;background:#e8632a;transition:width .2s ease;';
+        et.appendChild(_expoFill); _expoTag.appendChild(_expoLbl); _expoTag.appendChild(et);
+        _metersEl.appendChild(_expoTag);
 
-        // Warm FireRed bars (Stamina, Exposure)
-        function warmBar(label) {
-            var box = document.createElement('div');
-            box.style.cssText = 'width:104px;';
-            var head = document.createElement('div');
-            head.style.cssText = 'font-size:5px;color:#f0f0d8;margin-bottom:2px;text-shadow:0 1px 0 #000;';
-            head.textContent = label;
-            var track = document.createElement('div');
-            track.style.cssText = 'height:5px;background:#aca47b;border:1px solid #62737b;' +
-                'border-radius:3px;overflow:hidden;';
-            var fill = document.createElement('div');
-            fill.style.cssText = 'width:100%;height:100%;background:#58d038;transition:width .25s ease;';
-            track.appendChild(fill); box.appendChild(head); box.appendChild(track);
-            return { box: box, fill: fill };
-        }
-        var stam = warmBar('STAMINA'); _stamFill = stam.fill;
-        var expo = warmBar('EXPOSURE'); _expoFill = expo.fill;
-
-        _metersEl.appendChild(_survBox);
-        _metersEl.appendChild(stam.box);
-        _metersEl.appendChild(expo.box);
         overlay.appendChild(_metersEl);
     }
 
-    // Public: set meter values (0-100). Survival state also persists in save.
+    // Public: set vitals/survival (0-100). Persists in save.survival.
     function setMeters(v) {
         v = v || {};
         if (window.GameSave && GameSave.state) {
             GameSave.state.survival = Object.assign(
-                { surveillance: 0, stamina: 100, exposure: 0 },
+                { hp: 100, mana: 100, stamina: 100, surveillance: 0, exposure: 0 },
                 GameSave.state.survival, v);
         }
         _renderMeters();
@@ -295,35 +291,37 @@ window.GameHUD = (function () {
 
     function _renderMeters() {
         if (!_metersEl) return;
-        // Hide the meters whenever the start menu (or any of its sub-screens) is open.
+        // Hide the HUD whenever the start menu (or any sub-screen) is open.
         var menuOpen = !!(window.GameStartMenu && GameStartMenu.isOpen);
         _metersEl.style.display = menuOpen ? 'none' : 'flex';
         if (menuOpen) return;
-        // Portrait → right side (below the top-right info box); otherwise top-left.
+        // Portrait → right side; otherwise top-left.
         var portrait = _isPortraitLayout();
         if (portrait) {
-            _metersEl.style.left = 'auto'; _metersEl.style.right = '4px'; _metersEl.style.top = '58px';
+            _metersEl.style.left = 'auto'; _metersEl.style.right = '4px'; _metersEl.style.top = '6px';
         } else {
             _metersEl.style.right = 'auto'; _metersEl.style.left = '4px'; _metersEl.style.top = '4px';
         }
         var s = (window.GameSave && GameSave.state && GameSave.state.survival) ||
-                { surveillance: 0, stamina: 100, exposure: 0 };
-        var clamp = function (n) { return Math.max(0, Math.min(100, n || 0)); };
-        var sv = clamp(s.surveillance), st = clamp(s.stamina), ex = clamp(s.exposure);
-        // Surveillance: cold cyan -> warn -> danger as it climbs, glow intensifies
-        var hot = sv >= 66, mid = sv >= 33;
-        var sCol = hot ? '#ff3030' : mid ? '#f8c800' : '#00ccff';
-        _survFill.style.width = sv + '%'; _survFill.style.background = sCol;
-        _survPct.textContent = Math.round(sv) + '%'; _survPct.style.color = sCol;
-        _survBox.style.borderColor = sCol;
-        _survBox.style.boxShadow = '0 0 ' + (hot ? 11 : mid ? 8 : 7) + 'px ' +
-            (hot ? 'rgba(255,48,48,0.6)' : mid ? 'rgba(248,200,0,0.45)' : 'rgba(0,200,255,0.45)');
-        // Warm bars: green -> yellow -> red by fill (HP style)
-        var warmCol = function (p) { return p > 50 ? '#58d038' : p > 20 ? '#f8c800' : '#f83800'; };
-        _stamFill.style.width = st + '%'; _stamFill.style.background = warmCol(st);
-        // Exposure is a hazard: invert color logic (high = bad/red)
-        _expoFill.style.width = ex + '%';
-        _expoFill.style.background = ex > 66 ? '#f83800' : ex > 33 ? '#f8c800' : '#58d038';
+                { hp: 100, mana: 100, stamina: 100, exposure: 0 };
+        var clamp = function (n) { return Math.max(0, Math.min(100, n == null ? 100 : n)); };
+        // Vitals
+        var hp = clamp(s.hp), mp = clamp(s.mana), st = clamp(s.stamina);
+        _vitals.hp.fill.style.width = hp + '%';
+        _vitals.hp.fill.style.background = hp < 25 ? OS.hpLow : OS.hp;   // crit flash
+        _vitals.hp.num.textContent = Math.round(hp);
+        _vitals.mana.fill.style.width = mp + '%'; _vitals.mana.num.textContent = Math.round(mp);
+        _vitals.stamina.fill.style.width = st + '%'; _vitals.stamina.num.textContent = Math.round(st);
+        // Exposure — only while a hazard is active (exposure > 0)
+        var ex = clamp(s.exposure);
+        if (ex > 0) {
+            _expoTag.style.display = 'flex';
+            _expoFill.style.width = ex + '%';
+            var ecol = ex > 66 ? '#ff3030' : ex > 33 ? '#e8632a' : '#f8c800';
+            _expoFill.style.background = ecol; _expoTag.style.borderColor = ecol;
+        } else {
+            _expoTag.style.display = 'none';
+        }
     }
 
     function init(map, player) {
@@ -336,35 +334,11 @@ window.GameHUD = (function () {
             return;
         }
 
-        // Single info block: map name / coords / fps stacked
-        infoEl = document.createElement('div');
-        infoEl.id = 'hud-info';
-
-        const _verLine = document.createElement('div');
-        _verLine.textContent = GAME_VERSION;
-
-        _mapLine = document.createElement('div');
-        _mapLine.textContent = '—';
-
-        _coordLine = document.createElement('div');
-        _coordLine.textContent = '—';
-
-        _fpsLine = document.createElement('div');
-        _fpsLine.textContent = '-- FPS';
-
-        infoEl.appendChild(_verLine);
-        infoEl.appendChild(_mapLine);
-        infoEl.appendChild(_coordLine);
-        infoEl.appendChild(_fpsLine);
-        overlay.appendChild(infoEl);
-
+        // Minimal HUD: no on-screen version/map/coords/fps text (moved to STATUS).
         _createMeters();
-        // Seed starting survival state if none exists yet (gameplay updates it later)
+        // Seed starting vitals/survival if none exists yet (gameplay updates later)
         var _sv = window.GameSave && GameSave.state && GameSave.state.survival;
-        setMeters(_sv || { surveillance: 18, stamina: 86, exposure: 24 });
-
-        // Keep fpsEl reference non-null (CSS hides #hud-fps anyway)
-        fpsEl = _fpsLine;
+        setMeters(_sv || { hp: 100, mana: 100, stamina: 86, surveillance: 18, exposure: 0 });
 
         // Settings button (bottom-left of overlay)
         settingsBtn = document.createElement('button');
@@ -378,16 +352,17 @@ window.GameHUD = (function () {
         _bannerEl.style.display = 'none';
         overlay.appendChild(_bannerEl);
 
-        // HUD info toggle button
+        // HUD toggle button — shows/hides the vitals cluster
         const hudToggleBtn = document.createElement('button');
         hudToggleBtn.id = 'hud-toggle-btn';
-        hudToggleBtn.title = 'Show/hide HUD info';
+        hudToggleBtn.title = 'Show/hide HUD';
         const _hudHidden = localStorage.getItem('ac_hud_hidden') === '1';
-        if (_hudHidden) infoEl.style.display = 'none';
+        if (_hudHidden && _metersEl) _metersEl.style.display = 'none';
         hudToggleBtn.textContent = _hudHidden ? '👁' : '🙈';
         hudToggleBtn.addEventListener('click', () => {
-            const hidden = infoEl.style.display === 'none';
-            infoEl.style.display = hidden ? '' : 'none';
+            if (!_metersEl) return;
+            const hidden = _metersEl.style.display === 'none';
+            _metersEl.style.display = hidden ? 'flex' : 'none';
             hudToggleBtn.textContent = hidden ? '🙈' : '👁';
             localStorage.setItem('ac_hud_hidden', hidden ? '0' : '1');
         });

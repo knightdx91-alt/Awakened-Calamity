@@ -113,21 +113,30 @@ window.GameRenderer = (function () {
             .catch(() => { _overlayLoadingName = null; });
     }
 
+    // Variable tile size: a tileset JSON may declare `tile` (native source px,
+    // e.g. 16 or 32) and `metatiles_per_row`. The SOURCE rect is read at the
+    // sheet's native size, then scaled into the map's TILE_PX render cell
+    // (defaults preserve the original 16px-everywhere behavior).
+    function _srcTile(meta) { return (meta && meta.tile) || TILE_PX; }
+    function _perRow(meta)  { return (meta && meta.metatiles_per_row) || METATILES_PER_ROW; }
+
     function drawOverlayMetatile(idx, sx, sy) {
         if (!_overlayImg || idx < 0) return;
-        const col = idx % METATILES_PER_ROW;
-        const row = Math.floor(idx / METATILES_PER_ROW);
-        ctx.drawImage(_overlayImg, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX,
+        const st = _srcTile(_overlayMeta), pr = _perRow(_overlayMeta);
+        const col = idx % pr;
+        const row = Math.floor(idx / pr);
+        ctx.drawImage(_overlayImg, col * st, row * st, st, st,
             sx, sy, TILE_PX, TILE_PX);
     }
 
     function drawMetatile(metatileIdx, sx, sy) {
         if (!_tilesetImg) return false;
-        const col = metatileIdx % METATILES_PER_ROW;
-        const row = Math.floor(metatileIdx / METATILES_PER_ROW);
+        const st = _srcTile(_tilesetMeta), pr = _perRow(_tilesetMeta);
+        const col = metatileIdx % pr;
+        const row = Math.floor(metatileIdx / pr);
         ctx.drawImage(
             _tilesetImg,
-            col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX,
+            col * st, row * st, st, st,
             sx, sy, TILE_PX, TILE_PX
         );
         return true;
