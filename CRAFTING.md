@@ -131,7 +131,23 @@ progression.
    encounters, and materials still scale by depth tier; only the "era" label is gone. Reworded across
    `PROGRESSION`, `WORLD`, `ECONOMY`, `CRAFTING`.
 
+3. **Durability = YES. Items WEAR and BREAK — nothing is permanent.** Equipment and tools carry a
+   **durability pool** that depletes with use:
+   - **Drains from use** — weapons/armor lose durability in combat (dealing & taking hits), tools from
+     gathering, and **hazard exposure accelerates wear** (Cold/Heat/etc. chew through gear — ties
+     durability into the survival/Exposure layer).
+   - **At 0 it BREAKS** — the item becomes unusable (not silently weaker). A broken weapon stops
+     working; broken hazard gear stops protecting (and Exposure starts climbing). The break is a
+     *felt* event mid-expedition, a real reason to carry spares / turn back.
+   - **Repair, don't ignore** — repairable at Camp/town with **materials** (a fraction of the craft
+     cost) via the relevant discipline. Repair is the steady crafting sink that keeps gathering and
+     the craft loop alive the whole game.
+   - **Soft cap on repair (recommended, tune in playtest):** each repair may shave a little off **max**
+     durability, so gear eventually needs **re-crafting**, not infinite patching — keeps high-end mats
+     flowing and stops one perfect item lasting forever. (Open: how steep, or whether repair is lossless.)
+   - **Theme fit:** your *character* is permanent (no respec, permadeath stakes), but your *gear* is a
+     maintained, consumable resource — crafting stays the survival backbone, never one-and-done.
+
 **Open:**
 2. **Gear slots** — how many equip slots for player and per creature.
-3. **Durability?** — do crafted items wear out (survival pressure) or are they permanent?
 4. **Node density** — how many nodes per zone (affects expedition pacing + Stamina budget).
