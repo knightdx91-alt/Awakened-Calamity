@@ -1,0 +1,7 @@
+[
+null,
+{"id":1,"battlerName":"","characterIndex":0,"characterName":"$PixelFantasy_1-Reid","classId":1,"equips":[0,0,0,3,0],"faceIndex":0,"faceName":"PixelFantasy-Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Reid","nickname":"","note":"","profile":""},
+{"id":2,"battlerName":"","characterIndex":1,"characterName":"$PixelFantasy_2-Priscilla","classId":1,"equips":[1,0,0,9,0],"faceIndex":1,"faceName":"PixelFantasy-Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Priscilla","nickname":"","note":"","profile":""},
+{"id":3,"battlerName":"","characterIndex":0,"characterName":"$PixelFantasy_3-Gale","classId":1,"equips":[0,0,0,0,0],"faceIndex":2,"faceName":"PixelFantasy-Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Gale","nickname":"","note":"","profile":""},
+{"id":4,"battlerName":"","characterIndex":0,"characterName":"$PixelFantasy_4-Michelle","classId":1,"equips":[0,0,0,0,0],"faceIndex":3,"faceName":"PixelFantasy-Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Michelle","nickname":"","note":"","profile":""}
+]
