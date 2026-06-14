@@ -6,7 +6,7 @@ window.GameStartMenu = (function () {
     // Affinities / System, plus Save / Options / Exit. (Was the Pokémon EE menu.)
     // BONDS only appears once you've bonded at least one creature.
     const _ITEM = {
-        CAMP:       { id: 'CAMP',       label: 'CAMP'       },
+        CAMP:       { id: 'CAMP',       label: 'STATUS'     },
         BONDS:      { id: 'BONDS',      label: 'BONDS'      },
         SUPPLIES:   { id: 'SUPPLIES',   label: 'SUPPLIES'   },
         AFFINITIES: { id: 'AFFINITIES', label: 'AFFINITIES' },
@@ -200,27 +200,32 @@ window.GameStartMenu = (function () {
         const panelCanvas = document.createElement('canvas');
         panelCanvas.width  = PW;
         panelCanvas.height = PH;
-        panelCanvas.style.cssText = 'display:block;flex:none;width:48%;min-width:88px;max-width:116px;height:auto;pointer-events:all;border-left:3px solid #62737b;border-top:3px solid #62737b;border-bottom:3px solid #62737b;box-shadow:inset 0 0 0 1px #ffffff;cursor:pointer;image-rendering:pixelated;';
+        panelCanvas.style.cssText = 'display:block;flex:none;width:48%;min-width:88px;max-width:116px;height:auto;pointer-events:all;border:1px solid #00ccff;box-shadow:0 0 12px rgba(0,200,255,0.28),0 6px 22px rgba(0,0,0,0.6);cursor:pointer;image-rendering:pixelated;';
         const pc = panelCanvas.getContext('2d');
 
         function _drawPanel() {
             pc.clearRect(0, 0, PW, PH);
-            // White background
-            pc.fillStyle = '#f0f0d8';   // --fr-body-lt
+            // System OS dark holographic glass
+            pc.fillStyle = '#06101f';
             pc.fillRect(0, 0, PW, PH);
-            // Row highlight for selected
-            pc.fillStyle = 'rgba(230,8,8,0.13)';   // --fr-red tint
+            // faint cyan scanlines
+            pc.fillStyle = 'rgba(0,200,255,0.06)';
+            for (var sy = 0; sy < PH; sy += 3) pc.fillRect(0, sy, PW, 1);
+            // Row highlight for selected (cyan wash + left bar)
+            pc.fillStyle = 'rgba(0,200,255,0.12)';
             pc.fillRect(0, selectedIdx * ROW_H, PW, ROW_H);
+            pc.fillStyle = '#00ccff';
+            pc.fillRect(0, selectedIdx * ROW_H, 2, ROW_H);
             // Text
             pc.font = 'bold ' + FONT_PX + 'px "Press Start 2P", monospace';
             pc.textBaseline = 'middle';
             ITEMS.forEach(function(itm, i) {
                 const y = i * ROW_H + ROW_H / 2;
                 if (i === selectedIdx) {
-                    pc.fillStyle = '#e60808';   // --fr-red cursor
-                    pc.fillText('▶', PAD_X, y);
+                    pc.fillStyle = '#80f0ff';   // cyan cursor
+                    pc.fillText('▸', PAD_X, y);
                 }
-                pc.fillStyle = '#181818';   // --fr-text
+                pc.fillStyle = (i === selectedIdx) ? '#eafaff' : '#5f86a0';
                 const label = (itm.id === 'CAMP') ? _playerName().toUpperCase() : itm.label.toUpperCase();
                 pc.fillText(label, PAD_X + 12, y);
             });
@@ -245,9 +250,11 @@ window.GameStartMenu = (function () {
         descCanvas.height = DH;
         descCanvas.style.cssText = 'display:block;flex:none;width:100%;height:34px;pointer-events:none;';
         const dc = descCanvas.getContext('2d');
-        dc.fillStyle = '#2870c0';
+        dc.fillStyle = '#06101f';                       // System OS glass
         dc.fillRect(0, 0, descCanvas.width, DH);
-        dc.fillStyle = '#ffffff';
+        dc.fillStyle = '#00ccff';                       // cyan top hairline
+        dc.fillRect(0, 0, descCanvas.width, 1);
+        dc.fillStyle = '#bfeeff';
         dc.font = '7px "Press Start 2P", monospace';
         dc.textBaseline = 'top';
         const selItem = ITEMS[selectedIdx];
@@ -283,7 +290,7 @@ window.GameStartMenu = (function () {
             return;
         }
 
-        const titles = { camp:'CAMP', bonds:'BONDS', supplies:'SUPPLIES',
+        const titles = { camp:'[ STATUS ]', bonds:'[ BONDS ]', supplies:'[ SUPPLIES ]',
                          affinities:'AFFINITIES', reaches:'THE FOUR REACHES',
                          system:'[ THE SYSTEM ]',
                          save:'Save', options:'Options'
@@ -377,8 +384,10 @@ window.GameStartMenu = (function () {
     // Awakened Calamity survival menus (Camp / Bonds / Supplies /
     // Affinities / Reaches / System). DOM-based, design-system palette.
     // ===================================================================
-    var _FR = { body:'#d5d5bd', bodyLt:'#f0f0d8', border:'#62737b', text:'#181818',
-                dim:'#484848', red:'#e60808', blue:'#2870c0', tan:'#aca47b' };
+    // System OS palette (cold holographic glass + cyan) — was FireRed. Reskins
+    // every sub-screen built from _FR.* (CAMP/SUPPLIES/AFFINITIES/REACHES/…).
+    var _FR = { body:'#0a1224', bodyLt:'#06101f', border:'#00ccff', text:'#bfeeff',
+                dim:'#5f86a0', red:'#00ccff', blue:'#37e0d0', tan:'rgba(0,0,0,0.5)' };
     var _SYS = { panel:'#0a0e1a', ink:'#80e8ff', cyan:'#00ccff', warn:'#f8c800',
                  danger:'#ff3030', dim:'#3a5a6a' };
     var AFFINITIES_DATA = [

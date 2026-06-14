@@ -11,16 +11,18 @@
 /* === CSS Variables (FireRed palette) === */
 :root {
     color-scheme: light only;
-    --fr-body:      #d5d5bd;   /* window body / background */
-    --fr-body-lt:   #f0f0d8;   /* lighter body for content areas */
-    --fr-border:    #62737b;   /* window border */
-    --fr-hi:        #ffffff;   /* inner highlight */
-    --fr-red:       #e60808;   /* FireRed red accent */
-    --fr-red-dark:  #b80000;   /* darker red for hover/active */
-    --fr-text:      #181818;   /* primary text */
-    --fr-text-dim:  #484848;   /* secondary text */
-    --fr-tan:       #aca47b;   /* shadow / divider tan */
-    --fr-window:    inset 0 0 0 2px var(--fr-hi);  /* inner highlight shadow */
+    /* The System OS — cold holographic glass + cyan (was FireRed). The whole
+       in-game chrome is the surveillance interface; there is no tan/red look. */
+    --fr-body:      #0a1224;   /* window body / glass background */
+    --fr-body-lt:   #06101f;   /* deeper inset for content areas */
+    --fr-border:    #00ccff;   /* cyan panel edge */
+    --fr-hi:        rgba(0,200,255,0.45);   /* inner highlight (cyan) */
+    --fr-red:       #00ccff;   /* accent → cyan */
+    --fr-red-dark:  #0090c0;   /* darker cyan for hover/active */
+    --fr-text:      #bfeeff;   /* primary ink (cyan-white) */
+    --fr-text-dim:  #5f86a0;   /* secondary ink */
+    --fr-tan:       #1a2230;   /* divider hairline */
+    --fr-window:    0 0 12px rgba(0,200,255,0.25);  /* cyan glow */
 }
 
 /* --- Reset & base --- */
@@ -282,9 +284,9 @@ html, body {
     display: flex; flex-direction: column;
 }
 .sm-win-title {
-    background: var(--fr-red); border-bottom: 2px solid var(--fr-border);
-    color: #fff; font-size: 9px; padding: 4px 10px;
-    letter-spacing: 0.5px; flex-shrink: 0;
+    background: var(--fr-body-lt); border-bottom: 1px solid var(--fr-border);
+    color: var(--fr-border); font-size: 9px; padding: 5px 10px;
+    letter-spacing: 1.5px; flex-shrink: 0; text-shadow: 0 0 6px var(--fr-border);
 }
 .sm-sub-content {
     flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
