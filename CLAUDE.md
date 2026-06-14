@@ -246,3 +246,43 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     `guardAlly` redirect (stubbed). Broader: wire survival meters + a real SUPPLIES inventory, encounters
     (so battles start from the world, not just SELECT), attribute-point allocation UI. Then resume class
     content / prototype the discovery-layer registry.
+- **2026-06-14** — Art pipeline + System OS UI + design-bundle adoption:
+  - **Claude Skills installed** (`.claude/skills/`): game-dev/3D/shader set (Snyk roundup),
+    `tripo-text-to-3d` (text→.glb), and **`pixellab`** (all-purpose pixel-art gen via PixelLab API:
+    image/tileset/mapobject/character/object; now supports `--color-image` palette reference).
+    Keys: `PIXELLAB_API_KEY`, `Tripo_Api` (env). PixelLab MCP also wired (`.mcp.json`).
+  - **Procedural art tools** (`tools/`): `gen_zone.py` (autotiled terrain + object stamping →
+    playable map JSON), `build_house.py`/`build_building_tileset.py` (modular buildings: rect/L-shape/
+    hip roofs, keep + curtain-wall castle, 6 materials), `nine_slice.py` (UI 9-patch→CSS),
+    `town_mockup.py` + `official_town_mockup.py`, `bootcheck.mjs` (headless boot verify via
+    Playwright chromium + puppeteer-core).
+  - **System OS UI shipped & headless-verified**: minimal HUD (HP/MP/SP vitals + conditional
+    Exposure), start menu + sub-screens + title bars + dialogue + notifications reskinned to dark
+    holographic glass + cyan (flipped `_FR` + `--fr-*` vars), SysPanel corner brackets, SAVE/OPTIONS
+    fixed (DARK theme was returning light bg) + OPTIONS content cleaned (dropped Pokémon/theme cruft).
+  - **Variable tile size**: renderer reads per-tileset native size + per-map `layout.tileSize`
+    (camera viewport derives from it). `GenTown32` = 32px demo.
+  - **DECISION — adopt the owner's official art** (the other Claude account pushed the design bundle
+    to the `design-bundle` branch = Claude Design handoff). Imported **11 official `ac-*` tilesets**
+    → `src/assets/tiles/`. The procedural PixelLab buildings looked bad (flat + clashing colors);
+    the **official `ac-buildings-16` assemblable kit** (roof corners/eaves/walls/doors, one cohesive
+    palette) is the building source of truth. `tools/official_town_mockup.py` proves it. PixelLab
+    stays for **gap/bulk content**, palette-locked via `--color-image`. Owner wants colors leaning
+    **RPG Maker XP** (warm/saturated) — `data/art/palettes/rmxp.png` started; direction not finalized.
+  - Handoff doc for the design tool: `docs/CODE_SIDE_CAPABILITIES.md`. Research notes:
+    `docs/TILE_CONSTRUCTION_NOTES.md`, `docs/BUILDING_TILESETS.md`, `docs/TILESHEET_CHECKLIST.md`.
+
+## ⏳ PENDING (next session) — World Area Bible (spec LOCKED, approved, NOT started)
+Goal: a **complete, exhaustively-named** area catalog — every enterable building named + its owner
+NPC ("Bob's House"), every dungeon with **floor count + each floor named** (theme/hazard/gimmick +
+which floor the Alpha is on), everything named & cross-referenced. Builds ON `GAZETTEER.md` (keep all
+existing names; only fill gaps). Names are **generated** in the existing tone (Dawnhearth/Hollow Vein).
+- **Format = BOTH**: source of truth `data/world/<region>.json`; auto-generated readable view
+  `docs/gazetteer/<region>.md` via `tools/build_gazetteer.py`; cross-ref validator `tools/validate_world.py`.
+- **NPC depth = ALL**: id, name, role, faction, personality (1 line), hook (1 line), `home`+`workplace` building links.
+- **Dungeon floors = ALL**: n, id, name, theme, hazard, gimmick; mark Alpha's floor.
+- **IDs**: `vd_town_dawnhearth`, `vd_dawnhearth_smithy`, `npc_vd_bob_emberhand`,
+  `vd_dungeon_hollow_vein_f3`, `alpha_veinmother`, `fac_vanguard_order`.
+- **Sequencing**: REGION BY REGION — start **Verdara**, show the owner the format to approve before
+  doing Halveth → Calderra → Vael → Open Sea.
+- This is the STARTING population (per `LIVING_WORLD.md` NPCs can die/repopulate).
