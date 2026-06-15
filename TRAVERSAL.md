@@ -80,6 +80,20 @@ a traversal + skill gate.
    author — enough). **Stagger introduction:** Verdara teaches the 4 basics (Ford, Climb, Illuminate,
    Break); the rarer two (Glide, deep Hazard-wade) come in later regions.
 
-**Open:**
-3. **Soft vs hard gates** — do some sub-areas allow a risky no-tool crossing (chance of damage), or
-   strict capability checks only?
+3. **Gates = SOFT by default — reward ingenuity, not the "right item."** The philosophy is **make
+   players *think* about how to get past things**, and make figuring it out feel **special**. Most
+   obstacles should offer a **risky / clever workaround** rather than a hard "come back with capability
+   X" wall:
+   - **Risk-it crossings** — wade a river without the rig (Stamina/chip damage, maybe swept back),
+     dash a toxic patch eating Exposure, feel through a dark cave blind (Gloom rises, sight reduced).
+     Bold or desperate play is a valid answer.
+   - **Multiple solution paths** — gear OR class OR creature OR a risky unaided attempt OR an
+     environmental trick. Because **taming is NOT a main pillar**, traversal must never quietly require
+     a creature; a clever player without one should still find a way — and be *rewarded* for it.
+   - **Cleverness is special** — an unintended-but-valid crossing (stack something, time a hazard, lure
+     a creature, use a skill off-label) should succeed and feel like a discovery, not get walled.
+   - **Hard gates only where genuinely needed** — true lethal barriers (deep open water, sheer
+     cliffs, lava, story seals) stay strict for safety/sense; everything milder is soft. **Per-gate
+     authored flag** marks which is which, so each hard wall is a deliberate exception.
+   - *Fits the North Star:* "do I risk this crossing for the visible-temptation loot, or come back
+     safe?" is the survival push-or-extract tension expressed in traversal.
