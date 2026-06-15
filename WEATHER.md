@@ -80,6 +80,11 @@ Weather: <profile — likely types + frequency; any scripted/permanent weather>
    real clock — a 60h game must let players see all four seasons; the real-time-clock pacing is itself
    an option to revisit then). Out of scope for the first build, intact as a vision hook.
 
+2. **Forecast access = the SKYGUARD guild service.** Forecasts are a **guild service**, not a free
+   always-on UI — knowing the weather is a *resource* you engage the Skyguard for (rep/credits), which
+   adds living-world texture and a reason to deal with the guild. *(The System's standing offer to do
+   anything "for you" at a Surveillance cost still applies in general — but the designed, intended path
+   is the guild.)*
+
 **Open:**
-2. **Forecast access** — guild service, a skill, both, or always-on UI?
 3. **Battle swing size** — how strong the affinity buff/weaken is (tactical spice vs. dominant).
