@@ -11,8 +11,11 @@
 (function () {
   'use strict';
 
-  var MT = 16;                 // metatile pixel size
-  var META_PER_ROW = 16;       // metatiles per row in tileset sheets
+  var DT = 16;                 // DISPLAY metatile px (on-screen cell, tileset-independent)
+  var META_PER_ROW = 16;       // fallback metatiles-per-row
+  // SOURCE geometry is read per-tileset from its meta (RMMZ packs are 48px):
+  function srcTile() { return (state.tilesetMeta && state.tilesetMeta.tile) || 16; }
+  function perRow()  { return (state.tilesetMeta && state.tilesetMeta.metatiles_per_row) || META_PER_ROW; }
   var $ = function (id) { return document.getElementById(id); };
 
   // ── Editor state ──
@@ -173,8 +176,8 @@
     if (state.tilesetMeta && state.tilesetMeta.total_metatiles)
       return state.tilesetMeta.total_metatiles;
     if (!state.tilesetImg) return 0;
-    var cols = state.tilesetImg.width / MT;
-    var rows = state.tilesetImg.height / MT;
+    var cols = state.tilesetImg.width / srcTile();
+    var rows = state.tilesetImg.height / srcTile();
     return Math.floor(cols * rows);
   }
 
@@ -188,36 +191,37 @@
     if (!state.tilesetImg) return;
     var n = totalMetatiles();
     var rows = Math.ceil(n / PAL_COLS);
-    var cw = PAL_COLS * MT * PAL_SCALE;
-    var ch = rows * MT * PAL_SCALE;
+    var cw = PAL_COLS * DT * PAL_SCALE;
+    var ch = rows * DT * PAL_SCALE;
     paletteCanvas.width = cw; paletteCanvas.height = ch;
     pctx.imageSmoothingEnabled = false;
     pctx.clearRect(0, 0, cw, ch);
     for (var i = 0; i < n; i++) {
       var dc = i % PAL_COLS, dr = (i / PAL_COLS) | 0;
-      blitMeta(pctx, i, dc * MT * PAL_SCALE, dr * MT * PAL_SCALE, MT * PAL_SCALE);
+      blitMeta(pctx, i, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
     }
     // highlight selected
     var si = state.selectedTile;
     if (si >= 0 && si < n) {
       var sc = si % PAL_COLS, sr = (si / PAL_COLS) | 0;
       pctx.strokeStyle = '#18b8c8'; pctx.lineWidth = 2;
-      pctx.strokeRect(sc * MT * PAL_SCALE + 1, sr * MT * PAL_SCALE + 1,
-        MT * PAL_SCALE - 2, MT * PAL_SCALE - 2);
+      pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
+        DT * PAL_SCALE - 2, DT * PAL_SCALE - 2);
     }
     $('paletteCount').textContent = n + ' tiles';
   }
 
   function blitMeta(c, id, dx, dy, dsize) {
     if (!state.tilesetImg) return;
-    var col = id % META_PER_ROW, row = (id / META_PER_ROW) | 0;
-    c.drawImage(state.tilesetImg, col * MT, row * MT, MT, MT, dx, dy, dsize, dsize);
+    var st = srcTile(), pr = perRow();
+    var col = id % pr, row = (id / pr) | 0;
+    c.drawImage(state.tilesetImg, col * st, row * st, st, st, dx, dy, dsize, dsize);
   }
 
   paletteCanvas.addEventListener('click', function (e) {
     var r = paletteCanvas.getBoundingClientRect();
-    var px = (e.clientX - r.left) / (MT * PAL_SCALE);
-    var py = (e.clientY - r.top) / (MT * PAL_SCALE);
+    var px = (e.clientX - r.left) / (DT * PAL_SCALE);
+    var py = (e.clientY - r.top) / (DT * PAL_SCALE);
     var id = ((py | 0) * PAL_COLS) + (px | 0);
     if (id >= 0 && id < totalMetatiles()) selectTile(id);
   });
@@ -227,7 +231,7 @@
     if (!isNaN(id) && id >= 0 && id < totalMetatiles()) {
       selectTile(id);
       var dr = (id / PAL_COLS) | 0;
-      $('paletteWrap').scrollTop = dr * MT * PAL_SCALE - 60;
+      $('paletteWrap').scrollTop = dr * DT * PAL_SCALE - 60;
     }
   });
 
@@ -283,7 +287,7 @@
   var mapCanvas = $('mapCanvas');
   var mctx = mapCanvas.getContext('2d');
 
-  function cell() { return MT * state.zoom; }
+  function cell() { return DT * state.zoom; }
 
   function drawMap() {
     if (!state.metatiles) return;
