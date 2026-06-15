@@ -141,5 +141,12 @@ player at a glance what something is worth and how hard it is to get.
    - *(This converges three systems on one reward — rep lanes §1, the credit faucet §2, and a quest —
      which is what makes an earned class feel earned.)*
 
-**Open:**
-4. **Cross-town rep** — does helping one town bleed reputation to neighbors, or fully independent?
+4. **Cross-town rep = per-town independent base + fractional bleed along FACTION lines (not
+   geography).** Each town's rep is earned locally and independently (preserves travel-to-shop, each
+   town matters). **But towns belong to factions/guilds**, and standing bleeds along allegiance:
+   helping a faction's town earns a **small fraction** of standing with its **aligned** towns, and can
+   **cost** standing with **rival**-faction towns. This makes rep a **light political map** — your
+   allegiances matter, allies warm, rivals cool, "you can't be everyone's friend" — without a full
+   faction-warfare system, and it interlocks with the existing 16 guilds + factions. You still earn
+   each town's *full* trust locally; the bleed is a nudge, not a substitute. (Bleed fractions tune in
+   playtest.)
