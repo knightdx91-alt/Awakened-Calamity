@@ -69,6 +69,17 @@ Weather: <profile — likely types + frequency; any scripted/permanent weather>
 - **Defer:** seasons, scripted Calamity weather, weather-exclusive rare spawns.
 
 ## 6. Open Calls
-1. **Seasons?** — layer a seasonal cycle over weather, or weather-only?
+
+**LOCKED:**
+1. **Weather-only now; seasons SAVED as a future option.** Ship the day-to-day weather roll — it
+   already delivers what seasons would (same zone harder on different days via Exposure spikes,
+   tactical battle shifts, weather-gated spawns), without the multiplied content cost (seasonal
+   profiles + resource tables + art/lighting variants per zone). **Seasons are kept on the books as a
+   later layer:** if added, a season slowly shifts each zone's weather *profile* (winter → constant
+   Vael blizzards, summer → brutal Calderra heat) on a **compressed in-game calendar** (NOT the raw
+   real clock — a 60h game must let players see all four seasons; the real-time-clock pacing is itself
+   an option to revisit then). Out of scope for the first build, intact as a vision hook.
+
+**Open:**
 2. **Forecast access** — guild service, a skill, both, or always-on UI?
 3. **Battle swing size** — how strong the affinity buff/weaken is (tactical spice vs. dominant).
