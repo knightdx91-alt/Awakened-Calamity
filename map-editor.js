@@ -48,6 +48,8 @@
     mode: 'map',                 // map | collide | warp | region
     region: null,                // Uint8Array(w*h) of region IDs (0 = none)
     regionId: 1,                 // currently painted region number (1..63)
+    sel: null,                   // {x0,y0,x1,y1} selection rect (Select tool)
+    clipboard: null,             // { w, h, ids:[gid...] } copied active-layer block
     eraser: false,
     showGrid: true,
     zoom: 2,
@@ -713,6 +715,14 @@
       mctx.fillStyle = 'rgba(255,176,0,0.28)';
       mctx.fillRect(wp.x * cs, wp.y * cs, cs, cs);
     });
+    if (state.sel) {
+      var s = state.sel;
+      var sx = s.x0 * cs, sy = s.y0 * cs, sw = (s.x1 - s.x0 + 1) * cs, sh = (s.y1 - s.y0 + 1) * cs;
+      mctx.fillStyle = 'rgba(58,123,213,0.22)';
+      mctx.fillRect(sx, sy, sw, sh);
+      mctx.strokeStyle = '#3a7bd5'; mctx.lineWidth = 2;
+      mctx.setLineDash([6, 4]); mctx.strokeRect(sx + 1, sy + 1, sw - 2, sh - 2); mctx.setLineDash([]);
+    }
   }
 
   // ── Undo / Redo (snapshot history) ──
@@ -865,6 +875,7 @@
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
+    if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
     pushUndo();                                          // record state before any edit gesture
     if (state.mode === 'warp') { addWarp(p.x, p.y); return; }
     if (state.tool === 'fill' && state.mode === 'map') { floodFill(p.x, p.y); drawMap(); return; }
@@ -881,11 +892,21 @@
       $('statTile').textContent = 'tile #' + layer.data[idx(p.x, p.y)] +
         (state.layers.ground.collision[idx(p.x, p.y)] ? '  (blocked)' : '');
     }
+    if (state.tool === 'select' && rectStart) {
+      state.sel = { x0: Math.min(rectStart.x, p.x), y0: Math.min(rectStart.y, p.y),
+                    x1: Math.max(rectStart.x, p.x), y1: Math.max(rectStart.y, p.y) };
+      drawMap();
+    }
     if (painting && inBounds(p.x, p.y)) { applyAt(p.x, p.y); drawMap(); }
   });
 
   window.addEventListener('mouseup', function (e) {
-    if ((state.tool === 'rect' || state.tool === 'ellipse') && rectStart) {
+    if (state.tool === 'select' && rectStart) {
+      var ps = eventCell(e);
+      state.sel = { x0: Math.min(rectStart.x, ps.x), y0: Math.min(rectStart.y, ps.y),
+                    x1: Math.max(rectStart.x, ps.x), y1: Math.max(rectStart.y, ps.y) };
+      rectStart = null; drawMap();
+    } else if ((state.tool === 'rect' || state.tool === 'ellipse') && rectStart) {
       var p = eventCell(e);
       var x0 = Math.min(rectStart.x, p.x), x1 = Math.max(rectStart.x, p.x);
       var y0 = Math.min(rectStart.y, p.y), y1 = Math.max(rectStart.y, p.y);
@@ -894,6 +915,43 @@
     }
     painting = false;
   });
+
+  // ── Selection clipboard (Copy / Cut / Paste / Delete) on the active layer ──
+  function clampSel() {
+    if (!state.sel) return null;
+    var s = state.sel;
+    return { x0: Math.max(0, s.x0), y0: Math.max(0, s.y0),
+             x1: Math.min(state.width - 1, s.x1), y1: Math.min(state.height - 1, s.y1) };
+  }
+  function copySelection() {
+    var s = clampSel(); if (!s) { toast('Select a box first (Select tool).'); return; }
+    var layer = L(), w = s.x1 - s.x0 + 1, h = s.y1 - s.y0 + 1, ids = [];
+    for (var y = s.y0; y <= s.y1; y++)
+      for (var x = s.x0; x <= s.x1; x++) ids.push(layer.data[idx(x, y)]);
+    state.clipboard = { w: w, h: h, ids: ids };
+    toast('Copied ' + w + '×' + h + ' (active layer). Pick a tool + click to paste.');
+  }
+  function clearSelection() {
+    var s = clampSel(); if (!s) { toast('Select a box first.'); return; }
+    pushUndo();
+    var layer = L();
+    for (var y = s.y0; y <= s.y1; y++)
+      for (var x = s.x0; x <= s.x1; x++) {
+        layer.data[idx(x, y)] = layer.baseFill;
+        if (state.active === 'ground') layer.terrain[idx(x, y)] = '';
+      }
+    drawMap();
+  }
+  function cutSelection() { copySelection(); clearSelection(); }
+  function pasteClipboard() {
+    if (!state.clipboard) { toast('Clipboard empty — Copy a selection first.'); return; }
+    // Load the copied block as the current stamp; pencil places it on click.
+    state.stamp = { w: state.clipboard.w, h: state.clipboard.h, ids: state.clipboard.ids.slice() };
+    state.selectedTile = state.clipboard.ids[0];
+    state.eraser = false; $('eraserBtn').classList.remove('active');
+    setToolBtn('pencil');
+    toast('Paste armed — click on the map to stamp the copied block.');
+  }
 
   // ── Warps ──
   function addWarp(x, y) {
@@ -1179,21 +1237,72 @@
   $('redoBtn').addEventListener('click', doRedo);
   // Keyboard: Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) for undo/redo.
   window.addEventListener('keydown', function (e) {
-    if (!(e.ctrlKey || e.metaKey)) return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;  // don't hijack typing
+    if (!(e.ctrlKey || e.metaKey)) {
+      if (e.key === 'Delete' || e.key === 'Backspace') { if (state.sel) { e.preventDefault(); clearSelection(); } }
+      return;
+    }
     var k = e.key.toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
     else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); doRedo(); }
+    else if (k === 'c') { e.preventDefault(); copySelection(); }
+    else if (k === 'x') { e.preventDefault(); cutSelection(); }
+    else if (k === 'v') { e.preventDefault(); pasteClipboard(); }
   });
+
+  // Shift the whole map (all layers + regions) by dx,dy; out-of-range cells clear.
+  function shiftMap(dx, dy) {
+    pushUndo();
+    var w = state.width, h = state.height;
+    LAYER_KEYS.forEach(function (key) {
+      var layer = state.layers[key];
+      if (!layer.data) return;
+      var nd = new Int32Array(w * h), nt = new Array(w * h), nc = new Uint8Array(w * h);
+      var empty = (key === 'ground') ? layer.baseFill : -1;
+      for (var i = 0; i < w * h; i++) { nd[i] = empty; nt[i] = ''; }
+      for (var y = 0; y < h; y++)
+        for (var x = 0; x < w; x++) {
+          var sxp = x - dx, syp = y - dy;
+          if (sxp >= 0 && syp >= 0 && sxp < w && syp < h) {
+            nd[y * w + x] = layer.data[syp * w + sxp];
+            if (layer.terrain) nt[y * w + x] = layer.terrain[syp * w + sxp] || '';
+            if (layer.collision) nc[y * w + x] = layer.collision[syp * w + sxp];
+          }
+        }
+      layer.data = nd; layer.terrain = nt; layer.collision = nc;
+    });
+    if (state.region) {
+      var nr = new Uint8Array(w * h);
+      for (var ry = 0; ry < h; ry++)
+        for (var rx = 0; rx < w; rx++) {
+          var sx2 = rx - dx, sy2 = ry - dy;
+          if (sx2 >= 0 && sy2 >= 0 && sx2 < w && sy2 < h) nr[ry * w + rx] = state.region[sy2 * w + sx2];
+        }
+      state.region = nr;
+    }
+    drawMap();
+  }
+  function shiftMapPrompt() {
+    var v = prompt('Shift map by "dx dy" tiles (e.g. "1 0" = right 1, "0 -1" = up 1):', '0 0');
+    if (!v) return;
+    var m = v.trim().split(/[\s,]+/).map(function (n) { return parseInt(n, 10); });
+    if (m.length < 2 || isNaN(m[0]) || isNaN(m[1])) { toast('Enter two numbers, e.g. 1 0'); return; }
+    shiftMap(m[0], m[1]);
+  }
   // Visible grid toggle mirrors the (hidden) gridBtn state.
   var gtb = $('gridToolBtn');
   if (gtb) gtb.addEventListener('click', function () {
     clickEl('gridBtn');
     gtb.classList.toggle('active', $('gridBtn').classList.contains('active'));
   });
-  ['cutBtn', 'copyBtn', 'pasteBtn', 'delBtn',
-   'dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
+  ['dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
     var e = $(id); if (e) e.addEventListener('click', soon);
   });
+  $('cutBtn').addEventListener('click', cutSelection);
+  $('copyBtn').addEventListener('click', copySelection);
+  $('pasteBtn').addEventListener('click', pasteClipboard);
+  $('delBtn').addEventListener('click', clearSelection);
 
   // Screenshot -> capture the whole editor, upload to the `screenshots` branch,
   // show a copyable raw link to paste back. Lets the owner show what they see.
@@ -1257,8 +1366,10 @@
     ]],
     ['Edit', [
       ['Undo', 'Ctrl+Z', function () { doUndo(); }], ['Redo', 'Ctrl+Y', function () { doRedo(); }], 'sep',
-      ['Cut', 'Ctrl+X', null], ['Copy', 'Ctrl+C', null],
-      ['Paste', 'Ctrl+V', null], ['Delete', 'Del', null]
+      ['Cut', 'Ctrl+X', function () { cutSelection(); }], ['Copy', 'Ctrl+C', function () { copySelection(); }],
+      ['Paste', 'Ctrl+V', function () { pasteClipboard(); }], ['Delete', 'Del', function () { clearSelection(); }],
+      'sep',
+      ['Shift Map…', '', function () { shiftMapPrompt(); }]
     ]],
     ['Mode', [
       ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }],
