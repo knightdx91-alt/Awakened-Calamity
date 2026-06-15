@@ -104,60 +104,98 @@ def slice9(m):  # 8-bit neighbour mask -> nine-slice index (sides only), from bu
     if nE: return 5
     return 4
 
-# --- terrains to bake from pf_outside_a2 ---
-# (name, col-pair, row, collision)  — row 0 autotiles border grass
-TERRAINS = [
-    ("cobble", 1, 0, 0),
-    ("stone",  2, 0, 0),
-    ("path",   3, 0, 0),
-]
-BASE = ("grass", 0, 0)  # uniform fill (centre tile of its block)
+def fill_tile(im, cp, row):
+    """Seamless interior 48px tile of a block (for texture-fill terrains)."""
+    return block(im, cp, row).crop((Q, T, Q + T, T + T))
 
-def main():
-    src = os.path.join(TS, "pf_outside_a2.png")
+# --- bake jobs: each produces one pf_<scene>_ground tileset ---
+# blocks addressed by (block-col 0..7, block-row 0..3) in the 8x4 A2 grid.
+#   base    = (name, col, row)                       -> index-0 default fill
+#   fills   = [(name, col, row, collision), ...]      -> flat seamless textures (1 tile each)
+#   terrains= [(name, col, row, collision), ...]      -> 9-slice autotiles (terrain over base)
+# Outside row-0 blocks ARE terrain-over-grass (visible base border) -> autotiles.
+# Inside/Dungeon left-column blocks are seamless texture fills; cols 4-7 are pit
+# autotiles (terrain feature over a contrasting base) -> classify as autotiles.
+JOBS = [
+    dict(out="pf_outside_ground", src="pf_outside_a2.png",
+         base=("grass", 0, 0), fills=[],
+         terrains=[("cobble", 1, 0, 0), ("stone", 2, 0, 0), ("path", 3, 0, 0)]),
+    dict(out="pf_inside_ground", src="pf_inside_a2.png",
+         base=("wood", 0, 0),
+         fills=[("scallop_tile", 1, 0, 0), ("wood_floor", 2, 0, 0), ("brick", 1, 1, 0),
+                ("red_carpet", 2, 1, 0), ("blue_carpet", 2, 2, 0), ("pink_carpet", 3, 2, 0),
+                ("white_tile", 5, 1, 0), ("orange_scale", 0, 3, 0), ("blue_scale", 1, 3, 0)],
+         terrains=[]),
+    dict(out="pf_dungeon_ground", src="pf_dungeon_a2.png",
+         base=("dirt", 0, 0),
+         fills=[("moss", 1, 0, 0), ("stone", 0, 1, 0), ("cobble", 1, 1, 0),
+                ("lava_rock", 1, 2, 0), ("lava", 2, 2, 1), ("ice", 0, 3, 0)],
+         # pit autotiles: feature (dark hole) over the block's own base ground.
+         terrains=[("sand_pit", 4, 0, 1)]),
+]
+
+def bake_job(job, report_only=False):
+    src = os.path.join(TS, job["src"])
     im = Image.open(src).convert("RGBA")
-    # grass fill = centre 48px tile of base block (solid interior)
-    gblk = block(im, BASE[1], BASE[2])
-    grass = gblk.crop((Q, T, Q + T, T + T))  # tile (... interior)
-    out = [grass]; beh = [0]; col = [0]
+    bname, bcp, brow = job["base"]
+    out = [fill_tile(im, bcp, brow)]; beh = [0]; col = [0]
     cfg = {"tile": T, "per_row": PR, "scheme": "wang8_lut",
-           "priority": ["grass"] + [t[0] for t in TERRAINS],
-           "fills": {"grass": 0}, "terrains": {}}
-    for name, cp, row, collision in TERRAINS:
+           "priority": [bname] + [f[0] for f in job["fills"]] + [t[0] for t in job["terrains"]],
+           "fills": {bname: 0}, "terrains": {}}
+    print(f"=== {job['out']} (base {bname}) ===")
+    # flat texture fills -> 1 tile each, lut maps every neighbour-mask to that tile
+    for name, cp, row, collision in job["fills"]:
+        idx = len(out)
+        out.append(fill_tile(im, cp, row)); beh.append(0); col.append(collision)
+        cfg["fills"][name] = idx
+        lut = [idx] * 256
+        cfg["terrains"][name] = {"lut": lut, "luts": {bname: lut},
+                                 "behavior": 0, "collision": collision, "count": 1}
+        print(f"  {name}: flat fill -> tile {idx}")
+    # 9-slice autotiles (terrain feature over a contrasting in-block base)
+    for name, cp, row, collision in job["terrains"]:
         blk = block(im, cp, row)
         outside = blk.load()[1, 1]            # outer corner pixel = the base it borders
         qd, cov = classify_quarters(blk, outside)
         missing = [k for k in ("fill","e_t","e_b","e_l","e_r","c_tl","c_tr","c_bl","c_br") if k not in qd]
-        print(f"{name}: outside={outside[:3]} found={sorted(cov.keys())}" +
+        print(f"  {name}: outside={outside[:3]} found={sorted(cov.keys())}" +
               (f"  MISSING={missing}" if missing else "  OK"))
-        if missing:
-            print(f"  !! cannot bake {name}, missing prototypes")
+        if missing or report_only:
             continue
         start = len(out)
         for t in assemble9(qd):
             out.append(t); beh.append(0); col.append(collision)
         lut = [start + slice9(m) for m in range(256)]
-        cfg["terrains"][name] = {"lut": lut, "luts": {"grass": lut},
+        cfg["terrains"][name] = {"lut": lut, "luts": {bname: lut},
                                  "behavior": 0, "collision": collision, "count": 9}
-    # write baked sheet + meta + autotile cfg
+    if report_only:
+        return
     n = len(out); rows = (n + PR - 1) // PR
     sheet = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
     for i, t in enumerate(out):
         sheet.paste(t, ((i % PR) * T, (i // PR) * T))
-    sheet.save(os.path.join(TS, "pf_outside_ground.png"))
+    sheet.save(os.path.join(TS, job["out"] + ".png"))
     json.dump({"total_metatiles": n, "primary_count": n, "secondary_count": 0,
                "tile": T, "metatiles_per_row": PR,
                "source": "Pixel Fantasy RMMZ A2 (see PIXEL_FANTASY.LICENSE.txt)",
                "behaviors": beh, "collisions": col},
-              open(os.path.join(TS, "pf_outside_ground.json"), "w"))
-    json.dump(cfg, open(os.path.join(TS, "pf_outside_ground.autotile.json"), "w"))
-    # register
+              open(os.path.join(TS, job["out"] + ".json"), "w"))
+    json.dump(cfg, open(os.path.join(TS, job["out"] + ".autotile.json"), "w"))
     idx_path = os.path.join(TS, "_index.json")
     idx = json.load(open(idx_path))
-    if "pf_outside_ground" not in idx:
-        idx = sorted(set(idx) | {"pf_outside_ground"})
+    if job["out"] not in idx:
+        idx = sorted(set(idx) | {job["out"]})
         json.dump(idx, open(idx_path, "w"))
-    print(f"wrote pf_outside_ground: {n} tiles (grass + {len(cfg['terrains'])} terrains)")
+    print(f"  wrote {job['out']}: {n} tiles "
+          f"({bname} + {len(job['fills'])} fills + {len(cfg['terrains'])-len(job['fills'])} autotiles)")
+
+def main():
+    report = "--report" in sys.argv
+    only = [a for a in sys.argv[1:] if not a.startswith("-")]
+    for job in JOBS:
+        if only and job["out"] not in only and job["src"].split(".")[0] not in only:
+            continue
+        bake_job(job, report_only=report)
 
 if __name__ == "__main__":
     main()
