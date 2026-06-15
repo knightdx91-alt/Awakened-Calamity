@@ -1266,12 +1266,20 @@
 
   // Screen orientation: a dropdown of ALL orientations (matches the game's
   // Portrait / Rev. Portrait / Landscape / Rev. Landscape options).
-  var ORIENT_OPTS = [
-    { n: 0, label: 'Landscape (0°)' },
-    { n: 1, label: 'Portrait (90°)' },
-    { n: 2, label: 'Rev. Landscape (180°)' },
-    { n: 3, label: 'Rev. Portrait (270°)' }
-  ];
+  // Labels are computed from the DEVICE's screen shape so they name the actual
+  // resulting orientation: on a portrait phone 0° is Portrait and 90° is
+  // Landscape; on a landscape monitor it's the reverse.
+  function orientOpts() {
+    var portraitDevice = window.innerHeight >= window.innerWidth;
+    var nat = portraitDevice ? 'Portrait' : 'Landscape';   // 0° (no rotation)
+    var rot = portraitDevice ? 'Landscape' : 'Portrait';   // 90° (rotated)
+    return [
+      { n: 0, label: nat + ' (0°)' },
+      { n: 1, label: rot + ' (90°)' },
+      { n: 2, label: 'Rev. ' + nat + ' (180°)' },
+      { n: 3, label: 'Rev. ' + rot + ' (270°)' }
+    ];
+  }
   function setOrient(n) {
     state.orient = ((n % 4) + 4) % 4;
     document.body.dataset.orient = state.orient;
@@ -1285,7 +1293,7 @@
     orientMenu.style.cssText = 'display:block; position:fixed; z-index:200; min-width:170px;' +
       'background:#fff; color:var(--text); border:1px solid var(--line); padding:3px;' +
       'box-shadow:0 8px 24px rgba(0,0,0,.28);';
-    ORIENT_OPTS.forEach(function (o) {
+    orientOpts().forEach(function (o) {
       var mi = document.createElement('div');
       mi.className = 'mi' + (o.n === state.orient ? ' active' : '');
       mi.style.cssText = 'padding:6px 14px; cursor:pointer; border-radius:3px;' +
