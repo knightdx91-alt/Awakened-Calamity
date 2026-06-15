@@ -321,6 +321,25 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
   - **Spawned (designed-not-built, deserve own docs):** **`CRAFT_DISCOVERY.md`** (recipe
     experimentation/discovery layer, mirrors `CLASS_GENERATION.md`) + a **3D per-class action-combat
     model** doc. **Next:** owner to direct (vertical slice, a new doc, or content).
+  - **Pixel Fantasy RMMZ tile import** (owner-provided commercial pack on the `pixel-fantasy-assets`
+    branch under `pixel-fantasy-rmmz/`). ⚠️ **Commercial / NOT CC0 / EULA-gated** (external RPG-Maker
+    EULA likely restricts to RM engines) → flagged `data/tilesets/PIXEL_FANTASY.LICENSE.txt`,
+    **placeholder/non-shippable** until cleared (consistent with `ASSETS_NOTICE.md`).
+    - **Pass 1 (done, headless-verified):** imported all **20 sheets @native 48px** → `data/tilesets/
+      pf_*` (Outside/Inside/Dungeon × A1–A5/B/C/D), plain-grid JSON (`tile:48`, per-row from width)
+      via `tools/import_pixel_fantasy.py`. **Taught the editor per-tileset tile size** (`map-editor.js`:
+      decoupled SOURCE size = `meta.tile`/`.metatiles_per_row` from a fixed 16px DISPLAY cell) so 48px
+      sheets render in the picker/map; engine renderer already honored `meta.tile`. All object/prop/
+      building (A5/B/C/D) sheets fully paintable; A1–A4 imported & manually paintable.
+    - **Pass 2a (done, verified):** baked **outside A2 ground autotiles** → `pf_outside_ground`
+      (grass base + cobble/stone/path, 28 tiles) in the project's **9-slice `wang8_lut`** scheme (same
+      as `ac_ground`). `tools/build_pixel_fantasy_autotiles.py` classifies each RMMZ 24px quarter by
+      terrain-coverage (self-calibrating per terrain vs its outside colour), collects the 9 nine-slice
+      prototypes, assembles nine-patches. Verified: seamless stone-over-grass blob + editor terrain
+      brush shows cobble/stone/path, no JS errors.
+    - **Remaining for "all 21 w/ autotiles":** other A2 sheets (inside/dungeon floors) reuse the same
+      baker; **A1** (animated water/waterfall), **A3** (2×2 roof tops), **A4** (2×3 wall top+side) each
+      need their own block-structure handling. Pipeline proven; extension is mechanical per type.
 
 ## ⏳ PENDING (next session) — World Area Bible (spec LOCKED, approved, NOT started)
 Goal: a **complete, exhaustively-named** area catalog — every enterable building named + its owner
