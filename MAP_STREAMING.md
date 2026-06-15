@@ -90,7 +90,16 @@ not pop into existence on a fresh load).
 - **Defer:** worker-thread streaming, sea-voyage sequences, diagonal-neighbor corners.
 
 ## 8. Open Calls
-1. **Ring depth** — 1 ring (4 neighbors) or 2 (includes diagonals/corners) for fast travel/biking?
-2. **Sea travel** — seamless ocean stream vs. a short travel scene for long crossings.
-3. **Indoor transition** — instant fade vs. a brief door animation.
-4. **Boat style** — cinematic crossing vs. walkable ship (§2.1).
+
+> **Note — prototype-scoped.** These are **2D metatile-engine** streaming details. In the **3D target**
+> they dissolve into standard distance-based chunk streaming, so they carry decision-weight only for
+> this prototype. Defaults locked below.
+
+**LOCKED (prototype defaults):**
+1. **Ring depth = 2** — load the full 3×3 (4 orthogonal **+ 4 diagonal/corner** neighbors). Fully
+   seamless in *every* direction including diagonal corner crossings; safe for fast travel / biking
+   (no edge hitch). Costs ~2× maps in memory vs. ring 1 — acceptable for the prototype's small maps.
+2. **Sea travel = short travel scene** for long crossings (avoids streaming a large empty ocean);
+   seamless near-shore water is fine, but open-sea voyages use a brief sequence.
+3. **Indoor transition = instant fade** (simplest, snappy).
+4. **Boat style = cinematic crossing** for long voyages; walkable ship deferred (§2.1).
