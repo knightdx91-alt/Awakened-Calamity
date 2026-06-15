@@ -86,5 +86,11 @@ Weather: <profile — likely types + frequency; any scripted/permanent weather>
    anything "for you" at a Surveillance cost still applies in general — but the designed, intended path
    is the guild.)*
 
-**Open:**
-3. **Battle swing size** — how strong the affinity buff/weaken is (tactical spice vs. dominant).
+3. **Battle swing size = SMALL (~10–15% affinity damage).** Weather is **tactical spice / a
+   tiebreaker** in battle, never a fight-decider — a small buff/weaken you can notice and exploit, but
+   the "wrong" affinity still wins easily with good play. This keeps outcomes **earned** (important
+   given permanent creature death — no creature should die to bad-weather luck, `DESIGN.md §3`). Keep
+   accuracy/suppression effects **mild** too (no hard move lockouts from weather). **Consequence:**
+   weather's *main* gameplay weight is the **survival/Exposure** side (a blizzard spiking Cold is the
+   real planning concern), and that — not battle dominance — is the primary reason to use the Skyguard
+   forecast (§2).
