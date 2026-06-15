@@ -1,15 +1,19 @@
 /* Map Editor — RPG Maker MZ-style metatile editor.
  *
- * Reshaped to behave like RM's editor: tabbed tile palette (A = autotiles,
- * B = raw tiles with multi-tile drag-select stamps), two paint layers
- * (Ground + Overlay), and autotile-on-paint (the A tab blends edges live).
+ * Tileset tabs (one per sheet) + an Auto/Tiles toggle, two paint layers
+ * (Ground + Overlay), autotile-on-paint, and a tileset GROUP per layer:
+ * each layer can hold tiles from multiple sheets at once (RM A–E model).
+ * Cells store GLOBAL ids = sheet.offset + localId; switching the picker to
+ * another sheet never repaints the map (existing ids keep their sheet).
  *
- * Layout format (matches data/layouts/*.json), engine reads these fields:
- *   { id, width, height, tileset, metatiles:[ids...], collision:[0|1...],
+ * Layout format (matches data/layouts/*.json):
+ *   { id, width, height, tileset, metatiles:[gid...], collision:[0|1...],
+ *     tileset_group:[{name,offset,count}],   // sheets behind the global ids
  *     terrain:[names...]              // author-time autotile source (engine ignores)
- *     overlay_tileset, overlay:[ids... | -1] }   // optional second layer
+ *     overlay_tileset, overlay_group, overlay:[gid... | -1] }
+ *   Single-sheet maps (group of 1, offset 0) stay engine-compatible (gid==local).
  * Map format (matches data/maps/<region>/*.json):
- *   { id, name, region, layout, ..., connections, npcs, warps, triggers, signs }
+ *   { id, name, region, layout, parent, ..., connections, npcs, warps, triggers, signs }
  */
 (function () {
   'use strict';
@@ -18,10 +22,16 @@
   var META_PER_ROW = 16;       // fallback metatiles-per-row
   var $ = function (id) { return document.getElementById(id); };
 
-  // ── Per-layer record. SOURCE geometry (tile px / per-row) is read from meta. ──
+  // ── Per-layer record. A layer holds a GROUP of tileset sheets (RM-style):
+  // each sheet gets an offset into a shared global id-space, and cells store
+  // global ids. Switching the picker to another sheet does NOT touch the map —
+  // existing cells keep their ids and render from their own sheet.
+  //   sheet = { name, img, meta, autotile, offset, count }
+  //   data[i] = global id (offset + localId), or -1 for empty (overlay).
+  // name/img/meta/autotile mirror the ACTIVE sheet for the palette code.
   function newLayer(fill) {
-    return { name: null, img: null, meta: null, autotile: null,
-             data: null, collision: null, terrain: null, fill: fill };
+    return { sheets: [], active: 0, name: null, img: null, meta: null, autotile: null,
+             data: null, collision: null, terrain: null, fill: fill, baseFill: fill };
   }
 
   var state = {
@@ -65,8 +75,33 @@
   }
 
   function L() { return state.layers[state.active]; }
-  function srcTile(layer) { layer = layer || L(); return (layer.meta && layer.meta.tile) || 16; }
-  function perRow(layer)  { layer = layer || L(); return (layer.meta && layer.meta.metatiles_per_row) || META_PER_ROW; }
+  function srcTile(o) { o = o || L(); return (o.meta && o.meta.tile) || 16; }
+  function perRow(o)  { o = o || L(); return (o.meta && o.meta.metatiles_per_row) || META_PER_ROW; }
+
+  // ── Tileset-group helpers ──
+  function aSheet(layer) { layer = layer || L(); return layer.sheets[layer.active] || null; }
+  function syncActive(layer) {           // mirror active sheet onto layer.* for palette code
+    var s = aSheet(layer);
+    layer.name = s ? s.name : null; layer.img = s ? s.img : null;
+    layer.meta = s ? s.meta : null; layer.autotile = s ? s.autotile : null;
+  }
+  function sheetCount(sheet) {
+    if (sheet.meta && sheet.meta.total_metatiles) return sheet.meta.total_metatiles;
+    if (!sheet.img) return 0;
+    var st = (sheet.meta && sheet.meta.tile) || 16;
+    return Math.floor((sheet.img.width / st) * (sheet.img.height / st));
+  }
+  function sheetOfGid(layer, gid) {
+    for (var i = 0; i < layer.sheets.length; i++) {
+      var s = layer.sheets[i];
+      if (gid >= s.offset && gid < s.offset + s.count) return s;
+    }
+    return layer.sheets[0] || null;
+  }
+  function autotileSheet(layer) {
+    for (var i = 0; i < layer.sheets.length; i++) if (layer.sheets[i].autotile) return layer.sheets[i];
+    return null;
+  }
 
   // ── Tileset loading (into the ACTIVE layer) ──
   function loadTilesetList() {
@@ -87,8 +122,8 @@
       });
   }
 
-  // Load a tileset's png + json (+ optional autotile.json) into a layer.
-  function loadTilesetInto(layer, name) {
+  // Load one tileset sheet (png + json + optional autotile.json).
+  function loadSheetData(name) {
     return Promise.all([
       fetch('data/tilesets/' + name + '.json').then(function (r) { return r.json(); }),
       new Promise(function (res, rej) {
@@ -101,17 +136,32 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .catch(function () { return null; })
     ]).then(function (parts) {
-      layer.name = name;
-      layer.meta = parts[0];
-      layer.img = parts[1];
-      layer.autotile = (parts[2] && parts[2].terrains) ? parts[2] : null;
+      var sheet = { name: name, meta: parts[0], img: parts[1],
+        autotile: (parts[2] && parts[2].terrains) ? parts[2] : null, offset: 0, count: 0 };
+      sheet.count = sheetCount(sheet);
+      return sheet;
+    });
+  }
+
+  // Ensure `name` is in the layer's group and make it the active picker sheet.
+  // A new sheet is appended with offset = current end of the group, so existing
+  // cell ids stay valid (the map is untouched).
+  function useTileset(layer, name) {
+    for (var i = 0; i < layer.sheets.length; i++) {
+      if (layer.sheets[i].name === name) { layer.active = i; syncActive(layer); return Promise.resolve(layer); }
+    }
+    return loadSheetData(name).then(function (sheet) {
+      var off = 0; layer.sheets.forEach(function (s) { off += s.count; });
+      sheet.offset = off;
+      layer.sheets.push(sheet);
+      layer.active = layer.sheets.length - 1;
+      syncActive(layer);
       return layer;
     });
   }
 
   function loadTileset(name) {
-    return loadTilesetInto(L(), name).then(function () {
-      // default to autotile painting when an autotile ground sheet is selected
+    return useTileset(L(), name).then(function () {
       state.autoMode = state.active === 'ground' && !!L().autotile;
       $('tilesetSel').value = name;
       updateTilesetStatus();
@@ -121,7 +171,7 @@
       drawPalette();
       drawMap();
       updateSelSwatch();
-      setStampFromPalette(1, 0, 1, 0);
+      setStampFromPalette(0, 0, 0, 0);
     });
   }
 
@@ -133,28 +183,25 @@
   }
 
   function totalMetatiles(layer) {
-    layer = layer || L();
-    if (layer.meta && layer.meta.total_metatiles) return layer.meta.total_metatiles;
-    if (!layer.img) return 0;
-    var st = srcTile(layer);
-    return Math.floor((layer.img.width / st) * (layer.img.height / st));
+    var s = aSheet(layer || L());
+    return s ? s.count : 0;
   }
 
   // ── Autotiler (author-time edge blob, ground layer) ──
   function recomputeTerrainCell(x, y) {
     var layer = state.layers.ground;
-    if (!layer.autotile) return;
+    var asheet = autotileSheet(layer);
+    if (!asheet) return;
+    var auto = asheet.autotile, off = asheet.offset;
     var i = idx(x, y);
     var name = layer.terrain[i];
-    if (!name) {                                  // base cell -> default fill
-      var fills = layer.autotile.fills || {};
-      var baseKey = (layer.autotile.priority && layer.autotile.priority[0]) || 'grass';
-      if (fills[baseKey] != null) { layer.data[i] = fills[baseKey]; layer.collision[i] = 0; }
+    if (!name) {                                  // base cell -> default fill (grass)
+      layer.data[i] = layer.baseFill; layer.collision[i] = 0;
       return;
     }
-    var info = layer.autotile.terrains[name];
+    var info = auto.terrains[name];
     if (!info) return;
-    var prio = layer.autotile.priority || null;
+    var prio = auto.priority || null;
     var baseKey = (prio && prio[0]) || 'grass';
     var prioOf = function (t) {
       if (!prio) return 0;
@@ -169,7 +216,7 @@
       var t = terrAt(nx, ny);
       return t === name || (prio && prioOf(t) > myP);
     };
-    if (layer.autotile.scheme === 'wang8_lut' && (info.luts || info.lut)) {
+    if (auto.scheme === 'wang8_lut' && (info.luts || info.lut)) {
       var m8 = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y - 1) ? 2 : 0) |
                (same(x + 1, y) ? 4 : 0) | (same(x + 1, y + 1) ? 8 : 0) |
                (same(x, y + 1) ? 16 : 0) | (same(x - 1, y + 1) ? 32 : 0) |
@@ -185,11 +232,11 @@
           }
         lut = info.luts[bName] || info.luts[baseKey] || info.lut;
       }
-      layer.data[i] = lut[m8];
+      layer.data[i] = off + lut[m8];
     } else {
       var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
                  (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
-      layer.data[i] = info.base_index + mask;
+      layer.data[i] = off + info.base_index + mask;
     }
     layer.collision[i] = info.collision ? 1 : 0;
   }
@@ -275,7 +322,7 @@
         var fillId = (layer.autotile.fills && layer.autotile.fills[k] != null)
           ? layer.autotile.fills[k]
           : (info.lut ? info.lut[255] : (info.base_index || 0));
-        blitMeta(cx, layer, fillId, 0, 0, 32);
+        blitLocal(cx, aSheet(layer), fillId, 0, 0, 32);
       }
       var label = document.createElement('span');
       label.textContent = k === '' ? '(erase)' : k;
@@ -300,24 +347,35 @@
     paletteCanvas.width = cw; paletteCanvas.height = ch;
     pctx.imageSmoothingEnabled = false;
     pctx.clearRect(0, 0, cw, ch);
+    var sheet = aSheet(layer);
     for (var i = 0; i < n; i++) {
       var dc = i % PAL_COLS, dr = (i / PAL_COLS) | 0;
-      blitMeta(pctx, layer, i, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
+      blitLocal(pctx, sheet, i, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
     }
-    // highlight current stamp rectangle
-    var s = state.stamp, top = state.selectedTile;
-    var sc = top % PAL_COLS, sr = (top / PAL_COLS) | 0;
-    pctx.strokeStyle = '#ff3030'; pctx.lineWidth = 2;
-    pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
-      s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
+    // highlight current stamp rectangle (only if the selection is in this sheet)
+    var s = state.stamp, top = state.selectedTile - (sheet ? sheet.offset : 0);
+    if (top >= 0 && top < n) {
+      var sc = top % PAL_COLS, sr = (top / PAL_COLS) | 0;
+      pctx.strokeStyle = '#ff3030'; pctx.lineWidth = 2;
+      pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
+        s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
+    }
     $('paletteCount').textContent = n + ' tiles';
   }
 
-  function blitMeta(c, layer, id, dx, dy, dsize) {
-    if (!layer.img || id < 0) return;
-    var st = srcTile(layer), pr = perRow(layer);
-    var col = id % pr, row = (id / pr) | 0;
-    c.drawImage(layer.img, col * st, row * st, st, st, dx, dy, dsize, dsize);
+  // blit a LOCAL id from a specific sheet (palette/swatch)
+  function blitLocal(c, sheet, local, dx, dy, dsize) {
+    if (!sheet || !sheet.img || local < 0) return;
+    var st = (sheet.meta && sheet.meta.tile) || 16;
+    var pr = (sheet.meta && sheet.meta.metatiles_per_row) || META_PER_ROW;
+    var col = local % pr, row = (local / pr) | 0;
+    c.drawImage(sheet.img, col * st, row * st, st, st, dx, dy, dsize, dsize);
+  }
+  // blit a GLOBAL id, resolving which sheet of the layer it belongs to (map)
+  function blitGid(c, layer, gid, dx, dy, dsize) {
+    if (gid < 0) return;
+    var sheet = sheetOfGid(layer, gid);
+    if (sheet) blitLocal(c, sheet, gid - sheet.offset, dx, dy, dsize);
   }
 
   // Palette drag-select (multi-tile stamp)
@@ -339,20 +397,22 @@
   window.addEventListener('mouseup', function () { palDrag = null; });
 
   function setStampFromPalette(cx0, cy0, cx1, cy1) {
-    var n = totalMetatiles();
+    var sheet = aSheet(L()); if (!sheet) return;
+    var off = sheet.offset, n = sheet.count;
     var x0 = Math.min(cx0, cx1), x1 = Math.max(cx0, cx1);
     var y0 = Math.min(cy0, cy1), y1 = Math.max(cy0, cy1);
     var ids = [], w = x1 - x0 + 1, h = y1 - y0 + 1;
     for (var y = y0; y <= y1; y++)
       for (var x = x0; x <= x1; x++) {
-        var id = y * PAL_COLS + x;
-        ids.push(id >= 0 && id < n ? id : 0);
+        var local = y * PAL_COLS + x;
+        ids.push(off + ((local >= 0 && local < n) ? local : 0));   // GLOBAL ids
       }
     state.stamp = { w: w, h: h, ids: ids };
-    state.selectedTile = y0 * PAL_COLS + x0;
+    var topLocal = y0 * PAL_COLS + x0;
+    state.selectedTile = off + ((topLocal >= 0 && topLocal < n) ? topLocal : 0);
     state.eraser = false; $('eraserBtn').classList.remove('active');
     $('selId').textContent = state.selectedTile + (w * h > 1 ? (' (' + w + '×' + h + ')') : '');
-    var beh = L().meta && L().meta.behaviors ? L().meta.behaviors[state.selectedTile] : null;
+    var beh = sheet.meta && sheet.meta.behaviors ? sheet.meta.behaviors[topLocal] : null;
     $('selBehavior').textContent = beh != null ? ('behavior ' + beh) : '';
     updateSelSwatch();
     drawPalette();
@@ -370,7 +430,7 @@
     var sc = $('selSwatch').getContext('2d');
     sc.imageSmoothingEnabled = false;
     sc.clearRect(0, 0, 16, 16);
-    blitMeta(sc, L(), state.selectedTile, 0, 0, 16);
+    blitGid(sc, L(), state.selectedTile, 0, 0, 16);
   }
 
   // ── Map model ──
@@ -380,12 +440,16 @@
     state.width = w; state.height = h;
     ['ground', 'overlay'].forEach(function (key) {
       var layer = state.layers[key];
-      // Ground default fill = the autotile base fill (clean grass) when available.
+      // Ground default fill = the autotile base fill (clean grass) as a GLOBAL id.
       var fill = layer.fill;
-      if (key === 'ground' && layer.autotile && layer.autotile.fills) {
-        var baseKey = (layer.autotile.priority && layer.autotile.priority[0]) || 'grass';
-        if (layer.autotile.fills[baseKey] != null) fill = layer.autotile.fills[baseKey];
+      if (key === 'ground') {
+        var as = autotileSheet(layer);
+        if (as && as.autotile.fills) {
+          var baseKey = (as.autotile.priority && as.autotile.priority[0]) || 'grass';
+          fill = (as.autotile.fills[baseKey] != null) ? as.offset + as.autotile.fills[baseKey] : as.offset;
+        } else if (layer.sheets[0]) { fill = layer.sheets[0].offset; }
       }
+      layer.baseFill = fill;
       var nd = new Int32Array(w * h);
       var nc = new Uint8Array(w * h);
       var nt = new Array(w * h);
@@ -417,13 +481,13 @@
 
   function drawLayer(key, alpha) {
     var layer = state.layers[key];
-    if (!layer.img || !layer.data) return;
+    if (!layer.sheets.length || !layer.data) return;
     var cs = cell();
     mctx.globalAlpha = alpha;
     for (var y = 0; y < state.height; y++)
       for (var x = 0; x < state.width; x++) {
         var v = layer.data[idx(x, y)];
-        if (v >= 0) blitMeta(mctx, layer, v, x * cs, y * cs, cs);
+        if (v >= 0) blitGid(mctx, layer, v, x * cs, y * cs, cs);
       }
     mctx.globalAlpha = 1;
   }
@@ -483,7 +547,7 @@
       for (var dx = 0; dx < s.w; dx++) {
         var x = ax + dx, y = ay + dy;
         if (!inBounds(x, y)) continue;
-        layer.data[idx(x, y)] = state.eraser ? layer.fill : s.ids[dy * s.w + dx];
+        layer.data[idx(x, y)] = state.eraser ? layer.baseFill : s.ids[dy * s.w + dx];
         if (state.active === 'ground') layer.terrain[idx(x, y)] = '';
       }
   }
@@ -504,17 +568,32 @@
     }
     if (state.tool === 'pick') {
       var v = L().data[idx(x, y)];
-      if (v >= 0) setStampFromPalette(v % PAL_COLS, (v / PAL_COLS) | 0, v % PAL_COLS, (v / PAL_COLS) | 0);
+      if (v >= 0) selectGid(v);
       return;
     }
     if (isAutoPaint() && !state.eraser) { paintTerrain(x, y); return; }
     stampAt(x, y);
   }
 
+  // Eyedropper: select the picked global id, switching the active sheet if needed.
+  function selectGid(gid) {
+    var layer = L();
+    var sheet = sheetOfGid(layer, gid); if (!sheet) return;
+    var sidx = layer.sheets.indexOf(sheet);
+    if (sidx >= 0 && sidx !== layer.active) {
+      layer.active = sidx; syncActive(layer);
+      $('tilesetSel').value = layer.name;
+      updateTilesetStatus(); buildTilesetTabs(); rebuildAutoPalette(); refreshPaletteTabs();
+    }
+    var local = gid - sheet.offset;
+    drawPalette();
+    setStampFromPalette(local % PAL_COLS, (local / PAL_COLS) | 0, local % PAL_COLS, (local / PAL_COLS) | 0);
+  }
+
   function floodFill(x, y) {
     var layer = L();
     var target = layer.data[idx(x, y)];
-    var repl = state.eraser ? layer.fill : state.stamp.ids[0];
+    var repl = state.eraser ? layer.baseFill : state.stamp.ids[0];
     if (target === repl) return;
     var stack = [[x, y]];
     while (stack.length) {
@@ -543,7 +622,7 @@
         if (auto) { layer.terrain[idx(x, y)] = state.selectedTerrain; continue; }
         // tile the stamp block by relative position
         var s = state.stamp;
-        var id = state.eraser ? layer.fill : s.ids[((y - y0) % s.h) * s.w + ((x - x0) % s.w)];
+        var id = state.eraser ? layer.baseFill : s.ids[((y - y0) % s.h) * s.w + ((x - x0) % s.w)];
         layer.data[idx(x, y)] = id;
         if (state.active === 'ground') layer.terrain[idx(x, y)] = '';
       }
@@ -613,22 +692,28 @@
     return false;
   }
 
+  function sheetGroup(layer) {
+    return layer.sheets.map(function (s) { return { name: s.name, offset: s.offset, count: s.count }; });
+  }
   function buildLayout() {
     var g = state.layers.ground, o = state.layers.overlay;
+    var base = g.sheets[0] || null;
     var layout = {
       id: $('layoutId').value || 'LAYOUT_NEW_MAP',
       width: state.width, height: state.height,
-      primary_tileset: (g.meta && g.meta.primary_tileset) || 'gTileset_General',
-      secondary_tileset: (g.meta && g.meta.secondary_tileset) || '',
-      tileset: g.name,
+      primary_tileset: (base && base.meta && base.meta.primary_tileset) || 'gTileset_General',
+      secondary_tileset: (base && base.meta && base.meta.secondary_tileset) || '',
+      tileset: base ? base.name : null,           // base sheet (single-sheet maps stay engine-compatible)
+      tileset_group: sheetGroup(g),               // full group for multi-sheet maps
       metatiles: Array.from(g.data),
       collision: Array.from(g.collision)
     };
     if (g.terrain && g.terrain.some(function (t) { return t; })) {
       layout.terrain = g.terrain.map(function (t) { return t || ''; });
     }
-    if (o.name && hasContent(o.data, -1)) {
-      layout.overlay_tileset = o.name;
+    if (o.sheets.length && hasContent(o.data, -1)) {
+      layout.overlay_tileset = o.sheets[0].name;
+      layout.overlay_group = sheetGroup(o);
       layout.overlay = Array.from(o.data);
     }
     return layout;
@@ -673,29 +758,39 @@
       return Promise.reject(new Error('Not a layout JSON (needs width/height/metatiles).'));
     }
     var w = data.width, h = data.height;
-    var loads = [];
-    var groundName = data.tileset;
-    var overlayName = data.overlay_tileset || null;
-    // ensure ground layer is the active dropdown target after load
-    loads.push(groundName ? loadTilesetInto(state.layers.ground, groundName)
-      .catch(function () { alert('Tileset "' + groundName + '" not found.'); }) : Promise.resolve());
-    if (overlayName) {
-      loads.push(loadTilesetInto(state.layers.overlay, overlayName)
-        .catch(function () { state.layers.overlay = newLayer(-1); }));
-    } else {
-      state.layers.overlay = newLayer(-1);
+    var groundGroup = data.tileset_group || (data.tileset ? [{ name: data.tileset }] : []);
+    var overlayGroup = data.overlay_group || (data.overlay_tileset ? [{ name: data.overlay_tileset }] : []);
+    state.layers.ground = newLayer(0);
+    state.layers.overlay = newLayer(-1);
+    // load a group's sheets in order, honouring saved offsets (or repacking)
+    function loadGroup(layer, group) {
+      return group.reduce(function (p, entry) {
+        return p.then(function () {
+          return loadSheetData(entry.name).then(function (sheet) {
+            var off = 0; layer.sheets.forEach(function (s) { off += s.count; });
+            sheet.offset = (entry.offset != null) ? entry.offset : off;
+            layer.sheets.push(sheet);
+          }).catch(function () { /* missing sheet: skip */ });
+        });
+      }, Promise.resolve()).then(function () { syncActive(layer); });
     }
-    return Promise.all(loads).then(function () {
+    return Promise.all([loadGroup(state.layers.ground, groundGroup),
+                        loadGroup(state.layers.overlay, overlayGroup)]).then(function () {
       state.width = w; state.height = h;
       var g = state.layers.ground;
       g.data = Int32Array.from(data.metatiles);
       g.collision = data.collision ? Uint8Array.from(data.collision) : new Uint8Array(w * h);
       g.terrain = new Array(w * h);
       for (var ti = 0; ti < w * h; ti++) g.terrain[ti] = (data.terrain && data.terrain[ti]) || '';
+      var as = autotileSheet(g);
+      g.baseFill = (as && as.autotile.fills)
+        ? as.offset + (as.autotile.fills[(as.autotile.priority && as.autotile.priority[0]) || 'grass'] || 0)
+        : (g.sheets[0] ? g.sheets[0].offset : 0);
       var o = state.layers.overlay;
       o.data = new Int32Array(w * h);
       o.collision = new Uint8Array(w * h);
       o.terrain = new Array(w * h);
+      o.baseFill = -1;
       for (var oi = 0; oi < w * h; oi++) { o.data[oi] = data.overlay ? data.overlay[oi] : -1; o.terrain[oi] = ''; }
 
       $('mapW').value = w; $('mapH').value = h;
@@ -716,7 +811,6 @@
       } else { state.warps = []; }
       // reflect ground tileset in the dropdown + palette
       setActiveLayer('ground');
-      if (groundName) $('tilesetSel').value = groundName;
       drawMap(); renderWarpList();
     });
   }
@@ -738,14 +832,14 @@
     state.active = key;
     $('layerSel').value = key;
     var layer = L();
-    if (layer.name) { $('tilesetSel').value = layer.name; }
-    else if (key === 'overlay' && state._tilesetNames) {
-      // pick a sensible default overlay tileset (buildings/props) lazily
+    if (!layer.sheets.length && key === 'overlay' && state._tilesetNames) {
+      // lazily give the overlay layer a default object sheet on first use
       var def = ['ac_buildings', 'ac_props'].filter(function (n) {
         return state._tilesetNames.indexOf(n) >= 0;
-      })[0] || $('tilesetSel').value;
-      return loadTileset(def).then(function () { setActiveLayer(key); });
+      })[0] || state._tilesetNames[0];
+      return useTileset(layer, def).then(function () { setActiveLayer(key); });
     }
+    if (layer.name) $('tilesetSel').value = layer.name;
     state.autoMode = state.active === 'ground' && !!L().autotile;
     updateTilesetStatus();
     buildTilesetTabs();
