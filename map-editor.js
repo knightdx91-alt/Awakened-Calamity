@@ -59,7 +59,16 @@
   // RM tab roles in display order. A2 = ground autotile (terrain brush).
   var RM_ROLE_ORDER = ['A1', 'A2', 'A3', 'A4', 'A5', 'B', 'C', 'D', 'E'];
 
-  var ORIENT_DEG = [0, 90, 180, 270];
+  // Orientation modes that MATCH THE GAME (styles.css .orient-*). Index = state.orient.
+  // `deg` is the applied CSS rotation (used to inverse-rotate pointer coords);
+  // `cls` is the body class that drives #rotor's transform.
+  var ORIENT_MODES = [
+    { id: 'portrait',         label: 'Portrait',          deg: 0,    cls: '' },
+    { id: 'landscape',        label: 'Landscape',         deg: -90,  cls: 'ed-landscape' },
+    { id: 'reverse-portrait', label: 'Reverse Portrait',  deg: 180,  cls: 'ed-reverse-portrait' },
+    { id: 'reverse-landscape',label: 'Reverse Landscape', deg: 90,   cls: 'ed-reverse-landscape' }
+  ];
+  var ORIENT_CLASSES = ['ed-landscape', 'ed-reverse-portrait', 'ed-reverse-landscape'];
 
   // ── Map tree model (manual hierarchy, RM-style) ──
   // name -> { region, parent (name|null), local (true until saved to repo) }
@@ -76,7 +85,7 @@
     var r = canvas.getBoundingClientRect();
     var dx = clientX - (r.left + r.width / 2);
     var dy = clientY - (r.top + r.height / 2);
-    var a = -ORIENT_DEG[state.orient] * Math.PI / 180;
+    var a = -ORIENT_MODES[state.orient].deg * Math.PI / 180;
     var ca = Math.cos(a), sa = Math.sin(a);
     return { x: (dx * ca - dy * sa) + canvas.width / 2,
              y: (dx * sa + dy * ca) + canvas.height / 2 };
@@ -1266,24 +1275,15 @@
 
   // Screen orientation: a dropdown of ALL orientations (matches the game's
   // Portrait / Rev. Portrait / Landscape / Rev. Landscape options).
-  // Labels are computed from the DEVICE's screen shape so they name the actual
-  // resulting orientation: on a portrait phone 0° is Portrait and 90° is
-  // Landscape; on a landscape monitor it's the reverse.
   function orientOpts() {
-    var portraitDevice = window.innerHeight >= window.innerWidth;
-    var nat = portraitDevice ? 'Portrait' : 'Landscape';   // 0° (no rotation)
-    var rot = portraitDevice ? 'Landscape' : 'Portrait';   // 90° (rotated)
-    return [
-      { n: 0, label: nat + ' (0°)' },
-      { n: 1, label: rot + ' (90°)' },
-      { n: 2, label: 'Rev. ' + nat + ' (180°)' },
-      { n: 3, label: 'Rev. ' + rot + ' (270°)' }
-    ];
+    return ORIENT_MODES.map(function (m, i) { return { n: i, label: m.label }; });
   }
   function setOrient(n) {
     state.orient = ((n % 4) + 4) % 4;
-    document.body.dataset.orient = state.orient;
-    $('orientBtn').textContent = '⟳ ' + ORIENT_DEG[state.orient] + '°';
+    var m = ORIENT_MODES[state.orient];
+    ORIENT_CLASSES.forEach(function (c) { document.body.classList.remove(c); });
+    if (m.cls) document.body.classList.add(m.cls);
+    $('orientBtn').textContent = '⟳ ' + m.label;
   }
   var orientMenu = null;
   function toggleOrientMenu() {

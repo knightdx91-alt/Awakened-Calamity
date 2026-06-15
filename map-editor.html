@@ -18,17 +18,20 @@
     font-family:"Segoe UI", Tahoma, system-ui, sans-serif; font-size:12px; }
   body { overflow:hidden; }
 
-  /* ── Orientation rotor: rotates the whole editor in 90° steps ──
-     Use dvh (DYNAMIC viewport height) so the editor fits the actually-visible
-     area on mobile — plain 100vh is the LARGER viewport (address bar hidden),
-     which centered the editor and pushed the top menu bar off-screen on phones. */
-  #rotor { position:absolute; top:50%; left:50%;
-    width:100vw; height:100vh; width:100dvw; height:100dvh;
-    display:flex; flex-direction:column; transform:translate(-50%,-50%);
-    transform-origin:center center; transition:transform .25s ease; }
-  body[data-orient="1"] #rotor { width:100vh; height:100vw; width:100dvh; height:100dvw; transform:translate(-50%,-50%) rotate(90deg); }
-  body[data-orient="2"] #rotor { transform:translate(-50%,-50%) rotate(180deg); }
-  body[data-orient="3"] #rotor { width:100vh; height:100vw; width:100dvh; height:100dvw; transform:translate(-50%,-50%) rotate(270deg); }
+  /* ── Orientation: mirrors the GAME's system (styles.css .orient-*) ──
+     Portrait = no rotation, TOP-anchored (menu bar always at the visible top;
+     dvh keeps it within the mobile viewport). Landscape = rotate -90° filling a
+     portrait screen sideways (top-left origin, anchored top:100%), exactly like
+     the game; reverse-landscape = +90°; reverse-portrait = 180°. */
+  #rotor { position:absolute; top:0; left:0;
+    width:100vw; height:100vh; height:100dvh;
+    display:flex; flex-direction:column; transform-origin:top left;
+    transition:transform .2s ease; overflow:hidden; }
+  body.ed-reverse-portrait #rotor { transform-origin:center center; transform:rotate(180deg); }
+  body.ed-landscape #rotor, body.ed-reverse-landscape #rotor {
+    width:100vh; height:100vw; width:100dvh; height:100dvw; transform-origin:top left; }
+  body.ed-landscape         #rotor { top:100%; left:0;    transform:rotate(-90deg); }
+  body.ed-reverse-landscape #rotor { top:0;    left:100%; transform:rotate(90deg);  }
 
   /* ── RPG-Maker-XP-style menu bar ── */
   #menubar { display:flex; align-items:stretch; background:var(--toolbar);
@@ -239,7 +242,7 @@
     <div class="tsep"></div>
     <!-- View: screen orientation (rotate the whole editor 90°, like the game) -->
     <div class="tgrp">
-      <button id="orientBtn" class="tb txt" title="Rotate screen orientation 90°">⟳ 0°</button>
+      <button id="orientBtn" class="tb txt" title="Screen orientation (like the game)">⟳ Portrait</button>
       <button id="gridToolBtn" class="tb active" title="Toggle grid">▦</button>
     </div>
     <div class="tsep"></div>
