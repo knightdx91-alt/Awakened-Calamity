@@ -14,17 +14,21 @@
     --tab:#dcdcdc; --tabActive:#f0f0f0; --btn:#f6f6f6; --btnH:#e2ecfb;
   }
   * { box-sizing: border-box; }
-  html,body { margin:0; height:100%; background:var(--win); color:var(--text);
+  html,body { margin:0; height:100%; height:100dvh; background:var(--win); color:var(--text);
     font-family:"Segoe UI", Tahoma, system-ui, sans-serif; font-size:12px; }
   body { overflow:hidden; }
 
-  /* ── Orientation rotor: rotates the whole editor in 90° steps ── */
-  #rotor { position:absolute; top:50%; left:50%; width:100vw; height:100vh;
+  /* ── Orientation rotor: rotates the whole editor in 90° steps ──
+     Use dvh (DYNAMIC viewport height) so the editor fits the actually-visible
+     area on mobile — plain 100vh is the LARGER viewport (address bar hidden),
+     which centered the editor and pushed the top menu bar off-screen on phones. */
+  #rotor { position:absolute; top:50%; left:50%;
+    width:100vw; height:100vh; width:100dvw; height:100dvh;
     display:flex; flex-direction:column; transform:translate(-50%,-50%);
     transform-origin:center center; transition:transform .25s ease; }
-  body[data-orient="1"] #rotor { width:100vh; height:100vw; transform:translate(-50%,-50%) rotate(90deg); }
+  body[data-orient="1"] #rotor { width:100vh; height:100vw; width:100dvh; height:100dvw; transform:translate(-50%,-50%) rotate(90deg); }
   body[data-orient="2"] #rotor { transform:translate(-50%,-50%) rotate(180deg); }
-  body[data-orient="3"] #rotor { width:100vh; height:100vw; transform:translate(-50%,-50%) rotate(270deg); }
+  body[data-orient="3"] #rotor { width:100vh; height:100vw; width:100dvh; height:100dvw; transform:translate(-50%,-50%) rotate(270deg); }
 
   /* ── RPG-Maker-XP-style menu bar ── */
   #menubar { display:flex; align-items:stretch; background:var(--toolbar);
