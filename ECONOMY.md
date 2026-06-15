@@ -127,6 +127,19 @@ player at a glance what something is worth and how hard it is to get.
    **prices/discounts** and **class access** (§4). (Revises §1.) Exact prices tune in playtest against
    the lean-credit faucet (§2), pitched so Legendary tiers are a long-horizon goal you can *see* early.
 
+3. **Class-slot cost curve = super-linear Credits + escalating gates. NOTHING in any shop is free.**
+   Even entry-tier class access carries a real (if modest) price — the System always extracts
+   something. The only way to get a class for nothing is to **earn it** (quest reward, drop, story).
+   - **Curve:** ~3–4× Credits per rarity tier (echoes the XP tier multipliers) so each step up is a
+     genuine commitment, not a money dump.
+   - **Money alone never buys the top:** **Elite** adds a **class trial/quest** gate; **Legendary**
+     adds a substantial **quest chain** — on top of Credits + rep. A high class is a campaign goal.
+   - **Gates by tier:** Standard = modest Cr · Uncommon = small Cr + minor rep · Rare = payday Cr +
+     mid rep · Elite = large Cr + high rep + trial · Legendary = huge Cr + top rep + quest chain.
+   - **Anomalous never sold** (hidden-layer only, §4/§5) — money buys *sanctioned* power; loopholes
+     are found. Exact Cr values tune in playtest against the lean faucet (§2).
+   - *(This converges three systems on one reward — rep lanes §1, the credit faucet §2, and a quest —
+     which is what makes an earned class feel earned.)*
+
 **Open:**
-3. **Class-slot cost curve** — Cr (+ rep + quest) for Rare/Elite/Legendary class access.
 4. **Cross-town rep** — does helping one town bleed reputation to neighbors, or fully independent?
