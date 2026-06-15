@@ -1044,6 +1044,12 @@
     });
   });
   $('eventModeBtn').addEventListener('click', soon);
+  // Visible grid toggle mirrors the (hidden) gridBtn state.
+  var gtb = $('gridToolBtn');
+  if (gtb) gtb.addEventListener('click', function () {
+    clickEl('gridBtn');
+    gtb.classList.toggle('active', $('gridBtn').classList.contains('active'));
+  });
   ['cutBtn', 'copyBtn', 'pasteBtn', 'delBtn', 'undoBtn', 'redoBtn',
    'dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
     var e = $(id); if (e) e.addEventListener('click', soon);
