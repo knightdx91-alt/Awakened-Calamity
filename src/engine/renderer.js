@@ -34,6 +34,7 @@ window.GameRenderer = (function () {
 
     // Player sprite state
     let _playerImg = null;
+    let _playerMV  = null;   // MV charset meta {frame_w,frame_h,cols,rows} when using an XP/MV sprite
 
     // FPS tracking
     let _fpsFrameCount = 0;
@@ -314,7 +315,18 @@ window.GameRenderer = (function () {
         // Player
         const playerSX = (vx - vcamX) * _rt;
         const playerSY = (vy - vcamY) * _rt;
-        if (_playerImg) {
+        if (_playerImg && _playerMV) {
+            // MV charset: 3 cols (walk frames) x 4 rows (down,left,right,up).
+            const dir = _player.direction || 'down';
+            const DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+            const row = DIR_ROW[dir] !== undefined ? DIR_ROW[dir] : 0;
+            const wf  = _player.walkFrame || 0;            // 0 stand,1,2
+            const col = wf === 0 ? 1 : (wf === 1 ? 0 : 2); // middle = standing
+            const fw = _playerMV.frame_w, fh = _playerMV.frame_h;
+            const destW = _rt, destH = _rt * (fh / fw);     // keep aspect (sprites are taller)
+            ctx.drawImage(_playerImg, col * fw, row * fh, fw, fh,
+                playerSX, playerSY + _rt - destH, destW, destH);
+        } else if (_playerImg) {
             const dir = _player.direction || 'down';
             const wf  = _player.walkFrame || 0;
             const wfs = WALK_FRAMES[dir] || WALK_FRAMES.down;
@@ -391,6 +403,22 @@ window.GameRenderer = (function () {
     }
 
     function _loadPlayerImg() {
+        // An XP/MV charset chosen in the map editor (localStorage) overrides the
+        // default player sprite. Stored as {file, frame_w, frame_h, cols, rows}.
+        let ov = null;
+        try { ov = JSON.parse(localStorage.getItem('ac_player_sprite') || 'null'); } catch (e) {}
+        const img = new Image();
+        if (ov && ov.file) {
+            _playerMV = { frame_w: ov.frame_w, frame_h: ov.frame_h, cols: ov.cols, rows: ov.rows };
+            img.onload  = () => { _playerImg = img; };
+            img.onerror = () => { _playerMV = null; console.warn('[Renderer] player charset load failed; falling back'); _loadDefaultPlayer(); };
+            img.src = 'data/sprites/' + ov.file + '?b=' + (window.__BUILD__ || '0');
+        } else {
+            _loadDefaultPlayer();
+        }
+    }
+    function _loadDefaultPlayer() {
+        _playerMV = null;
         const img = new Image();
         img.onload  = () => { _playerImg = img; };
         img.onerror = () => { console.warn('[Renderer] Failed to load player sprite'); };

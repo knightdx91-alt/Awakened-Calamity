@@ -1347,9 +1347,12 @@
     clickEl('gridBtn');
     gtb.classList.toggle('active', $('gridBtn').classList.contains('active'));
   });
-  ['dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
+  ['dbBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
     var e = $(id); if (e) e.addEventListener('click', soon);
   });
+  // Repurpose the Materials (🎨) toolbar button as the character-sprite picker.
+  var matB = $('matBtn');
+  if (matB) { matB.title = 'Character Sprites'; matB.addEventListener('click', openSpriteModal); }
   $('cutBtn').addEventListener('click', cutSelection);
   $('copyBtn').addEventListener('click', copySelection);
   $('pasteBtn').addEventListener('click', pasteClipboard);
@@ -1454,6 +1457,7 @@
       ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
     ]],
     ['Tools', [
+      ['Character Sprites…', '', function () { openSpriteModal(); }],
       ['Database', '', null], ['Materials', '', null],
       ['Script editor', '', null], ['Sound test', '', null]
     ]],
@@ -2067,6 +2071,87 @@
   $('repoModalClose').addEventListener('click', function () { $('repoModal').style.display = 'none'; });
   $('repoModal').addEventListener('click', function (e) {
     if (e.target === $('repoModal')) $('repoModal').style.display = 'none';
+  });
+
+  // ── Character sprite picker (XP/MV charsets) ──
+  var _spriteIndex = null, _spriteCache = {}, _selectedSprite = null;
+  function loadSpriteIndex() {
+    if (_spriteIndex) return Promise.resolve(_spriteIndex);
+    return fetch('data/sprites/xp_index.json').then(function (r) { return r.json(); })
+      .then(function (d) { _spriteIndex = d; return d; });
+  }
+  function spriteImg(file) {
+    if (_spriteCache[file]) return _spriteCache[file];
+    var img = new Image(); img.src = 'data/sprites/' + file;
+    _spriteCache[file] = img; return img;
+  }
+  // Draw an entry's down-facing standing frame into a canvas thumbnail.
+  function drawSpriteThumb(cv, e) {
+    var img = spriteImg(e.file), cx = cv.getContext('2d');
+    cx.imageSmoothingEnabled = false;
+    var stand = 1, downRow = 0;            // MV: middle col = stand, row 0 = down
+    function paint() {
+      cx.clearRect(0, 0, cv.width, cv.height);
+      var fw = e.frame_w, fh = e.frame_h;
+      var scale = Math.min(cv.width / fw, cv.height / fh);
+      var dw = fw * scale, dh = fh * scale;
+      cx.drawImage(img, stand * fw, downRow * fh, fw, fh,
+        (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+    }
+    if (img.complete && img.naturalWidth) paint(); else img.onload = paint;
+  }
+  function renderSpriteGrid(cat) {
+    var grid = $('spriteGrid'); grid.innerHTML = '';
+    var list = _spriteIndex.sprites.filter(function (e) {
+      return cat === '(all)' || e.id.indexOf(cat) === 0;
+    });
+    list.forEach(function (e) {
+      var cell = document.createElement('div');
+      cell.style.cssText = 'width:72px; display:flex; flex-direction:column; align-items:center;' +
+        'gap:2px; cursor:pointer; padding:4px; border:1px solid transparent; border-radius:5px;';
+      var cv = document.createElement('canvas'); cv.width = 56; cv.height = 64;
+      cv.style.cssText = 'image-rendering:pixelated; background:#e8e8e8; border:1px solid var(--line2); border-radius:3px;';
+      var lab = document.createElement('span'); lab.textContent = e.id;
+      lab.style.cssText = 'font-size:10px; text-align:center; word-break:break-word; line-height:1.1;';
+      cell.appendChild(cv); cell.appendChild(lab);
+      drawSpriteThumb(cv, e);
+      cell.addEventListener('click', function () {
+        _selectedSprite = e;
+        grid.querySelectorAll('div').forEach(function (d) { d.style.borderColor = 'transparent'; d.style.background = ''; });
+        cell.style.borderColor = 'var(--accent)'; cell.style.background = 'var(--accent2)';
+        $('spriteSel').textContent = 'Selected: ' + e.id + ' (' + e.frame_w + '×' + e.frame_h + (e.single ? ', single' : ', 8-char') + ')';
+        $('setPlayerBtn').disabled = false;
+      });
+      grid.appendChild(cell);
+    });
+    if (!list.length) grid.innerHTML = '<div class="hint">No sprites in this category.</div>';
+  }
+  function openSpriteModal() {
+    $('spriteModal').style.display = 'flex';
+    loadSpriteIndex().then(function (d) {
+      var sel = $('spriteCat');
+      if (!sel._built) {
+        sel.innerHTML = '';
+        ['(all)'].concat(d.categories).forEach(function (c) {
+          var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
+        });
+        sel._built = true;
+        sel.addEventListener('change', function () { renderSpriteGrid(this.value); });
+      }
+      renderSpriteGrid(sel.value || '(all)');
+    }).catch(function (e) { $('spriteGrid').innerHTML = '<div class="hint" style="color:#c33;">Failed to load sprite index: ' + e.message + '</div>'; });
+  }
+  $('spriteModalClose').addEventListener('click', function () { $('spriteModal').style.display = 'none'; });
+  $('spriteModal').addEventListener('click', function (e) { if (e.target === $('spriteModal')) $('spriteModal').style.display = 'none'; });
+  $('setPlayerBtn').addEventListener('click', function () {
+    if (!_selectedSprite) return;
+    var e = _selectedSprite;
+    try {
+      localStorage.setItem('ac_player_sprite', JSON.stringify({
+        file: e.file, frame_w: e.frame_w, frame_h: e.frame_h, cols: e.cols, rows: e.rows, single: e.single
+      }));
+      toast('Player sprite set to ' + e.id + '. Playtest to see it.');
+    } catch (err) { toast('Could not save (storage blocked).'); }
   });
 
   // ── Boot ──
