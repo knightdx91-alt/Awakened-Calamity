@@ -31,8 +31,8 @@
     warps: [],
     selectedTile: 1,             // top-left id of the B-tab stamp
     stamp: { w: 1, h: 1, ids: [1] },   // multi-tile stamp from B tab
-    selectedTerrain: '',         // A tab
-    paletteTab: 'B',             // 'A' (auto) | 'B' (tiles)
+    selectedTerrain: '',         // autotile terrain (Auto mode)
+    autoMode: false,             // true = paint autotiles, false = raw tiles
     tool: 'pencil',              // pencil | rect | ellipse | fill | pick
     mode: 'map',                 // map | collide | warp
     eraser: false,
@@ -111,12 +111,17 @@
 
   function loadTileset(name) {
     return loadTilesetInto(L(), name).then(function () {
+      // default to autotile painting when an autotile ground sheet is selected
+      state.autoMode = state.active === 'ground' && !!L().autotile;
+      $('tilesetSel').value = name;
       updateTilesetStatus();
+      buildTilesetTabs();
       rebuildAutoPalette();
       refreshPaletteTabs();
       drawPalette();
       drawMap();
       updateSelSwatch();
+      setStampFromPalette(1, 0, 1, 0);
     });
   }
 
@@ -200,28 +205,51 @@
   var PAL_SCALE = 2;
   var PAL_COLS = 8;
 
-  function refreshPaletteTabs() {
-    var hasAuto = !!L().autotile;
-    var aTab = document.querySelector('.pal-tab[data-pal="A"]');
-    aTab.style.opacity = hasAuto ? '1' : '0.4';
-    aTab.style.pointerEvents = hasAuto ? '' : 'none';
-    if (!hasAuto && state.paletteTab === 'A') setPaletteTab('B');
-    else applyPaletteTabVisibility();
+  // Tileset tabs: one chip per official sheet (classic RM A–E feel). Each tab is
+  // its own palette; clicking it loads that tileset into the active layer.
+  var TAB_ORDER = ['ac_ground', 'ac_terrain', 'ac_terrain2', 'ac_buildings', 'ac_dungeon', 'ac_props'];
+  function tilesetTabList() {
+    var names = state._tilesetNames || [];
+    var list = TAB_ORDER.filter(function (n) { return names.indexOf(n) >= 0; });
+    var cur = L().name;
+    if (cur && list.indexOf(cur) < 0) list.push(cur);   // always show the active sheet
+    return list;
   }
-
-  function applyPaletteTabVisibility() {
-    var auto = state.paletteTab === 'A';
-    $('autoPalette').classList.toggle('show', auto);
-    paletteCanvas.style.display = auto ? 'none' : 'block';
-    document.querySelectorAll('.pal-tab').forEach(function (t) {
-      t.classList.toggle('active', t.dataset.pal === state.paletteTab);
+  function buildTilesetTabs() {
+    var strip = $('palTabs'); strip.innerHTML = '';
+    var cur = L().name;
+    tilesetTabList().forEach(function (n) {
+      var tab = document.createElement('div');
+      tab.className = 'pal-tab' + (n === cur ? ' active' : '');
+      tab.textContent = n.replace(/^ac_/, '').replace(/_/g, ' ');
+      tab.title = n;
+      tab.addEventListener('click', function () { if (n !== L().name) loadTileset(n); });
+      strip.appendChild(tab);
     });
   }
 
-  function setPaletteTab(tab) {
-    if (tab === 'A' && !L().autotile) return;
-    state.paletteTab = tab;
+  // Autotiles only paint the ground layer; the toggle is hidden otherwise.
+  function isAutoPaint() { return state.autoMode && state.active === 'ground' && !!L().autotile; }
+
+  function refreshPaletteTabs() {
+    var hasAuto = !!L().autotile && state.active === 'ground';
+    var tg = $('autoToggle');
+    tg.style.display = hasAuto ? '' : 'none';
+    if (!hasAuto) state.autoMode = false;
+    tg.classList.toggle('active', state.autoMode);
+    tg.textContent = state.autoMode ? '🌱 Auto' : '▦ Tiles';
     applyPaletteTabVisibility();
+  }
+
+  function applyPaletteTabVisibility() {
+    var auto = isAutoPaint();
+    $('autoPalette').classList.toggle('show', auto);
+    paletteCanvas.style.display = auto ? 'none' : 'block';
+  }
+
+  function setAutoMode(v) {
+    state.autoMode = v && !!L().autotile && state.active === 'ground';
+    refreshPaletteTabs();
   }
 
   function rebuildAutoPalette() {
@@ -479,10 +507,7 @@
       if (v >= 0) setStampFromPalette(v % PAL_COLS, (v / PAL_COLS) | 0, v % PAL_COLS, (v / PAL_COLS) | 0);
       return;
     }
-    if (state.paletteTab === 'A' && state.active === 'ground' && L().autotile && !state.eraser) {
-      paintTerrain(x, y);
-      return;
-    }
+    if (isAutoPaint() && !state.eraser) { paintTerrain(x, y); return; }
     stampAt(x, y);
   }
 
@@ -504,7 +529,7 @@
   // tile the stamp / single id over a rectangular or elliptical region
   function fillRegion(x0, y0, x1, y1, ellipse) {
     var layer = L();
-    var auto = state.paletteTab === 'A' && state.active === 'ground' && layer.autotile && !state.eraser;
+    var auto = isAutoPaint() && !state.eraser;
     var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     var rx = (x1 - x0) / 2 + 0.5, ry = (y1 - y0) / 2 + 0.5;
     for (var y = y0; y <= y1; y++)
@@ -721,7 +746,9 @@
       })[0] || $('tilesetSel').value;
       return loadTileset(def).then(function () { setActiveLayer(key); });
     }
+    state.autoMode = state.active === 'ground' && !!L().autotile;
     updateTilesetStatus();
+    buildTilesetTabs();
     rebuildAutoPalette();
     refreshPaletteTabs();
     drawPalette();
@@ -738,9 +765,7 @@
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, true);
   });
 
-  document.querySelectorAll('.pal-tab').forEach(function (t) {
-    t.addEventListener('click', function () { setPaletteTab(t.dataset.pal); });
-  });
+  $('autoToggle').addEventListener('click', function () { setAutoMode(!state.autoMode); });
 
   document.querySelectorAll('.tool').forEach(function (b) {
     if (!b.dataset.tool) return;
