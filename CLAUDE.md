@@ -271,6 +271,56 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     **RPG Maker XP** (warm/saturated) — `data/art/palettes/rmxp.png` started; direction not finalized.
   - Handoff doc for the design tool: `docs/CODE_SIDE_CAPABILITIES.md`. Research notes:
     `docs/TILE_CONSTRUCTION_NOTES.md`, `docs/BUILDING_TILESETS.md`, `docs/TILESHEET_CHECKLIST.md`.
+- **2026-06-15** — **Systems-decisions pass: every "Open Calls" section in the design bible RESOLVED**
+  (design-only session, no code). Walked the owner through each doc's open calls; locked each into the
+  doc. **Eight docs closed + cross-cutting reworks:**
+  - **`ENCOUNTERS.md`** — (1) down trigger = the **player** (targetable even with a creature out), not
+    party-wipe; (2) material loss on death = **everything carried** (town stash is the safe store);
+    (3) **creature death is PERMANENT** — no revive items, no Safe-Zone resurrection; (4) encounter
+    model = **Tales-of-the-World: Radiant Mythology** (visible roaming monsters with detection cones
+    that **chase**, contact = battle) + **ambush** spice; rates tune in playtest.
+  - **`PROGRESSION.md`** — XP curve already pinned; (2) **creature XP = active-only, unshared** (earns
+    only if it fought); (3) attr points/level tier-scaled; (4) **attributes reworked to a conventional
+    8-stat LitRPG set: Strength/Agility/Constitution/Intelligence/Wisdom/Perception/Charisma/Luck**
+    (Luck split out) — updated `data/systems/progression.json` (tests green); (5) **NO respec** — builds
+    permanent (propagated to `CLASSES.md`×4 + `ECONOMY.md`).
+  - **`CRAFTING.md`** — **capturing is class/Shop-gated** (Tamer line innate, else buy Bind from Shop;
+    Tether is just the tool); recipes **expand like the class system** (tiered Basic→Legendary lineages,
+    branching, discovery — "a lot"); gear **durability = items wear & BREAK**, DIY-or-pay-NPC repair,
+    soft repair cap; gear slots **player 6 (incl. hazard slot) / creature 2**; node density scales
+    inversely with depth.
+  - **`ECONOMY.md`** — rep from **all sources** (bounties+discoveries+donations+story); catalog is
+    **price-gated, NOT rep-gated** (full Legendary catalog visible from start, affordability is the
+    wall; rep drives price+class access); class cost = super-linear Cr + escalating gates, **nothing in
+    shops is free**; per-town rep + **fractional bleed along faction lines**.
+  - **`TRAVERSAL.md`** — creature field-utility **passive** (always-on if in party, no exposure); keep
+    **6 capabilities**; **gates SOFT by default** — reward ingenuity / multiple solution paths /
+    cleverness is "special" (taming never required).
+  - **`WEATHER.md`** — weather-only now (**seasons saved as a later option** on a compressed calendar —
+    real-time-clock pacing flagged to revisit); forecast = **Skyguard guild service**; battle swing
+    **small (~10–15%)** so weather's real weight is the survival/Exposure side.
+  - **`LIVING_WORLD.md`** — traveler roster locked at **~50 named roamers** (make them distinct); pin
+    list stays per-quest authoring (rule already set).
+  - **`MAP_STREAMING.md`** — **prototype-scoped** (moot for 3D): ring depth **2** (full 3×3, seamless
+    incl. corners), scene-based sea travel, instant indoor fade, cinematic boats.
+  - **Cross-cutting:** **"era" framing purged game-wide** (Pokémon-prototype holdover) — kept the
+    T1–T4 **tier bands**, renamed "level/depth tiers" (reworded across PROGRESSION/WORLD/ECONOMY/
+    CRAFTING). **`DESIGN.md` reframed:** Tempo+Intervention is the **2D prototype's** combat; the **3D
+    target = class-driven ACTION combat with the Intervention layer carried over** (the headline
+    original mechanic, combat-model-agnostic). **Bind reframed as a class subsystem, NOT a headline
+    pillar** — game positioned as a **System-horror LitRPG action-survival RPG**, not a creature
+    collector. Added **creature-origin lore**: bonded creatures *are* the world's monsters — System
+    onlining **mutated native fauna** (giant ant / fire salamander / dire wolf, overworld) + **pulled
+    otherworld creatures** into dungeons (bipedal night-lizards); **bond-what-you-fight** flow (find →
+    fight → attempt Bond before the kill → if it accepts, it's yours), tied to the Overflow loop.
+  - **Emergent identity:** every decision points one way — **permanence & earned weight** (permadeath
+    creatures, breakable gear, no respec, nothing free, choices you live with) under the System-horror
+    hook. **Reviewer take (recorded in chat):** strong original hook in a hot (LitRPG) lane; works as a
+    **3D single-player / small co-op** game; **does NOT scale to a themepark MMO** (personal
+    System-horror dilutes); the one real risk is **content VOLUME**, not the design.
+  - **Spawned (designed-not-built, deserve own docs):** **`CRAFT_DISCOVERY.md`** (recipe
+    experimentation/discovery layer, mirrors `CLASS_GENERATION.md`) + a **3D per-class action-combat
+    model** doc. **Next:** owner to direct (vertical slice, a new doc, or content).
 
 ## ⏳ PENDING (next session) — World Area Bible (spec LOCKED, approved, NOT started)
 Goal: a **complete, exhaustively-named** area catalog — every enterable building named + its owner
