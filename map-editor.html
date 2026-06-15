@@ -3,59 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Map Editor — Pokémon Game</title>
+<title>Map Editor — Awakened Calamity</title>
 <style>
-  :root { --bg:#1b1f2a; --panel:#252b3a; --panel2:#2e3547; --accent:#18b8c8; --text:#cdd6e6; --dim:#8b97ad; --line:#3a4256; }
+  /* RPG Maker MZ-style light theme */
+  :root {
+    --win:#e4e4e4; --panel:#f0f0f0; --panel2:#e8e8e8; --toolbar:#ededed;
+    --line:#a8a8a8; --line2:#c4c4c4; --text:#202020; --dim:#606060;
+    --accent:#3a7bd5; --accent2:#cfe0f6; --sel:#ff3030;
+    --tab:#dcdcdc; --tabActive:#f0f0f0; --btn:#f6f6f6; --btnH:#e2ecfb;
+  }
   * { box-sizing: border-box; }
-  html,body { margin:0; height:100%; background:#1b1f2a; color:#cdd6e6;
-    font-family: "Segoe UI", system-ui, sans-serif; font-size:13px; }
+  html,body { margin:0; height:100%; background:var(--win); color:var(--text);
+    font-family:"Segoe UI", Tahoma, system-ui, sans-serif; font-size:12px; }
   body { display:flex; flex-direction:column; overflow:hidden; }
 
-  #topbar { display:flex; align-items:center; gap:10px; padding:6px 10px;
-    background:#252b3a; border-bottom:1px solid #3a4256; flex-wrap:wrap; }
-  #topbar .group { display:flex; align-items:center; gap:5px; }
-  #topbar .sep { width:1px; height:22px; background:#3a4256; margin:0 4px; }
-  h1 { font-size:14px; margin:0 8px 0 0; color:#18b8c8; font-weight:700; letter-spacing:.5px; }
-  button, select, input { font-family:inherit; font-size:12px; color:#cdd6e6;
-    background:#2e3547; border:1px solid #404a60; border-radius:4px; padding:4px 8px; }
+  /* ── Toolbar ── */
+  #topbar { display:flex; align-items:center; gap:6px; padding:4px 8px;
+    background:linear-gradient(#f4f4f4,#e6e6e6); border-bottom:1px solid var(--line);
+    flex-wrap:wrap; }
+  #topbar .group { display:flex; align-items:center; gap:3px; }
+  #topbar .sep { width:1px; height:22px; background:var(--line2); margin:0 3px; }
+  h1 { font-size:13px; margin:0 8px 0 2px; color:#2b4a7a; font-weight:700; letter-spacing:.3px; }
+  button, select, input { font-family:inherit; font-size:12px; color:var(--text);
+    background:var(--btn); border:1px solid var(--line); border-radius:3px; padding:3px 7px; }
   button { cursor:pointer; }
-  button:hover { background:#39425a; }
-  button.active { background:#18b8c8; color:#08222a; border-color:#18b8c8; font-weight:600; }
-  input[type=number] { width:54px; }
+  button:hover { background:var(--btnH); }
+  button.active { background:var(--accent); color:#fff; border-color:#2c63ad; font-weight:600; }
+  button.tool { min-width:30px; font-size:14px; padding:3px 6px; }
+  input[type=number] { width:50px; }
   input[type=text] { width:130px; }
-  label.lbl { color:#8b97ad; }
+  label.lbl { color:var(--dim); }
+  select { padding:3px 4px; }
 
+  /* ── Main 3-pane layout ── */
   #main { flex:1; display:flex; min-height:0; }
-  #palettePanel { width:300px; background:#252b3a; border-right:1px solid #3a4256;
-    display:flex; flex-direction:column; min-height:0; }
-  #paletteHead { padding:6px 8px; border-bottom:1px solid #3a4256; display:flex;
-    align-items:center; gap:6px; flex-wrap:wrap; }
-  #paletteWrap { flex:1; overflow:auto; padding:6px; }
-  #paletteCanvas { display:block; image-rendering:pixelated; cursor:crosshair; }
 
-  #canvasPanel { flex:1; overflow:auto; background:#11141c;
-    background-image:linear-gradient(45deg,#161a24 25%,transparent 25%),
-      linear-gradient(-45deg,#161a24 25%,transparent 25%),
-      linear-gradient(45deg,transparent 75%,#161a24 75%),
-      linear-gradient(-45deg,transparent 75%,#161a24 75%);
+  /* Left: map tree + palette */
+  #leftCol { width:230px; min-width:230px; background:var(--panel);
+    border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  #treePanel { border-bottom:1px solid var(--line); display:flex; flex-direction:column;
+    max-height:160px; }
+  #treeHead, #palHeadLbl { padding:4px 8px; font-size:11px; font-weight:700; color:#2b4a7a;
+    background:linear-gradient(#eaeaea,#dedede); border-bottom:1px solid var(--line2);
+    text-transform:uppercase; letter-spacing:.4px; }
+  #mapTree { overflow:auto; padding:3px; flex:1; }
+  .tree-item { padding:3px 8px; font-size:12px; border-radius:3px; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tree-item:hover { background:var(--btnH); }
+  .tree-item.active { background:var(--accent); color:#fff; }
+  .tree-region { padding:4px 6px 2px; font-size:10px; color:var(--dim);
+    text-transform:uppercase; letter-spacing:.4px; }
+
+  #palettePanel { flex:1; display:flex; flex-direction:column; min-height:0; }
+  #palToolRow { padding:4px 6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line2); background:var(--panel2); }
+  #palTabs { display:flex; gap:0; padding:4px 6px 0; background:var(--panel2); }
+  .pal-tab { padding:4px 12px; font-size:11px; font-weight:600; cursor:pointer;
+    background:var(--tab); border:1px solid var(--line); border-bottom:none;
+    border-radius:5px 5px 0 0; color:var(--dim); margin-right:2px; }
+  .pal-tab.active { background:var(--tabActive); color:#2b4a7a; position:relative; top:1px;
+    border-bottom:1px solid var(--tabActive); }
+  #paletteHead { padding:3px 8px; border-bottom:1px solid var(--line2); display:flex;
+    align-items:center; gap:6px; flex-wrap:wrap; background:var(--panel2); }
+  #paletteWrap { flex:1; overflow:auto; padding:4px; background:#fafafa; }
+  #paletteCanvas { display:block; image-rendering:pixelated; cursor:crosshair; }
+  #autoPalette { display:none; padding:6px; gap:6px; flex-wrap:wrap; }
+  #autoPalette.show { display:flex; }
+  .auto-swatch { width:64px; display:flex; flex-direction:column; align-items:center;
+    gap:2px; cursor:pointer; padding:4px; border:1px solid transparent; border-radius:4px; }
+  .auto-swatch:hover { background:var(--btnH); }
+  .auto-swatch.active { background:var(--accent2); border-color:var(--accent); }
+  .auto-swatch canvas { image-rendering:pixelated; border:1px solid var(--line2); }
+  .auto-swatch span { font-size:10px; color:var(--text); text-align:center; word-break:break-word; }
+
+  /* Center: map canvas */
+  #canvasPanel { flex:1; overflow:auto; background:#8a8a8a;
+    background-image:linear-gradient(45deg,#7e7e7e 25%,transparent 25%),
+      linear-gradient(-45deg,#7e7e7e 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#7e7e7e 75%),
+      linear-gradient(-45deg,transparent 75%,#7e7e7e 75%);
     background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0px;
     position:relative; }
-  #mapCanvas { image-rendering:pixelated; display:block; margin:20px; cursor:crosshair;
-    box-shadow:0 0 0 1px #000, 0 6px 24px rgba(0,0,0,.5); background:#000; }
+  #mapCanvas { image-rendering:pixelated; display:block; margin:16px; cursor:crosshair;
+    box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; }
 
-  #sidePanel { width:240px; background:#252b3a; border-left:1px solid #3a4256;
-    padding:10px; overflow:auto; display:flex; flex-direction:column; gap:12px; }
-  .card { background:#2e3547; border:1px solid #3a4256; border-radius:6px; padding:8px; }
-  .card h3 { margin:0 0 6px; font-size:11px; text-transform:uppercase;
-    letter-spacing:.6px; color:#18b8c8; }
+  /* Right: inspector */
+  #sidePanel { width:226px; min-width:226px; background:var(--panel);
+    border-left:1px solid var(--line); padding:8px; overflow:auto;
+    display:flex; flex-direction:column; gap:10px; }
+  .card { background:#fafafa; border:1px solid var(--line2); border-radius:5px; padding:7px; }
+  .card h3 { margin:0 0 6px; font-size:10px; text-transform:uppercase;
+    letter-spacing:.5px; color:#2b4a7a; }
   .row { display:flex; align-items:center; gap:6px; margin:4px 0; flex-wrap:wrap; }
-  .swatch { width:40px; height:40px; image-rendering:pixelated; border:1px solid #404a60;
-    border-radius:4px; background:#000; }
-  #statusbar { padding:4px 10px; background:#252b3a; border-top:1px solid #3a4256;
-    color:#8b97ad; font-size:11px; display:flex; gap:18px; }
-  .hint { color:#8b97ad; font-size:11px; line-height:1.5; }
-  .warp-item { font-size:11px; padding:3px 5px; background:#222838; border-radius:4px;
-    margin:3px 0; display:flex; justify-content:space-between; gap:6px; }
+  .swatch { width:40px; height:40px; image-rendering:pixelated; border:1px solid var(--line);
+    border-radius:3px; background:#000; }
+  #statusbar { padding:3px 10px; background:linear-gradient(#ececec,#dedede);
+    border-top:1px solid var(--line); color:var(--dim); font-size:11px; display:flex; gap:18px; }
+  .hint { color:var(--dim); font-size:11px; line-height:1.5; }
+  .warp-item { font-size:11px; padding:3px 5px; background:#eef1f6; border:1px solid var(--line2);
+    border-radius:4px; margin:3px 0; display:flex; justify-content:space-between; gap:6px; }
   .warp-item button { padding:1px 5px; font-size:11px; }
 </style>
 </head>
@@ -63,36 +109,37 @@
   <div id="topbar">
     <h1>MAP EDITOR</h1>
     <div class="group">
-      <label class="lbl">Tileset</label>
-      <select id="tilesetSel"></select>
+      <label class="lbl">W</label><input type="number" id="mapW" value="20" min="1" max="200">
+      <label class="lbl">H</label><input type="number" id="mapH" value="18" min="1" max="200">
+      <button id="newBtn" title="New map">New</button>
+      <button id="resizeBtn" title="Resize keeping content">Resize</button>
     </div>
     <div class="sep"></div>
     <div class="group">
-      <label class="lbl">W</label><input type="number" id="mapW" value="20" min="1" max="200">
-      <label class="lbl">H</label><input type="number" id="mapH" value="18" min="1" max="200">
-      <button id="newBtn">New</button>
-      <button id="resizeBtn">Resize</button>
+      <label class="lbl">Layer</label>
+      <select id="layerSel">
+        <option value="ground">Ground</option>
+        <option value="overlay">Overlay</option>
+      </select>
+    </div>
+    <div class="sep"></div>
+    <div class="group" id="modeGroup">
+      <button data-mode="map" class="mode active" title="Tile mode">▦ Map</button>
+      <button data-mode="collide" class="mode" title="Passage / collision">⛔ Collision</button>
+      <button data-mode="warp" class="mode" title="Place warps">🚪 Warp</button>
     </div>
     <div class="sep"></div>
     <div class="group" id="toolGroup">
-      <button data-tool="pencil" class="tool active">✏ Pencil</button>
-      <button data-tool="fill" class="tool">🪣 Fill</button>
-      <button data-tool="rect" class="tool">▭ Rect</button>
-      <button data-tool="pick" class="tool">⛏ Pick</button>
+      <button data-tool="pencil" class="tool active" title="Pencil">✏</button>
+      <button data-tool="rect" class="tool" title="Rectangle">▭</button>
+      <button data-tool="ellipse" class="tool" title="Ellipse">◯</button>
+      <button data-tool="fill" class="tool" title="Flood fill">🪣</button>
+      <button data-tool="pick" class="tool" title="Pick (eyedropper)">⛏</button>
+      <button id="eraserBtn" class="tool" title="Eraser (paint empty)">⌫</button>
     </div>
     <div class="sep"></div>
     <div class="group">
-      <button id="collideBtn">⛔ Collision</button>
-      <button id="warpBtn">🚪 Warp</button>
-      <button id="gridBtn" class="active">▦ Grid</button>
-    </div>
-    <div class="sep"></div>
-    <div class="group" id="terrainGroup" style="display:none">
-      <button id="terrainBtn" title="Auto-tile terrain brush (smooths edges)">🌱 Terrain</button>
-      <select id="terrainSel"></select>
-    </div>
-    <div class="sep"></div>
-    <div class="group">
+      <button id="gridBtn" class="active" title="Toggle grid">▦ Grid</button>
       <label class="lbl">Zoom</label>
       <button id="zoomOut">−</button><span id="zoomLabel">2×</span><button id="zoomIn">+</button>
     </div>
@@ -100,29 +147,47 @@
     <div class="group">
       <button id="importBtn">Import…</button>
       <button id="exportBtn">Export ⬇</button>
-      <button id="repoSaveBtn" title="Commit this map to the 'maps' branch on GitHub">☁ Save to repo</button>
-      <button id="repoLoadBtn" title="Open a map saved on the 'maps' branch">☁ Load from repo</button>
+      <button id="repoSaveBtn" title="Commit this map to the 'maps' branch on GitHub">☁ Save</button>
+      <button id="repoLoadBtn" title="Open a map saved on the 'maps' branch">☁ Load</button>
       <input type="file" id="importFile" accept=".json" style="display:none">
     </div>
   </div>
 
   <div id="main">
-    <div id="palettePanel">
-      <div id="paletteHead">
-        <strong>Metatiles</strong>
-        <label class="lbl">Jump to ID</label><input type="number" id="paletteJump" min="0" style="width:64px">
-        <span class="lbl" id="paletteCount"></span>
+    <!-- Left: map tree + tabbed palette -->
+    <div id="leftCol">
+      <div id="treePanel">
+        <div id="treeHead">Maps</div>
+        <div id="mapTree"><div class="hint" style="padding:6px;">Loading…</div></div>
       </div>
-      <div id="paletteWrap"><canvas id="paletteCanvas"></canvas></div>
+      <div id="palettePanel">
+        <div id="palHeadLbl">Tileset</div>
+        <div id="palToolRow">
+          <select id="tilesetSel" style="flex:1; min-width:0;"></select>
+        </div>
+        <div id="palTabs">
+          <div class="pal-tab" data-pal="A">A · Auto</div>
+          <div class="pal-tab active" data-pal="B">B · Tiles</div>
+        </div>
+        <div id="paletteHead">
+          <label class="lbl">Jump</label><input type="number" id="paletteJump" min="0" style="width:54px">
+          <span class="lbl" id="paletteCount"></span>
+        </div>
+        <div id="paletteWrap">
+          <canvas id="paletteCanvas"></canvas>
+          <div id="autoPalette"></div>
+        </div>
+      </div>
     </div>
 
     <div id="canvasPanel">
       <canvas id="mapCanvas"></canvas>
     </div>
 
+    <!-- Right: inspector -->
     <div id="sidePanel">
       <div class="card">
-        <h3>Selected tile</h3>
+        <h3>Selection</h3>
         <div class="row">
           <canvas class="swatch" id="selSwatch" width="16" height="16"></canvas>
           <div><div>ID: <strong id="selId">1</strong></div>
@@ -135,8 +200,7 @@
         <div class="row"><label class="lbl">Name</label><input type="text" id="mapName" value="NewMap"></div>
         <div class="row"><label class="lbl">Region</label>
           <select id="mapRegion">
-            <option>kanto</option><option>johto</option><option>hoenn</option>
-            <option>sinnoh</option><option selected>custom</option>
+            <option selected>awakened</option><option>custom</option>
           </select></div>
         <div class="row"><label class="lbl">Layout ID</label><input type="text" id="layoutId" value="LAYOUT_NEW_MAP"></div>
       </div>
@@ -144,18 +208,17 @@
       <div class="card">
         <h3>Warps <span class="lbl" id="warpHint"></span></h3>
         <div id="warpList"></div>
-        <div class="hint">Toggle 🚪 Warp, then click a tile to add. Set its destination here.</div>
+        <div class="hint">Warp mode, then click a tile to add. Set destination here.</div>
       </div>
 
       <div class="card">
         <h3>How to use</h3>
         <div class="hint">
-          • Pick a tileset, set W/H, hit <b>New</b>.<br>
-          • Click a metatile in the left palette, then paint on the map.<br>
-          • <b>Fill</b> = bucket. <b>Rect</b> = drag a rectangle. <b>Pick</b> = eyedrop a tile.<br>
-          • <b>Collision</b> mode: paint red = blocked, click again to clear.<br>
-          • <b>Export</b> downloads <code>&lt;layout&gt;.json</code> + <code>&lt;map&gt;.json</code>.<br>
-          • <b>Import</b> a layout JSON to keep editing it.
+          • <b>A · Auto</b> = autotile terrains (edges blend as you paint).<br>
+          • <b>B · Tiles</b> = raw tiles. <b>Drag</b> a box in the palette to grab a multi-tile stamp.<br>
+          • <b>Layer</b>: paint Ground then Overlay (buildings/props). Other layer dims.<br>
+          • Tools: Pencil / Rect / Ellipse / Fill / Pick / Eraser.<br>
+          • <b>Export</b> writes <code>&lt;layout&gt;.json</code> + <code>&lt;map&gt;.json</code>.
         </div>
       </div>
     </div>
@@ -166,17 +229,18 @@
     <span id="statTile">—</span>
     <span id="statSize">—</span>
     <span id="statTileset">—</span>
+    <span id="statLayer">—</span>
   </div>
 
   <!-- Repo map picker -->
   <div id="repoModal" style="display:none; position:fixed; inset:0; z-index:50;
-      background:rgba(0,0,0,.6); align-items:center; justify-content:center;">
-    <div style="width:420px; max-width:92vw; max-height:80vh; background:#252b3a;
-        border:1px solid #3a4256; border-radius:10px; display:flex; flex-direction:column;
-        box-shadow:0 12px 40px rgba(0,0,0,.6);">
-      <div style="padding:12px 14px; border-bottom:1px solid #3a4256; display:flex;
+      background:rgba(0,0,0,.45); align-items:center; justify-content:center;">
+    <div style="width:420px; max-width:92vw; max-height:80vh; background:var(--panel);
+        border:1px solid var(--line); border-radius:8px; display:flex; flex-direction:column;
+        box-shadow:0 12px 40px rgba(0,0,0,.4);">
+      <div style="padding:10px 14px; border-bottom:1px solid var(--line); display:flex;
           align-items:center; justify-content:space-between;">
-        <strong style="color:#18b8c8;">Load map from repo</strong>
+        <strong style="color:#2b4a7a;">Load map from repo</strong>
         <button id="repoModalClose">✕</button>
       </div>
       <div id="repoModalBody" style="padding:10px 12px; overflow:auto; flex:1;">

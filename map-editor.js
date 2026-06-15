@@ -1,49 +1,55 @@
-/* Map Editor — paint authentic GBA metatiles onto a grid and export the
- * layout + map JSON the game already understands.
+/* Map Editor — RPG Maker MZ-style metatile editor.
  *
- * Layout format (matches data/layouts/*.json):
- *   { id, width, height, primary_tileset, secondary_tileset, tileset,
- *     metatiles:[ids...], collision:[0|1...] }
+ * Reshaped to behave like RM's editor: tabbed tile palette (A = autotiles,
+ * B = raw tiles with multi-tile drag-select stamps), two paint layers
+ * (Ground + Overlay), and autotile-on-paint (the A tab blends edges live).
+ *
+ * Layout format (matches data/layouts/*.json), engine reads these fields:
+ *   { id, width, height, tileset, metatiles:[ids...], collision:[0|1...],
+ *     terrain:[names...]              // author-time autotile source (engine ignores)
+ *     overlay_tileset, overlay:[ids... | -1] }   // optional second layer
  * Map format (matches data/maps/<region>/*.json):
- *   { id, name, region, layout, music, weather, map_type, ...,
- *     connections, npcs, warps, triggers, signs }
+ *   { id, name, region, layout, ..., connections, npcs, warps, triggers, signs }
  */
 (function () {
   'use strict';
 
   var DT = 16;                 // DISPLAY metatile px (on-screen cell, tileset-independent)
   var META_PER_ROW = 16;       // fallback metatiles-per-row
-  // SOURCE geometry is read per-tileset from its meta (RMMZ packs are 48px):
-  function srcTile() { return (state.tilesetMeta && state.tilesetMeta.tile) || 16; }
-  function perRow()  { return (state.tilesetMeta && state.tilesetMeta.metatiles_per_row) || META_PER_ROW; }
   var $ = function (id) { return document.getElementById(id); };
 
-  // ── Editor state ──
+  // ── Per-layer record. SOURCE geometry (tile px / per-row) is read from meta. ──
+  function newLayer(fill) {
+    return { name: null, img: null, meta: null, autotile: null,
+             data: null, collision: null, terrain: null, fill: fill };
+  }
+
   var state = {
-    tilesetName: null,
-    tilesetImg: null,
-    tilesetMeta: null,         // { total_metatiles, behaviors, collisions, ... }
+    layers: { ground: newLayer(1), overlay: newLayer(-1) },
+    active: 'ground',
     width: 20, height: 18,
-    metatiles: null,           // Int32Array width*height
-    collision: null,           // Uint8Array width*height
-    warps: [],                 // [{x,y,dest_map,dest_warp_id}]
-    selectedTile: 1,
-    tool: 'pencil',            // pencil | fill | rect | pick
-    collisionMode: false,
-    warpMode: false,
-    autotile: null,            // parsed <tileset>.autotile.json or null
-    terrain: null,             // Array(width*height) of terrain name or '' (base)
-    terrainMode: false,
-    currentTerrain: '',        // '' = erase to base, else a terrain key
+    warps: [],
+    selectedTile: 1,             // top-left id of the B-tab stamp
+    stamp: { w: 1, h: 1, ids: [1] },   // multi-tile stamp from B tab
+    selectedTerrain: '',         // A tab
+    paletteTab: 'B',             // 'A' (auto) | 'B' (tiles)
+    tool: 'pencil',              // pencil | rect | ellipse | fill | pick
+    mode: 'map',                 // map | collide | warp
+    eraser: false,
     showGrid: true,
     zoom: 2
   };
 
-  // ── Tileset loading ──
+  function L() { return state.layers[state.active]; }
+  function srcTile(layer) { layer = layer || L(); return (layer.meta && layer.meta.tile) || 16; }
+  function perRow(layer)  { layer = layer || L(); return (layer.meta && layer.meta.metatiles_per_row) || META_PER_ROW; }
+
+  // ── Tileset loading (into the ACTIVE layer) ──
   function loadTilesetList() {
     return fetch('data/tilesets/_index.json')
       .then(function (r) { return r.json(); })
       .then(function (names) {
+        state._tilesetNames = names;
         var sel = $('tilesetSel');
         sel.innerHTML = '';
         names.forEach(function (n) {
@@ -51,14 +57,14 @@
           o.value = n; o.textContent = n;
           sel.appendChild(o);
         });
-        // default to a friendly outdoor set if present
-        var pref = names.indexOf('pallet_town') >= 0 ? 'pallet_town' : names[0];
+        var pref = names.indexOf('ac_ground') >= 0 ? 'ac_ground' : names[0];
         sel.value = pref;
         return loadTileset(pref);
       });
   }
 
-  function loadTileset(name) {
+  // Load a tileset's png + json (+ optional autotile.json) into a layer.
+  function loadTilesetInto(layer, name) {
     return Promise.all([
       fetch('data/tilesets/' + name + '.json').then(function (r) { return r.json(); }),
       new Promise(function (res, rej) {
@@ -66,130 +72,176 @@
         img.onload = function () { res(img); };
         img.onerror = rej;
         img.src = 'data/tilesets/' + name + '.png';
-      })
+      }),
+      fetch('data/tilesets/' + name + '.autotile.json')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
     ]).then(function (parts) {
-      state.tilesetName = name;
-      state.tilesetMeta = parts[0];
-      state.tilesetImg = parts[1];
-      $('statTileset').textContent = 'Tileset: ' + name +
-        ' (' + (state.tilesetMeta.total_metatiles || '?') + ' metatiles)';
+      layer.name = name;
+      layer.meta = parts[0];
+      layer.img = parts[1];
+      layer.autotile = (parts[2] && parts[2].terrains) ? parts[2] : null;
+      return layer;
+    });
+  }
+
+  function loadTileset(name) {
+    return loadTilesetInto(L(), name).then(function () {
+      updateTilesetStatus();
+      rebuildAutoPalette();
+      refreshPaletteTabs();
       drawPalette();
       drawMap();
       updateSelSwatch();
-      // optional autotile config for this tileset
-      return fetch('data/tilesets/' + name + '.autotile.json')
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .catch(function () { return null; })
-        .then(function (cfg) { applyAutotileConfig(cfg); });
     });
   }
 
-  // ── Autotiler (author-time, 4-bit edge blob) ──
-  function applyAutotileConfig(cfg) {
-    state.autotile = cfg && cfg.terrains ? cfg : null;
-    var group = $('terrainGroup'), sel = $('terrainSel');
-    if (!state.autotile) {
-      group.style.display = 'none';
-      state.terrainMode = false; $('terrainBtn').classList.remove('active');
-      return;
-    }
-    group.style.display = '';
-    sel.innerHTML = '';
-    var keys = Object.keys(state.autotile.terrains);
-    keys.forEach(function (k) {
-      var o = document.createElement('option'); o.value = k; o.textContent = k;
-      sel.appendChild(o);
-    });
-    var er = document.createElement('option'); er.value = ''; er.textContent = '(erase)';
-    sel.appendChild(er);
-    state.currentTerrain = keys[0] || '';
-    sel.value = state.currentTerrain;
+  function updateTilesetStatus() {
+    var layer = L();
+    $('statTileset').textContent = 'Tileset: ' + (layer.name || '—') +
+      ' (' + (totalMetatiles(layer) || '?') + ')';
+    $('statLayer').textContent = 'Layer: ' + state.active;
   }
 
-  // recompute the baked metatile/collision for a single terrain cell
+  function totalMetatiles(layer) {
+    layer = layer || L();
+    if (layer.meta && layer.meta.total_metatiles) return layer.meta.total_metatiles;
+    if (!layer.img) return 0;
+    var st = srcTile(layer);
+    return Math.floor((layer.img.width / st) * (layer.img.height / st));
+  }
+
+  // ── Autotiler (author-time edge blob, ground layer) ──
   function recomputeTerrainCell(x, y) {
-    if (!state.autotile) return;
+    var layer = state.layers.ground;
+    if (!layer.autotile) return;
     var i = idx(x, y);
-    var name = state.terrain[i];
-    if (!name) {                                  // base cell -> grass fill
-      var fills = state.autotile.fills || {};
-      if (fills.grass != null) {
-        state.metatiles[i] = fills.grass; state.collision[i] = 0;
-      }
+    var name = layer.terrain[i];
+    if (!name) {                                  // base cell -> default fill
+      var fills = layer.autotile.fills || {};
+      var baseKey = (layer.autotile.priority && layer.autotile.priority[0]) || 'grass';
+      if (fills[baseKey] != null) { layer.data[i] = fills[baseKey]; layer.collision[i] = 0; }
       return;
     }
-    var info = state.autotile.terrains[name];
+    var info = layer.autotile.terrains[name];
     if (!info) return;
-    // Priority order (low->high). Unpainted/'' counts as the base ('grass').
-    var prio = state.autotile.priority || null;
+    var prio = layer.autotile.priority || null;
+    var baseKey = (prio && prio[0]) || 'grass';
     var prioOf = function (t) {
       if (!prio) return 0;
-      var p = prio.indexOf(t || 'grass');
+      var p = prio.indexOf(t || baseKey);
       return p < 0 ? 0 : p;
     };
     var myP = prioOf(name);
     var terrAt = function (nx, ny) {
-      return inBounds(nx, ny) ? (state.terrain[idx(nx, ny)] || 'grass') : 'grass';
+      return inBounds(nx, ny) ? (layer.terrain[idx(nx, ny)] || baseKey) : baseKey;
     };
-    // Higher-priority neighbours count as "same": this terrain extends under them.
     var same = function (nx, ny) {
       var t = terrAt(nx, ny);
       return t === name || (prio && prioOf(t) > myP);
     };
-    if (state.autotile.scheme === 'wang8_lut' && (info.luts || info.lut)) {
-      // 8-direction mask: top,TR,right,BR,bottom,BL,left,TL
+    if (layer.autotile.scheme === 'wang8_lut' && (info.luts || info.lut)) {
       var m8 = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y - 1) ? 2 : 0) |
                (same(x + 1, y) ? 4 : 0) | (same(x + 1, y + 1) ? 8 : 0) |
                (same(x, y + 1) ? 16 : 0) | (same(x - 1, y + 1) ? 32 : 0) |
                (same(x - 1, y) ? 64 : 0) | (same(x - 1, y - 1) ? 128 : 0);
       var lut = info.lut;
       if (info.luts) {
-        // Edge art: blend against the highest-priority LOWER neighbour present.
-        var baseName = 'grass', baseP = -1;
+        var bName = baseKey, bP = -1;
         for (var dy = -1; dy <= 1; dy++)
           for (var dx = -1; dx <= 1; dx++) {
             if (!dx && !dy) continue;
             var t2 = terrAt(x + dx, y + dy), p2 = prioOf(t2);
-            if (t2 !== name && p2 < myP && p2 > baseP && info.luts[t2]) {
-              baseP = p2; baseName = t2;
-            }
+            if (t2 !== name && p2 < myP && p2 > bP && info.luts[t2]) { bP = p2; bName = t2; }
           }
-        lut = info.luts[baseName] || info.luts.grass || info.lut;
+        lut = info.luts[bName] || info.luts[baseKey] || info.lut;
       }
-      state.metatiles[i] = lut[m8];
+      layer.data[i] = lut[m8];
     } else {
-      // 4-bit edge blob: N,E,S,W
       var mask = (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0) |
                  (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
-      state.metatiles[i] = info.base_index + mask;
+      layer.data[i] = info.base_index + mask;
     }
-    state.collision[i] = info.collision ? 1 : 0;
+    layer.collision[i] = info.collision ? 1 : 0;
   }
 
-  // recompute a cell and its 8 neighbours (Wang edges depend on diagonals too)
   function recomputeTerrainAround(x, y) {
     for (var dy = -1; dy <= 1; dy++)
       for (var dx = -1; dx <= 1; dx++) recomputeTerrainCell(x + dx, y + dy);
   }
 
-  function totalMetatiles() {
-    if (state.tilesetMeta && state.tilesetMeta.total_metatiles)
-      return state.tilesetMeta.total_metatiles;
-    if (!state.tilesetImg) return 0;
-    var cols = state.tilesetImg.width / srcTile();
-    var rows = state.tilesetImg.height / srcTile();
-    return Math.floor(cols * rows);
-  }
-
-  // ── Palette rendering ──
+  // ── Palette: A (autotiles) + B (raw tiles) ──
   var paletteCanvas = $('paletteCanvas');
   var pctx = paletteCanvas.getContext('2d');
   var PAL_SCALE = 2;
   var PAL_COLS = 8;
 
+  function refreshPaletteTabs() {
+    var hasAuto = !!L().autotile;
+    var aTab = document.querySelector('.pal-tab[data-pal="A"]');
+    aTab.style.opacity = hasAuto ? '1' : '0.4';
+    aTab.style.pointerEvents = hasAuto ? '' : 'none';
+    if (!hasAuto && state.paletteTab === 'A') setPaletteTab('B');
+    else applyPaletteTabVisibility();
+  }
+
+  function applyPaletteTabVisibility() {
+    var auto = state.paletteTab === 'A';
+    $('autoPalette').classList.toggle('show', auto);
+    paletteCanvas.style.display = auto ? 'none' : 'block';
+    document.querySelectorAll('.pal-tab').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.pal === state.paletteTab);
+    });
+  }
+
+  function setPaletteTab(tab) {
+    if (tab === 'A' && !L().autotile) return;
+    state.paletteTab = tab;
+    applyPaletteTabVisibility();
+  }
+
+  function rebuildAutoPalette() {
+    var wrap = $('autoPalette');
+    wrap.innerHTML = '';
+    var layer = L();
+    if (!layer.autotile) return;
+    var keys = Object.keys(layer.autotile.terrains);
+    // erase swatch first
+    keys.unshift('');
+    keys.forEach(function (k) {
+      var sw = document.createElement('div');
+      sw.className = 'auto-swatch' + (k === state.selectedTerrain ? ' active' : '');
+      var c = document.createElement('canvas');
+      c.width = c.height = 32;
+      var cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
+      if (k === '') {
+        cx.fillStyle = '#ddd'; cx.fillRect(0, 0, 32, 32);
+        cx.strokeStyle = '#c33'; cx.lineWidth = 2;
+        cx.beginPath(); cx.moveTo(6, 6); cx.lineTo(26, 26); cx.moveTo(26, 6); cx.lineTo(6, 26); cx.stroke();
+      } else {
+        var info = layer.autotile.terrains[k];
+        var fillId = (layer.autotile.fills && layer.autotile.fills[k] != null)
+          ? layer.autotile.fills[k]
+          : (info.lut ? info.lut[255] : (info.base_index || 0));
+        blitMeta(cx, layer, fillId, 0, 0, 32);
+      }
+      var label = document.createElement('span');
+      label.textContent = k === '' ? '(erase)' : k;
+      sw.appendChild(c); sw.appendChild(label);
+      sw.addEventListener('click', function () {
+        state.selectedTerrain = k;
+        document.querySelectorAll('.auto-swatch').forEach(function (s) { s.classList.remove('active'); });
+        sw.classList.add('active');
+      });
+      wrap.appendChild(sw);
+    });
+    if (keys.indexOf(state.selectedTerrain) < 0) state.selectedTerrain = keys[1] || '';
+  }
+
   function drawPalette() {
-    if (!state.tilesetImg) return;
-    var n = totalMetatiles();
+    var layer = L();
+    if (!layer.img) return;
+    var n = totalMetatiles(layer);
     var rows = Math.ceil(n / PAL_COLS);
     var cw = PAL_COLS * DT * PAL_SCALE;
     var ch = rows * DT * PAL_SCALE;
@@ -198,82 +250,106 @@
     pctx.clearRect(0, 0, cw, ch);
     for (var i = 0; i < n; i++) {
       var dc = i % PAL_COLS, dr = (i / PAL_COLS) | 0;
-      blitMeta(pctx, i, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
+      blitMeta(pctx, layer, i, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
     }
-    // highlight selected
-    var si = state.selectedTile;
-    if (si >= 0 && si < n) {
-      var sc = si % PAL_COLS, sr = (si / PAL_COLS) | 0;
-      pctx.strokeStyle = '#18b8c8'; pctx.lineWidth = 2;
-      pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
-        DT * PAL_SCALE - 2, DT * PAL_SCALE - 2);
-    }
+    // highlight current stamp rectangle
+    var s = state.stamp, top = state.selectedTile;
+    var sc = top % PAL_COLS, sr = (top / PAL_COLS) | 0;
+    pctx.strokeStyle = '#ff3030'; pctx.lineWidth = 2;
+    pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
+      s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
     $('paletteCount').textContent = n + ' tiles';
   }
 
-  function blitMeta(c, id, dx, dy, dsize) {
-    if (!state.tilesetImg) return;
-    var st = srcTile(), pr = perRow();
+  function blitMeta(c, layer, id, dx, dy, dsize) {
+    if (!layer.img || id < 0) return;
+    var st = srcTile(layer), pr = perRow(layer);
     var col = id % pr, row = (id / pr) | 0;
-    c.drawImage(state.tilesetImg, col * st, row * st, st, st, dx, dy, dsize, dsize);
+    c.drawImage(layer.img, col * st, row * st, st, st, dx, dy, dsize, dsize);
   }
 
-  paletteCanvas.addEventListener('click', function (e) {
+  // Palette drag-select (multi-tile stamp)
+  var palDrag = null;
+  function palCellFromEvent(e) {
     var r = paletteCanvas.getBoundingClientRect();
-    var px = (e.clientX - r.left) / (DT * PAL_SCALE);
-    var py = (e.clientY - r.top) / (DT * PAL_SCALE);
-    var id = ((py | 0) * PAL_COLS) + (px | 0);
-    if (id >= 0 && id < totalMetatiles()) selectTile(id);
+    var px = Math.floor((e.clientX - r.left) / (DT * PAL_SCALE));
+    var py = Math.floor((e.clientY - r.top) / (DT * PAL_SCALE));
+    return { cx: Math.max(0, px), cy: Math.max(0, py) };
+  }
+  paletteCanvas.addEventListener('mousedown', function (e) {
+    palDrag = palCellFromEvent(e);
+    setStampFromPalette(palDrag.cx, palDrag.cy, palDrag.cx, palDrag.cy);
   });
-
-  $('paletteJump').addEventListener('change', function () {
-    var id = parseInt(this.value, 10);
-    if (!isNaN(id) && id >= 0 && id < totalMetatiles()) {
-      selectTile(id);
-      var dr = (id / PAL_COLS) | 0;
-      $('paletteWrap').scrollTop = dr * DT * PAL_SCALE - 60;
-    }
+  paletteCanvas.addEventListener('mousemove', function (e) {
+    if (!palDrag) return;
+    var p = palCellFromEvent(e);
+    setStampFromPalette(palDrag.cx, palDrag.cy, p.cx, p.cy);
   });
+  window.addEventListener('mouseup', function () { palDrag = null; });
 
-  function selectTile(id) {
-    state.selectedTile = id;
-    $('selId').textContent = id;
-    var beh = state.tilesetMeta && state.tilesetMeta.behaviors
-      ? state.tilesetMeta.behaviors[id] : null;
+  function setStampFromPalette(cx0, cy0, cx1, cy1) {
+    var n = totalMetatiles();
+    var x0 = Math.min(cx0, cx1), x1 = Math.max(cx0, cx1);
+    var y0 = Math.min(cy0, cy1), y1 = Math.max(cy0, cy1);
+    var ids = [], w = x1 - x0 + 1, h = y1 - y0 + 1;
+    for (var y = y0; y <= y1; y++)
+      for (var x = x0; x <= x1; x++) {
+        var id = y * PAL_COLS + x;
+        ids.push(id >= 0 && id < n ? id : 0);
+      }
+    state.stamp = { w: w, h: h, ids: ids };
+    state.selectedTile = y0 * PAL_COLS + x0;
+    state.eraser = false; $('eraserBtn').classList.remove('active');
+    $('selId').textContent = state.selectedTile + (w * h > 1 ? (' (' + w + '×' + h + ')') : '');
+    var beh = L().meta && L().meta.behaviors ? L().meta.behaviors[state.selectedTile] : null;
     $('selBehavior').textContent = beh != null ? ('behavior ' + beh) : '';
     updateSelSwatch();
     drawPalette();
   }
 
+  $('paletteJump').addEventListener('change', function () {
+    var id = parseInt(this.value, 10);
+    if (!isNaN(id) && id >= 0 && id < totalMetatiles()) {
+      setStampFromPalette(id % PAL_COLS, (id / PAL_COLS) | 0, id % PAL_COLS, (id / PAL_COLS) | 0);
+      $('paletteWrap').scrollTop = ((id / PAL_COLS) | 0) * DT * PAL_SCALE - 60;
+    }
+  });
+
   function updateSelSwatch() {
     var sc = $('selSwatch').getContext('2d');
     sc.imageSmoothingEnabled = false;
     sc.clearRect(0, 0, 16, 16);
-    blitMeta(sc, state.selectedTile, 0, 0, 16);
+    blitMeta(sc, L(), state.selectedTile, 0, 0, 16);
   }
 
   // ── Map model ──
   function newMap(w, h, keep) {
-    var old = keep ? {
-      w: state.width, h: state.height,
-      m: state.metatiles, c: state.collision
-    } : null;
+    var prev = keep ? state.layers : null;
+    var pw = keep ? state.width : 0, ph = keep ? state.height : 0;
     state.width = w; state.height = h;
-    state.metatiles = new Int32Array(w * h);
-    state.collision = new Uint8Array(w * h);
-    var oldT = keep ? state.terrain : null;
-    state.terrain = new Array(w * h);
-    for (var t = 0; t < w * h; t++) state.terrain[t] = '';
-    // default fill: tile 1 (usually plain grass), passable
-    for (var i = 0; i < w * h; i++) state.metatiles[i] = 1;
-    if (old) {
-      for (var y = 0; y < Math.min(h, old.h); y++)
-        for (var x = 0; x < Math.min(w, old.w); x++) {
-          state.metatiles[y * w + x] = old.m[y * old.w + x];
-          state.collision[y * w + x] = old.c[y * old.w + x];
-          if (oldT) state.terrain[y * w + x] = oldT[y * old.w + x] || '';
-        }
-    }
+    ['ground', 'overlay'].forEach(function (key) {
+      var layer = state.layers[key];
+      // Ground default fill = the autotile base fill (clean grass) when available.
+      var fill = layer.fill;
+      if (key === 'ground' && layer.autotile && layer.autotile.fills) {
+        var baseKey = (layer.autotile.priority && layer.autotile.priority[0]) || 'grass';
+        if (layer.autotile.fills[baseKey] != null) fill = layer.autotile.fills[baseKey];
+      }
+      var nd = new Int32Array(w * h);
+      var nc = new Uint8Array(w * h);
+      var nt = new Array(w * h);
+      for (var i = 0; i < w * h; i++) { nd[i] = fill; nt[i] = ''; }
+      if (keep && prev[key].data) {
+        var od = prev[key].data, oc = prev[key].collision, ot = prev[key].terrain;
+        for (var y = 0; y < Math.min(h, ph); y++)
+          for (var x = 0; x < Math.min(w, pw); x++) {
+            nd[y * w + x] = od[y * pw + x];
+            if (oc) nc[y * w + x] = oc[y * pw + x];
+            if (ot) nt[y * w + x] = ot[y * pw + x] || '';
+          }
+      }
+      layer.data = nd; layer.collision = nc; layer.terrain = nt;
+    });
     if (!keep) state.warps = [];
     $('statSize').textContent = w + ' × ' + h;
     drawMap();
@@ -286,35 +362,42 @@
   // ── Map rendering ──
   var mapCanvas = $('mapCanvas');
   var mctx = mapCanvas.getContext('2d');
-
   function cell() { return DT * state.zoom; }
 
+  function drawLayer(key, alpha) {
+    var layer = state.layers[key];
+    if (!layer.img || !layer.data) return;
+    var cs = cell();
+    mctx.globalAlpha = alpha;
+    for (var y = 0; y < state.height; y++)
+      for (var x = 0; x < state.width; x++) {
+        var v = layer.data[idx(x, y)];
+        if (v >= 0) blitMeta(mctx, layer, v, x * cs, y * cs, cs);
+      }
+    mctx.globalAlpha = 1;
+  }
+
   function drawMap() {
-    if (!state.metatiles) return;
     var cs = cell();
     mapCanvas.width = state.width * cs;
     mapCanvas.height = state.height * cs;
     mctx.imageSmoothingEnabled = false;
     mctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-    for (var y = 0; y < state.height; y++) {
-      for (var x = 0; x < state.width; x++) {
-        blitMeta(mctx, state.metatiles[idx(x, y)], x * cs, y * cs, cs);
-      }
-    }
-    // collision overlay
-    if (state.collisionMode) {
+    // Ground always under overlay. Dim the non-active layer like RM.
+    drawLayer('ground', state.active === 'ground' ? 1 : 0.4);
+    drawLayer('overlay', state.active === 'overlay' ? 1 : 0.4);
+
+    if (state.mode === 'collide') {
+      var col = state.layers.ground.collision;
       for (var yy = 0; yy < state.height; yy++)
-        for (var xx = 0; xx < state.width; xx++) {
-          if (state.collision[idx(xx, yy)]) {
+        for (var xx = 0; xx < state.width; xx++)
+          if (col[idx(xx, yy)]) {
             mctx.fillStyle = 'rgba(230,40,40,0.45)';
             mctx.fillRect(xx * cs, yy * cs, cs, cs);
           }
-        }
     }
-    // grid
     if (state.showGrid) {
-      mctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      mctx.lineWidth = 1;
+      mctx.strokeStyle = 'rgba(0,0,0,0.18)'; mctx.lineWidth = 1;
       for (var gx = 0; gx <= state.width; gx++) {
         mctx.beginPath(); mctx.moveTo(gx * cs + 0.5, 0);
         mctx.lineTo(gx * cs + 0.5, mapCanvas.height); mctx.stroke();
@@ -324,11 +407,10 @@
         mctx.lineTo(mapCanvas.width, gy * cs + 0.5); mctx.stroke();
       }
     }
-    // warps
     state.warps.forEach(function (wp) {
-      mctx.strokeStyle = '#ffd000'; mctx.lineWidth = 2;
+      mctx.strokeStyle = '#ffb000'; mctx.lineWidth = 2;
       mctx.strokeRect(wp.x * cs + 1, wp.y * cs + 1, cs - 2, cs - 2);
-      mctx.fillStyle = 'rgba(255,208,0,0.25)';
+      mctx.fillStyle = 'rgba(255,176,0,0.28)';
       mctx.fillRect(wp.x * cs, wp.y * cs, cs, cs);
     });
   }
@@ -339,89 +421,115 @@
   function eventCell(e) {
     var r = mapCanvas.getBoundingClientRect();
     var cs = cell();
-    var x = Math.floor((e.clientX - r.left) / cs);
-    var y = Math.floor((e.clientY - r.top) / cs);
-    return { x: x, y: y };
+    return { x: Math.floor((e.clientX - r.left) / cs), y: Math.floor((e.clientY - r.top) / cs) };
+  }
+
+  // Stamp the current B-tab block (or eraser) with top-left at (ax,ay).
+  function stampAt(ax, ay) {
+    var layer = L();
+    var s = state.stamp;
+    for (var dy = 0; dy < s.h; dy++)
+      for (var dx = 0; dx < s.w; dx++) {
+        var x = ax + dx, y = ay + dy;
+        if (!inBounds(x, y)) continue;
+        layer.data[idx(x, y)] = state.eraser ? layer.fill : s.ids[dy * s.w + dx];
+        if (state.active === 'ground') layer.terrain[idx(x, y)] = '';
+      }
+  }
+
+  function paintTerrain(x, y) {
+    var layer = state.layers.ground;
+    layer.terrain[idx(x, y)] = state.selectedTerrain;
+    recomputeTerrainAround(x, y);
   }
 
   function applyAt(x, y) {
     if (!inBounds(x, y)) return;
-    if (state.warpMode) return; // handled separately on click
-    if (state.terrainMode && state.autotile) {
-      state.terrain[idx(x, y)] = state.currentTerrain; // '' = erase
-      recomputeTerrainAround(x, y);
+    if (state.mode === 'warp') return;
+    if (state.mode === 'collide') {
+      var c = state.layers.ground.collision;
+      c[idx(x, y)] = c[idx(x, y)] ? 0 : 1;
       return;
     }
-    if (state.collisionMode) {
-      state.collision[idx(x, y)] = state.collision[idx(x, y)] ? 0 : 1;
+    if (state.tool === 'pick') {
+      var v = L().data[idx(x, y)];
+      if (v >= 0) setStampFromPalette(v % PAL_COLS, (v / PAL_COLS) | 0, v % PAL_COLS, (v / PAL_COLS) | 0);
       return;
     }
-    if (state.tool === 'pick') { selectTile(state.metatiles[idx(x, y)]); return; }
-    state.metatiles[idx(x, y)] = state.selectedTile;
+    if (state.paletteTab === 'A' && state.active === 'ground' && L().autotile && !state.eraser) {
+      paintTerrain(x, y);
+      return;
+    }
+    stampAt(x, y);
   }
 
-  function floodFill(x, y, target, repl) {
+  function floodFill(x, y) {
+    var layer = L();
+    var target = layer.data[idx(x, y)];
+    var repl = state.eraser ? layer.fill : state.stamp.ids[0];
     if (target === repl) return;
     var stack = [[x, y]];
     while (stack.length) {
       var p = stack.pop(), px = p[0], py = p[1];
-      if (!inBounds(px, py)) continue;
-      if (state.metatiles[idx(px, py)] !== target) continue;
-      state.metatiles[idx(px, py)] = repl;
+      if (!inBounds(px, py) || layer.data[idx(px, py)] !== target) continue;
+      layer.data[idx(px, py)] = repl;
+      if (state.active === 'ground') layer.terrain[idx(px, py)] = '';
       stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
     }
+  }
+
+  // tile the stamp / single id over a rectangular or elliptical region
+  function fillRegion(x0, y0, x1, y1, ellipse) {
+    var layer = L();
+    var auto = state.paletteTab === 'A' && state.active === 'ground' && layer.autotile && !state.eraser;
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    var rx = (x1 - x0) / 2 + 0.5, ry = (y1 - y0) / 2 + 0.5;
+    for (var y = y0; y <= y1; y++)
+      for (var x = x0; x <= x1; x++) {
+        if (!inBounds(x, y)) continue;
+        if (ellipse) {
+          var nx = (x - cx) / rx, ny = (y - cy) / ry;
+          if (nx * nx + ny * ny > 1) continue;
+        }
+        if (state.mode === 'collide') { layer.collision[idx(x, y)] = state.eraser ? 0 : 1; continue; }
+        if (auto) { layer.terrain[idx(x, y)] = state.selectedTerrain; continue; }
+        // tile the stamp block by relative position
+        var s = state.stamp;
+        var id = state.eraser ? layer.fill : s.ids[((y - y0) % s.h) * s.w + ((x - x0) % s.w)];
+        layer.data[idx(x, y)] = id;
+        if (state.active === 'ground') layer.terrain[idx(x, y)] = '';
+      }
+    if (auto) for (var ry2 = y0 - 1; ry2 <= y1 + 1; ry2++)
+      for (var rx2 = x0 - 1; rx2 <= x1 + 1; rx2++) recomputeTerrainCell(rx2, ry2);
   }
 
   mapCanvas.addEventListener('mousedown', function (e) {
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
-
-    if (state.warpMode) {
-      addWarp(p.x, p.y);
-      return;
-    }
-    if (state.terrainMode && state.autotile && state.tool !== 'rect') {
-      painting = true; applyAt(p.x, p.y); drawMap(); return;
-    }
-    if (state.collisionMode && state.tool !== 'rect') {
-      painting = true; applyAt(p.x, p.y); drawMap(); return;
-    }
-    if (state.tool === 'fill') {
-      floodFill(p.x, p.y, state.metatiles[idx(p.x, p.y)], state.selectedTile);
-      drawMap(); return;
-    }
-    if (state.tool === 'rect') {
-      rectStart = p; return;
-    }
-    if (state.tool === 'pick') { selectTile(state.metatiles[idx(p.x, p.y)]); return; }
+    if (state.mode === 'warp') { addWarp(p.x, p.y); return; }
+    if (state.tool === 'fill' && state.mode !== 'collide') { floodFill(p.x, p.y); drawMap(); return; }
+    if (state.tool === 'rect' || state.tool === 'ellipse') { rectStart = p; return; }
+    if (state.tool === 'pick') { applyAt(p.x, p.y); return; }
     painting = true; applyAt(p.x, p.y); drawMap();
   });
 
   mapCanvas.addEventListener('mousemove', function (e) {
     var p = eventCell(e);
     $('statCoord').textContent = 'x: ' + p.x + '  y: ' + p.y;
-    if (inBounds(p.x, p.y))
-      $('statTile').textContent = 'tile #' + state.metatiles[idx(p.x, p.y)] +
-        (state.collision[idx(p.x, p.y)] ? '  (blocked)' : '');
+    if (inBounds(p.x, p.y)) {
+      var layer = L();
+      $('statTile').textContent = 'tile #' + layer.data[idx(p.x, p.y)] +
+        (state.layers.ground.collision[idx(p.x, p.y)] ? '  (blocked)' : '');
+    }
     if (painting && inBounds(p.x, p.y)) { applyAt(p.x, p.y); drawMap(); }
   });
 
   window.addEventListener('mouseup', function (e) {
-    if (state.tool === 'rect' && rectStart) {
+    if ((state.tool === 'rect' || state.tool === 'ellipse') && rectStart) {
       var p = eventCell(e);
       var x0 = Math.min(rectStart.x, p.x), x1 = Math.max(rectStart.x, p.x);
       var y0 = Math.min(rectStart.y, p.y), y1 = Math.max(rectStart.y, p.y);
-      for (var y = y0; y <= y1; y++)
-        for (var x = x0; x <= x1; x++) {
-          if (!inBounds(x, y)) continue;
-          if (state.terrainMode && state.autotile) state.terrain[idx(x, y)] = state.currentTerrain;
-          else if (state.collisionMode) state.collision[idx(x, y)] = 1;
-          else state.metatiles[idx(x, y)] = state.selectedTile;
-        }
-      if (state.terrainMode && state.autotile) {
-        for (var ry = y0 - 1; ry <= y1 + 1; ry++)
-          for (var rx = x0 - 1; rx <= x1 + 1; rx++) recomputeTerrainCell(rx, ry);
-      }
+      fillRegion(x0, y0, x1, y1, state.tool === 'ellipse');
       rectStart = null; drawMap();
     }
     painting = false;
@@ -433,47 +541,47 @@
     state.warps.push({ x: x, y: y, dest_map: 'MAP_NONE', dest_warp_id: '0' });
     drawMap(); renderWarpList();
   }
-
   function renderWarpList() {
     var list = $('warpList'); list.innerHTML = '';
-    if (!state.warps.length) {
-      list.innerHTML = '<div class="hint">No warps yet.</div>';
-      return;
-    }
+    if (!state.warps.length) { list.innerHTML = '<div class="hint">No warps yet.</div>'; return; }
     state.warps.forEach(function (w, i) {
       var div = document.createElement('div'); div.className = 'warp-item';
-      var info = document.createElement('span');
-      info.textContent = '(' + w.x + ',' + w.y + ')';
+      var info = document.createElement('span'); info.textContent = '(' + w.x + ',' + w.y + ')';
       var dest = document.createElement('input');
-      dest.type = 'text'; dest.value = w.dest_map; dest.style.width = '110px';
+      dest.type = 'text'; dest.value = w.dest_map; dest.style.width = '100px';
       dest.title = 'destination MAP_CONST';
       dest.addEventListener('change', function () { w.dest_map = this.value; });
-      var del = document.createElement('button');
-      del.textContent = '✕';
-      del.addEventListener('click', function () {
-        state.warps.splice(i, 1); drawMap(); renderWarpList();
-      });
+      var del = document.createElement('button'); del.textContent = '✕';
+      del.addEventListener('click', function () { state.warps.splice(i, 1); drawMap(); renderWarpList(); });
       div.appendChild(info); div.appendChild(dest); div.appendChild(del);
       list.appendChild(div);
     });
   }
 
   // ── Export / Import ──
+  function hasContent(arr, empty) {
+    if (!arr) return false;
+    for (var i = 0; i < arr.length; i++) if (arr[i] !== empty) return true;
+    return false;
+  }
+
   function buildLayout() {
+    var g = state.layers.ground, o = state.layers.overlay;
     var layout = {
       id: $('layoutId').value || 'LAYOUT_NEW_MAP',
-      width: state.width,
-      height: state.height,
-      primary_tileset: (state.tilesetMeta && state.tilesetMeta.primary_tileset) || 'gTileset_General',
-      secondary_tileset: (state.tilesetMeta && state.tilesetMeta.secondary_tileset) || '',
-      tileset: state.tilesetName,
-      metatiles: Array.from(state.metatiles),
-      collision: Array.from(state.collision)
+      width: state.width, height: state.height,
+      primary_tileset: (g.meta && g.meta.primary_tileset) || 'gTileset_General',
+      secondary_tileset: (g.meta && g.meta.secondary_tileset) || '',
+      tileset: g.name,
+      metatiles: Array.from(g.data),
+      collision: Array.from(g.collision)
     };
-    // Persist the painted terrain layer so the map stays re-editable with the
-    // Terrain brush. The engine ignores this field (it only reads metatiles).
-    if (state.terrain && state.terrain.some(function (t) { return t; })) {
-      layout.terrain = state.terrain.map(function (t) { return t || ''; });
+    if (g.terrain && g.terrain.some(function (t) { return t; })) {
+      layout.terrain = g.terrain.map(function (t) { return t || ''; });
+    }
+    if (o.name && hasContent(o.data, -1)) {
+      layout.overlay_tileset = o.name;
+      layout.overlay = Array.from(o.data);
     }
     return layout;
   }
@@ -482,22 +590,15 @@
     var name = $('mapName').value || 'NewMap';
     return {
       id: 'MAP_' + name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase(),
-      name: name,
-      region: $('mapRegion').value,
+      name: name, region: $('mapRegion').value,
       layout: $('layoutId').value || 'LAYOUT_NEW_MAP',
-      music: 'MUS_PALLET',
-      weather: 'WEATHER_NONE',
-      map_type: 'MAP_TYPE_TOWN',
-      allow_running: true,
-      allow_cycling: true,
-      show_map_name: true,
-      connections: [],
-      npcs: [],
+      music: 'MUS_PALLET', weather: 'WEATHER_NONE', map_type: 'MAP_TYPE_TOWN',
+      allow_running: true, allow_cycling: true, show_map_name: true,
+      connections: [], npcs: [],
       warps: state.warps.map(function (w) {
         return { x: w.x, y: w.y, dest_map: w.dest_map, dest_warp_id: w.dest_warp_id };
       }),
-      triggers: [],
-      signs: []
+      triggers: [], signs: []
     };
   }
 
@@ -511,56 +612,63 @@
   }
 
   $('exportBtn').addEventListener('click', function () {
-    var layout = buildLayout();
-    var map = buildMap();
+    var layout = buildLayout(), map = buildMap();
     download(layout.id + '.json', layout);
     setTimeout(function () { download(map.name + '.json', map); }, 250);
   });
 
-  // Apply a parsed layout JSON to the editor. Returns a Promise (tileset load).
-  // `mapMeta` (optional) restores warps + map-info fields from a map JSON.
+  // Apply a parsed layout (+ optional map meta). Loads both layer tilesets.
   function applyLayout(data, mapMeta) {
     if (!data || !data.metatiles || !data.width) {
       return Promise.reject(new Error('Not a layout JSON (needs width/height/metatiles).'));
     }
-    var finish = function () {
-      state.width = data.width; state.height = data.height;
-      state.metatiles = Int32Array.from(data.metatiles);
-      state.collision = data.collision ? Uint8Array.from(data.collision)
-        : new Uint8Array(data.width * data.height);
-      state.terrain = new Array(data.width * data.height);
-      for (var ti = 0; ti < data.width * data.height; ti++) {
-        state.terrain[ti] = (data.terrain && data.terrain[ti]) || '';
-      }
-      $('mapW').value = data.width; $('mapH').value = data.height;
+    var w = data.width, h = data.height;
+    var loads = [];
+    var groundName = data.tileset;
+    var overlayName = data.overlay_tileset || null;
+    // ensure ground layer is the active dropdown target after load
+    loads.push(groundName ? loadTilesetInto(state.layers.ground, groundName)
+      .catch(function () { alert('Tileset "' + groundName + '" not found.'); }) : Promise.resolve());
+    if (overlayName) {
+      loads.push(loadTilesetInto(state.layers.overlay, overlayName)
+        .catch(function () { state.layers.overlay = newLayer(-1); }));
+    } else {
+      state.layers.overlay = newLayer(-1);
+    }
+    return Promise.all(loads).then(function () {
+      state.width = w; state.height = h;
+      var g = state.layers.ground;
+      g.data = Int32Array.from(data.metatiles);
+      g.collision = data.collision ? Uint8Array.from(data.collision) : new Uint8Array(w * h);
+      g.terrain = new Array(w * h);
+      for (var ti = 0; ti < w * h; ti++) g.terrain[ti] = (data.terrain && data.terrain[ti]) || '';
+      var o = state.layers.overlay;
+      o.data = new Int32Array(w * h);
+      o.collision = new Uint8Array(w * h);
+      o.terrain = new Array(w * h);
+      for (var oi = 0; oi < w * h; oi++) { o.data[oi] = data.overlay ? data.overlay[oi] : -1; o.terrain[oi] = ''; }
+
+      $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
-      $('statSize').textContent = data.width + ' × ' + data.height;
+      $('statSize').textContent = w + ' × ' + h;
       if (mapMeta) {
         if (mapMeta.name) $('mapName').value = mapMeta.name;
         if (mapMeta.region) {
           var sel = $('mapRegion');
-          if (!Array.prototype.some.call(sel.options, function (o) { return o.value === mapMeta.region; })) {
-            var o = document.createElement('option'); o.value = o.textContent = mapMeta.region; sel.appendChild(o);
+          if (!Array.prototype.some.call(sel.options, function (op) { return op.value === mapMeta.region; })) {
+            var op = document.createElement('option'); op.value = op.textContent = mapMeta.region; sel.appendChild(op);
           }
           sel.value = mapMeta.region;
         }
-        state.warps = (mapMeta.warps || []).map(function (w) {
-          return { x: w.x, y: w.y, dest_map: w.dest_map || 'MAP_NONE', dest_warp_id: w.dest_warp_id || '0' };
+        state.warps = (mapMeta.warps || []).map(function (w2) {
+          return { x: w2.x, y: w2.y, dest_map: w2.dest_map || 'MAP_NONE', dest_warp_id: w2.dest_warp_id || '0' };
         });
-      } else {
-        state.warps = [];
-      }
+      } else { state.warps = []; }
+      // reflect ground tileset in the dropdown + palette
+      setActiveLayer('ground');
+      if (groundName) $('tilesetSel').value = groundName;
       drawMap(); renderWarpList();
-    };
-    if (data.tileset && data.tileset !== state.tilesetName) {
-      $('tilesetSel').value = data.tileset;
-      return loadTileset(data.tileset).then(finish).catch(function () {
-        alert('Tileset "' + data.tileset + '" not found; keeping current.');
-        finish();
-      });
-    }
-    finish();
-    return Promise.resolve();
+    });
   }
 
   $('importBtn').addEventListener('click', function () { $('importFile').click(); });
@@ -568,15 +676,35 @@
     var f = e.target.files[0]; if (!f) return;
     var reader = new FileReader();
     reader.onload = function () {
-      try {
-        applyLayout(JSON.parse(reader.result)).catch(function (err) { alert(err.message); });
-      } catch (err) { alert('Failed to parse JSON: ' + err.message); }
+      try { applyLayout(JSON.parse(reader.result)).catch(function (err) { alert(err.message); }); }
+      catch (err) { alert('Failed to parse JSON: ' + err.message); }
     };
     reader.readAsText(f);
     e.target.value = '';
   });
 
   // ── Toolbar wiring ──
+  function setActiveLayer(key) {
+    state.active = key;
+    $('layerSel').value = key;
+    var layer = L();
+    if (layer.name) { $('tilesetSel').value = layer.name; }
+    else if (key === 'overlay' && state._tilesetNames) {
+      // pick a sensible default overlay tileset (buildings/props) lazily
+      var def = ['ac_buildings', 'ac_props'].filter(function (n) {
+        return state._tilesetNames.indexOf(n) >= 0;
+      })[0] || $('tilesetSel').value;
+      return loadTileset(def).then(function () { setActiveLayer(key); });
+    }
+    updateTilesetStatus();
+    rebuildAutoPalette();
+    refreshPaletteTabs();
+    drawPalette();
+    updateSelSwatch();
+    drawMap();
+  }
+
+  $('layerSel').addEventListener('change', function () { setActiveLayer(this.value); });
   $('tilesetSel').addEventListener('change', function () { loadTileset(this.value); });
   $('newBtn').addEventListener('click', function () {
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, false);
@@ -585,46 +713,38 @@
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, true);
   });
 
+  document.querySelectorAll('.pal-tab').forEach(function (t) {
+    t.addEventListener('click', function () { setPaletteTab(t.dataset.pal); });
+  });
+
   document.querySelectorAll('.tool').forEach(function (b) {
+    if (!b.dataset.tool) return;
     b.addEventListener('click', function () {
       state.tool = b.dataset.tool;
+      state.eraser = false; $('eraserBtn').classList.remove('active');
       document.querySelectorAll('.tool').forEach(function (x) { x.classList.remove('active'); });
       b.classList.add('active');
     });
   });
+  $('eraserBtn').addEventListener('click', function () {
+    state.eraser = !state.eraser;
+    this.classList.toggle('active', state.eraser);
+  });
 
-  $('terrainBtn').addEventListener('click', function () {
-    if (!state.autotile) return;
-    state.terrainMode = !state.terrainMode;
-    this.classList.toggle('active', state.terrainMode);
-    if (state.terrainMode) {
-      state.collisionMode = false; $('collideBtn').classList.remove('active');
-      state.warpMode = false; $('warpBtn').classList.remove('active');
-    }
-    drawMap();
+  document.querySelectorAll('.mode').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.mode = b.dataset.mode;
+      document.querySelectorAll('.mode').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      drawMap();
+    });
   });
-  $('terrainSel').addEventListener('change', function () { state.currentTerrain = this.value; });
 
-  $('collideBtn').addEventListener('click', function () {
-    state.collisionMode = !state.collisionMode;
-    this.classList.toggle('active', state.collisionMode);
-    if (state.collisionMode) {
-      state.warpMode = false; $('warpBtn').classList.remove('active');
-      state.terrainMode = false; $('terrainBtn').classList.remove('active');
-    }
-    drawMap();
-  });
-  $('warpBtn').addEventListener('click', function () {
-    state.warpMode = !state.warpMode;
-    this.classList.toggle('active', state.warpMode);
-    if (state.warpMode) { state.collisionMode = false; $('collideBtn').classList.remove('active'); drawMap(); }
-  });
   $('gridBtn').addEventListener('click', function () {
     state.showGrid = !state.showGrid;
     this.classList.toggle('active', state.showGrid);
     drawMap();
   });
-
   function setZoom(z) {
     state.zoom = Math.max(1, Math.min(6, z));
     $('zoomLabel').textContent = state.zoom + '×';
@@ -636,28 +756,15 @@
   // ── Save to GitHub 'maps' branch (same mechanism as cloud-saves.js) ──
   var GH_REPO   = 'knightdx91-alt/awakened-calamity';
   var GH_BRANCH = 'maps';
-  // Token stored reversed so secret scanners don't flag the source file.
   var GH_TOKEN  = 'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
                   .split('').reverse().join('');
-
   function ghHeaders() {
-    return {
-      Authorization: 'token ' + GH_TOKEN,
-      'Content-Type': 'application/json',
-      Accept: 'application/vnd.github+json'
-    };
+    return { Authorization: 'token ' + GH_TOKEN, 'Content-Type': 'application/json',
+             Accept: 'application/vnd.github+json' };
   }
-  function b64encode(str) {
-    return btoa(unescape(encodeURIComponent(str)));
-  }
-  function b64decode(b64) {
-    return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
-  }
-  function ghUrl(path) {
-    return 'https://api.github.com/repos/' + GH_REPO + '/contents/' + path;
-  }
-
-  // GET current file sha + decoded content (or nulls if it doesn't exist).
+  function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64decode(b64) { return decodeURIComponent(escape(atob(b64.replace(/\n/g, '')))); }
+  function ghUrl(path) { return 'https://api.github.com/repos/' + GH_REPO + '/contents/' + path; }
   function ghGet(path) {
     return fetch(ghUrl(path) + '?ref=' + GH_BRANCH, { headers: ghHeaders() })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -666,8 +773,6 @@
       })
       .catch(function () { return { sha: null, content: null }; });
   }
-
-  // PUT a file (create or update). `obj` is JSON-serializable.
   function ghPut(path, obj, message, sha) {
     var body = { message: message, content: b64encode(JSON.stringify(obj)), branch: GH_BRANCH };
     if (sha) body.sha = sha;
@@ -677,27 +782,19 @@
         return r.json();
       });
   }
-
   function setRepoBtn(txt, col) {
-    var b = $('repoSaveBtn');
-    b.textContent = txt;
-    b.style.color = col || '';
-    b.style.borderColor = col || '';
+    var b = $('repoSaveBtn'); b.textContent = txt;
+    b.style.color = col || ''; b.style.borderColor = col || '';
   }
-
   function saveToRepo() {
-    if (!state.metatiles) return;
+    if (!state.layers.ground.data) return;
     var region = $('mapRegion').value || 'custom';
-    var layout = buildLayout();
-    var map = buildMap();
+    var layout = buildLayout(), map = buildMap();
     var layoutPath = 'data/layouts/' + region + '/' + layout.id + '.json';
     var mapPath    = 'data/maps/' + region + '/' + map.name + '.json';
     var indexPath  = 'data/maps/' + region + '_index.json';
     var stamp = new Date().toISOString();
-
-    setRepoBtn('☁ Saving…', '#e8c000');
-
-    // 1) layout  2) map  3) region index (read-modify-write)
+    setRepoBtn('☁ Saving…', '#b58900');
     ghGet(layoutPath)
       .then(function (cur) { return ghPut(layoutPath, layout, 'map-editor: layout ' + layout.id + ' ' + stamp, cur.sha); })
       .then(function () { return ghGet(mapPath); })
@@ -706,88 +803,64 @@
       .then(function (cur) {
         var index = {};
         if (cur.content) { try { index = JSON.parse(cur.content); } catch (e) { index = {}; } }
-        index[map.id] = map.name;
-        index[map.name] = map.name;
+        index[map.id] = map.name; index[map.name] = map.name;
         return ghPut(indexPath, index, 'map-editor: index ' + region + ' ' + stamp, cur.sha);
       })
       .then(function () {
-        setRepoBtn('✓ Saved to maps', '#20d840');
-        setTimeout(function () { setRepoBtn('☁ Save to repo'); }, 2800);
+        setRepoBtn('✓ Saved', '#2a9d2a');
+        setTimeout(function () { setRepoBtn('☁ Save'); }, 2800);
       })
       .catch(function (e) {
-        setRepoBtn('✗ Error', '#e82020');
-        setTimeout(function () { setRepoBtn('☁ Save to repo'); }, 3500);
-        alert('Save to repo failed: ' + e.message +
-          '\n\n(Maps are committed to the "maps" branch. Check your connection.)');
+        setRepoBtn('✗ Error', '#c02020');
+        setTimeout(function () { setRepoBtn('☁ Save'); }, 3500);
+        alert('Save to repo failed: ' + e.message);
       });
   }
-
   $('repoSaveBtn').addEventListener('click', saveToRepo);
 
-  // ── Load from repo: browse maps on the 'maps' branch and open one ──
-  // List every map file via the Git Trees API (one recursive call), excluding
-  // region index files.
+  // ── Load from repo + map tree ──
   function ghListMaps() {
-    var url = 'https://api.github.com/repos/' + GH_REPO + '/git/trees/' +
-      GH_BRANCH + '?recursive=1';
+    var url = 'https://api.github.com/repos/' + GH_REPO + '/git/trees/' + GH_BRANCH + '?recursive=1';
     return fetch(url, { headers: ghHeaders() })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (tree) {
         var maps = [];
         (tree.tree || []).forEach(function (node) {
-          // data/maps/<region>/<Name>.json  (skip <region>_index.json)
           var m = /^data\/maps\/([^/]+)\/([^/]+)\.json$/.exec(node.path);
-          if (m && !/_index$/.test(m[2])) {
-            maps.push({ region: m[1], name: m[2], path: node.path });
-          }
+          if (m && !/_index$/.test(m[2])) maps.push({ region: m[1], name: m[2], path: node.path });
         });
-        maps.sort(function (a, b) {
-          return (a.region + a.name).localeCompare(b.region + b.name);
-        });
+        maps.sort(function (a, b) { return (a.region + a.name).localeCompare(b.region + b.name); });
         return maps;
       });
   }
 
-  function openRepoModal() {
-    $('repoModal').style.display = 'flex';
-    var body = $('repoModalBody');
-    body.innerHTML = '<div class="hint">Loading map list…</div>';
+  function buildMapTree() {
+    var tree = $('mapTree');
     ghListMaps().then(function (maps) {
-      if (!maps.length) {
-        body.innerHTML = '<div class="hint">No maps saved on the "maps" branch yet. ' +
-          'Use ☁ Save to repo first.</div>';
-        return;
-      }
-      body.innerHTML = '';
+      tree.innerHTML = '';
+      if (!maps.length) { tree.innerHTML = '<div class="hint" style="padding:6px;">No saved maps.</div>'; return; }
       var lastRegion = null;
       maps.forEach(function (mp) {
         if (mp.region !== lastRegion) {
           lastRegion = mp.region;
-          var hdr = document.createElement('div');
-          hdr.textContent = mp.region;
-          hdr.style.cssText = 'color:#18b8c8; font-size:11px; text-transform:uppercase;' +
-            'letter-spacing:.5px; margin:8px 2px 4px;';
-          body.appendChild(hdr);
+          var hdr = document.createElement('div'); hdr.className = 'tree-region';
+          hdr.textContent = mp.region; tree.appendChild(hdr);
         }
-        var row = document.createElement('button');
-        row.textContent = mp.name;
-        row.style.cssText = 'display:block; width:100%; text-align:left; margin:3px 0;';
-        row.addEventListener('click', function () { loadMapFromRepo(mp); });
-        body.appendChild(row);
+        var item = document.createElement('div'); item.className = 'tree-item';
+        item.textContent = mp.name;
+        item.addEventListener('click', function () {
+          document.querySelectorAll('.tree-item').forEach(function (t) { t.classList.remove('active'); });
+          item.classList.add('active');
+          loadMapFromRepo(mp);
+        });
+        tree.appendChild(item);
       });
     }).catch(function (e) {
-      body.innerHTML = '<div class="hint" style="color:#e88;">Failed to list maps: ' +
-        e.message + '</div>';
+      tree.innerHTML = '<div class="hint" style="padding:6px; color:#c33;">List failed: ' + e.message + '</div>';
     });
   }
 
   function loadMapFromRepo(mp) {
-    var body = $('repoModalBody');
-    body.innerHTML = '<div class="hint">Loading ' + mp.name + '…</div>';
-    // Fetch the map JSON, then its layout, then apply both.
     ghGet(mp.path)
       .then(function (cur) {
         if (!cur.content) throw new Error('map file empty');
@@ -798,22 +871,38 @@
           return { layout: JSON.parse(lc.content), map: mapObj };
         });
       })
-      .then(function (res) {
-        return applyLayout(res.layout, res.map);
-      })
-      .then(function () {
-        $('repoModal').style.display = 'none';
-      })
-      .catch(function (e) {
-        body.innerHTML = '<div class="hint" style="color:#e88;">Failed to load: ' +
-          e.message + '</div>';
-      });
+      .then(function (res) { return applyLayout(res.layout, res.map); })
+      .then(function () { $('repoModal').style.display = 'none'; })
+      .catch(function (e) { alert('Failed to load: ' + e.message); });
   }
 
+  function openRepoModal() {
+    $('repoModal').style.display = 'flex';
+    var body = $('repoModalBody');
+    body.innerHTML = '<div class="hint">Loading map list…</div>';
+    ghListMaps().then(function (maps) {
+      if (!maps.length) { body.innerHTML = '<div class="hint">No maps saved yet.</div>'; return; }
+      body.innerHTML = '';
+      var lastRegion = null;
+      maps.forEach(function (mp) {
+        if (mp.region !== lastRegion) {
+          lastRegion = mp.region;
+          var hdr = document.createElement('div'); hdr.textContent = mp.region;
+          hdr.style.cssText = 'color:#2b4a7a; font-size:11px; text-transform:uppercase; letter-spacing:.5px; margin:8px 2px 4px;';
+          body.appendChild(hdr);
+        }
+        var row = document.createElement('button');
+        row.textContent = mp.name;
+        row.style.cssText = 'display:block; width:100%; text-align:left; margin:3px 0;';
+        row.addEventListener('click', function () { loadMapFromRepo(mp); });
+        body.appendChild(row);
+      });
+    }).catch(function (e) {
+      body.innerHTML = '<div class="hint" style="color:#c33;">Failed to list maps: ' + e.message + '</div>';
+    });
+  }
   $('repoLoadBtn').addEventListener('click', openRepoModal);
-  $('repoModalClose').addEventListener('click', function () {
-    $('repoModal').style.display = 'none';
-  });
+  $('repoModalClose').addEventListener('click', function () { $('repoModal').style.display = 'none'; });
   $('repoModal').addEventListener('click', function (e) {
     if (e.target === $('repoModal')) $('repoModal').style.display = 'none';
   });
@@ -821,8 +910,9 @@
   // ── Boot ──
   loadTilesetList().then(function () {
     newMap(state.width, state.height, false);
-    selectTile(1);
+    setStampFromPalette(1, 0, 1, 0);
+    buildMapTree();
   }).catch(function (err) {
-    alert('Failed to load tilesets. Serve this over http (not file://).\n' + err);
+    alert('Failed to load tilesets. Serve over http (not file://).\n' + err);
   });
 })();
