@@ -341,6 +341,21 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       baker; **A1** (animated water/waterfall), **A3** (2×2 roof tops), **A4** (2×3 wall top+side) each
       need their own block-structure handling. Pipeline proven; extension is mechanical per type.
 
+## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
+**Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
+@48px, editor supports per-tileset tile size) + Pass 2a (outside A2 ground → `pf_outside_ground`,
+grass+cobble/stone/path) are DONE & verified. **Still to bake (see 2026-06-15 log for the proven
+pipeline):**
+- **Other A2 sheets** — Inside + Dungeon floors. Reuse `tools/build_pixel_fantasy_autotiles.py`
+  as-is (just point it at `pf_inside_a2` / `pf_dungeon_a2` and pick their terrains). Quick.
+- **A1** — animated water / waterfalls (different block structure: animated frames + waterfall edges).
+- **A3** — 2×2 roof-top autotiles (building tops).
+- **A4** — 2×3 wall autotiles (wall-top 2×2 + wall-side 2×2).
+- Also consider adding the **A2 base fills** (sand/dirt/water) as fill options + their row autotiles.
+- Tool already proven: classify 24px quarters by terrain coverage → 9-slice `wang8_lut`. Verify each
+  with a blob-render + headless editor load (see `/tmp` test pattern in the 2026-06-15 work).
+- ⚠️ Keep the **EULA/non-shippable flag** (`data/tilesets/PIXEL_FANTASY.LICENSE.txt`) in mind.
+
 ## ⏳ PENDING (next session) — World Area Bible (spec LOCKED, approved, NOT started)
 Goal: a **complete, exhaustively-named** area catalog — every enterable building named + its owner
 NPC ("Bob's House"), every dungeon with **floor count + each floor named** (theme/hazard/gimmick +
