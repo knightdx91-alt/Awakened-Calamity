@@ -13,9 +13,15 @@
 
 ## 1. The System Shop — earned, per Safe Zone
 
-- **Access is per-town reputation.** Each Safe Zone has its own **local reputation** (raised via
-  bounties, discoveries, helping locals). Unlocking the town's System Shop requires rep; **higher rep
-  unlocks higher catalog tiers** at that town.
+- **The catalog is OPEN from the start — affordability is the gate, not rep.** The full goods/material
+  catalog up to **Legendary** (Standard→Legendary items **and** Basic→Legendary crafting mats) is
+  **visible and purchasable from the very beginning** — you simply can't *afford* the high tiers early
+  (the lean-credit economy, §2). The Legendary ingot dangles in front of you; that's the motivator, not
+  a grey-out. *(Mythic = quest/relic only; Anomalous = hidden-layer only — never shop-stock, §5.)*
+- **Reputation's job is PRICE + CLASS ACCESS, not hiding tiers.** Each Safe Zone has its own **local
+  reputation** (raised via bounties, discoveries, donations, story — §8.1). Higher rep means **better
+  prices/discounts** (stacking with Charisma haggling, `PROGRESSION.md`) and gates **buyable class
+  access** (§4) — it does **not** lock which item/material tiers you can see or buy.
 - **Towns specialize toward their guild.** Cinderhold's shop leans forging; the Pastoral Exchange
   town leans food/supply; espionage towns stock skill manuals, etc. → you **travel to shop**, which
   feeds the living world and gives each town a purpose.
@@ -115,7 +121,12 @@ player at a glance what something is worth and how hard it is to get.
    rep; donations cost *real* rare mats (not a credit→rep laundromat). Bounties remain the reliable
    path; the rest are alternate lanes.
 
+2. **Catalog tiers = PRICE-GATED, not rep-gated.** The whole goods + crafting-material catalog up to
+   **Legendary** is available from the start; **affordability** (Credits) is the only wall — no rep
+   thresholds hide stock. Mythic/Anomalous stay non-shop (quest/hidden). Reputation instead drives
+   **prices/discounts** and **class access** (§4). (Revises §1.) Exact prices tune in playtest against
+   the lean-credit faucet (§2), pitched so Legendary tiers are a long-horizon goal you can *see* early.
+
 **Open:**
-2. **Catalog tier thresholds** — what rep unlocks Rare vs. Elite vs. Legendary stock.
 3. **Class-slot cost curve** — Cr (+ rep + quest) for Rare/Elite/Legendary class access.
 4. **Cross-town rep** — does helping one town bleed reputation to neighbors, or fully independent?
