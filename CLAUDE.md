@@ -2,6 +2,27 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+> **2026-06-15 — Map editor → RPG Maker rebuild, STAGE 1 (done).** Owner direction: rebuild the
+> map editor to mirror RPG Maker (XP + MV/MZ) and **purge all tiles/maps except Pixel Fantasy
+> (`pf_*`)**. ⚠️ PF is commercial/EULA/non-shippable (`PIXEL_FANTASY.LICENSE.txt`) — flagged to owner,
+> proceeding as prototype. **Stage 1 shipped:** (a) deleted every non-`pf_*` tileset + all old
+> maps/layouts; `_index.json` is PF-only; fresh PF grass starter `AwakeningCamp` (game boots clean,
+> headless-verified). (b) `data/tilesets/_rm_sets.json` groups `pf_*` into RM A1–A5/B/C/D/E **sets**
+> (Outside/Inside/Dungeon). (c) editor palette reworked: **Set selector + MV A–E tabs (one sheet) ⇄
+> XP single stacked sheet** (`tabModeBtn`); cells still store global ids via the existing layer-group
+> model. (d) **chrome reskinned to the RPG Maker XP layout**: menu bar (File/Edit/Mode/Draw/Scale/
+> View/Tools/Game/Help) + grouped icon toolbar (file · edit · undo/redo · layers 1/2/3+event · draw
+> tools · scale 1/1·1/2·1/4 · tools · playtest); W/H/Resize moved to the side panel. Buttons without
+> features yet (cut/copy/paste, undo/redo, layer 3, event, database/materials/script/sound) show a
+> "coming in a later stage" toast. **Agreed full scope (contract A–H):** A tab models (both), B layers
+> (1/2/3 + auto upper/lower) + shadow pen + region IDs, C tools (shift-map/copy-paste/undo-redo),
+> D events + list editor, E map props, **G sprite/charset event graphics**, **H Charas-style character
+> GENERATOR on the open LPC part set** (CC-BY-SA/GPL/OGA — chosen for IP-clean). Formats may be
+> extended (backward-compatible). **Remaining stages:** 2 = layers/shadow/region + tools; 3 = events +
+> sprite picker; 4 = LPC character generator. Headless harness: serve `python3 -m http.server 8099`,
+> run `/tmp/edcheck.mjs` (editor) / `tools/bootcheck.mjs` (game) with puppeteer-core from `/tmp` +
+> chromium at `/opt/pw-browsers/chromium-1194`.
+
 ## What this is
 A browser-based, **GBA-style (240×160 logical) 2D top-down LitRPG survival sandbox**.
 Core premise: *"The System helps you, and that's the horror."* Full design lives in the

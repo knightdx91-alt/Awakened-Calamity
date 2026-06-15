@@ -48,8 +48,16 @@
     eraser: false,
     showGrid: true,
     zoom: 2,
-    orient: 0                    // 0..3 -> 0/90/180/270 deg whole-editor rotation
+    orient: 0,                   // 0..3 -> 0/90/180/270 deg whole-editor rotation
+    // ── RPG-Maker tab model ──
+    rmSets: [],                  // loaded from data/tilesets/_rm_sets.json
+    activeSet: null,             // current set object {id,name,tile,tabs}
+    setTabs: [],                 // [{label, sheet, role}] for the active set
+    tabMode: 'mv'                // 'mv' = A-E tabs (one sheet) | 'xp' = single stacked sheet
   };
+
+  // RM tab roles in display order. A2 = ground autotile (terrain brush).
+  var RM_ROLE_ORDER = ['A1', 'A2', 'A3', 'A4', 'A5', 'B', 'C', 'D', 'E'];
 
   var ORIENT_DEG = [0, 90, 180, 270];
 
@@ -252,25 +260,101 @@
   var PAL_SCALE = 2;
   var PAL_COLS = 8;
 
-  // Tileset tabs: one chip per official sheet (classic RM A–E feel). Each tab is
-  // its own palette; clicking it loads that tileset into the active layer.
-  var TAB_ORDER = ['ac_ground', 'ac_terrain', 'ac_terrain2', 'ac_buildings', 'ac_dungeon', 'ac_props'];
-  function tilesetTabList() {
-    var names = state._tilesetNames || [];
-    var list = TAB_ORDER.filter(function (n) { return names.indexOf(n) >= 0; });
-    var cur = L().name;
-    if (cur && list.indexOf(cur) < 0) list.push(cur);   // always show the active sheet
-    return list;
+  // ── RPG-Maker tileset SETS (data/tilesets/_rm_sets.json) ──
+  // A "set" groups sheets into RM A1-A5/B/C/D/E roles. Selecting a set loads all
+  // its sheets into the active layer's group (offsets), so cells store global ids
+  // and tabs just switch which sheet the picker shows. MV mode = A-E tabs (one
+  // sheet at a time); XP mode = one tall scrolling palette stacking every sheet.
+  function loadRmSets() {
+    return fetch('data/tilesets/_rm_sets.json')
+      .then(function (r) { return r.ok ? r.json() : { sets: [] }; })
+      .then(function (d) { state.rmSets = d.sets || []; })
+      .catch(function () { state.rmSets = []; });
   }
+
+  // Tabs present in the active set, in RM role order. A2 maps to the baked
+  // *_ground autotile sheet (terrain brush); other roles map to raw sheets.
+  function computeSetTabs(set) {
+    var tabs = [];
+    RM_ROLE_ORDER.forEach(function (role) {
+      var sheet = set.tabs[role];
+      if (sheet && (state._tilesetNames || []).indexOf(sheet) >= 0) tabs.push({ label: role, sheet: sheet, role: role });
+    });
+    return tabs;
+  }
+
+  // Load a whole set into the active layer's group; activate the first tab.
+  function loadSet(setId, keepData) {
+    var set = state.rmSets.filter(function (s) { return s.id === setId; })[0];
+    if (!set) return Promise.resolve();
+    state.activeSet = set;
+    state.setTabs = computeSetTabs(set);
+    var layer = L();
+    // append every set sheet to the group that isn't already present
+    var chain = Promise.resolve();
+    state.setTabs.forEach(function (t) {
+      chain = chain.then(function () {
+        var have = layer.sheets.some(function (s) { return s.name === t.sheet; });
+        if (have) return null;
+        return loadSheetData(t.sheet).then(function (sheet) {
+          var off = 0; layer.sheets.forEach(function (s) { off += s.count; });
+          sheet.offset = off; layer.sheets.push(sheet);
+        }).catch(function () { /* missing sheet: skip */ });
+      });
+    });
+    return chain.then(function () {
+      // activate the A2 (ground/autotile) tab if present, else first tab
+      var first = state.setTabs.filter(function (t) { return t.role === 'A2'; })[0] || state.setTabs[0];
+      $('rmSetSel').value = set.id;
+      if (first) return activateTab(first.sheet);
+      syncActive(layer); afterTilesetChange();
+    });
+  }
+
+  // Switch the picker to a sheet already in the group (a tab click).
+  function activateTab(sheetName) {
+    var layer = L();
+    for (var i = 0; i < layer.sheets.length; i++) {
+      if (layer.sheets[i].name === sheetName) { layer.active = i; syncActive(layer); break; }
+    }
+    afterTilesetChange();
+    setStampFromPalette(0, 0, 0, 0);
+    return Promise.resolve();
+  }
+
+  // Shared refresh after the active sheet/set/layer changes.
+  function afterTilesetChange() {
+    state.autoMode = state.active === 'ground' && !!L().autotile;
+    if (L().name) $('tilesetSel').value = L().name;
+    updateTilesetStatus();
+    buildTilesetTabs();
+    rebuildAutoPalette();
+    refreshPaletteTabs();
+    drawPalette();
+    updateSelSwatch();
+    drawMap();
+  }
+
+  // Build the RM A-E tab chips for the active set (MV mode) and the set dropdown.
   function buildTilesetTabs() {
+    var setSel = $('rmSetSel');
+    if (setSel && !setSel._built) {
+      setSel.innerHTML = '';
+      state.rmSets.forEach(function (s) {
+        var o = document.createElement('option'); o.value = s.id; o.textContent = s.name; setSel.appendChild(o);
+      });
+      setSel._built = true;
+    }
     var strip = $('palTabs'); strip.innerHTML = '';
+    if (state.tabMode === 'xp') { strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
     var cur = L().name;
-    tilesetTabList().forEach(function (n) {
+    state.setTabs.forEach(function (t) {
       var tab = document.createElement('div');
-      tab.className = 'pal-tab' + (n === cur ? ' active' : '');
-      tab.textContent = n.replace(/^ac_/, '').replace(/_/g, ' ');
-      tab.title = n;
-      tab.addEventListener('click', function () { if (n !== L().name) loadTileset(n); });
+      tab.className = 'pal-tab' + (t.sheet === cur ? ' active' : '');
+      tab.textContent = t.label;
+      tab.title = t.sheet + (t.role === 'A2' ? ' (ground autotiles)' : '');
+      tab.addEventListener('click', function () { if (t.sheet !== L().name) activateTab(t.sheet); });
       strip.appendChild(tab);
     });
   }
@@ -337,7 +421,26 @@
     if (keys.indexOf(state.selectedTerrain) < 0) state.selectedTerrain = keys[1] || '';
   }
 
+  // XP mode flat tile list: every tile of every sheet in the active set, stacked
+  // (skips the *_ground autotile sheet's raw tiles to avoid duplicating A2-raw).
+  // Each entry maps a palette cell -> a GLOBAL id in the active layer's group.
+  function buildXpView() {
+    var layer = L();
+    var tiles = [];
+    var seen = {};
+    state.setTabs.forEach(function (t) {
+      if (t.role === 'A2') return;            // ground autotile handled by the Auto palette
+      var sheet = layer.sheets.filter(function (s) { return s.name === t.sheet; })[0];
+      if (!sheet || seen[t.sheet]) return;
+      seen[t.sheet] = 1;
+      for (var i = 0; i < sheet.count; i++) tiles.push({ sheet: sheet, local: i, gid: sheet.offset + i });
+    });
+    state.xpView = { tiles: tiles };
+    return state.xpView;
+  }
+
   function drawPalette() {
+    if (state.tabMode === 'xp') return drawPaletteXP();
     var layer = L();
     if (!layer.img) return;
     var n = totalMetatiles(layer);
@@ -361,6 +464,33 @@
         s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
     }
     $('paletteCount').textContent = n + ' tiles';
+  }
+
+  // XP single tall palette: all set sheets stacked in one PAL_COLS-wide column.
+  function drawPaletteXP() {
+    var view = buildXpView();
+    var n = view.tiles.length;
+    var rows = Math.ceil(n / PAL_COLS) || 1;
+    var cw = PAL_COLS * DT * PAL_SCALE, ch = rows * DT * PAL_SCALE;
+    paletteCanvas.width = cw; paletteCanvas.height = ch;
+    pctx.imageSmoothingEnabled = false;
+    pctx.clearRect(0, 0, cw, ch);
+    for (var i = 0; i < n; i++) {
+      var dc = i % PAL_COLS, dr = (i / PAL_COLS) | 0, t = view.tiles[i];
+      blitLocal(pctx, t.sheet, t.local, dc * DT * PAL_SCALE, dr * DT * PAL_SCALE, DT * PAL_SCALE);
+    }
+    // highlight: find the cell whose gid == selectedTile
+    var s = state.stamp;
+    for (var k = 0; k < n; k++) {
+      if (view.tiles[k].gid === state.selectedTile) {
+        var sc = k % PAL_COLS, sr = (k / PAL_COLS) | 0;
+        pctx.strokeStyle = '#ff3030'; pctx.lineWidth = 2;
+        pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
+          s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
+        break;
+      }
+    }
+    $('paletteCount').textContent = n + ' tiles (all sheets)';
   }
 
   // blit a LOCAL id from a specific sheet (palette/swatch)
@@ -397,11 +527,27 @@
   window.addEventListener('mouseup', function () { palDrag = null; });
 
   function setStampFromPalette(cx0, cy0, cx1, cy1) {
-    var sheet = aSheet(L()); if (!sheet) return;
-    var off = sheet.offset, n = sheet.count;
     var x0 = Math.min(cx0, cx1), x1 = Math.max(cx0, cx1);
     var y0 = Math.min(cy0, cy1), y1 = Math.max(cy0, cy1);
-    var ids = [], w = x1 - x0 + 1, h = y1 - y0 + 1;
+    var w = x1 - x0 + 1, h = y1 - y0 + 1, ids = [];
+    if (state.tabMode === 'xp') {
+      var view = state.xpView || buildXpView(), n0 = view.tiles.length;
+      var gidAt = function (cx, cy) {
+        var k = cy * PAL_COLS + cx;
+        return (k >= 0 && k < n0) ? view.tiles[k].gid : (view.tiles[0] ? view.tiles[0].gid : 0);
+      };
+      for (var yy = y0; yy <= y1; yy++)
+        for (var xx = x0; xx <= x1; xx++) ids.push(gidAt(xx, yy));
+      state.stamp = { w: w, h: h, ids: ids };
+      state.selectedTile = gidAt(x0, y0);
+      state.eraser = false; $('eraserBtn').classList.remove('active');
+      $('selId').textContent = state.selectedTile + (w * h > 1 ? (' (' + w + '×' + h + ')') : '');
+      $('selBehavior').textContent = '';
+      updateSelSwatch(); drawPalette();
+      return;
+    }
+    var sheet = aSheet(L()); if (!sheet) return;
+    var off = sheet.offset, n = sheet.count;
     for (var y = y0; y <= y1; y++)
       for (var x = x0; x <= x1; x++) {
         var local = y * PAL_COLS + x;
@@ -833,10 +979,12 @@
     $('layerSel').value = key;
     var layer = L();
     if (!layer.sheets.length && key === 'overlay' && state._tilesetNames) {
-      // lazily give the overlay layer a default object sheet on first use
-      var def = ['ac_buildings', 'ac_props'].filter(function (n) {
-        return state._tilesetNames.indexOf(n) >= 0;
-      })[0] || state._tilesetNames[0];
+      // lazily give the overlay layer a default object sheet on first use:
+      // the active set's B page (buildings/props) if available, else first sheet.
+      var setB = state.activeSet && state.activeSet.tabs.B;
+      var def = (setB && state._tilesetNames.indexOf(setB) >= 0) ? setB
+        : ['pf_outside_b', 'pf_outside_c'].filter(function (n) { return state._tilesetNames.indexOf(n) >= 0; })[0]
+        || state._tilesetNames[0];
       return useTileset(layer, def).then(function () { setActiveLayer(key); });
     }
     if (layer.name) $('tilesetSel').value = layer.name;
@@ -852,6 +1000,174 @@
 
   $('layerSel').addEventListener('change', function () { setActiveLayer(this.value); });
   $('tilesetSel').addEventListener('change', function () { loadTileset(this.value); });
+  $('rmSetSel').addEventListener('change', function () { loadSet(this.value); });
+
+  // ── RPG-Maker-XP chrome wiring (menu bar, toolbar groups) ──
+  function clickEl(id) { var e = $(id); if (e) e.click(); }
+  var _toast = null;
+  function toast(msg) {
+    if (!_toast) {
+      _toast = document.createElement('div');
+      _toast.style.cssText = 'position:fixed; left:50%; bottom:38px; transform:translateX(-50%);' +
+        'background:#222; color:#fff; padding:8px 16px; border-radius:6px; font-size:12px;' +
+        'z-index:300; box-shadow:0 6px 20px rgba(0,0,0,.4); pointer-events:none; opacity:0; transition:opacity .15s;';
+      document.body.appendChild(_toast);
+    }
+    _toast.textContent = msg; _toast.style.opacity = '1';
+    clearTimeout(_toast._t); _toast._t = setTimeout(function () { _toast.style.opacity = '0'; }, 1600);
+  }
+  function soon() { toast('Coming in a later stage of the RPG-Maker-style rebuild.'); }
+
+  // Resize (visible button in the side panel)
+  var rb2 = $('resizeBtn2');
+  if (rb2) rb2.addEventListener('click', function () {
+    newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, true);
+  });
+
+  // Scale buttons (1/1, 1/2, 1/4) -> setZoom (deferred: setZoom defined below)
+  document.querySelectorAll('#scaleGroup .scale').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#scaleGroup .scale').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      window._setZoom(parseFloat(b.dataset.scale));
+    });
+  });
+
+  // Layer buttons (Layer 1/2/3 + Event). 1=ground, 2=overlay; 3/event = coming soon.
+  document.querySelectorAll('#layerGroup .mode-layer').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var lyr = b.dataset.layer;
+      if (lyr === 'upper') { soon(); return; }
+      document.querySelectorAll('#layerGroup .mode-layer').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      setActiveLayer(lyr);
+    });
+  });
+  $('eventModeBtn').addEventListener('click', soon);
+  ['cutBtn', 'copyBtn', 'pasteBtn', 'delBtn', 'undoBtn', 'redoBtn',
+   'dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
+    var e = $(id); if (e) e.addEventListener('click', soon);
+  });
+
+  // Playtest -> open the game on the current map in a new tab.
+  $('playBtn').addEventListener('click', function () {
+    var nm = $('mapName').value || 'AwakeningCamp';
+    var rg = $('mapRegion').value || 'awakened';
+    window.open('game.html?map=' + encodeURIComponent(nm) + '&region=' + encodeURIComponent(rg), '_blank');
+  });
+
+  // ── Menu bar (RPG Maker XP menu order) ──
+  var MENUS = [
+    ['File', [
+      ['New', 'Ctrl+N', function () { clickEl('newBtn'); }],
+      ['Open / Import…', 'Ctrl+O', function () { clickEl('importBtn'); }],
+      ['Load from repo…', '', function () { clickEl('repoLoadBtn'); }],
+      'sep',
+      ['Export (layout + map)', 'Ctrl+S', function () { clickEl('exportBtn'); }],
+      ['Save to repo', '', function () { clickEl('repoSaveBtn'); }]
+    ]],
+    ['Edit', [
+      ['Undo', 'Ctrl+Z', null], ['Redo', 'Ctrl+Y', null], 'sep',
+      ['Cut', 'Ctrl+X', null], ['Copy', 'Ctrl+C', null],
+      ['Paste', 'Ctrl+V', null], ['Delete', 'Del', null]
+    ]],
+    ['Mode', [
+      ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }],
+      ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }],
+      ['Layer 3 (Upper)', '3', null],
+      ['Event layer', 'F6', null],
+      'sep',
+      ['Collision / Passage', '', function () { setModeBtn('collide'); }],
+      ['Tile mode', '', function () { setModeBtn('map'); }],
+      ['Warp placement', '', function () { setModeBtn('warp'); }]
+    ]],
+    ['Draw', [
+      ['Pencil', '', function () { setToolBtn('pencil'); }],
+      ['Rectangle', '', function () { setToolBtn('rect'); }],
+      ['Ellipse', '', function () { setToolBtn('ellipse'); }],
+      ['Flood Fill', '', function () { setToolBtn('fill'); }],
+      ['Select / Pick', '', function () { setToolBtn('pick'); }],
+      ['Eraser', '', function () { clickEl('eraserBtn'); }]
+    ]],
+    ['Scale', [
+      ['1/1', '', function () { setScaleBtn(2); }],
+      ['1/2', '', function () { setScaleBtn(1); }],
+      ['1/4', '', function () { setScaleBtn(0.5); }]
+    ]],
+    ['View', [
+      ['Toggle Grid', '', function () { clickEl('gridBtn'); }],
+      ['Rotate 90°', '', function () { clickEl('orientBtn'); }],
+      'sep',
+      ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
+    ]],
+    ['Tools', [
+      ['Database', '', null], ['Materials', '', null],
+      ['Script editor', '', null], ['Sound test', '', null]
+    ]],
+    ['Game', [
+      ['Playtest', 'F12', function () { clickEl('playBtn'); }]
+    ]],
+    ['Help', [
+      ['About', '', function () { toast('Awakened Calamity — RPG-Maker-style map editor.'); }]
+    ]]
+  ];
+  function setLayerBtn(lyr) {
+    var b = document.querySelector('#layerGroup .mode-layer[data-layer="' + lyr + '"]');
+    if (b) b.click();
+  }
+  function setModeBtn(mode) {
+    var b = document.querySelector('#modeGroup .mode[data-mode="' + mode + '"]');
+    if (b) b.click();
+  }
+  function setToolBtn(tool) {
+    var b = document.querySelector('#toolGroup .tool[data-tool="' + tool + '"]');
+    if (b) b.click();
+  }
+  function setScaleBtn(z) {
+    var b = document.querySelector('#scaleGroup .scale[data-scale="' + z + '"]');
+    if (b) b.click();
+  }
+  function buildMenuBar() {
+    var bar = $('menubar'); bar.innerHTML = '';
+    MENUS.forEach(function (m) {
+      var menu = document.createElement('div'); menu.className = 'menu'; menu.textContent = m[0];
+      var dd = document.createElement('div'); dd.className = 'dropdown';
+      m[1].forEach(function (it) {
+        if (it === 'sep') { var s = document.createElement('div'); s.className = 'mi-sep'; dd.appendChild(s); return; }
+        var mi = document.createElement('div');
+        mi.className = 'mi' + (it[2] ? '' : ' disabled');
+        var lab = document.createElement('span'); lab.textContent = it[0];
+        var key = document.createElement('span'); key.className = 'key'; key.textContent = it[1] || '';
+        mi.appendChild(lab); mi.appendChild(key);
+        if (it[2]) mi.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); it[2](); });
+        else mi.addEventListener('click', function (e) { e.stopPropagation(); });
+        dd.appendChild(mi);
+      });
+      menu.appendChild(dd);
+      menu.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var wasOpen = menu.classList.contains('open');
+        closeMenus();
+        if (!wasOpen) menu.classList.add('open');
+      });
+      menu.addEventListener('mouseenter', function () {
+        if (bar.querySelector('.menu.open')) { closeMenus(); menu.classList.add('open'); }
+      });
+      bar.appendChild(menu);
+    });
+  }
+  function closeMenus() {
+    document.querySelectorAll('#menubar .menu.open').forEach(function (m) { m.classList.remove('open'); });
+  }
+  document.addEventListener('click', closeMenus);
+  buildMenuBar();
+  $('tabModeBtn').addEventListener('click', function () {
+    state.tabMode = state.tabMode === 'mv' ? 'xp' : 'mv';
+    this.textContent = state.tabMode === 'mv' ? 'MV Tabs' : 'XP Sheet';
+    // XP mode shows raw tiles only (autotiles still reachable via Auto toggle on A2)
+    if (state.tabMode === 'xp') setAutoMode(false);
+    buildTilesetTabs(); applyPaletteTabVisibility(); drawPalette();
+  });
   $('newBtn').addEventListener('click', function () {
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, false);
   });
@@ -890,10 +1206,11 @@
     drawMap();
   });
   function setZoom(z) {
-    state.zoom = Math.max(1, Math.min(6, z));
+    state.zoom = Math.max(0.5, Math.min(6, z));
     $('zoomLabel').textContent = state.zoom + '×';
     drawMap();
   }
+  window._setZoom = setZoom;   // used by the XP Scale buttons (defined earlier)
   $('zoomIn').addEventListener('click', function () { setZoom(state.zoom + 1); });
   $('zoomOut').addEventListener('click', function () { setZoom(state.zoom - 1); });
 
@@ -1362,9 +1679,23 @@
   });
 
   // ── Boot ──
-  loadTilesetList().then(function () {
+  // Load tileset names + the "Sheet" dropdown, the RM set manifest, then open the
+  // first set (Outside) so the ground layer's group is defined by the set.
+  Promise.all([
+    fetch('data/tilesets/_index.json').then(function (r) { return r.json(); }),
+    loadRmSets()
+  ]).then(function (parts) {
+    state._tilesetNames = parts[0];
+    var sel = $('tilesetSel'); sel.innerHTML = '';
+    parts[0].forEach(function (n) {
+      var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+    });
+    var firstSet = (state.rmSets[0] && state.rmSets[0].id) || null;
+    var open = firstSet ? loadSet(firstSet) : useTileset(L(), parts[0][0]).then(afterTilesetChange);
+    return open;
+  }).then(function () {
     newMap(state.width, state.height, false);
-    setStampFromPalette(1, 0, 1, 0);
+    setStampFromPalette(0, 0, 0, 0);
     buildMapTree();
   }).catch(function (err) {
     alert('Failed to load tilesets. Serve over http (not file://).\n' + err);

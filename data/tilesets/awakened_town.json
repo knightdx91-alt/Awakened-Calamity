@@ -1,1 +1,0 @@
-{"total_metatiles": 13, "primary_count": 13, "secondary_count": 0, "metatiles_per_row": 16, "labels": ["grass", "grass_dirt_edge", "cobble", "brick_wall", "wall_window", "door", "roof", "water_shore", "fence", "signpost", "tree_top", "tree_bottom", "rune_floor"], "behaviors": [0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0], "collisions": [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]}

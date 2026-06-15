@@ -1,3 +1,0 @@
-coast_cc0 — '16x16 tileset: water, grass and sand' by Demetrius.
-License: CC0 1.0 (public domain). No attribution required.
-Source: https://opengameart.org/content/16x16-tileset-water-grass-and-sand

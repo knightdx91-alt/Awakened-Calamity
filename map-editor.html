@@ -25,12 +25,35 @@
   body[data-orient="2"] #rotor { transform:translate(-50%,-50%) rotate(180deg); }
   body[data-orient="3"] #rotor { width:100vh; height:100vw; transform:translate(-50%,-50%) rotate(270deg); }
 
-  /* ── Toolbar ── */
-  #topbar { display:flex; align-items:center; gap:6px; padding:4px 8px;
+  /* ── RPG-Maker-XP-style menu bar ── */
+  #menubar { display:flex; align-items:stretch; background:var(--toolbar);
+    border-bottom:1px solid var(--line); font-size:12px; user-select:none; }
+  #menubar .menu { padding:4px 10px; cursor:pointer; position:relative; }
+  #menubar .menu:hover, #menubar .menu.open { background:var(--accent); color:#fff; }
+  #menubar .dropdown { display:none; position:absolute; top:100%; left:0; z-index:120;
+    min-width:178px; background:#fff; color:var(--text); border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,.28); padding:3px; }
+  #menubar .menu.open .dropdown { display:block; }
+  #menubar .mi { padding:5px 14px; cursor:pointer; border-radius:3px; white-space:nowrap;
+    display:flex; justify-content:space-between; gap:18px; }
+  #menubar .mi:hover { background:var(--accent); color:#fff; }
+  #menubar .mi.disabled { color:#aaa; cursor:default; }
+  #menubar .mi.disabled:hover { background:transparent; color:#aaa; }
+  #menubar .mi .key { color:#999; font-size:11px; }
+  #menubar .mi:hover .key { color:#dfe; }
+  #menubar .mi-sep { height:1px; background:var(--line2); margin:3px 4px; }
+
+  /* ── RPG-Maker-XP-style icon toolbar ── */
+  #toolbar { display:flex; align-items:center; gap:2px; padding:3px 6px;
     background:linear-gradient(#f4f4f4,#e6e6e6); border-bottom:1px solid var(--line);
     flex-wrap:wrap; }
-  #topbar .group { display:flex; align-items:center; gap:3px; }
-  #topbar .sep { width:1px; height:22px; background:var(--line2); margin:0 3px; }
+  #toolbar .tgrp { display:flex; align-items:center; gap:1px; }
+  #toolbar .tsep { width:1px; height:22px; background:var(--line2); margin:0 4px; }
+  .tb { min-width:26px; height:26px; font-size:14px; padding:2px 5px; line-height:1;
+    display:inline-flex; align-items:center; justify-content:center; }
+  .tb.txt { font-size:11px; font-weight:600; min-width:30px; }
+  /* legacy: keep old group/sep classes harmless */
+  #topbar { display:none; }
   h1 { font-size:13px; margin:0 8px 0 2px; color:#2b4a7a; font-weight:700; letter-spacing:.3px; }
   button, select, input { font-family:inherit; font-size:12px; color:var(--text);
     background:var(--btn); border:1px solid var(--line); border-radius:3px; padding:3px 7px; }
@@ -150,62 +173,107 @@
 </head>
 <body>
  <div id="rotor">
-  <div id="topbar">
-    <h1>MAP EDITOR</h1>
-    <div class="group">
-      <label class="lbl">W</label><input type="number" id="mapW" value="20" min="1" max="200">
-      <label class="lbl">H</label><input type="number" id="mapH" value="18" min="1" max="200">
-      <button id="newBtn" title="New map">New</button>
-      <button id="resizeBtn" title="Resize keeping content">Resize</button>
+  <!-- ── Menu bar (RPG Maker XP order) ── -->
+  <div id="menubar"></div>
+
+  <!-- ── Icon toolbar (RPG Maker XP group order) ── -->
+  <div id="toolbar">
+    <!-- File -->
+    <div class="tgrp">
+      <button id="newBtn" class="tb" title="New map">📄</button>
+      <button id="importBtn" class="tb" title="Open / Import…">📂</button>
+      <button id="exportBtn" class="tb" title="Export (save layout+map)">💾</button>
     </div>
-    <div class="sep"></div>
-    <div class="group">
-      <label class="lbl">Layer</label>
-      <select id="layerSel">
-        <option value="ground">Ground</option>
-        <option value="overlay">Overlay</option>
-      </select>
+    <div class="tsep"></div>
+    <!-- Edit -->
+    <div class="tgrp">
+      <button id="cutBtn" class="tb" title="Cut (coming soon)">✂️</button>
+      <button id="copyBtn" class="tb" title="Copy (coming soon)">⧉</button>
+      <button id="pasteBtn" class="tb" title="Paste (coming soon)">📋</button>
+      <button id="delBtn" class="tb" title="Delete (coming soon)">❌</button>
     </div>
-    <div class="sep"></div>
-    <div class="group" id="modeGroup">
-      <button data-mode="map" class="mode active" title="Tile mode">▦ Map</button>
-      <button data-mode="collide" class="mode" title="Passage / collision">⛔ Collision</button>
-      <button data-mode="warp" class="mode" title="Place warps">🚪 Warp</button>
+    <div class="tsep"></div>
+    <!-- Undo / Redo -->
+    <div class="tgrp">
+      <button id="undoBtn" class="tb" title="Undo (coming soon)">↶</button>
+      <button id="redoBtn" class="tb" title="Redo (coming soon)">↷</button>
     </div>
-    <div class="sep"></div>
-    <div class="group" id="toolGroup">
-      <button data-tool="pencil" class="tool active" title="Pencil">✏</button>
-      <button data-tool="rect" class="tool" title="Rectangle">▭</button>
-      <button data-tool="ellipse" class="tool" title="Ellipse">◯</button>
-      <button data-tool="fill" class="tool" title="Flood fill">🪣</button>
-      <button data-tool="pick" class="tool" title="Pick (eyedropper)">⛏</button>
-      <button id="eraserBtn" class="tool" title="Eraser (paint empty)">⌫</button>
+    <div class="tsep"></div>
+    <!-- Mode: map layers + event layer -->
+    <div class="tgrp" id="layerGroup">
+      <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (Ground)">1</button>
+      <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (Overlay)">2</button>
+      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (Upper) — coming soon">3</button>
+      <button id="eventModeBtn" class="tb" title="Event layer — coming soon">◆</button>
     </div>
-    <div class="sep"></div>
-    <div class="group">
-      <button id="gridBtn" class="active" title="Toggle grid">▦ Grid</button>
-      <button id="orientBtn" title="Rotate the whole editor 90°">⟳ 0°</button>
-      <label class="lbl">Zoom</label>
-      <button id="zoomOut">−</button><span id="zoomLabel">2×</span><button id="zoomIn">+</button>
+    <div class="tsep"></div>
+    <!-- Draw tools -->
+    <div class="tgrp" id="toolGroup">
+      <button data-tool="pencil"  class="tb tool active" title="Pencil">✏️</button>
+      <button data-tool="rect"    class="tb tool" title="Rectangle">▭</button>
+      <button data-tool="ellipse" class="tb tool" title="Ellipse">◯</button>
+      <button data-tool="fill"    class="tb tool" title="Flood fill">🪣</button>
+      <button data-tool="pick"    class="tb tool" title="Select / Pick (eyedropper)">⛏️</button>
+      <button id="eraserBtn"      class="tb tool" title="Eraser (paint empty)">⌫</button>
     </div>
-    <div class="sep"></div>
-    <div class="group">
-      <button id="importBtn">Import…</button>
-      <button id="exportBtn">Export ⬇</button>
-      <button id="repoSaveBtn" title="Commit this map to the 'maps' branch on GitHub">☁ Save</button>
-      <button id="repoLoadBtn" title="Open a map saved on the 'maps' branch">☁ Load</button>
-      <input type="file" id="importFile" accept=".json" style="display:none">
+    <div class="tsep"></div>
+    <!-- Scale -->
+    <div class="tgrp" id="scaleGroup">
+      <button class="tb txt scale active" data-scale="2"   title="Scale 1/1">1/1</button>
+      <button class="tb txt scale"        data-scale="1"   title="Scale 1/2">1/2</button>
+      <button class="tb txt scale"        data-scale="0.5" title="Scale 1/4">1/4</button>
     </div>
+    <div class="tsep"></div>
+    <!-- Tools -->
+    <div class="tgrp">
+      <button id="dbBtn" class="tb" title="Database (coming soon)">🗄️</button>
+      <button id="matBtn" class="tb" title="Materials (coming soon)">🎨</button>
+      <button id="scriptBtn" class="tb" title="Script (coming soon)">📜</button>
+      <button id="soundBtn" class="tb" title="Sound test (coming soon)">🔊</button>
+    </div>
+    <div class="tsep"></div>
+    <!-- Game -->
+    <div class="tgrp">
+      <button id="playBtn" class="tb" title="Playtest (open the game on this map)">▶️</button>
+    </div>
+
+    <!-- Hidden controls the JS still binds to (driven by menus/toolbar above) -->
+    <select id="layerSel" style="display:none">
+      <option value="ground">Ground</option><option value="overlay">Overlay</option>
+    </select>
+    <div id="modeGroup" style="display:none">
+      <button data-mode="map" class="mode active">Map</button>
+      <button data-mode="collide" class="mode">Collision</button>
+      <button data-mode="warp" class="mode">Warp</button>
+    </div>
+    <button id="resizeBtn" style="display:none"></button>
+    <button id="gridBtn" class="active" style="display:none"></button>
+    <button id="orientBtn" style="display:none">⟳ 0°</button>
+    <button id="zoomOut" style="display:none"></button>
+    <span id="zoomLabel" style="display:none">2×</span>
+    <button id="zoomIn" style="display:none"></button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <button id="repoSaveBtn" style="display:none">☁ Save</button>
+    <button id="repoLoadBtn" style="display:none">☁ Load</button>
   </div>
 
   <div id="main">
     <!-- Left: map tree + tabbed palette -->
     <div id="leftCol">
       <div id="palettePanel">
-        <div id="palHeadLbl">Tilesets</div>
+        <div id="palHeadLbl">Tilesets
+          <span style="float:right; font-weight:400; text-transform:none;">
+            <button id="tabModeBtn" title="Switch palette layout: MV tabs ⇄ XP single sheet"
+              style="padding:1px 7px; font-size:10px;">MV Tabs</button>
+          </span>
+        </div>
+        <div id="palToolRow">
+          <span class="lbl">Set</span>
+          <select id="rmSetSel" style="flex:1; min-width:0;"></select>
+        </div>
         <div id="palTabs"></div>
         <div id="palToolRow">
-          <span class="lbl">More:</span>
+          <span class="lbl">Sheet</span>
           <select id="tilesetSel" style="flex:1; min-width:0;"></select>
         </div>
         <div id="paletteHead">
@@ -241,6 +309,11 @@
 
       <div class="card">
         <h3>Map info</h3>
+        <div class="row">
+          <label class="lbl">W</label><input type="number" id="mapW" value="20" min="1" max="200">
+          <label class="lbl">H</label><input type="number" id="mapH" value="18" min="1" max="200">
+          <button id="resizeBtn2" title="Resize keeping content">Resize</button>
+        </div>
         <div class="row"><label class="lbl">Name</label><input type="text" id="mapName" value="NewMap"></div>
         <div class="row"><label class="lbl">Region</label>
           <select id="mapRegion">

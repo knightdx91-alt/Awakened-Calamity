@@ -1,0 +1,49 @@
+{
+  "_comment": "RPG-Maker-style tileset SETS. Each set groups sheets into RM A1-A5/B/C/D/E roles. A2 prefers the baked *_ground autotile sheet (terrain blob) and falls back to the raw a2 sheet. Used by the map editor's MV/MZ A-E tab palette and the XP single-sheet view. Pixel Fantasy source = commercial/EULA (see PIXEL_FANTASY.LICENSE.txt).",
+  "sets": [
+    {
+      "id": "pf_outside",
+      "name": "Outside",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_outside_a1",
+        "A2": "pf_outside_ground",
+        "A2raw": "pf_outside_a2",
+        "A3": "pf_outside_a3",
+        "A4": "pf_outside_a4",
+        "A5": "pf_outside_a5",
+        "B": "pf_outside_b",
+        "C": "pf_outside_c",
+        "D": "pf_outside_d"
+      }
+    },
+    {
+      "id": "pf_inside",
+      "name": "Inside",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_inside_a1",
+        "A2": "pf_inside_ground",
+        "A2raw": "pf_inside_a2",
+        "A4": "pf_inside_a4",
+        "A5": "pf_inside_a5",
+        "B": "pf_inside_b",
+        "C": "pf_inside_c"
+      }
+    },
+    {
+      "id": "pf_dungeon",
+      "name": "Dungeon",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_dungeon_a1",
+        "A2": "pf_dungeon_ground",
+        "A2raw": "pf_dungeon_a2",
+        "A4": "pf_dungeon_a4",
+        "A5": "pf_dungeon_a5",
+        "B": "pf_dungeon_b",
+        "C": "pf_dungeon_c"
+      }
+    }
+  ]
+}

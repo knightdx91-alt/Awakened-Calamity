@@ -1,5 +1,0 @@
-forest_cc0 tileset
-Source: 'Seasons of Forest (free sample)' by inkBubi
-https://opengameart.org/content/free-sample-16x16-pixel-forest-tileset
-License: CC0 1.0 (public domain). No attribution required; credit appreciated.
-Full set: https://inkbubi.itch.io/seasons-of-forest-tileset

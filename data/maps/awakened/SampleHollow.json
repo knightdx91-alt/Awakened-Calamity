@@ -1,1 +1,0 @@
-{"id": "MAP_SAMPLE_HOLLOW", "name": "SampleHollow", "region": "awakened", "layout": "LAYOUT_SAMPLE_HOLLOW", "music": "", "weather": "WEATHER_NONE", "map_type": "MAP_TYPE_ROUTE", "allow_running": true, "allow_cycling": false, "show_map_name": true, "connections": [], "npcs": [], "warps": [], "triggers": [], "signs": []}
