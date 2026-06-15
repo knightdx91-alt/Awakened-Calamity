@@ -813,9 +813,86 @@
         return r.json();
       });
   }
+  function ghDelete(path, message) {
+    return ghGet(path).then(function (cur) {
+      if (!cur.sha) return null;   // already gone
+      return fetch(ghUrl(path), {
+        method: 'DELETE', headers: ghHeaders(),
+        body: JSON.stringify({ message: message, sha: cur.sha, branch: GH_BRANCH })
+      }).then(function (r) {
+        if (!r.ok) return r.json().then(function (d) { throw new Error(d.message || ('HTTP ' + r.status)); });
+        return r.json();
+      });
+    });
+  }
+  // remove a map's entries from the region index (read-modify-write)
+  function ghIndexRemove(region, mapId, mapName) {
+    var indexPath = 'data/maps/' + region + '_index.json';
+    return ghGet(indexPath).then(function (cur) {
+      if (!cur.content) return null;
+      var index = {}; try { index = JSON.parse(cur.content); } catch (e) { return null; }
+      delete index[mapId]; delete index[mapName];
+      return ghPut(indexPath, index, 'map-editor: index remove ' + mapName, cur.sha);
+    });
+  }
   function setRepoBtn(txt, col) {
     var b = $('repoSaveBtn'); b.textContent = txt;
     b.style.color = col || ''; b.style.borderColor = col || '';
+  }
+  function mapIdOf(name) { return 'MAP_' + name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase(); }
+
+  // Rename a saved map (+ its layout) on the 'maps' branch: write the new
+  // files, update the region index, then delete the old files.
+  function repoRename(oldName, newName, region) {
+    var oldMapPath = 'data/maps/' + region + '/' + oldName + '.json';
+    return ghGet(oldMapPath).then(function (c) {
+      if (!c.content) throw new Error('map not found on branch');
+      var mapObj = JSON.parse(c.content);
+      var oldLayoutId = mapObj.layout;
+      var oldLayoutPath = 'data/layouts/' + region + '/' + oldLayoutId + '.json';
+      return ghGet(oldLayoutPath).then(function (lc) {
+        var layoutObj = lc.content ? JSON.parse(lc.content) : null;
+        var newLayoutId = layoutIdFor(newName);
+        mapObj.name = newName; mapObj.id = mapIdOf(newName); mapObj.layout = newLayoutId;
+        var newMapPath = 'data/maps/' + region + '/' + newName + '.json';
+        var newLayoutPath = 'data/layouts/' + region + '/' + newLayoutId + '.json';
+        var chain = Promise.resolve();
+        if (layoutObj) {
+          layoutObj.id = newLayoutId;
+          chain = chain.then(function () { return ghGet(newLayoutPath); })
+            .then(function (cur) { return ghPut(newLayoutPath, layoutObj, 'map-editor: rename layout ' + newLayoutId, cur.sha); });
+        }
+        return chain
+          .then(function () { return ghGet(newMapPath); })
+          .then(function (cur) { return ghPut(newMapPath, mapObj, 'map-editor: rename map ' + newName, cur.sha); })
+          .then(function () {
+            var ip = 'data/maps/' + region + '_index.json';
+            return ghGet(ip).then(function (cur) {
+              var index = {}; if (cur.content) { try { index = JSON.parse(cur.content); } catch (e) {} }
+              index[mapObj.id] = newName; index[newName] = newName;
+              delete index[mapIdOf(oldName)]; delete index[oldName];
+              return ghPut(ip, index, 'map-editor: rename index ' + newName, cur.sha);
+            });
+          })
+          .then(function () { return ghDelete(oldMapPath, 'map-editor: rename remove ' + oldName); })
+          .then(function () { if (layoutObj && newLayoutId !== oldLayoutId) return ghDelete(oldLayoutPath, 'map-editor: rename remove layout ' + oldLayoutId); });
+      });
+    });
+  }
+
+  // Delete a saved map (+ its layout) from the branch and drop it from the index.
+  function repoDelete(name, region) {
+    var mapPath = 'data/maps/' + region + '/' + name + '.json';
+    return ghGet(mapPath).then(function (c) {
+      var mapObj = c.content ? JSON.parse(c.content) : null;
+      var mapId = mapObj ? mapObj.id : mapIdOf(name);
+      var layoutId = mapObj ? mapObj.layout : null;
+      var chain = ghDelete(mapPath, 'map-editor: delete map ' + name);
+      if (layoutId) chain = chain.then(function () {
+        return ghDelete('data/layouts/' + region + '/' + layoutId + '.json', 'map-editor: delete layout ' + layoutId);
+      });
+      return chain.then(function () { return ghIndexRemove(region, mapId, name); });
+    });
   }
   function saveToRepo() {
     if (!state.layers.ground.data) return;
@@ -944,9 +1021,11 @@
         treeExpanded[name] = treeExpanded[name] === false;
         persistTree(); renderTree();
       });
+      var icon = document.createElement('span'); icon.className = 'tree-icon';
+      icon.textContent = hasKids ? '🗀' : '🗺';
       var label = document.createElement('span'); label.className = 'tree-label';
       label.textContent = name + (node.local ? ' •' : '');
-      item.appendChild(caret); item.appendChild(label);
+      item.appendChild(caret); item.appendChild(icon); item.appendChild(label);
       item.addEventListener('click', function () { selectNode(name); });
       attachCtx(item, name);
       tree.appendChild(item);
@@ -983,12 +1062,23 @@
     var nn = prompt('Rename map "' + name + '" to:', name);
     if (!nn || nn === name) return;
     if (treeModel[nn]) { alert('A map named "' + nn + '" already exists.'); return; }
-    treeModel[nn] = treeModel[name]; delete treeModel[name];
+    var node = treeModel[name];
+    var wasSaved = !node.local, region = node.region;
+    // update the local model
+    treeModel[nn] = node; delete treeModel[name];
     Object.keys(treeModel).forEach(function (k) { if (treeModel[k].parent === name) treeModel[k].parent = nn; });
     if (treeExpanded[name] != null) { treeExpanded[nn] = treeExpanded[name]; delete treeExpanded[name]; }
-    treeModel[nn].local = true;   // name changed -> save writes a new file
     if (currentNode === name) { currentNode = nn; $('mapName').value = nn; $('layoutId').value = layoutIdFor(nn); }
     persistTree(); renderTree();
+    if (!wasSaved) return;   // local-only: nothing on the repo to move
+    setRepoBtn('☁ Renaming…', '#b58900');
+    repoRename(name, nn, region)
+      .then(function () { setRepoBtn('✓ Renamed', '#2a9d2a'); setTimeout(function () { setRepoBtn('☁ Save'); }, 2500); })
+      .catch(function (e) {
+        setRepoBtn('✗ Error', '#c02020'); setTimeout(function () { setRepoBtn('☁ Save'); }, 3000);
+        treeModel[nn].local = true; persistTree(); renderTree();
+        alert('Renamed locally, but the repo update failed:\n' + e.message);
+      });
   }
 
   function duplicateNode(name) {
@@ -1012,14 +1102,24 @@
 
   function deleteNode(name) {
     var node = treeModel[name];
-    var msg = 'Remove "' + name + '" from the tree?' +
-      (node.local ? '' : '\n(This only removes it from the list; the saved file on the repo is kept.)');
+    var wasSaved = !node.local, region = node.region;
+    var msg = wasSaved
+      ? 'Delete "' + name + '" from the maps branch?\nThis removes the map AND its layout file, and updates the index. This cannot be undone.'
+      : 'Remove "' + name + '" from the list?';
     if (!confirm(msg)) return;
-    var parent = treeModel[name].parent || null;
+    var parent = node.parent || null;
     Object.keys(treeModel).forEach(function (k) { if (treeModel[k].parent === name) treeModel[k].parent = parent; });
     delete treeModel[name]; delete treeExpanded[name];
     if (currentNode === name) currentNode = null;
     persistTree(); renderTree();
+    if (!wasSaved) return;
+    setRepoBtn('☁ Deleting…', '#b58900');
+    repoDelete(name, region)
+      .then(function () { setRepoBtn('✓ Deleted', '#2a9d2a'); setTimeout(function () { setRepoBtn('☁ Save'); }, 2500); })
+      .catch(function (e) {
+        setRepoBtn('✗ Error', '#c02020'); setTimeout(function () { setRepoBtn('☁ Save'); }, 3000);
+        alert('Removed from the list, but the repo delete failed:\n' + e.message);
+      });
   }
 
   // ── Context menu (press-and-hold / right-click) ──
