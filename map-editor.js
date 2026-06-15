@@ -43,6 +43,13 @@
 
   var ORIENT_DEG = [0, 90, 180, 270];
 
+  // ── Map tree model (manual hierarchy, RM-style) ──
+  // name -> { region, parent (name|null), local (true until saved to repo) }
+  var TREE_KEY = 'ac_map_tree_v1';
+  var treeModel = {};
+  var treeExpanded = {};       // name -> false when collapsed (default expanded)
+  var currentNode = null;      // tree node currently loaded in the editor
+
   // Map a screen point to a (rotated) canvas's own untransformed content
   // coordinates. The editor may be CSS-rotated about the viewport centre; since
   // that transform is rigid, inverse-rotating the offset from the canvas's
@@ -604,9 +611,11 @@
 
   function buildMap() {
     var name = $('mapName').value || 'NewMap';
+    var node = treeModel[name] || (currentNode && treeModel[currentNode]) || null;
     return {
       id: 'MAP_' + name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase(),
       name: name, region: $('mapRegion').value,
+      parent: node && node.parent ? node.parent : '',   // tree hierarchy (engine ignores)
       layout: $('layoutId').value || 'LAYOUT_NEW_MAP',
       music: 'MUS_PALLET', weather: 'WEATHER_NONE', map_type: 'MAP_TYPE_TOWN',
       allow_running: true, allow_cycling: true, show_map_name: true,
@@ -811,6 +820,13 @@
   function saveToRepo() {
     if (!state.layers.ground.data) return;
     var region = $('mapRegion').value || 'custom';
+    // ensure the tree has a node for the map being saved (carry parent if known)
+    var nm = $('mapName').value || 'NewMap';
+    if (!treeModel[nm]) {
+      var inherit = currentNode && treeModel[currentNode] ? treeModel[currentNode].parent : null;
+      treeModel[nm] = { region: region, parent: inherit || null, local: true };
+    } else { treeModel[nm].region = region; }
+    currentNode = nm;
     var layout = buildLayout(), map = buildMap();
     var layoutPath = 'data/layouts/' + region + '/' + layout.id + '.json';
     var mapPath    = 'data/maps/' + region + '/' + map.name + '.json';
@@ -829,6 +845,8 @@
         return ghPut(indexPath, index, 'map-editor: index ' + region + ' ' + stamp, cur.sha);
       })
       .then(function () {
+        if (treeModel[nm]) treeModel[nm].local = false;
+        persistTree(); renderTree();
         setRepoBtn('✓ Saved', '#2a9d2a');
         setTimeout(function () { setRepoBtn('☁ Save'); }, 2800);
       })
@@ -856,34 +874,217 @@
       });
   }
 
-  function buildMapTree() {
-    var tree = $('mapTree');
-    ghListMaps().then(function (maps) {
-      tree.innerHTML = '';
-      if (!maps.length) { tree.innerHTML = '<div class="hint" style="padding:6px;">No saved maps.</div>'; return; }
-      var lastRegion = null;
-      maps.forEach(function (mp) {
-        if (mp.region !== lastRegion) {
-          lastRegion = mp.region;
-          var hdr = document.createElement('div'); hdr.className = 'tree-region';
-          hdr.textContent = mp.region; tree.appendChild(hdr);
-        }
-        var item = document.createElement('div'); item.className = 'tree-item';
-        item.textContent = mp.name;
-        item.addEventListener('click', function () {
-          document.querySelectorAll('.tree-item').forEach(function (t) { t.classList.remove('active'); });
-          item.classList.add('active');
-          loadMapFromRepo(mp);
-        });
-        tree.appendChild(item);
-      });
-    }).catch(function (e) {
-      tree.innerHTML = '<div class="hint" style="padding:6px; color:#c33;">List failed: ' + e.message + '</div>';
-    });
+  // ── Tree model persistence + merge ──
+  function persistTree() {
+    try { localStorage.setItem(TREE_KEY, JSON.stringify({ maps: treeModel, expanded: treeExpanded })); }
+    catch (e) { /* storage may be unavailable */ }
+  }
+  function loadTreeLocal() {
+    try {
+      var raw = localStorage.getItem(TREE_KEY);
+      if (raw) { var d = JSON.parse(raw); treeModel = d.maps || {}; treeExpanded = d.expanded || {}; }
+    } catch (e) { treeModel = {}; treeExpanded = {}; }
+  }
+  function defRegion() { return $('mapRegion').value || 'awakened'; }
+  function layoutIdFor(name) {
+    return 'LAYOUT_' + name.replace(/([a-z])([A-Z])/g, '$1_$2').replace(/[^A-Za-z0-9]+/g, '_').toUpperCase();
+  }
+  function uniqueName(base) {
+    if (!treeModel[base]) return base;
+    var i = 2; while (treeModel[base + i]) i++; return base + i;
+  }
+  function setRegionSelect(region) {
+    var sel = $('mapRegion');
+    if (!Array.prototype.some.call(sel.options, function (o) { return o.value === region; })) {
+      var o = document.createElement('option'); o.value = o.textContent = region; sel.appendChild(o);
+    }
+    sel.value = region;
   }
 
+  function buildMapTree() {
+    loadTreeLocal();
+    renderTree();
+    // Merge any maps saved on the repo branch into the model (parent kept from
+    // the saved file or local hierarchy). Network failure just leaves the
+    // local tree as-is.
+    ghListMaps().then(function (maps) {
+      maps.forEach(function (mp) {
+        if (!treeModel[mp.name]) treeModel[mp.name] = { region: mp.region, parent: null, local: false };
+        else { treeModel[mp.name].local = false; treeModel[mp.name].region = mp.region; }
+      });
+      persistTree(); renderTree();
+    }).catch(function () { /* offline: keep local tree */ });
+  }
+
+  function renderTree() {
+    var tree = $('mapTree');
+    tree.innerHTML = '';
+    var names = Object.keys(treeModel);
+    if (!names.length) {
+      tree.innerHTML = '<div class="hint" style="padding:6px;">No maps yet. Tap ＋ or press-and-hold here → New Map.</div>';
+      return;
+    }
+    var kids = {};
+    names.forEach(function (n) {
+      var p = treeModel[n].parent;
+      if (p == null || !treeModel[p]) p = '';   // orphan -> root
+      (kids[p] = kids[p] || []).push(n);
+    });
+    Object.keys(kids).forEach(function (k) { kids[k].sort(); });
+    function row(name, depth) {
+      var node = treeModel[name];
+      var item = document.createElement('div');
+      item.className = 'tree-item' + (name === currentNode ? ' active' : '');
+      item.style.paddingLeft = (4 + depth * 14) + 'px';
+      var hasKids = kids[name] && kids[name].length;
+      var caret = document.createElement('span'); caret.className = 'tree-caret';
+      caret.textContent = hasKids ? (treeExpanded[name] === false ? '▶' : '▼') : '';
+      if (hasKids) caret.addEventListener('click', function (e) {
+        e.stopPropagation();
+        treeExpanded[name] = treeExpanded[name] === false;
+        persistTree(); renderTree();
+      });
+      var label = document.createElement('span'); label.className = 'tree-label';
+      label.textContent = name + (node.local ? ' •' : '');
+      item.appendChild(caret); item.appendChild(label);
+      item.addEventListener('click', function () { selectNode(name); });
+      attachCtx(item, name);
+      tree.appendChild(item);
+      if (hasKids && treeExpanded[name] !== false)
+        kids[name].forEach(function (c) { row(c, depth + 1); });
+    }
+    (kids[''] || []).forEach(function (n) { row(n, 0); });
+  }
+
+  // ── Tree node operations ──
+  function selectNode(name) {
+    currentNode = name; renderTree();
+    var node = treeModel[name];
+    if (node && !node.local) {
+      loadMapFromRepo({ region: node.region, name: name, path: 'data/maps/' + node.region + '/' + name + '.json' });
+    } else {
+      // local, not yet saved: set the editor's identity for the eventual save
+      $('mapName').value = name; setRegionSelect(node.region); $('layoutId').value = layoutIdFor(name);
+    }
+  }
+
+  function newMapNode(parent) {
+    var name = uniqueName('NewMap');
+    var region = (parent && treeModel[parent] && treeModel[parent].region) || defRegion();
+    treeModel[name] = { region: region, parent: parent || null, local: true };
+    if (parent) treeExpanded[parent] = true;
+    currentNode = name;
+    $('mapName').value = name; setRegionSelect(region); $('layoutId').value = layoutIdFor(name);
+    newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, false);
+    persistTree(); renderTree();
+  }
+
+  function renameNode(name) {
+    var nn = prompt('Rename map "' + name + '" to:', name);
+    if (!nn || nn === name) return;
+    if (treeModel[nn]) { alert('A map named "' + nn + '" already exists.'); return; }
+    treeModel[nn] = treeModel[name]; delete treeModel[name];
+    Object.keys(treeModel).forEach(function (k) { if (treeModel[k].parent === name) treeModel[k].parent = nn; });
+    if (treeExpanded[name] != null) { treeExpanded[nn] = treeExpanded[name]; delete treeExpanded[name]; }
+    treeModel[nn].local = true;   // name changed -> save writes a new file
+    if (currentNode === name) { currentNode = nn; $('mapName').value = nn; $('layoutId').value = layoutIdFor(nn); }
+    persistTree(); renderTree();
+  }
+
+  function duplicateNode(name) {
+    var node = treeModel[name];
+    var copy = uniqueName(name + 'Copy');
+    treeModel[copy] = { region: node.region, parent: node.parent, local: true };
+    currentNode = copy;
+    persistTree(); renderTree();
+    // pull the source content into the editor under the new name, if it's saved
+    if (!node.local) {
+      loadMapFromRepo({ region: node.region, name: name, path: 'data/maps/' + node.region + '/' + name + '.json' })
+        .then(function () {
+          $('mapName').value = copy; setRegionSelect(treeModel[copy].region); $('layoutId').value = layoutIdFor(copy);
+          currentNode = copy; renderTree();
+        });
+    } else {
+      $('mapName').value = copy; setRegionSelect(node.region); $('layoutId').value = layoutIdFor(copy);
+      newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, false);
+    }
+  }
+
+  function deleteNode(name) {
+    var node = treeModel[name];
+    var msg = 'Remove "' + name + '" from the tree?' +
+      (node.local ? '' : '\n(This only removes it from the list; the saved file on the repo is kept.)');
+    if (!confirm(msg)) return;
+    var parent = treeModel[name].parent || null;
+    Object.keys(treeModel).forEach(function (k) { if (treeModel[k].parent === name) treeModel[k].parent = parent; });
+    delete treeModel[name]; delete treeExpanded[name];
+    if (currentNode === name) currentNode = null;
+    persistTree(); renderTree();
+  }
+
+  // ── Context menu (press-and-hold / right-click) ──
+  var ctxMenu = $('ctxMenu');
+  function openCtx(x, y, name) {
+    ctxMenu.innerHTML = '';
+    var items;
+    if (name) items = [
+      ['New Map (child)', function () { newMapNode(name); }],
+      ['Edit', function () { selectNode(name); }],
+      ['Rename…', function () { renameNode(name); }],
+      ['Duplicate', function () { duplicateNode(name); }],
+      'sep',
+      ['Delete', function () { deleteNode(name); }, 'danger']
+    ];
+    else items = [['New Map', function () { newMapNode(null); }]];
+    items.forEach(function (it) {
+      if (it === 'sep') { var s = document.createElement('div'); s.className = 'ci-sep'; ctxMenu.appendChild(s); return; }
+      var d = document.createElement('div');
+      d.className = 'ci' + (it[2] ? ' ' + it[2] : '');
+      d.textContent = it[0];
+      d.addEventListener('click', function () { closeCtx(); it[1](); });
+      ctxMenu.appendChild(d);
+    });
+    ctxMenu.style.display = 'block';
+    // clamp to viewport
+    var mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+    ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 6) + 'px';
+    ctxMenu.style.top = Math.min(y, window.innerHeight - mh - 6) + 'px';
+  }
+  function closeCtx() { ctxMenu.style.display = 'none'; }
+  window.addEventListener('mousedown', function (e) { if (!ctxMenu.contains(e.target)) closeCtx(); });
+  window.addEventListener('scroll', closeCtx, true);
+
+  function attachCtx(el, name) {
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); openCtx(e.clientX, e.clientY, name); });
+    var timer = null, sx = 0, sy = 0;
+    el.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+      timer = setTimeout(function () { timer = null; openCtx(sx, sy, name); }, 500);
+    }, { passive: true });
+    el.addEventListener('touchmove', function (e) {
+      var t = e.touches[0];
+      if (timer && (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8)) { clearTimeout(timer); timer = null; }
+    }, { passive: true });
+    el.addEventListener('touchend', function () { if (timer) { clearTimeout(timer); timer = null; } });
+  }
+  // empty-tree-area press-and-hold / right-click -> top-level New Map
+  (function () {
+    var tree = $('mapTree'), timer = null, sx = 0, sy = 0;
+    tree.addEventListener('contextmenu', function (e) {
+      if (e.target === tree) { e.preventDefault(); openCtx(e.clientX, e.clientY, null); }
+    });
+    tree.addEventListener('touchstart', function (e) {
+      if (e.target !== tree) return;
+      var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+      timer = setTimeout(function () { timer = null; openCtx(sx, sy, null); }, 500);
+    }, { passive: true });
+    tree.addEventListener('touchmove', function () { if (timer) { clearTimeout(timer); timer = null; } }, { passive: true });
+    tree.addEventListener('touchend', function () { if (timer) { clearTimeout(timer); timer = null; } });
+  })();
+  $('treeAddBtn').addEventListener('click', function (e) { e.stopPropagation(); newMapNode(null); });
+
   function loadMapFromRepo(mp) {
-    ghGet(mp.path)
+    return ghGet(mp.path)
       .then(function (cur) {
         if (!cur.content) throw new Error('map file empty');
         var mapObj = JSON.parse(cur.content);
@@ -893,8 +1094,20 @@
           return { layout: JSON.parse(lc.content), map: mapObj };
         });
       })
-      .then(function (res) { return applyLayout(res.layout, res.map); })
-      .then(function () { $('repoModal').style.display = 'none'; })
+      .then(function (res) {
+        // sync the tree model from the loaded map's parent field
+        var pm = res.map || {};
+        treeModel[mp.name] = {
+          region: mp.region,
+          parent: (pm.parent != null && pm.parent !== '') ? pm.parent
+                  : (treeModel[mp.name] && treeModel[mp.name].parent) || null,
+          local: false
+        };
+        currentNode = mp.name;
+        persistTree();
+        return applyLayout(res.layout, res.map);
+      })
+      .then(function () { $('repoModal').style.display = 'none'; renderTree(); })
       .catch(function (e) { alert('Failed to load: ' + e.message); });
   }
 
