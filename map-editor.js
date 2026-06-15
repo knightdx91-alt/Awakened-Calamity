@@ -45,7 +45,9 @@
     selectedTerrain: '',         // autotile terrain (Auto mode)
     autoMode: false,             // true = paint autotiles, false = raw tiles
     tool: 'pencil',              // pencil | rect | ellipse | fill | pick
-    mode: 'map',                 // map | collide | warp
+    mode: 'map',                 // map | collide | warp | region
+    region: null,                // Uint8Array(w*h) of region IDs (0 = none)
+    regionId: 1,                 // currently painted region number (1..63)
     eraser: false,
     showGrid: true,
     zoom: 2,
@@ -621,6 +623,13 @@
       }
       layer.data = nd; layer.collision = nc; layer.terrain = nt;
     });
+    // Region-ID layer (preserve overlapping cells on resize).
+    var nr = new Uint8Array(w * h);
+    if (keep && state.region) {
+      for (var ry = 0; ry < Math.min(h, ph); ry++)
+        for (var rx = 0; rx < Math.min(w, pw); rx++) nr[ry * w + rx] = state.region[ry * pw + rx];
+    }
+    state.region = nr;
     if (!keep) state.warps = [];
     $('statSize').textContent = w + ' × ' + h;
     drawMap();
@@ -629,6 +638,12 @@
 
   function idx(x, y) { return y * state.width + x; }
   function inBounds(x, y) { return x >= 0 && y >= 0 && x < state.width && y < state.height; }
+
+  // Distinct translucent colour per region id (HSL spread, like RM's palette).
+  function regionColor(id) {
+    var h = (id * 47) % 360;
+    return 'hsla(' + h + ',75%,50%,0.5)';
+  }
 
   // ── Map rendering ──
   var mapCanvas = $('mapCanvas');
@@ -668,6 +683,19 @@
             mctx.fillRect(xx * cs, yy * cs, cs, cs);
           }
     }
+    if (state.mode === 'region' && state.region) {
+      mctx.font = Math.floor(cs * 0.5) + 'px sans-serif';
+      mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+      for (var rj = 0; rj < state.height; rj++)
+        for (var ri = 0; ri < state.width; ri++) {
+          var rid = state.region[idx(ri, rj)];
+          if (!rid) continue;
+          mctx.fillStyle = regionColor(rid);
+          mctx.fillRect(ri * cs, rj * cs, cs, cs);
+          mctx.fillStyle = '#fff';
+          mctx.fillText(String(rid), ri * cs + cs / 2, rj * cs + cs / 2);
+        }
+    }
     if (state.showGrid) {
       mctx.strokeStyle = 'rgba(0,0,0,0.18)'; mctx.lineWidth = 1;
       for (var gx = 0; gx <= state.width; gx++) {
@@ -694,7 +722,8 @@
   var LAYER_KEYS = ['ground', 'overlay', 'upper'];
   function snapshot() {
     var s = { width: state.width, height: state.height, layers: {},
-              warps: JSON.parse(JSON.stringify(state.warps)) };
+              warps: JSON.parse(JSON.stringify(state.warps)),
+              region: state.region ? Uint8Array.from(state.region) : null };
     LAYER_KEYS.forEach(function (k) {
       var L = state.layers[k];
       s.layers[k] = {
@@ -716,6 +745,7 @@
       if (d.terrain) L.terrain = d.terrain.slice();
     });
     state.warps = JSON.parse(JSON.stringify(s.warps));
+    if (s.region) state.region = Uint8Array.from(s.region);
     drawMap(); renderWarpList();
   }
   function pushUndo() {
@@ -757,6 +787,10 @@
   function applyAt(x, y) {
     if (!inBounds(x, y)) return;
     if (state.mode === 'warp') return;
+    if (state.mode === 'region') {
+      state.region[idx(x, y)] = state.eraser ? 0 : state.regionId;
+      return;
+    }
     if (state.mode === 'collide') {
       var c = state.layers.ground.collision;
       c[idx(x, y)] = c[idx(x, y)] ? 0 : 1;
@@ -814,6 +848,7 @@
           var nx = (x - cx) / rx, ny = (y - cy) / ry;
           if (nx * nx + ny * ny > 1) continue;
         }
+        if (state.mode === 'region') { state.region[idx(x, y)] = state.eraser ? 0 : state.regionId; continue; }
         if (state.mode === 'collide') { layer.collision[idx(x, y)] = state.eraser ? 0 : 1; continue; }
         if (auto) { layer.terrain[idx(x, y)] = state.selectedTerrain; continue; }
         // tile the stamp block by relative position
@@ -832,7 +867,7 @@
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     pushUndo();                                          // record state before any edit gesture
     if (state.mode === 'warp') { addWarp(p.x, p.y); return; }
-    if (state.tool === 'fill' && state.mode !== 'collide') { floodFill(p.x, p.y); drawMap(); return; }
+    if (state.tool === 'fill' && state.mode === 'map') { floodFill(p.x, p.y); drawMap(); return; }
     if (state.tool === 'rect' || state.tool === 'ellipse') { rectStart = p; return; }
     if (state.tool === 'pick') { applyAt(p.x, p.y); return; }
     painting = true; applyAt(p.x, p.y); drawMap();
@@ -919,6 +954,9 @@
       layout.upper_group = sheetGroup(u);
       layout.upper = Array.from(u.data);
     }
+    if (state.region && hasContent(state.region, 0)) {
+      layout.region_ids = Array.from(state.region);
+    }
     return layout;
   }
 
@@ -1004,6 +1042,8 @@
       u.terrain = new Array(w * h);
       u.baseFill = -1;
       for (var ui = 0; ui < w * h; ui++) { u.data[ui] = data.upper ? data.upper[ui] : -1; u.terrain[ui] = ''; }
+      state.region = new Uint8Array(w * h);
+      if (data.region_ids) for (var ri = 0; ri < w * h; ri++) state.region[ri] = data.region_ids[ri] || 0;
 
       $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
@@ -1113,6 +1153,27 @@
       setActiveLayer(lyr);
     });
   });
+  // Side-panel Mode buttons (Map/Collision/Warp/Region) drive the hidden .mode
+  // buttons and reflect active state + show the Region # picker in region mode.
+  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region' };
+  function syncModeUI() {
+    Object.keys(MODE_BTNS).forEach(function (id) {
+      var e = $(id); if (e) e.classList.toggle('active', MODE_BTNS[id] === state.mode);
+    });
+    var rr = $('regionRow'); if (rr) rr.style.display = state.mode === 'region' ? '' : 'none';
+  }
+  Object.keys(MODE_BTNS).forEach(function (id) {
+    var e = $(id); if (!e) return;
+    e.addEventListener('click', function () { setModeBtn(MODE_BTNS[id]); syncModeUI(); });
+  });
+  var rn = $('regionNum');
+  if (rn) rn.addEventListener('change', function () {
+    var v = parseInt(this.value, 10);
+    state.regionId = Math.max(1, Math.min(63, isNaN(v) ? 1 : v));
+    this.value = state.regionId;
+  });
+  syncModeUI();
+
   $('eventModeBtn').addEventListener('click', soon);
   $('undoBtn').addEventListener('click', doUndo);
   $('redoBtn').addEventListener('click', doRedo);
@@ -1205,9 +1266,10 @@
       ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }],
       ['Event layer', 'F6', null],
       'sep',
-      ['Collision / Passage', '', function () { setModeBtn('collide'); }],
-      ['Tile mode', '', function () { setModeBtn('map'); }],
-      ['Warp placement', '', function () { setModeBtn('warp'); }]
+      ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }],
+      ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }],
+      ['Warp placement', '', function () { setModeBtn('warp'); syncModeUI(); }],
+      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }]
     ]],
     ['Draw', [
       ['Pencil', '', function () { setToolBtn('pencil'); }],
