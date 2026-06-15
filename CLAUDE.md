@@ -18,10 +18,17 @@ Guidance for Claude Code working in this repo. **Read this first.**
 > (1/2/3 + auto upper/lower) + shadow pen + region IDs, C tools (shift-map/copy-paste/undo-redo),
 > D events + list editor, E map props, **G sprite/charset event graphics**, **H Charas-style character
 > GENERATOR on the open LPC part set** (CC-BY-SA/GPL/OGA — chosen for IP-clean). Formats may be
-> extended (backward-compatible). **Remaining stages:** 2 = layers/shadow/region + tools; 3 = events +
-> sprite picker; 4 = LPC character generator. Headless harness: serve `python3 -m http.server 8099`,
-> run `/tmp/edcheck.mjs` (editor) / `tools/bootcheck.mjs` (game) with puppeteer-core from `/tmp` +
-> chromium at `/opt/pw-browsers/chromium-1194`.
+> extended (backward-compatible). **STAGE 2 DONE (live):** real **Layer 3** (upper, exported as
+> `upper_*`, engine renders it above the player), **Undo/Redo** (snapshot history, Ctrl+Z/Y),
+> **Region IDs** (paint 1–63, `region_ids[]`), **Select tool + Copy/Cut/Paste/Delete** (Ctrl+C/X/V,
+> active-layer clipboard → paste arms a stamp) **+ Shift Map**, and **Shadow pen** (quarter-tile masks
+> `shadow[]`, engine renders over tiles/below player). Also added an **orientation chooser matching the
+> game** (Portrait/Landscape/reverses via styles.css `.orient-*` transforms; `dvh` fix so the menu bar
+> isn't clipped on mobile) and a **📷 screenshot button** (uploads to the `screenshots` branch → shareable
+> link; that branch was created). **Remaining stages:** 3 = events + sprite/charset picker; 4 = LPC
+> character generator. Headless harness: serve `python3 -m http.server 8099`, run `/tmp/edcheck.mjs`
+> (editor) / `tools/bootcheck.mjs` (game) with puppeteer-core from `/tmp` + chromium at
+> `/opt/pw-browsers/chromium-1194` (CHROME env, `--ignore-certificate-errors` for live URLs).
 
 ## What this is
 A browser-based, **GBA-style (240×160 logical) 2D top-down LitRPG survival sandbox**.
