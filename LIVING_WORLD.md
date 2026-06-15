@@ -247,12 +247,17 @@ snaps an NPC to a zone center or its destination.
   lighting to day while the clock keeps advancing (sim untouched). `visualClock` decoupled from the
   real-time sim clock.
 
-**Still open (filled in as we author the world/story, not upfront settings):**
-1. **Traveler roster size:** how many *named cross-region roamers* to author. Most NPCs are locals
-   who live a schedule in one town; travelers are the subset whose records physically move across
-   regions (the "I keep running into the same person" magic). Dial between aliveness (~50+) and
-   workload (~10–20). Set when we populate the world.
+**Locked target:**
+1. **Traveler roster size = ~50 named cross-region roamers** (the aliveness end of the dial). Most
+   NPCs stay locals on a one-town schedule; these ~50 are the special subset whose records physically
+   move across regions (the "I keep running into the same person" magic). The *system* is unbounded
+   (positions advance analytically), so 50 is a **writing** commitment, not an engineering one.
+   **Authoring guardrail:** make the 50 **distinct and memorable** (clear personality + a reason to
+   roam + ideally a light arc) so recurrence reads as *recognition*, not a faceless crowd — a dense
+   world only feels alive if you can tell the roamers apart. Populate over time as the world is built.
+
+**Still open (filled in as we author the world/story, not an upfront setting):**
 2. **Narrative pin list:** which story-critical NPCs are **exempt from roaming** so they're always
-   where the plot needs them (quest-givers at a fixed spot, escorts, cutscene/boss NPCs). "Pinned"
-   = ignores the world brain until their beat is done, then released or vanished. Marked per-quest
-   as we write the story.
+   where the plot needs them (quest-givers at a fixed spot, escorts, cutscene/boss NPCs). **Rule is
+   set:** "pinned" = ignores the world brain until their beat is done, then released or vanished.
+   *Which* NPCs are pinned is marked **per-quest as we write the story** — nothing to decide upfront.
