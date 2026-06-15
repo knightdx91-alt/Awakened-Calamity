@@ -299,6 +299,12 @@ window.GameMap = (function () {
         const v = layoutData.upper[y * mapWidth + x];
         return (v === undefined || v === null) ? -1 : v;
     }
+    // Shadow quarter-mask per tile (RM shadow pen). bit: TL1 TR2 BL4 BR8.
+    function getShadow(x, y) {
+        if (!layoutData || !layoutData.shadow) return 0;
+        if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return 0;
+        return layoutData.shadow[y * mapWidth + x] || 0;
+    }
 
     // Per-map render cell size in px (default 16). A layout may declare
     // tileSize: 32 to render bigger cells (fewer tiles on screen).
@@ -386,6 +392,7 @@ window.GameMap = (function () {
         getOverlay,
         getUpperTilesetName,
         getUpper,
+        getShadow,
         getTileSize,
         getTileTerrainType,
         getTileDebug,

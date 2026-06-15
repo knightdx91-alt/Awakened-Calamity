@@ -260,6 +260,18 @@ window.GameRenderer = (function () {
                     const ov = _map.getOverlay(worldX, worldY);
                     if (ov >= 0) drawOverlayMetatile(ov, sx, sy);
                 }
+                // Shadow quarters (RM shadow pen) over the tiles, below the player.
+                if (_map.getShadow) {
+                    const shm = _map.getShadow(worldX, worldY);
+                    if (shm) {
+                        const hc = _rt / 2;
+                        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                        if (shm & 1) ctx.fillRect(sx,      sy,      hc, hc);
+                        if (shm & 2) ctx.fillRect(sx + hc, sy,      hc, hc);
+                        if (shm & 4) ctx.fillRect(sx,      sy + hc, hc, hc);
+                        if (shm & 8) ctx.fillRect(sx + hc, sy + hc, hc, hc);
+                    }
+                }
 
                 if (warpSet.has(`${worldX},${worldY}`)) {
                     ctx.fillStyle = 'rgba(249,168,37,0.45)';

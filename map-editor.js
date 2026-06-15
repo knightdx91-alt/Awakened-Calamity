@@ -48,6 +48,7 @@
     mode: 'map',                 // map | collide | warp | region
     region: null,                // Uint8Array(w*h) of region IDs (0 = none)
     regionId: 1,                 // currently painted region number (1..63)
+    shadow: null,                // Uint8Array(w*h); 4-bit quarter mask (TL1 TR2 BL4 BR8)
     sel: null,                   // {x0,y0,x1,y1} selection rect (Select tool)
     clipboard: null,             // { w, h, ids:[gid...] } copied active-layer block
     eraser: false,
@@ -625,13 +626,16 @@
       }
       layer.data = nd; layer.collision = nc; layer.terrain = nt;
     });
-    // Region-ID layer (preserve overlapping cells on resize).
-    var nr = new Uint8Array(w * h);
-    if (keep && state.region) {
+    // Region-ID + shadow layers (preserve overlapping cells on resize).
+    var nr = new Uint8Array(w * h), nsh = new Uint8Array(w * h);
+    if (keep) {
       for (var ry = 0; ry < Math.min(h, ph); ry++)
-        for (var rx = 0; rx < Math.min(w, pw); rx++) nr[ry * w + rx] = state.region[ry * pw + rx];
+        for (var rx = 0; rx < Math.min(w, pw); rx++) {
+          if (state.region) nr[ry * w + rx] = state.region[ry * pw + rx];
+          if (state.shadow) nsh[ry * w + rx] = state.shadow[ry * pw + rx];
+        }
     }
-    state.region = nr;
+    state.region = nr; state.shadow = nsh;
     if (!keep) state.warps = [];
     $('statSize').textContent = w + ' × ' + h;
     drawMap();
@@ -675,6 +679,20 @@
     drawLayer('ground', state.active === 'ground' ? 1 : 0.4);
     drawLayer('overlay', state.active === 'overlay' ? 1 : 0.4);
     drawLayer('upper', state.active === 'upper' ? 1 : 0.4);
+
+    // Shadows (RM shadow pen): translucent black quarter-cells, drawn over tiles.
+    if (state.shadow) {
+      mctx.fillStyle = 'rgba(0,0,0,0.35)';
+      var hc = cs / 2;
+      for (var sy = 0; sy < state.height; sy++)
+        for (var sx = 0; sx < state.width; sx++) {
+          var m = state.shadow[idx(sx, sy)]; if (!m) continue;
+          if (m & 1) mctx.fillRect(sx * cs,      sy * cs,      hc, hc);
+          if (m & 2) mctx.fillRect(sx * cs + hc, sy * cs,      hc, hc);
+          if (m & 4) mctx.fillRect(sx * cs,      sy * cs + hc, hc, hc);
+          if (m & 8) mctx.fillRect(sx * cs + hc, sy * cs + hc, hc, hc);
+        }
+    }
 
     if (state.mode === 'collide') {
       var col = state.layers.ground.collision;
@@ -733,7 +751,8 @@
   function snapshot() {
     var s = { width: state.width, height: state.height, layers: {},
               warps: JSON.parse(JSON.stringify(state.warps)),
-              region: state.region ? Uint8Array.from(state.region) : null };
+              region: state.region ? Uint8Array.from(state.region) : null,
+              shadow: state.shadow ? Uint8Array.from(state.shadow) : null };
     LAYER_KEYS.forEach(function (k) {
       var L = state.layers[k];
       s.layers[k] = {
@@ -756,6 +775,7 @@
     });
     state.warps = JSON.parse(JSON.stringify(s.warps));
     if (s.region) state.region = Uint8Array.from(s.region);
+    if (s.shadow) state.shadow = Uint8Array.from(s.shadow);
     drawMap(); renderWarpList();
   }
   function pushUndo() {
@@ -773,6 +793,23 @@
     var p = screenToLocal(mapCanvas, e.clientX, e.clientY);
     var cs = cell();
     return { x: Math.floor(p.x / cs), y: Math.floor(p.y / cs) };
+  }
+
+  // Which quarter of a tile the pointer is over (shadow pen). bit: TL1 TR2 BL4 BR8.
+  var SHADOW_BITS = { TL: 1, TR: 2, BL: 4, BR: 8 };
+  var _shadowAdd = true;
+  function eventQuarter(e) {
+    var p = screenToLocal(mapCanvas, e.clientX, e.clientY);
+    var cs = cell();
+    var tx = Math.floor(p.x / cs), ty = Math.floor(p.y / cs);
+    var fx = p.x / cs - tx, fy = p.y / cs - ty;
+    var bit = (fx < 0.5 ? (fy < 0.5 ? 1 : 4) : (fy < 0.5 ? 2 : 8));
+    return { x: tx, y: ty, bit: bit };
+  }
+  function applyShadow(q) {
+    if (!inBounds(q.x, q.y) || !state.shadow) return;
+    var i = idx(q.x, q.y);
+    if (_shadowAdd) state.shadow[i] |= q.bit; else state.shadow[i] &= ~q.bit;
   }
 
   // Stamp the current B-tab block (or eraser) with top-left at (ax,ay).
@@ -877,6 +914,13 @@
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
     pushUndo();                                          // record state before any edit gesture
+    if (state.mode === 'shadow') {
+      var q0 = eventQuarter(e);
+      // toggle the clicked quarter; remember the direction for drag painting
+      var had = (state.shadow[idx(q0.x, q0.y)] & q0.bit) !== 0;
+      _shadowAdd = state.eraser ? false : !had;
+      painting = true; applyShadow(q0); drawMap(); return;
+    }
     if (state.mode === 'warp') { addWarp(p.x, p.y); return; }
     if (state.tool === 'fill' && state.mode === 'map') { floodFill(p.x, p.y); drawMap(); return; }
     if (state.tool === 'rect' || state.tool === 'ellipse') { rectStart = p; return; }
@@ -897,6 +941,7 @@
                     x1: Math.max(rectStart.x, p.x), y1: Math.max(rectStart.y, p.y) };
       drawMap();
     }
+    if (painting && state.mode === 'shadow') { applyShadow(eventQuarter(e)); drawMap(); return; }
     if (painting && inBounds(p.x, p.y)) { applyAt(p.x, p.y); drawMap(); }
   });
 
@@ -1015,6 +1060,9 @@
     if (state.region && hasContent(state.region, 0)) {
       layout.region_ids = Array.from(state.region);
     }
+    if (state.shadow && hasContent(state.shadow, 0)) {
+      layout.shadow = Array.from(state.shadow);
+    }
     return layout;
   }
 
@@ -1102,6 +1150,8 @@
       for (var ui = 0; ui < w * h; ui++) { u.data[ui] = data.upper ? data.upper[ui] : -1; u.terrain[ui] = ''; }
       state.region = new Uint8Array(w * h);
       if (data.region_ids) for (var ri = 0; ri < w * h; ri++) state.region[ri] = data.region_ids[ri] || 0;
+      state.shadow = new Uint8Array(w * h);
+      if (data.shadow) for (var si = 0; si < w * h; si++) state.shadow[si] = data.shadow[si] || 0;
 
       $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
@@ -1213,12 +1263,13 @@
   });
   // Side-panel Mode buttons (Map/Collision/Warp/Region) drive the hidden .mode
   // buttons and reflect active state + show the Region # picker in region mode.
-  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region' };
+  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region', mShadow: 'shadow' };
   function syncModeUI() {
     Object.keys(MODE_BTNS).forEach(function (id) {
       var e = $(id); if (e) e.classList.toggle('active', MODE_BTNS[id] === state.mode);
     });
     var rr = $('regionRow'); if (rr) rr.style.display = state.mode === 'region' ? '' : 'none';
+    var sr = $('shadowRow'); if (sr) sr.style.display = state.mode === 'shadow' ? '' : 'none';
   }
   Object.keys(MODE_BTNS).forEach(function (id) {
     var e = $(id); if (!e) return;
@@ -1380,7 +1431,8 @@
       ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }],
       ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }],
       ['Warp placement', '', function () { setModeBtn('warp'); syncModeUI(); }],
-      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }]
+      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }],
+      ['Shadow pen', '', function () { setModeBtn('shadow'); syncModeUI(); }]
     ]],
     ['Draw', [
       ['Pencil', '', function () { setToolBtn('pencil'); }],
