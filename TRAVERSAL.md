@@ -73,7 +73,13 @@ a traversal + skill gate.
    convenience — a party that doubles as a traversal toolkit. **Party size is the only limit** (you
    can't cover every capability at once without also crafting the gear alternatives, §1).
 
+2. **Capability count = KEEP THE 6** (Ford/Swim · Climb · Glide/Descend · Illuminate · Break ·
+   Hazard-wade). Each maps to a distinct, instantly-readable obstacle (water/cliff/chasm/dark/rubble/
+   hazard-field), each reuses an existing system (Hazard-wade = Exposure gear, Illuminate = Gloom
+   defense), and each already has the gear/class/creature triple path (= 18 acquisition routes to
+   author — enough). **Stagger introduction:** Verdara teaches the 4 basics (Ford, Climb, Illuminate,
+   Break); the rarer two (Glide, deep Hazard-wade) come in later regions.
+
 **Open:**
-2. **How many capabilities** — the 6 above, or trim/expand?
 3. **Soft vs hard gates** — do some sub-areas allow a risky no-tool crossing (chance of damage), or
    strict capability checks only?
