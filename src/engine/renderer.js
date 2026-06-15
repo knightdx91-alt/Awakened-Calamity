@@ -22,6 +22,12 @@ window.GameRenderer = (function () {
     let _overlayImg         = null;
     let _overlayMeta        = null;
 
+    // Optional UPPER tileset (RPG Maker layer 3 — drawn ABOVE the player)
+    let _upperName        = null;
+    let _upperLoadingName = null;
+    let _upperImg         = null;
+    let _upperMeta        = null;
+
     // NPC sprite state
     let _npcIndex    = null;
     let _npcImgCache = new Map();
@@ -114,6 +120,32 @@ window.GameRenderer = (function () {
             .catch(() => { _overlayLoadingName = null; });
     }
 
+    // Upper tileset (RPG Maker layer 3 — roofs/treetops drawn above the player).
+    function loadUpperTileset(name) {
+        if (!name) { return; }
+        if (name === _upperName || name === _upperLoadingName) return;
+        _upperLoadingName = name;
+        fetch(`data/tilesets/${name}.json`, { cache: 'no-cache' })
+            .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+            .then(meta => {
+                const img = new Image();
+                img.onload = () => {
+                    _upperImg = img; _upperMeta = meta; _upperName = name;
+                    _upperLoadingName = null;
+                };
+                img.onerror = () => { _upperLoadingName = null; };
+                const v = (meta.total_metatiles || 0) + '_' + (meta.primary_count || 0);
+                img.src = `data/tilesets/${name}.png?v=${v}&b=${(window.__BUILD__||'0')}`;
+            })
+            .catch(() => { _upperLoadingName = null; });
+    }
+    function drawUpperMetatile(idx, sx, sy) {
+        if (!_upperImg || idx < 0) return;
+        const st = _srcTile(_upperMeta), pr = _perRow(_upperMeta);
+        const col = idx % pr, row = Math.floor(idx / pr);
+        ctx.drawImage(_upperImg, col * st, row * st, st, st, sx, sy, _rt, _rt);
+    }
+
     // Variable tile size: a tileset JSON may declare `tile` (native source px,
     // e.g. 16 or 32) and `metatiles_per_row`. The SOURCE rect is read at the
     // sheet's native size, then scaled into the map's TILE_PX render cell
@@ -191,6 +223,10 @@ window.GameRenderer = (function () {
         const wantedOverlay = _map.getOverlayTilesetName ? _map.getOverlayTilesetName() : null;
         if (wantedOverlay && wantedOverlay !== _overlayName && wantedOverlay !== _overlayLoadingName) {
             loadOverlayTileset(wantedOverlay);
+        }
+        const wantedUpper = _map.getUpperTilesetName ? _map.getUpperTilesetName() : null;
+        if (wantedUpper && wantedUpper !== _upperName && wantedUpper !== _upperLoadingName) {
+            loadUpperTileset(wantedUpper);
         }
 
         ctx.fillStyle = COLORS.bg;
@@ -288,6 +324,17 @@ window.GameRenderer = (function () {
             ctx.fillRect(playerSX + pad, playerSY + pad, _rt - pad * 2, _rt - pad * 2);
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(playerSX + Math.floor(_rt / 2) - 1, playerSY + pad + 1, 3, 3);
+        }
+
+        // UPPER layer (RPG Maker layer 3) — drawn ABOVE the player so roofs/
+        // treetops can pass over the character.
+        if (_upperImg && _map.getUpper) {
+            for (let ty = -1; ty <= vh; ty++) {
+                for (let tx = -1; tx <= vw; tx++) {
+                    const up = _map.getUpper(tileStartX + tx, tileStartY + ty);
+                    if (up >= 0) drawUpperMetatile(up, tx * _rt + subX, ty * _rt + subY);
+                }
+            }
         }
     }
 

@@ -35,7 +35,8 @@
   }
 
   var state = {
-    layers: { ground: newLayer(1), overlay: newLayer(-1) },
+    // Three tile layers (RPG Maker XP): ground (1), overlay (2), upper (3).
+    layers: { ground: newLayer(1), overlay: newLayer(-1), upper: newLayer(-1) },
     active: 'ground',
     width: 20, height: 18,
     warps: [],
@@ -593,7 +594,7 @@
     var prev = keep ? state.layers : null;
     var pw = keep ? state.width : 0, ph = keep ? state.height : 0;
     state.width = w; state.height = h;
-    ['ground', 'overlay'].forEach(function (key) {
+    ['ground', 'overlay', 'upper'].forEach(function (key) {
       var layer = state.layers[key];
       // Ground default fill = the autotile base fill (clean grass) as a GLOBAL id.
       var fill = layer.fill;
@@ -653,9 +654,10 @@
     mapCanvas.height = state.height * cs;
     mctx.imageSmoothingEnabled = false;
     mctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-    // Ground always under overlay. Dim the non-active layer like RM.
+    // Layers draw bottom→top (ground, overlay, upper). Dim the non-active ones like RM.
     drawLayer('ground', state.active === 'ground' ? 1 : 0.4);
     drawLayer('overlay', state.active === 'overlay' ? 1 : 0.4);
+    drawLayer('upper', state.active === 'upper' ? 1 : 0.4);
 
     if (state.mode === 'collide') {
       var col = state.layers.ground.collision;
@@ -684,6 +686,45 @@
       mctx.fillRect(wp.x * cs, wp.y * cs, cs, cs);
     });
   }
+
+  // ── Undo / Redo (snapshot history) ──
+  // Snapshot the editable arrays (all layers' data/collision/terrain + warps +
+  // size). Push before each user gesture; restore on undo/redo.
+  var undoStack = [], redoStack = [], UNDO_MAX = 60;
+  var LAYER_KEYS = ['ground', 'overlay', 'upper'];
+  function snapshot() {
+    var s = { width: state.width, height: state.height, layers: {},
+              warps: JSON.parse(JSON.stringify(state.warps)) };
+    LAYER_KEYS.forEach(function (k) {
+      var L = state.layers[k];
+      s.layers[k] = {
+        data: L.data ? Int32Array.from(L.data) : null,
+        collision: L.collision ? Uint8Array.from(L.collision) : null,
+        terrain: L.terrain ? L.terrain.slice() : null
+      };
+    });
+    return s;
+  }
+  function restore(s) {
+    state.width = s.width; state.height = s.height;
+    $('mapW').value = s.width; $('mapH').value = s.height;
+    $('statSize').textContent = s.width + ' × ' + s.height;
+    LAYER_KEYS.forEach(function (k) {
+      var L = state.layers[k], d = s.layers[k]; if (!d) return;
+      if (d.data) L.data = Int32Array.from(d.data);
+      if (d.collision) L.collision = Uint8Array.from(d.collision);
+      if (d.terrain) L.terrain = d.terrain.slice();
+    });
+    state.warps = JSON.parse(JSON.stringify(s.warps));
+    drawMap(); renderWarpList();
+  }
+  function pushUndo() {
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    redoStack.length = 0;
+  }
+  function doUndo() { if (!undoStack.length) { toast('Nothing to undo.'); return; } redoStack.push(snapshot()); restore(undoStack.pop()); }
+  function doRedo() { if (!redoStack.length) { toast('Nothing to redo.'); return; } undoStack.push(snapshot()); restore(redoStack.pop()); }
 
   // ── Painting ──
   var painting = false, rectStart = null;
@@ -788,6 +829,8 @@
   mapCanvas.addEventListener('mousedown', function (e) {
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
+    if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
+    pushUndo();                                          // record state before any edit gesture
     if (state.mode === 'warp') { addWarp(p.x, p.y); return; }
     if (state.tool === 'fill' && state.mode !== 'collide') { floodFill(p.x, p.y); drawMap(); return; }
     if (state.tool === 'rect' || state.tool === 'ellipse') { rectStart = p; return; }
@@ -851,7 +894,7 @@
     return layer.sheets.map(function (s) { return { name: s.name, offset: s.offset, count: s.count }; });
   }
   function buildLayout() {
-    var g = state.layers.ground, o = state.layers.overlay;
+    var g = state.layers.ground, o = state.layers.overlay, u = state.layers.upper;
     var base = g.sheets[0] || null;
     var layout = {
       id: $('layoutId').value || 'LAYOUT_NEW_MAP',
@@ -870,6 +913,11 @@
       layout.overlay_tileset = o.sheets[0].name;
       layout.overlay_group = sheetGroup(o);
       layout.overlay = Array.from(o.data);
+    }
+    if (u.sheets.length && hasContent(u.data, -1)) {
+      layout.upper_tileset = u.sheets[0].name;
+      layout.upper_group = sheetGroup(u);
+      layout.upper = Array.from(u.data);
     }
     return layout;
   }
@@ -915,8 +963,10 @@
     var w = data.width, h = data.height;
     var groundGroup = data.tileset_group || (data.tileset ? [{ name: data.tileset }] : []);
     var overlayGroup = data.overlay_group || (data.overlay_tileset ? [{ name: data.overlay_tileset }] : []);
+    var upperGroup = data.upper_group || (data.upper_tileset ? [{ name: data.upper_tileset }] : []);
     state.layers.ground = newLayer(0);
     state.layers.overlay = newLayer(-1);
+    state.layers.upper = newLayer(-1);
     // load a group's sheets in order, honouring saved offsets (or repacking)
     function loadGroup(layer, group) {
       return group.reduce(function (p, entry) {
@@ -930,7 +980,8 @@
       }, Promise.resolve()).then(function () { syncActive(layer); });
     }
     return Promise.all([loadGroup(state.layers.ground, groundGroup),
-                        loadGroup(state.layers.overlay, overlayGroup)]).then(function () {
+                        loadGroup(state.layers.overlay, overlayGroup),
+                        loadGroup(state.layers.upper, upperGroup)]).then(function () {
       state.width = w; state.height = h;
       var g = state.layers.ground;
       g.data = Int32Array.from(data.metatiles);
@@ -947,6 +998,12 @@
       o.terrain = new Array(w * h);
       o.baseFill = -1;
       for (var oi = 0; oi < w * h; oi++) { o.data[oi] = data.overlay ? data.overlay[oi] : -1; o.terrain[oi] = ''; }
+      var u = state.layers.upper;
+      u.data = new Int32Array(w * h);
+      u.collision = new Uint8Array(w * h);
+      u.terrain = new Array(w * h);
+      u.baseFill = -1;
+      for (var ui = 0; ui < w * h; ui++) { u.data[ui] = data.upper ? data.upper[ui] : -1; u.terrain[ui] = ''; }
 
       $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
@@ -986,9 +1043,13 @@
   function setActiveLayer(key) {
     state.active = key;
     $('layerSel').value = key;
+    // reflect on the XP toolbar layer buttons (1/2/3)
+    document.querySelectorAll('#layerGroup .mode-layer').forEach(function (x) {
+      x.classList.toggle('active', x.dataset.layer === key);
+    });
     var layer = L();
-    if (!layer.sheets.length && key === 'overlay' && state._tilesetNames) {
-      // lazily give the overlay layer a default object sheet on first use:
+    if (!layer.sheets.length && (key === 'overlay' || key === 'upper') && state._tilesetNames) {
+      // lazily give the overlay/upper layer a default object sheet on first use:
       // the active set's B page (buildings/props) if available, else first sheet.
       var setB = state.activeSet && state.activeSet.tabs.B;
       var def = (setB && state._tilesetNames.indexOf(setB) >= 0) ? setB
@@ -1030,6 +1091,7 @@
   // Resize (visible button in the side panel)
   var rb2 = $('resizeBtn2');
   if (rb2) rb2.addEventListener('click', function () {
+    pushUndo();
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, true);
   });
 
@@ -1046,20 +1108,28 @@
   document.querySelectorAll('#layerGroup .mode-layer').forEach(function (b) {
     b.addEventListener('click', function () {
       var lyr = b.dataset.layer;
-      if (lyr === 'upper') { soon(); return; }
       document.querySelectorAll('#layerGroup .mode-layer').forEach(function (x) { x.classList.remove('active'); });
       b.classList.add('active');
       setActiveLayer(lyr);
     });
   });
   $('eventModeBtn').addEventListener('click', soon);
+  $('undoBtn').addEventListener('click', doUndo);
+  $('redoBtn').addEventListener('click', doRedo);
+  // Keyboard: Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) for undo/redo.
+  window.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    var k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); doRedo(); }
+  });
   // Visible grid toggle mirrors the (hidden) gridBtn state.
   var gtb = $('gridToolBtn');
   if (gtb) gtb.addEventListener('click', function () {
     clickEl('gridBtn');
     gtb.classList.toggle('active', $('gridBtn').classList.contains('active'));
   });
-  ['cutBtn', 'copyBtn', 'pasteBtn', 'delBtn', 'undoBtn', 'redoBtn',
+  ['cutBtn', 'copyBtn', 'pasteBtn', 'delBtn',
    'dbBtn', 'matBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
     var e = $(id); if (e) e.addEventListener('click', soon);
   });
@@ -1125,14 +1195,14 @@
       ['Save to repo', '', function () { clickEl('repoSaveBtn'); }]
     ]],
     ['Edit', [
-      ['Undo', 'Ctrl+Z', null], ['Redo', 'Ctrl+Y', null], 'sep',
+      ['Undo', 'Ctrl+Z', function () { doUndo(); }], ['Redo', 'Ctrl+Y', function () { doRedo(); }], 'sep',
       ['Cut', 'Ctrl+X', null], ['Copy', 'Ctrl+C', null],
       ['Paste', 'Ctrl+V', null], ['Delete', 'Del', null]
     ]],
     ['Mode', [
       ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }],
       ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }],
-      ['Layer 3 (Upper)', '3', null],
+      ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }],
       ['Event layer', 'F6', null],
       'sep',
       ['Collision / Passage', '', function () { setModeBtn('collide'); }],

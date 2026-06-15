@@ -288,6 +288,17 @@ window.GameMap = (function () {
         const v = layoutData.overlay[y * mapWidth + x];
         return (v === undefined || v === null) ? -1 : v;
     }
+    // Optional UPPER layer (RPG Maker layer 3) — drawn ABOVE the player
+    // (roofs / treetops). layout.upper_tileset + layout.upper[] (-1 = none).
+    function getUpperTilesetName() {
+        return (layoutData && layoutData.upper_tileset) || null;
+    }
+    function getUpper(x, y) {
+        if (!layoutData || !layoutData.upper) return -1;
+        if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return -1;
+        const v = layoutData.upper[y * mapWidth + x];
+        return (v === undefined || v === null) ? -1 : v;
+    }
 
     // Per-map render cell size in px (default 16). A layout may declare
     // tileSize: 32 to render bigger cells (fewer tiles on screen).
@@ -373,6 +384,8 @@ window.GameMap = (function () {
         getTilesetName,
         getOverlayTilesetName,
         getOverlay,
+        getUpperTilesetName,
+        getUpper,
         getTileSize,
         getTileTerrainType,
         getTileDebug,
