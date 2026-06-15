@@ -44,10 +44,12 @@
   select { padding:3px 4px; }
 
   /* ── Main 3-pane layout ── */
-  #main { flex:1; display:flex; min-height:0; }
+  /* overflow:auto = never clip; if panels exceed the viewport you can scroll
+     to every panel instead of having an edge cut off. */
+  #main { flex:1; display:flex; min-height:0; min-width:0; overflow:auto; }
 
   /* Left: map tree + palette */
-  #leftCol { width:230px; min-width:230px; background:var(--panel);
+  #leftCol { width:230px; min-width:230px; flex:0 0 auto; background:var(--panel);
     border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
   #treePanel { border-bottom:1px solid var(--line); display:flex; flex-direction:column;
     max-height:160px; }
@@ -85,7 +87,7 @@
   .auto-swatch span { font-size:10px; color:var(--text); text-align:center; word-break:break-word; }
 
   /* Center: map canvas */
-  #canvasPanel { flex:1; overflow:auto; background:#8a8a8a;
+  #canvasPanel { flex:1 1 auto; min-width:220px; overflow:auto; background:#8a8a8a;
     background-image:linear-gradient(45deg,#7e7e7e 25%,transparent 25%),
       linear-gradient(-45deg,#7e7e7e 25%,transparent 25%),
       linear-gradient(45deg,transparent 75%,#7e7e7e 75%),
@@ -96,9 +98,22 @@
     box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; }
 
   /* Right: inspector */
-  #sidePanel { width:226px; min-width:226px; background:var(--panel);
+  #sidePanel { width:226px; min-width:226px; flex:0 0 auto; background:var(--panel);
     border-left:1px solid var(--line); padding:8px; overflow:auto;
     display:flex; flex-direction:column; gap:10px; }
+
+  /* Responsive: shrink the side panels on smaller screens so the map keeps
+     usable room and nothing is cut off the edges. */
+  @media (max-width:900px) {
+    #leftCol  { width:194px; min-width:194px; }
+    #sidePanel{ width:184px; min-width:184px; }
+  }
+  @media (max-width:600px) {
+    #topbar h1 { display:none; }
+    #leftCol  { width:162px; min-width:162px; }
+    #sidePanel{ width:160px; min-width:160px; }
+    .auto-swatch { width:54px; }
+  }
   .card { background:#fafafa; border:1px solid var(--line2); border-radius:5px; padding:7px; }
   .card h3 { margin:0 0 6px; font-size:10px; text-transform:uppercase;
     letter-spacing:.5px; color:#2b4a7a; }
