@@ -1055,6 +1055,49 @@
     var e = $(id); if (e) e.addEventListener('click', soon);
   });
 
+  // Screenshot -> capture the whole editor, upload to the `screenshots` branch,
+  // show a copyable raw link to paste back. Lets the owner show what they see.
+  function uploadShot(b64) {
+    var ts = Date.now(), path = 'screenshots/editor-' + ts + '.png';
+    var REPO = 'knightdx91-alt/awakened-calamity';
+    fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+      method: 'PUT',
+      headers: { Authorization: 'token ' + GH_TOKEN, 'Content-Type': 'application/json',
+                 Accept: 'application/vnd.github+json' },
+      body: JSON.stringify({ message: 'editor screenshot ' + ts, content: b64, branch: 'screenshots' })
+    }).then(function (r) {
+      return r.ok ? r.json() : r.json().then(function (d) { throw new Error(d.message || ('HTTP ' + r.status)); });
+    }).then(function () {
+      var url = 'https://raw.githubusercontent.com/' + REPO + '/screenshots/' + path;
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      var inner = document.createElement('div');
+      inner.style.cssText = 'background:#fff;border:1px solid #888;border-radius:8px;padding:18px;max-width:440px;width:90%;display:flex;flex-direction:column;gap:10px;font-size:12px;';
+      inner.innerHTML = '<b style="color:#2b4a7a;">📷 Screenshot uploaded — paste this link in chat:</b>' +
+        '<input id="_ssu" readonly value="' + url + '" style="padding:7px;border:1px solid #888;border-radius:4px;width:100%;box-sizing:border-box;font-family:monospace;font-size:11px;">' +
+        '<div style="display:flex;gap:8px;"><button id="_ssc" style="flex:1;padding:8px;">📋 Copy</button>' +
+        '<button id="_ssx" style="flex:1;padding:8px;">Close</button></div>';
+      box.appendChild(inner); document.body.appendChild(box);
+      var inp = inner.querySelector('#_ssu'); inp.focus(); inp.select();
+      inner.querySelector('#_ssc').addEventListener('click', function () {
+        var self = this;
+        (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+          self.textContent = '✓ Copied'; }).catch(function () { inp.select(); document.execCommand('copy'); self.textContent = '✓ Copied'; });
+      });
+      inner.querySelector('#_ssx').addEventListener('click', function () { box.remove(); });
+    }).catch(function (e) { toast('Screenshot upload failed: ' + e.message); });
+  }
+  $('shotBtn').addEventListener('click', function () {
+    toast('Capturing screenshot…');
+    var done = function (canvas) {
+      uploadShot(canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''));
+    };
+    if (window.html2canvas) {
+      html2canvas(document.body, { useCORS: true, allowTaint: true, scale: 1 }).then(done)
+        .catch(function () { toast('Capture failed (html2canvas).'); });
+    } else { toast('Screenshot library not loaded — check your connection and retry.'); }
+  });
+
   // Playtest -> open the game on the current map in a new tab.
   $('playBtn').addEventListener('click', function () {
     var nm = $('mapName').value || 'AwakeningCamp';
@@ -1114,6 +1157,7 @@
       ['Playtest', 'F12', function () { clickEl('playBtn'); }]
     ]],
     ['Help', [
+      ['Send Screenshot…', '', function () { clickEl('shotBtn'); }],
       ['About', '', function () { toast('Awakened Calamity — RPG-Maker-style map editor.'); }]
     ]]
   ];
