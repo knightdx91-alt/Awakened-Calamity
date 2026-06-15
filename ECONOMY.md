@@ -105,7 +105,17 @@ player at a glance what something is worth and how hard it is to get.
 ---
 
 ## 8. Open Calls
-1. **Rep sources per town** — bounties only, or also discoveries/donations/story?
+
+**LOCKED:**
+1. **Rep sources = ALL of them** — **bounties** (the steady backbone) **+ discoveries** (mapping the
+   region, finding landmarks) **+ donations** (turning in materials / credits / rare drops) **+ story**
+   (helping with the town's Overflow / Calamity beats). Every build has a lane to earn a town's trust:
+   fighters bounty, explorers discover, crafters/rich players donate, story players progress the plot —
+   respecting the no-respec, build-matters identity. **Guardrail:** weight them so none trivializes
+   rep; donations cost *real* rare mats (not a credit→rep laundromat). Bounties remain the reliable
+   path; the rest are alternate lanes.
+
+**Open:**
 2. **Catalog tier thresholds** — what rep unlocks Rare vs. Elite vs. Legendary stock.
 3. **Class-slot cost curve** — Cr (+ rep + quest) for Rare/Elite/Legendary class access.
 4. **Cross-town rep** — does helping one town bleed reputation to neighbors, or fully independent?
