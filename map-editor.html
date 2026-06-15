@@ -15,7 +15,15 @@
   * { box-sizing: border-box; }
   html,body { margin:0; height:100%; background:var(--win); color:var(--text);
     font-family:"Segoe UI", Tahoma, system-ui, sans-serif; font-size:12px; }
-  body { display:flex; flex-direction:column; overflow:hidden; }
+  body { overflow:hidden; }
+
+  /* ── Orientation rotor: rotates the whole editor in 90° steps ── */
+  #rotor { position:absolute; top:50%; left:50%; width:100vw; height:100vh;
+    display:flex; flex-direction:column; transform:translate(-50%,-50%);
+    transform-origin:center center; transition:transform .25s ease; }
+  body[data-orient="1"] #rotor { width:100vh; height:100vw; transform:translate(-50%,-50%) rotate(90deg); }
+  body[data-orient="2"] #rotor { transform:translate(-50%,-50%) rotate(180deg); }
+  body[data-orient="3"] #rotor { width:100vh; height:100vw; transform:translate(-50%,-50%) rotate(270deg); }
 
   /* ── Toolbar ── */
   #topbar { display:flex; align-items:center; gap:6px; padding:4px 8px;
@@ -106,6 +114,7 @@
 </style>
 </head>
 <body>
+ <div id="rotor">
   <div id="topbar">
     <h1>MAP EDITOR</h1>
     <div class="group">
@@ -140,6 +149,7 @@
     <div class="sep"></div>
     <div class="group">
       <button id="gridBtn" class="active" title="Toggle grid">▦ Grid</button>
+      <button id="orientBtn" title="Rotate the whole editor 90°">⟳ 0°</button>
       <label class="lbl">Zoom</label>
       <button id="zoomOut">−</button><span id="zoomLabel">2×</span><button id="zoomIn">+</button>
     </div>
@@ -231,6 +241,7 @@
     <span id="statTileset">—</span>
     <span id="statLayer">—</span>
   </div>
+ </div><!-- /#rotor -->
 
   <!-- Repo map picker -->
   <div id="repoModal" style="display:none; position:fixed; inset:0; z-index:50;

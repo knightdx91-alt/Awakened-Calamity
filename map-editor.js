@@ -37,8 +37,25 @@
     mode: 'map',                 // map | collide | warp
     eraser: false,
     showGrid: true,
-    zoom: 2
+    zoom: 2,
+    orient: 0                    // 0..3 -> 0/90/180/270 deg whole-editor rotation
   };
+
+  var ORIENT_DEG = [0, 90, 180, 270];
+
+  // Map a screen point to a (rotated) canvas's own untransformed content
+  // coordinates. The editor may be CSS-rotated about the viewport centre; since
+  // that transform is rigid, inverse-rotating the offset from the canvas's
+  // on-screen bounding-box centre recovers local coords regardless of pivot.
+  function screenToLocal(canvas, clientX, clientY) {
+    var r = canvas.getBoundingClientRect();
+    var dx = clientX - (r.left + r.width / 2);
+    var dy = clientY - (r.top + r.height / 2);
+    var a = -ORIENT_DEG[state.orient] * Math.PI / 180;
+    var ca = Math.cos(a), sa = Math.sin(a);
+    return { x: (dx * ca - dy * sa) + canvas.width / 2,
+             y: (dx * sa + dy * ca) + canvas.height / 2 };
+  }
 
   function L() { return state.layers[state.active]; }
   function srcTile(layer) { layer = layer || L(); return (layer.meta && layer.meta.tile) || 16; }
@@ -271,10 +288,9 @@
   // Palette drag-select (multi-tile stamp)
   var palDrag = null;
   function palCellFromEvent(e) {
-    var r = paletteCanvas.getBoundingClientRect();
-    var px = Math.floor((e.clientX - r.left) / (DT * PAL_SCALE));
-    var py = Math.floor((e.clientY - r.top) / (DT * PAL_SCALE));
-    return { cx: Math.max(0, px), cy: Math.max(0, py) };
+    var p = screenToLocal(paletteCanvas, e.clientX, e.clientY);
+    return { cx: Math.max(0, Math.floor(p.x / (DT * PAL_SCALE))),
+             cy: Math.max(0, Math.floor(p.y / (DT * PAL_SCALE))) };
   }
   paletteCanvas.addEventListener('mousedown', function (e) {
     palDrag = palCellFromEvent(e);
@@ -419,9 +435,9 @@
   var painting = false, rectStart = null;
 
   function eventCell(e) {
-    var r = mapCanvas.getBoundingClientRect();
+    var p = screenToLocal(mapCanvas, e.clientX, e.clientY);
     var cs = cell();
-    return { x: Math.floor((e.clientX - r.left) / cs), y: Math.floor((e.clientY - r.top) / cs) };
+    return { x: Math.floor(p.x / cs), y: Math.floor(p.y / cs) };
   }
 
   // Stamp the current B-tab block (or eraser) with top-left at (ax,ay).
@@ -752,6 +768,12 @@
   }
   $('zoomIn').addEventListener('click', function () { setZoom(state.zoom + 1); });
   $('zoomOut').addEventListener('click', function () { setZoom(state.zoom - 1); });
+
+  $('orientBtn').addEventListener('click', function () {
+    state.orient = (state.orient + 1) % 4;
+    document.body.dataset.orient = state.orient;
+    this.textContent = '⟳ ' + ORIENT_DEG[state.orient] + '°';
+  });
 
   // ── Save to GitHub 'maps' branch (same mechanism as cloud-saves.js) ──
   var GH_REPO   = 'knightdx91-alt/awakened-calamity';
