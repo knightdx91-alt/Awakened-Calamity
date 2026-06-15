@@ -1,0 +1,8 @@
+RPG Maker XP graphics - reformatted for RPG Maker MV by LadyBaskerville
+
+Free for commercial and non-commercial use in any RPG Maker engine, as long as you legally own RPG Maker XP.
+
+Please credit:
+- Enterbrain (original tiles)
+- RyanBram (scaling tool)
+- optional: LadyBaskerville (reformating)

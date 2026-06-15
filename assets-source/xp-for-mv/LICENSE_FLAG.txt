@@ -1,0 +1,19 @@
+⚠️  RPG MAKER XP RTP (reformatted for MV) — EULA-GATED, NOT AUTO-SHIPPABLE
+========================================================================
+
+Source: "XP Characters/Tilesets for MV" by LadyBaskerville (original Drive zip,
+owner-provided). Original art = RPG Maker XP RTP (© Enterbrain).
+
+License (see TermsOfUse.txt): free for commercial/non-commercial use **in any
+RPG Maker engine, as long as you legally own RPG Maker XP**. Credit Enterbrain
+(tiles), RyanBram (scaling tool), LadyBaskerville (reformatting).
+
+⚠️  Our engine is a custom HTML5 / future-Unity engine — NOT an RPG Maker engine.
+The license restricts use to RPG Maker engines, so these are PROTOTYPE/EVALUATION
+ONLY here, exactly like the Pixel Fantasy pack (data/tilesets/PIXEL_FANTASY.LICENSE.txt).
+Do NOT ship without clearing this (own RM XP + confirm engine restriction).
+
+Contents:
+- tilesets/   59 sheets, 768x768 (48px tiles): themed maps (Grassland..Church)
+              + A1/A2/A4/A5 autotile sheets (MV format).
+- characters/ 193 sprites, 48px MV $/! format (people, monsters, animals, props).
