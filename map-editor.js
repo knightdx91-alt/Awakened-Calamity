@@ -1102,7 +1102,7 @@
     ]],
     ['View', [
       ['Toggle Grid', '', function () { clickEl('gridBtn'); }],
-      ['Rotate 90°', '', function () { clickEl('orientBtn'); }],
+      ['Screen Orientation…', '', function () { clickEl('orientBtn'); }],
       'sep',
       ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
     ]],
@@ -1220,11 +1220,49 @@
   $('zoomIn').addEventListener('click', function () { setZoom(state.zoom + 1); });
   $('zoomOut').addEventListener('click', function () { setZoom(state.zoom - 1); });
 
-  $('orientBtn').addEventListener('click', function () {
-    state.orient = (state.orient + 1) % 4;
+  // Screen orientation: a dropdown of ALL orientations (matches the game's
+  // Portrait / Rev. Portrait / Landscape / Rev. Landscape options).
+  var ORIENT_OPTS = [
+    { n: 0, label: 'Landscape (0°)' },
+    { n: 1, label: 'Portrait (90°)' },
+    { n: 2, label: 'Rev. Landscape (180°)' },
+    { n: 3, label: 'Rev. Portrait (270°)' }
+  ];
+  function setOrient(n) {
+    state.orient = ((n % 4) + 4) % 4;
     document.body.dataset.orient = state.orient;
-    this.textContent = '⟳ ' + ORIENT_DEG[state.orient] + '°';
-  });
+    $('orientBtn').textContent = '⟳ ' + ORIENT_DEG[state.orient] + '°';
+  }
+  var orientMenu = null;
+  function toggleOrientMenu() {
+    if (orientMenu) { orientMenu.remove(); orientMenu = null; return; }
+    orientMenu = document.createElement('div');
+    orientMenu.className = 'dropdown';
+    orientMenu.style.cssText = 'display:block; position:fixed; z-index:200; min-width:170px;' +
+      'background:#fff; color:var(--text); border:1px solid var(--line); padding:3px;' +
+      'box-shadow:0 8px 24px rgba(0,0,0,.28);';
+    ORIENT_OPTS.forEach(function (o) {
+      var mi = document.createElement('div');
+      mi.className = 'mi' + (o.n === state.orient ? ' active' : '');
+      mi.style.cssText = 'padding:6px 14px; cursor:pointer; border-radius:3px;' +
+        (o.n === state.orient ? 'font-weight:700;' : '');
+      mi.textContent = (o.n === state.orient ? '● ' : '○ ') + o.label;
+      mi.addEventListener('mouseenter', function () { mi.style.background = 'var(--accent)'; mi.style.color = '#fff'; });
+      mi.addEventListener('mouseleave', function () { mi.style.background = ''; mi.style.color = ''; });
+      mi.addEventListener('click', function (e) {
+        e.stopPropagation(); setOrient(o.n);
+        if (orientMenu) { orientMenu.remove(); orientMenu = null; }
+      });
+      orientMenu.appendChild(mi);
+    });
+    document.body.appendChild(orientMenu);
+    var r = $('orientBtn').getBoundingClientRect();
+    var mw = orientMenu.offsetWidth, mh = orientMenu.offsetHeight;
+    orientMenu.style.left = Math.min(r.left, window.innerWidth - mw - 6) + 'px';
+    orientMenu.style.top = Math.min(r.bottom + 2, window.innerHeight - mh - 6) + 'px';
+  }
+  $('orientBtn').addEventListener('click', function (e) { e.stopPropagation(); toggleOrientMenu(); });
+  document.addEventListener('click', function () { if (orientMenu) { orientMenu.remove(); orientMenu = null; } });
 
   // ── Save to GitHub 'maps' branch (same mechanism as cloud-saves.js) ──
   var GH_REPO   = 'knightdx91-alt/awakened-calamity';
