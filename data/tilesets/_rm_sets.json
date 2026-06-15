@@ -1,48 +1,57 @@
 {
-  "_comment": "RPG-Maker-style tileset SETS. Each set groups sheets into RM A1-A5/B/C/D/E roles. A2 prefers the baked *_ground autotile sheet (terrain blob) and falls back to the raw a2 sheet. Used by the map editor's MV/MZ A-E tab palette and the XP single-sheet view. Pixel Fantasy source = commercial/EULA (see PIXEL_FANTASY.LICENSE.txt).",
+  "_comment": "RPG-Maker-style tileset SETS for the map editor. Source = 'XP graphics reformatted for MV' (RPG Maker XP RTP, LadyBaskerville). EULA/prototype-only (assets-source/xp-for-mv/LICENSE_FLAG.txt). A1=animated water, A2=ground, A4=walls, A5=normal ground; B/C/D = themed object pages. All 59 xp_* sheets are also reachable via the editor's 'Sheet' dropdown. Autotile (wang) bake for A2 is a later pass; A2 tabs paint raw for now.",
   "sets": [
     {
-      "id": "pf_outside",
+      "id": "xp_outside",
       "name": "Outside",
       "tile": 48,
       "tabs": {
-        "A1": "pf_outside_a1",
-        "A2": "pf_outside_ground",
-        "A2raw": "pf_outside_a2",
-        "A3": "pf_outside_a3",
-        "A4": "pf_outside_a4",
-        "A5": "pf_outside_a5",
-        "B": "pf_outside_b",
-        "C": "pf_outside_c",
-        "D": "pf_outside_d"
+        "A1": "xp_a1",
+        "A2": "xp_a2_outside",
+        "A4": "xp_a4",
+        "A5": "xp_a5",
+        "B": "xp_001_grassland",
+        "C": "xp_002_woods01",
+        "D": "xp_009_castletown01"
       }
     },
     {
-      "id": "pf_inside",
+      "id": "xp_town",
+      "name": "Town",
+      "tile": 48,
+      "tabs": {
+        "A2": "xp_a2_outside",
+        "A4": "xp_a4",
+        "A5": "xp_a5",
+        "B": "xp_009_castletown01",
+        "C": "xp_036_shop01a",
+        "D": "xp_028_church01"
+      }
+    },
+    {
+      "id": "xp_inside",
       "name": "Inside",
       "tile": 48,
       "tabs": {
-        "A1": "pf_inside_a1",
-        "A2": "pf_inside_ground",
-        "A2raw": "pf_inside_a2",
-        "A4": "pf_inside_a4",
-        "A5": "pf_inside_a5",
-        "B": "pf_inside_b",
-        "C": "pf_inside_c"
+        "A2": "xp_a2_inside",
+        "A4": "xp_a4",
+        "A5": "xp_a5",
+        "B": "xp_036_shop01a",
+        "C": "xp_028_church01"
       }
     },
     {
-      "id": "pf_dungeon",
+      "id": "xp_dungeon",
       "name": "Dungeon",
       "tile": 48,
       "tabs": {
-        "A1": "pf_dungeon_a1",
-        "A2": "pf_dungeon_ground",
-        "A2raw": "pf_dungeon_a2",
-        "A4": "pf_dungeon_a4",
-        "A5": "pf_dungeon_a5",
-        "B": "pf_dungeon_b",
-        "C": "pf_dungeon_c"
+        "A1": "xp_a1",
+        "A2": "xp_a2_outside",
+        "A4": "xp_a4",
+        "A5": "xp_a5",
+        "B": "xp_043_cave01",
+        "C": "xp_044_cave02",
+        "D": "xp_047_mine01"
       }
     }
   ]
