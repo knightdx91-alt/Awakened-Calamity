@@ -45,6 +45,14 @@ trap). Judge every feature by whether it reinforces this.
 
 ## 1. Battle System — **Tempo + Intervention**
 
+> **2D prototype vs. 3D target.** *Tempo* (active-time/ATB) is this **2D prototype's** expression of
+> combat — the right fit for a GBA-style build. In the **3D game**, combat becomes **class-driven and
+> action-based**: a Reaver plays like action-melee, a Channeler like a caster, an Engineer like a
+> gadget/summon build — combat *feels like your class*, not one universal ATB. **What carries over
+> intact is the Intervention layer** (below): the System meddling *inside* the fight is combat-model-
+> agnostic and is the genuinely original, headline-worthy mechanic. Keep Intervention; let the
+> moment-to-moment combat match the medium.
+
 Designed to be *more fun for survival* **and** mechanically distinct from classic turn-based
 (divergence for IP safety). Two parts: **Tempo** (active-time core) + **Intervention** (the
 System meddles).
@@ -152,6 +160,27 @@ a +40-level patrol = a real "push or extract" call); death is always the player'
 ---
 
 ## 4. Capture — **Bind** (IP-divergent)
+
+> **Framing — NOT a headline pillar.** This is **not a creature-collector game.** Bonding is a
+> **class subsystem**, available to the few capture-capable classes (Tamer/Binder lineage) or bought
+> from the Shop (`CRAFTING.md §5`) — one build path among many, not the game's identity or its
+> marketing. The game is a **System-horror LitRPG action-survival RPG**; taming is optional flavor.
+
+### Where creatures come from (origin lore)
+**Bonded creatures are just the world's monsters — the same things you fight.** There is no separate
+"collectible species" set. When the **System came online** it populated the world two ways:
+- **Mutated native fauna** — ordinary animals warped into monsters: a **giant ant**, a **fire
+  salamander**, a **dire wolf** — recognizable-but-wrong versions of real creatures, mostly in the
+  overworld/wilds.
+- **Pulled-in otherworld creatures** — things dragged from **other Systems / consumed cycles**
+  (`WORLD.md`'s cycle cosmology) to **populate the dungeons**: alien, never-of-this-world forms like
+  **large bipedal night-lizards**. Dungeon depths skew otherworldly.
+
+### The bond flow — you bond what you fight
+Per the **Overflow** loop (`OVERFLOW.md`): a creature breaks free / roams the wilds, **you find it,
+you fight it**, and **before you land the kill you may attempt the Bond.** If the creature **accepts**,
+it becomes your bonded creature; if it refuses (or you've no Bind ability), the fight is just a fight.
+So your party is literally *the monsters you chose to spare and tame*, not pre-set catchables.
 
 No Poké Balls. You **Bind** a weakened creature via the System's protocol.
 - **The ability to Bind is GATED — not universal** (`CRAFTING.md §5`). Only **capture-capable classes**
