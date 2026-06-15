@@ -64,8 +64,16 @@ a traversal + skill gate.
 - **Defer:** fancy traversal animations, multi-step traversal puzzles.
 
 ## 5. Open Calls
-1. **Creature field-utility** — always available if the right creature is in the party, or a learned/
-   equipped slot?
+
+**LOCKED:**
+1. **Creature field-utility = always available if you have the creature.** Passive — any creature in
+   your party grants its traversal capability just by *being there*; no slot, no equip, no
+   teaching-step. Crucially this means you never have to **expose** a creature to use its utility (it
+   sidesteps the permanent-death catch-22, `ENCOUNTERS §4`). It's the Tamer build's natural
+   convenience — a party that doubles as a traversal toolkit. **Party size is the only limit** (you
+   can't cover every capability at once without also crafting the gear alternatives, §1).
+
+**Open:**
 2. **How many capabilities** — the 6 above, or trim/expand?
 3. **Soft vs hard gates** — do some sub-areas allow a risky no-tool crossing (chance of damage), or
    strict capability checks only?
