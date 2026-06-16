@@ -64,23 +64,30 @@
   }
 
   // Join an existing room, claiming a free color (prefers black). Returns {roomId,color,ref}.
+  // NOTE: a transaction's handler is first invoked with the client's local (often
+  // null) estimate; returning undefined there ABORTS with no server retry. So we
+  // read the room once first — that confirms it exists, primes the cache, and lets
+  // us seed the transaction from the snapshot so a transient null never aborts it.
   function joinRoom(id) {
     id = (id || '').trim().toUpperCase();
     return init().then(function () {
-      var ref = db.ref('rooms/' + id);
-      return ref.child('players').transaction(function (players) {
-        if (players === null) return; // room doesn't exist -> abort
-        var me = clientId();
-        if (players.white === me || players.black === me) return players; // rejoin
-        if (!players.black) { players.black = me; return players; }
-        if (!players.white) { players.white = me; return players; }
-        return; // full -> abort
-      }).then(function (res) {
-        if (!res.committed || !res.snapshot.exists()) throw new Error('room not found or full');
-        var players = res.snapshot.val(), me = clientId();
-        var color = players.white === me ? 'white' : (players.black === me ? 'black' : null);
-        if (!color) throw new Error('room is full');
-        return { roomId: id, color: color, ref: ref };
+      var ref = db.ref('rooms/' + id), me = clientId();
+      return ref.once('value').then(function (snap) {
+        if (!snap.exists()) throw new Error('room not found');
+        var known = (snap.val() && snap.val().players) || null;
+        return ref.child('players').transaction(function (players) {
+          if (players === null) players = known ? { white: known.white || null, black: known.black || null } : { white: null, black: null };
+          if (players.white === me || players.black === me) return players; // rejoin
+          if (!players.black) { players.black = me; return players; }
+          if (!players.white) { players.white = me; return players; }
+          return; // genuinely full -> abort
+        }).then(function (res) {
+          if (!res.committed) throw new Error('room is full');
+          var players = res.snapshot.val();
+          var color = players.white === me ? 'white' : (players.black === me ? 'black' : null);
+          if (!color) throw new Error('room is full');
+          return { roomId: id, color: color, ref: ref };
+        });
       });
     });
   }
@@ -107,14 +114,17 @@
   function leaveRoom(ref) {
     if (!ref) return Promise.resolve();
     var me = clientId();
-    return ref.transaction(function (room) {
-      if (room === null) return room;
-      var players = room.players || {};
-      if (players.white === me) players.white = null;
-      if (players.black === me) players.black = null;
-      if (!players.white && !players.black) return null; // empty -> remove whole room
-      room.players = players;
-      return room;
+    return ref.once('value').then(function (snap) {
+      if (!snap.exists()) return;
+      return ref.transaction(function (room) {
+        if (room === null) room = snap.val(); // seed from snapshot on a cold-cache pass
+        var players = room.players || {};
+        if (players.white === me) players.white = null;
+        if (players.black === me) players.black = null;
+        if (!players.white && !players.black) return null; // empty -> remove whole room
+        room.players = players;
+        return room;
+      });
     }).then(function () {}).catch(function () {});
   }
 

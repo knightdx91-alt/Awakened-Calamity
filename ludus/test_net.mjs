@@ -14,6 +14,8 @@ function deep(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
 function makeStore() {
   const root = {};
   const listeners = []; // {path, cb}
+  const primed = []; // paths read via once() — their subtree is "cached" locally
+  function isCached(path) { return primed.some(function (p) { return path === p || path.startsWith(p + '/'); }); }
   function getNode(path, create) {
     const segs = path.split('/').filter(Boolean);
     let n = root;
@@ -44,10 +46,14 @@ function makeStore() {
       child: function (p) { return ref(path + '/' + p); },
       set: function (val) { setNode(path, val); notify(path); return Promise.resolve(); },
       update: function (obj) { Object.keys(obj).forEach(function (k) { setNode(path + '/' + k, obj[k]); }); notify(path); return Promise.resolve(); },
+      once: function () { primed.push(path); const v = valAt(path); return Promise.resolve({ val: function () { return v; }, exists: function () { return v !== null; } }); },
       transaction: function (fn) {
-        const cur = valAt(path);
-        const out = fn(cur);
-        if (out === undefined) return Promise.resolve({ committed: false, snapshot: { val: function () { return cur; }, exists: function () { return cur !== null; } } });
+        // Faithful to Firebase: the handler is first called with the LOCAL estimate,
+        // which is null for an uncached path. Returning undefined aborts with NO
+        // server retry. Only an already-cached (once'd) path sees the real value first.
+        const firstVal = isCached(path) ? valAt(path) : null;
+        const out = fn(firstVal);
+        if (out === undefined) { const cur = valAt(path); return Promise.resolve({ committed: false, snapshot: { val: function () { return cur; }, exists: function () { return cur !== null; } } }); }
         setNode(path, out); notify(path);
         return Promise.resolve({ committed: true, snapshot: { val: function () { return valAt(path); }, exists: function () { return valAt(path) !== null; } } });
       },
