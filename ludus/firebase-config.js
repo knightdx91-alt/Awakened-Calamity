@@ -8,9 +8,12 @@
  * simply stays disabled until a valid config (with databaseURL) is present.
  */
 window.LUDUS_FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  databaseURL: "",   // e.g. https://your-project-default-rtdb.firebaseio.com
-  projectId: "",
-  appId: ""
+  apiKey: "AIzaSyBoWXONT4fF-Oqnj95oEJ4v7djN839sUok",
+  authDomain: "ludus-alera.firebaseapp.com",
+  databaseURL: "https://ludus-alera-default-rtdb.firebaseio.com",
+  projectId: "ludus-alera",
+  storageBucket: "ludus-alera.firebasestorage.app",
+  messagingSenderId: "208415489645",
+  appId: "1:208415489645:web:ef266583dee64a48a04964",
+  measurementId: "G-VFR4SVWQ79"
 };
