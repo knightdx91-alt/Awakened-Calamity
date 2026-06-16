@@ -7,10 +7,11 @@ Guidance for Claude Code working in this repo. **Read this first.**
 > incl. the editor. Raw pack lives at `assets-source/xp-for-mv/` (59 tileset sheets 768×768@48px +
 > 193 MV `$`/`!` character sprites) — ⚠️ **EULA-gated, prototype-only** (`LICENSE_FLAG.txt`; RM-engine-
 > only + must own RM XP). `tools/import_xp_for_mv.py` imports the sheets → `data/tilesets/xp_*`
-> (plain 48px grids); `_index.json` is **xp-only** (pf_* deleted); `_rm_sets.json` now defines
-> **Outside/Town/Inside/Dungeon** sets (A1 water, A2 ground, A4 walls, A5 normal, B/C/D themed pages);
-> all 59 sheets reachable via the editor "Sheet" dropdown. Starter `AwakeningCamp` rebuilt on
-> `xp_a2_outside` (grass gid 0); game boots clean. **Autotile (wang) bake for the A2 ground is a TODO**
+> (plain 48px grids). **Update: BOTH packs now coexist** — owner asked to restore Pixel Fantasy
+> alongside XP, each as its own selectable **Set** (Set dropdown) with A1–A5/B/C/D tabs like RPG
+> Maker XP. `_index.json` = 82 sheets (23 `pf_*` + 59 `xp_*`); `_rm_sets.json` = 7 sets: Outside/Town/
+> Inside/Dungeon **(XP)** + Outside/Inside/Dungeon **(Pixel Fantasy)** (PF keeps its A3 roofs +
+> baked `*_ground` autotiles). Starter `AwakeningCamp` on `xp_a2_outside` (grass gid 0); game boots clean. **Autotile (wang) bake for the A2 ground is a TODO**
 > (A2 tabs paint raw for now; baker `tools/build_pixel_fantasy_autotiles.py` is PF-hardcoded — adapt it).
 > **Deploy hygiene:** `pages.yml` now **strips `assets-source/` from the Pages artifact** so the raw
 > EULA pack isn't publicly hosted (note: tiles the game actually renders are still served — only clean

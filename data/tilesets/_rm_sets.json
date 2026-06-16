@@ -1,9 +1,9 @@
 {
-  "_comment": "RPG-Maker-style tileset SETS for the map editor. Source = 'XP graphics reformatted for MV' (RPG Maker XP RTP, LadyBaskerville). EULA/prototype-only (assets-source/xp-for-mv/LICENSE_FLAG.txt). A1=animated water, A2=ground, A4=walls, A5=normal ground; B/C/D = themed object pages. All 59 xp_* sheets are also reachable via the editor's 'Sheet' dropdown. Autotile (wang) bake for A2 is a later pass; A2 tabs paint raw for now.",
+  "_comment": "RPG-Maker tileset SETS for the editor. Two art packs, each its own selectable set (Set dropdown) with A1-A5/B/C/D tabs like RPG Maker XP. Both EULA/prototype-only (PIXEL_FANTASY.LICENSE.txt, assets-source/xp-for-mv/LICENSE_FLAG.txt). All sheets also reachable via the 'Sheet' dropdown.",
   "sets": [
     {
       "id": "xp_outside",
-      "name": "Outside",
+      "name": "Outside (XP)",
       "tile": 48,
       "tabs": {
         "A1": "xp_a1",
@@ -17,7 +17,7 @@
     },
     {
       "id": "xp_town",
-      "name": "Town",
+      "name": "Town (XP)",
       "tile": 48,
       "tabs": {
         "A2": "xp_a2_outside",
@@ -30,7 +30,7 @@
     },
     {
       "id": "xp_inside",
-      "name": "Inside",
+      "name": "Inside (XP)",
       "tile": 48,
       "tabs": {
         "A2": "xp_a2_inside",
@@ -42,7 +42,7 @@
     },
     {
       "id": "xp_dungeon",
-      "name": "Dungeon",
+      "name": "Dungeon (XP)",
       "tile": 48,
       "tabs": {
         "A1": "xp_a1",
@@ -52,6 +52,50 @@
         "B": "xp_043_cave01",
         "C": "xp_044_cave02",
         "D": "xp_047_mine01"
+      }
+    },
+    {
+      "id": "pf_outside",
+      "name": "Outside (Pixel Fantasy)",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_outside_a1",
+        "A2": "pf_outside_ground",
+        "A2raw": "pf_outside_a2",
+        "A3": "pf_outside_a3",
+        "A4": "pf_outside_a4",
+        "A5": "pf_outside_a5",
+        "B": "pf_outside_b",
+        "C": "pf_outside_c",
+        "D": "pf_outside_d"
+      }
+    },
+    {
+      "id": "pf_inside",
+      "name": "Inside (Pixel Fantasy)",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_inside_a1",
+        "A2": "pf_inside_ground",
+        "A2raw": "pf_inside_a2",
+        "A4": "pf_inside_a4",
+        "A5": "pf_inside_a5",
+        "B": "pf_inside_b",
+        "C": "pf_inside_c"
+      }
+    },
+    {
+      "id": "pf_dungeon",
+      "name": "Dungeon (Pixel Fantasy)",
+      "tile": 48,
+      "tabs": {
+        "A1": "pf_dungeon_a1",
+        "A2": "pf_dungeon_ground",
+        "A2raw": "pf_dungeon_a2",
+        "A4": "pf_dungeon_a4",
+        "A5": "pf_dungeon_a5",
+        "B": "pf_dungeon_b",
+        "C": "pf_dungeon_c"
       }
     }
   ]
