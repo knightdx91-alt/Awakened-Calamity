@@ -531,13 +531,20 @@
             let _startMap = _params.get('map');
             let _startReg = _params.get('region');
             let _startX = null, _startY = null;
-            // No URL override? Use the player start location set in the map editor.
-            if (!_startMap) {
-                try {
-                    const sl = JSON.parse(localStorage.getItem('ac_start_location') || 'null');
-                    if (sl && sl.map) { _startMap = sl.map; _startReg = _startReg || sl.region; _startX = sl.x; _startY = sl.y; }
-                } catch (e) {}
+            const _ux = _params.get('x'), _uy = _params.get('y');
+            // The player start set in the map editor (localStorage).
+            let _sl = null;
+            try { _sl = JSON.parse(localStorage.getItem('ac_start_location') || 'null'); } catch (e) {}
+            if (!_startMap && _sl && _sl.map) {
+                // No URL override → drop in at the editor's start map + coords.
+                _startMap = _sl.map; _startReg = _startReg || _sl.region; _startX = _sl.x; _startY = _sl.y;
+            } else if (_startMap && _sl && _sl.map === _startMap) {
+                // Launched onto the same map (e.g. editor Play) → honor its start coords.
+                _startX = _sl.x; _startY = _sl.y;
             }
+            // Explicit ?x=&y= always win (editor Play passes these).
+            if (_ux != null) _startX = parseInt(_ux, 10);
+            if (_uy != null) _startY = parseInt(_uy, 10);
             _startMap = _startMap || 'AwakeningCamp';
             _startReg = _startReg || currentRegion;
             currentRegion = _startReg;

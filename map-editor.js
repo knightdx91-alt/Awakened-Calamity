@@ -55,6 +55,7 @@
     selectedEvent: null,         // currently-edited event object
     eraser: false,
     showGrid: true,
+    multiTile: false,            // palette: single tile by default; drag-select a block only when ON
     zoom: 2,
     orient: 0,                   // 0..3 -> 0/90/180/270 deg whole-editor rotation
     // ── RPG-Maker tab model ──
@@ -562,6 +563,7 @@
   });
   paletteCanvas.addEventListener('pointermove', function (e) {
     if (!palDrag) return;
+    if (!state.multiTile) return;   // single tile by default; opt in for a multi-tile block
     var p = palCellFromEvent(e);
     setStampFromPalette(palDrag.cx, palDrag.cy, p.cx, p.cy);
   });
@@ -1126,15 +1128,26 @@
       return;
     }
     var ev = eventAt(x, y);
-    if (ev) { state.selectedEvent = ev; }
-    else {
-      pushUndo();
-      var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
-      ev = { id: id, name: 'EV' + ('00' + id).slice(-3), x: x, y: y,
-             graphic: state._defaultGraphic || null, dir: 'down', trigger: 'action', through: false,
-             commands: [] };
-      state.events.push(ev); state.selectedEvent = ev;
+    if (ev) {                                    // click an existing event → just select/edit it
+      state.selectedEvent = ev; openEventEditor(); drawMap(); return;
     }
+    // Empty cell: a single click only deselects (so panning/zooming/tapping never
+    // drops a stray event). Creating a NEW event requires a DOUBLE-click on the cell.
+    var now = Date.now(), last = state._lastEvClick;
+    var isDbl = last && last.x === x && last.y === y && (now - last.t) < 450;
+    state._lastEvClick = { x: x, y: y, t: now };
+    if (!isDbl) {
+      state.selectedEvent = null; drawMap();
+      toast('Double-click an empty tile to add an event.');
+      return;
+    }
+    state._lastEvClick = null;
+    pushUndo();
+    var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
+    ev = { id: id, name: 'EV' + ('00' + id).slice(-3), x: x, y: y,
+           graphic: state._defaultGraphic || null, dir: 'down', trigger: 'action', through: false,
+           commands: [] };
+    state.events.push(ev); state.selectedEvent = ev;
     openEventEditor(); drawMap();
   }
   function deleteEvent(ev) {
@@ -1843,7 +1856,11 @@
   $('playBtn').addEventListener('click', function () {
     var nm = $('mapName').value || 'AwakeningCamp';
     var rg = $('mapRegion').value || 'awakened';
-    window.open('game.html?map=' + encodeURIComponent(nm) + '&region=' + encodeURIComponent(rg), '_blank');
+    var q = 'game.html?map=' + encodeURIComponent(nm) + '&region=' + encodeURIComponent(rg);
+    // Honor the player-start tile if one was set on this map.
+    if (state.startLoc && state.startLoc.map === nm && state.startLoc.x != null)
+      q += '&x=' + state.startLoc.x + '&y=' + state.startLoc.y;
+    window.open(q, '_blank');
   });
 
   // ── Menu bar (RPG Maker XP menu order) ──
@@ -1883,7 +1900,13 @@
       ['Flood Fill', '', function () { setToolBtn('fill'); }, function () { return state.tool === 'fill'; }],
       ['Select (box)', '', function () { setToolBtn('select'); }, function () { return state.tool === 'select'; }],
       ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }, function () { return state.tool === 'pick'; }],
-      ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }]
+      ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }],
+      'sep',
+      ['Multi-tile brush', '', function () {
+        state.multiTile = !state.multiTile;
+        toast(state.multiTile ? 'Multi-tile brush ON — drag across the palette to grab a block'
+                              : 'Multi-tile brush OFF — one tile at a time');
+      }, function () { return state.multiTile; }]
     ]],
     ['Scale', [
       ['1/1', '', function () { setScaleBtn(2); }, function () { return state.zoom === 2; }],
@@ -2088,7 +2111,11 @@
   function b64decode(b64) { return decodeURIComponent(escape(atob(b64.replace(/\n/g, '')))); }
   function ghUrl(path) { return 'https://api.github.com/repos/' + GH_REPO + '/contents/' + path; }
   function ghGet(path) {
-    return fetch(ghUrl(path) + '?ref=' + GH_BRANCH, { headers: ghHeaders() })
+    // no-store + cache-bust: the GitHub contents API sends cache headers, and a
+    // browser-cached GET returns a STALE sha → the next PUT 409s ("does not
+    // match"). Always read the live sha.
+    return fetch(ghUrl(path) + '?ref=' + GH_BRANCH + '&_=' + Date.now(),
+                 { headers: ghHeaders(), cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         return d ? { sha: d.sha, content: d.content ? b64decode(d.content) : null } : { sha: null, content: null };
@@ -2096,13 +2123,26 @@
       .catch(function () { return { sha: null, content: null }; });
   }
   function ghPut(path, obj, message, sha) {
-    var body = { message: message, content: b64encode(JSON.stringify(obj)), branch: GH_BRANCH };
-    if (sha) body.sha = sha;
-    return fetch(ghUrl(path), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) })
-      .then(function (r) {
-        if (!r.ok) return r.json().then(function (d) { throw new Error(d.message || ('HTTP ' + r.status)); });
-        return r.json();
+    function put(curSha) {
+      var body = { message: message, content: b64encode(JSON.stringify(obj)), branch: GH_BRANCH };
+      if (curSha) body.sha = curSha;
+      return fetch(ghUrl(path), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+    }
+    return put(sha).then(function (r) {
+      if (r.ok) return r.json();
+      return r.json().then(function (d) {
+        // Stale sha (file changed since we read it) → refetch the live sha and retry once.
+        if (r.status === 409 || r.status === 422) {
+          return ghGet(path).then(function (cur) {
+            return put(cur.sha || undefined).then(function (r2) {
+              if (r2.ok) return r2.json();
+              return r2.json().then(function (d2) { throw new Error(d2.message || ('HTTP ' + r2.status)); });
+            });
+          });
+        }
+        throw new Error(d.message || ('HTTP ' + r.status));
       });
+    });
   }
   function ghDelete(path, message) {
     return ghGet(path).then(function (cur) {
