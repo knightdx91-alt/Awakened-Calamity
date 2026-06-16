@@ -99,7 +99,11 @@ def bake(out, src, grass, terrains):
 # OVER grass (border = grass). Names are by inspection; tune as needed.
 JOBS = [
     dict(out="xp_outside_ground", src="xp_a2_outside.png", grass=(0, 0),
-         terrains=[("stone", 3, 0, 0), ("tallgrass", 1, 1, 0), ("cobble", 3, 1, 0)]),
+         terrains=[("stone", 3, 0, 0), ("dirtpath", 4, 0, 0), ("dirt", 6, 0, 0),
+                   ("claydirt", 7, 0, 0), ("darksoil", 2, 1, 0), ("cobble", 3, 1, 0),
+                   ("bush", 4, 1, 0), ("shrub", 5, 1, 0), ("darkgrass", 6, 1, 0),
+                   ("tallgrass", 1, 1, 0), ("sand", 4, 2, 0), ("drysand", 5, 2, 0),
+                   ("pavement", 7, 2, 0), ("flowers", 7, 3, 0)]),
 ]
 
 def main():
