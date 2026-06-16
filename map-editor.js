@@ -1099,11 +1099,13 @@
     for (var i = 0; i < state.events.length; i++) if (state.events[i].x === x && state.events[i].y === y) return state.events[i];
     return null;
   }
+  function openEventEditor() { $('eventEditorModal').style.display = 'flex'; renderEventPanel(); }
+  function closeEventEditor() { $('eventEditorModal').style.display = 'none'; }
   function eventClick(x, y) {
     if (state._pickDest) {                       // arming a Transfer destination
       var pd = state._pickDest; state._pickDest = null;
       pd.cmd.map = $('mapName').value || pd.cmd.map; pd.cmd.x = x; pd.cmd.y = y;
-      state.selectedEvent = pd.ev; renderEventPanel();
+      state.selectedEvent = pd.ev; openEventEditor();
       toast('Destination set: ' + pd.cmd.map + ' (' + x + ',' + y + ')');
       return;
     }
@@ -1117,13 +1119,13 @@
              commands: [] };
       state.events.push(ev); state.selectedEvent = ev;
     }
-    renderEventPanel(); drawMap();
+    openEventEditor(); drawMap();
   }
   function deleteEvent(ev) {
     pushUndo();
     var i = state.events.indexOf(ev); if (i >= 0) state.events.splice(i, 1);
     if (state.selectedEvent === ev) state.selectedEvent = null;
-    renderEventPanel(); drawMap();
+    closeEventEditor(); drawMap();
   }
   // Draw a charset's [row,col] frame into the map cell (feet aligned to bottom).
   function blitCharFrame(g, row, col, dx, dy, size) {
@@ -1340,6 +1342,7 @@
   function pickDestination(cmd, ev) {
     toast('Click a tile on the CURRENT map to set the destination X,Y.');
     state._pickDest = { cmd: cmd, ev: ev };
+    closeEventEditor();                          // so the map is clickable; reopens after the pick
     setModeBtn('event'); syncModeUI();
   }
   function renderEventList() {
@@ -1350,7 +1353,7 @@
       d.style.cursor = 'pointer';
       if (ev === state.selectedEvent) { d.style.background = 'var(--accent2)'; d.style.borderColor = 'var(--accent)'; }
       d.textContent = ev.name + '  (' + ev.x + ',' + ev.y + ')' + (ev.graphic ? ' · ' + ev.graphic.sprite : '');
-      d.addEventListener('click', function () { state.selectedEvent = ev; renderEventPanel(); drawMap(); });
+      d.addEventListener('click', function () { state.selectedEvent = ev; openEventEditor(); drawMap(); });
       list.appendChild(d);
     });
   }
@@ -1613,11 +1616,11 @@
     Object.keys(MODE_BTNS).forEach(function (id) {
       var e = $(id); if (e) e.classList.toggle('active', MODE_BTNS[id] === state.mode);
     });
-    var rr = $('regionRow'); if (rr) rr.style.display = state.mode === 'region' ? '' : 'none';
-    var sr = $('shadowRow'); if (sr) sr.style.display = state.mode === 'shadow' ? '' : 'none';
-    var eh = $('eventHint'); if (eh) eh.style.display = state.mode === 'event' ? '' : 'none';
-    var ec = $('eventCard'); if (ec) ec.style.display = state.mode === 'event' ? '' : 'none';
-    if (state.mode === 'event') renderEventPanel();
+    var inR = state.mode === 'region', inS = state.mode === 'shadow', inE = state.mode === 'event';
+    if ($('regionRow')) $('regionRow').style.display = inR ? '' : 'none';
+    if ($('shadowRow')) $('shadowRow').style.display = inS ? '' : 'none';
+    if ($('eventHint')) $('eventHint').style.display = inE ? '' : 'none';
+    if ($('modeBar')) $('modeBar').style.display = (inR || inS || inE) ? 'flex' : 'none';
     drawMap();
   }
   Object.keys(MODE_BTNS).forEach(function (id) {
@@ -1763,6 +1766,8 @@
       ['New', 'Ctrl+N', function () { clickEl('newBtn'); }],
       ['Open / Import…', 'Ctrl+O', function () { clickEl('importBtn'); }],
       ['Load from repo…', '', function () { clickEl('repoLoadBtn'); }],
+      'sep',
+      ['Map Properties…', '', function () { window._openMapProps(); }],
       'sep',
       ['Export (layout + map)', 'Ctrl+S', function () { clickEl('exportBtn'); }],
       ['Save to repo', '', function () { clickEl('repoSaveBtn'); }]
@@ -2326,6 +2331,7 @@
     if (name) items = [
       ['New Map (child)', function () { newMapNode(name); }],
       ['Edit', function () { selectNode(name); }],
+      ['Map Properties…', function () { selectNode(name); window._openMapProps(); }],
       ['Rename…', function () { renameNode(name); }],
       ['Duplicate', function () { duplicateNode(name); }],
       'sep',
@@ -2511,6 +2517,15 @@
   }
   $('spriteModalClose').addEventListener('click', function () { $('spriteModal').style.display = 'none'; });
   $('spriteModal').addEventListener('click', function (e) { if (e.target === $('spriteModal')) $('spriteModal').style.display = 'none'; });
+
+  // ── Map Properties + Event editor modal wiring (RM XP-style dialogs) ──
+  function openMapProps() { $('mapPropsModal').style.display = 'flex'; }
+  function closeMapProps() { $('mapPropsModal').style.display = 'none'; }
+  $('mapPropsClose').addEventListener('click', closeMapProps);
+  $('mapPropsModal').addEventListener('click', function (e) { if (e.target === $('mapPropsModal')) closeMapProps(); });
+  $('eventEditorClose').addEventListener('click', closeEventEditor);
+  $('eventEditorModal').addEventListener('click', function (e) { if (e.target === $('eventEditorModal')) closeEventEditor(); });
+  window._openMapProps = openMapProps;   // used by the menu + tree context menu
   $('setPlayerBtn').addEventListener('click', function () {
     if (!_selectedSprite) return;
     var e = _selectedSprite;

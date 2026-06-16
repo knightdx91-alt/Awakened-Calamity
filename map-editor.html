@@ -149,6 +149,21 @@
     position:relative; }
   #mapCanvas { image-rendering:pixelated; display:block; margin:16px; cursor:crosshair;
     box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; touch-action:none; }
+  /* Contextual mode bar floating over the top of the map area */
+  #modeBar { position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:20;
+    background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:6px;
+    padding:5px 10px; box-shadow:0 3px 10px rgba(0,0,0,.25); display:flex; align-items:center;
+    gap:6px; font-size:11px; max-width:92%; }
+  /* Editor modal dialogs (Map Properties, Event) */
+  .ed-modal { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.45);
+    display:flex; align-items:center; justify-content:center; }
+  .ed-box { width:340px; max-width:92vw; max-height:86vh; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px; display:flex; flex-direction:column;
+    box-shadow:0 12px 40px rgba(0,0,0,.4); }
+  .ed-head { padding:9px 12px; border-bottom:1px solid var(--line); display:flex;
+    align-items:center; justify-content:space-between; }
+  .ed-head strong { color:#2b4a7a; }
+  .ed-body { padding:10px 12px; }
 
   /* Right: inspector */
   #sidePanel { width:226px; min-width:226px; flex:0 0 auto; background:var(--panel);
@@ -312,76 +327,56 @@
     </div>
 
     <div id="canvasPanel">
+      <!-- Contextual floating bar (Region #, Shadow/Event hints) — only the
+           active mode's controls show; no docked right panel (matches RM XP). -->
+      <div id="modeBar" style="display:none;">
+        <span id="regionRow" style="display:none;"><label class="lbl">Region #</label>
+          <input type="number" id="regionNum" value="1" min="1" max="63" style="width:50px;">
+          <span class="hint">paint 1–63; eraser clears.</span></span>
+        <span id="shadowRow" style="display:none;" class="hint">Shadow: click a tile <b>quarter</b> to add; drag to paint; Eraser removes.</span>
+        <span id="eventHint" style="display:none;" class="hint">Event: tap an empty tile to place; tap an event to edit.</span>
+      </div>
       <canvas id="mapCanvas"></canvas>
     </div>
+  </div>
 
-    <!-- Right: inspector -->
-    <div id="sidePanel">
-      <div class="card">
-        <h3>Selection</h3>
-        <div class="row">
-          <canvas class="swatch" id="selSwatch" width="16" height="16"></canvas>
-          <div><div>ID: <strong id="selId">1</strong></div>
-          <div class="hint" id="selBehavior"></div></div>
-        </div>
-      </div>
+  <!-- Hidden controls the JS binds to (modes via the Mode menu; selection shown
+       in the palette + status bar). Kept in the DOM so handlers/refs still work. -->
+  <div id="hiddenControls" style="display:none;">
+    <canvas id="selSwatch" width="16" height="16"></canvas>
+    <span id="selId">1</span><span id="selBehavior"></span>
+    <button id="mMap" class="modebtn active" data-mode2="map">Map</button>
+    <button id="mCollide" class="modebtn" data-mode2="collide">Collision</button>
+    <button id="mRegion" class="modebtn" data-mode2="region">Region</button>
+    <button id="mShadow" class="modebtn" data-mode2="shadow">Shadow</button>
+    <button id="mEvent" class="modebtn" data-mode2="event">Event</button>
+  </div>
 
-      <div class="card">
-        <h3>Map info</h3>
-        <div class="row">
-          <label class="lbl">W</label><input type="number" id="mapW" value="20" min="1" max="200">
-          <label class="lbl">H</label><input type="number" id="mapH" value="18" min="1" max="200">
-          <button id="resizeBtn2" title="Resize keeping content">Resize</button>
-        </div>
-        <div class="row"><label class="lbl">Name</label><input type="text" id="mapName" value="NewMap"></div>
+  <!-- Map Properties dialog (right-click a map in the list, or Tools menu) -->
+  <div id="mapPropsModal" class="ed-modal" style="display:none;">
+    <div class="ed-box">
+      <div class="ed-head"><strong>Map Properties</strong><button id="mapPropsClose">✕</button></div>
+      <div class="ed-body">
+        <div class="row"><label class="lbl">Name</label><input type="text" id="mapName" value="NewMap" style="flex:1;min-width:0;"></div>
+        <div class="row"><label class="lbl">Width</label><input type="number" id="mapW" value="20" min="1" max="200">
+          <label class="lbl">Height</label><input type="number" id="mapH" value="18" min="1" max="200">
+          <button id="resizeBtn2" title="Resize keeping content">Resize</button></div>
         <div class="row"><label class="lbl">Region</label>
-          <select id="mapRegion">
-            <option selected>awakened</option><option>custom</option>
-          </select></div>
-        <div class="row"><label class="lbl">Layout ID</label><input type="text" id="layoutId" value="LAYOUT_NEW_MAP"></div>
+          <select id="mapRegion"><option selected>awakened</option><option>custom</option></select></div>
+        <div class="row"><label class="lbl">Layout ID</label><input type="text" id="layoutId" value="LAYOUT_NEW_MAP" style="flex:1;min-width:0;"></div>
       </div>
+    </div>
+  </div>
 
-      <div class="card" id="modeCard">
-        <h3>Mode</h3>
-        <div class="row">
-          <button id="mMap" class="modebtn active">▦ Map</button>
-          <button id="mCollide" class="modebtn">⛔ Collision</button>
-          <button id="mRegion" class="modebtn">🅡 Region</button>
-          <button id="mShadow" class="modebtn">🌑 Shadow</button>
-          <button id="mEvent" class="modebtn">◆ Event</button>
-        </div>
-        <div class="row" id="eventHint" style="display:none;">
-          <span class="hint">Click an empty tile to place an event; click an event to edit it.</span>
-        </div>
-        <div class="row" id="shadowRow" style="display:none;">
-          <span class="hint">Click a tile <b>quarter</b> to add shadow; drag to paint; Eraser removes.</span>
-        </div>
-        <div class="row" id="regionRow" style="display:none;">
-          <label class="lbl">Region #</label>
-          <input type="number" id="regionNum" value="1" min="1" max="63" style="width:54px;">
-          <span class="hint">paint 1–63; eraser clears.</span>
-        </div>
-      </div>
-
-      <div class="card" id="eventCard" style="display:none;">
-        <h3>Event</h3>
-        <div id="eventProps"><div class="hint">No event selected.</div></div>
-        <div style="margin-top:7px;">
-          <strong style="font-size:10px; color:#2b4a7a;">EVENT LIST</strong>
-          <div id="eventList" style="max-height:150px; overflow:auto; margin-top:3px;"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>How to use</h3>
-        <div class="hint">
-          • Pick a <b>Tileset tab</b>, then a tile, and paint.<br>
-          • <b>🌱 Auto / ▦ Tiles</b> toggle (Ground): Auto blends terrain edges; Tiles = raw — <b>drag a box</b> in the palette for a multi-tile stamp.<br>
-          • <b>Layer</b>: paint Ground then Overlay (buildings/props). Other layer dims.<br>
-          • Tools: Pencil / Rect / Ellipse / Fill / Pick / Eraser.<br>
-          • <b>◆ Event</b> mode: place NPCs/warps. Use <b>Transfer Player</b> to warp (choose map + X/Y).<br>
-          • <b>Map List</b> (bottom-left): press-and-hold or right-click for New / Rename / Delete.<br>
-          • <b>Export</b> writes <code>&lt;layout&gt;.json</code> + <code>&lt;map&gt;.json</code>.
+  <!-- Event editor dialog (opens when you place/select an event, like RM XP) -->
+  <div id="eventEditorModal" class="ed-modal" style="display:none;">
+    <div class="ed-box" style="width:460px;max-width:94vw;max-height:88vh;">
+      <div class="ed-head"><strong>Event</strong><button id="eventEditorClose">✕</button></div>
+      <div class="ed-body" style="overflow:auto;">
+        <div id="eventProps"></div>
+        <div style="margin-top:8px;">
+          <strong style="font-size:10px;color:#2b4a7a;">OTHER EVENTS ON THIS MAP</strong>
+          <div id="eventList" style="max-height:120px;overflow:auto;margin-top:3px;"></div>
         </div>
       </div>
     </div>
