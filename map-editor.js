@@ -1624,7 +1624,7 @@
       ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }],
       ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }],
       ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }],
-      ['Event layer', 'F6', null],
+      ['Event layer', 'F6', function () { setModeBtn('event'); syncModeUI(); }],
       'sep',
       ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }],
       ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }],
@@ -1636,7 +1636,8 @@
       ['Rectangle', '', function () { setToolBtn('rect'); }],
       ['Ellipse', '', function () { setToolBtn('ellipse'); }],
       ['Flood Fill', '', function () { setToolBtn('fill'); }],
-      ['Select / Pick', '', function () { setToolBtn('pick'); }],
+      ['Select (box)', '', function () { setToolBtn('select'); }],
+      ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }],
       ['Eraser', '', function () { clickEl('eraserBtn'); }]
     ]],
     ['Scale', [
@@ -1652,9 +1653,7 @@
     ]],
     ['Tools', [
       ['Character Sprites…', '', function () { openSpriteModal('player'); }],
-      ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }],
-      ['Database', '', null], ['Materials', '', null],
-      ['Script editor', '', null], ['Sound test', '', null]
+      ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }]
     ]],
     ['Game', [
       ['Playtest', 'F12', function () { clickEl('playBtn'); }]
