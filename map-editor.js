@@ -1339,11 +1339,81 @@
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
-  function pickDestination(cmd, ev) {
-    toast('Click a tile on the CURRENT map to set the destination X,Y.');
-    state._pickDest = { cmd: cmd, ev: ev };
-    closeEventEditor();                          // so the map is clickable; reopens after the pick
-    setModeBtn('event'); syncModeUI();
+  // Transfer destination picker: open the chosen map and click where the player
+  // arrives — captures map + X + Y in one click (no typing).
+  function pickDestination(cmd, ev) { closeEventEditor(); openDestPicker(cmd, ev); }
+
+  // Load a layout's tileset groups + data into a throwaway {ground,overlay,upper}
+  // (does NOT touch the edit session), so we can render any map read-only.
+  function loadLayoutLayers(data) {
+    var Lg = newLayer(0), Lo = newLayer(-1), Lu = newLayer(-1);
+    var grp = function (g, t) { return g || (t ? [{ name: t }] : []); };
+    function loadGroup(layer, group) {
+      return group.reduce(function (pr, e) {
+        return pr.then(function () {
+          return loadSheetData(e.name).then(function (sh) {
+            var off = 0; layer.sheets.forEach(function (s) { off += s.count; });
+            sh.offset = (e.offset != null) ? e.offset : off; layer.sheets.push(sh);
+          }).catch(function () {});
+        });
+      }, Promise.resolve());
+    }
+    return Promise.all([
+      loadGroup(Lg, grp(data.tileset_group, data.tileset)),
+      loadGroup(Lo, grp(data.overlay_group, data.overlay_tileset)),
+      loadGroup(Lu, grp(data.upper_group, data.upper_tileset))
+    ]).then(function () {
+      var w = data.width, h = data.height;
+      Lg.data = Int32Array.from(data.metatiles || []);
+      Lo.data = new Int32Array(w * h); Lu.data = new Int32Array(w * h);
+      for (var i = 0; i < w * h; i++) { Lo.data[i] = data.overlay ? data.overlay[i] : -1; Lu.data[i] = data.upper ? data.upper[i] : -1; }
+      return { layers: { ground: Lg, overlay: Lo, upper: Lu }, width: w, height: h };
+    });
+  }
+  var DEST_CS = 16;
+  function renderDestCanvas(res) {
+    var c = $('destCanvas'); c.width = res.width * DEST_CS; c.height = res.height * DEST_CS;
+    var ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ['ground', 'overlay', 'upper'].forEach(function (k) {
+      var L = res.layers[k]; if (!L || !L.sheets.length || !L.data) return;
+      for (var y = 0; y < res.height; y++)
+        for (var x = 0; x < res.width; x++) { var v = L.data[y * res.width + x]; if (v >= 0) blitGid(ctx, L, v, x * DEST_CS, y * DEST_CS, DEST_CS); }
+    });
+  }
+  function loadDestMap(name) {
+    var info = $('destPickInfo'); info.textContent = 'Loading…';
+    var cur = $('mapName').value, p;
+    if (name === cur) { p = Promise.resolve(buildLayout()); }
+    else {
+      var region = (treeModel[name] && treeModel[name].region) || defRegion();
+      p = ghGet('data/maps/' + region + '/' + name + '.json').then(function (c) {
+        if (!c.content) throw new Error('unsaved');
+        var m = JSON.parse(c.content);
+        return ghGet('data/layouts/' + region + '/' + m.layout + '.json').then(function (lc) {
+          if (!lc.content) throw new Error('no layout'); return JSON.parse(lc.content);
+        });
+      });
+    }
+    p.then(loadLayoutLayers).then(function (res) {
+      state._destLayers = res; info.textContent = res.width + '×' + res.height + ' — click a tile';
+      renderDestCanvas(res);
+    }).catch(function () {
+      state._destLayers = null; info.textContent = 'Can’t preview — save that map first (☁), then pick.';
+      var c = $('destCanvas'); c.width = 1; c.height = 1;
+    });
+  }
+  function openDestPicker(cmd, ev) {
+    state._destPick = { cmd: cmd, ev: ev };
+    $('destPickModal').style.display = 'flex';
+    var sel = $('destMapSel'); sel.innerHTML = '';
+    var cur = $('mapName').value;
+    var names = Object.keys(treeModel || {}); if (names.indexOf(cur) < 0) names.unshift(cur);
+    names.sort();
+    names.forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = n + (n === cur ? '  (current)' : ''); sel.appendChild(o); });
+    sel.value = (cmd.map && names.indexOf(cmd.map) >= 0) ? cmd.map : cur;
+    sel.onchange = function () { loadDestMap(this.value); };
+    loadDestMap(sel.value);
   }
   function renderEventList() {
     var list = $('eventList'); if (!list) return; list.innerHTML = '';
@@ -2526,6 +2596,26 @@
   $('eventEditorClose').addEventListener('click', closeEventEditor);
   $('eventEditorModal').addEventListener('click', function (e) { if (e.target === $('eventEditorModal')) closeEventEditor(); });
   window._openMapProps = openMapProps;   // used by the menu + tree context menu
+
+  // Destination picker: click a tile on the previewed map → set map + X + Y.
+  function _cancelDestPick() {
+    $('destPickModal').style.display = 'none';
+    var pd = state._destPick; state._destPick = null; state._destLayers = null;
+    if (pd) { state.selectedEvent = pd.ev; openEventEditor(); }   // reopen the event editor unchanged
+  }
+  $('destPickClose').addEventListener('click', _cancelDestPick);
+  $('destPickModal').addEventListener('click', function (e) { if (e.target === $('destPickModal')) _cancelDestPick(); });
+  $('destCanvas').addEventListener('click', function (e) {
+    if (!state._destPick || !state._destLayers) return;
+    var r = this.getBoundingClientRect();
+    var x = Math.floor((e.clientX - r.left) / DEST_CS), y = Math.floor((e.clientY - r.top) / DEST_CS);
+    if (x < 0 || y < 0 || x >= state._destLayers.width || y >= state._destLayers.height) return;
+    var pd = state._destPick;
+    pd.cmd.map = $('destMapSel').value; pd.cmd.x = x; pd.cmd.y = y; if (!pd.cmd.dir) pd.cmd.dir = 'down';
+    $('destPickModal').style.display = 'none'; state._destPick = null; state._destLayers = null;
+    state.selectedEvent = pd.ev; openEventEditor();
+    toast('Destination set: ' + pd.cmd.map + ' (' + x + ',' + y + ')');
+  });
   $('setPlayerBtn').addEventListener('click', function () {
     if (!_selectedSprite) return;
     var e = _selectedSprite;

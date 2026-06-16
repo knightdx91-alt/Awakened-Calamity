@@ -368,6 +368,20 @@
     </div>
   </div>
 
+  <!-- Transfer destination picker: choose a map, click the tile the player lands on -->
+  <div id="destPickModal" class="ed-modal" style="display:none;">
+    <div class="ed-box" style="width:auto;max-width:94vw;max-height:90vh;">
+      <div class="ed-head"><strong>Transfer — click where the player arrives</strong><button id="destPickClose">✕</button></div>
+      <div class="ed-body" style="overflow:auto;">
+        <div class="row"><label class="lbl">Map</label><select id="destMapSel" style="flex:1;min-width:0;"></select>
+          <span id="destPickInfo" class="hint"></span></div>
+        <div style="overflow:auto;max-height:64vh;border:1px solid var(--line2);background:#8a8a8a;margin-top:6px;">
+          <canvas id="destCanvas" style="image-rendering:pixelated;display:block;cursor:crosshair;touch-action:none;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Event editor dialog (opens when you place/select an event, like RM XP) -->
   <div id="eventEditorModal" class="ed-modal" style="display:none;">
     <div class="ed-box" style="width:460px;max-width:94vw;max-height:88vh;">
