@@ -1028,7 +1028,8 @@
     drawMap(); renderWarpList();
   }
   function renderWarpList() {
-    var list = $('warpList'); list.innerHTML = '';
+    var list = $('warpList'); if (!list) return;   // Warp UI removed — warps are events now
+    list.innerHTML = '';
     if (!state.warps.length) { list.innerHTML = '<div class="hint">No warps yet.</div>'; return; }
     state.warps.forEach(function (w, i) {
       var div = document.createElement('div'); div.className = 'warp-item';
@@ -1453,7 +1454,7 @@
   });
   // Side-panel Mode buttons (Map/Collision/Warp/Region) drive the hidden .mode
   // buttons and reflect active state + show the Region # picker in region mode.
-  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region', mShadow: 'shadow', mEvent: 'event' };
+  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mRegion: 'region', mShadow: 'shadow', mEvent: 'event' };
   function syncModeUI() {
     Object.keys(MODE_BTNS).forEach(function (id) {
       var e = $(id); if (e) e.classList.toggle('active', MODE_BTNS[id] === state.mode);
@@ -1627,7 +1628,6 @@
       'sep',
       ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }],
       ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }],
-      ['Warp placement', '', function () { setModeBtn('warp'); syncModeUI(); }],
       ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }],
       ['Shadow pen', '', function () { setModeBtn('shadow'); syncModeUI(); }]
     ]],

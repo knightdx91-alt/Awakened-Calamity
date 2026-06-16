@@ -260,7 +260,6 @@
     <div id="modeGroup" style="display:none">
       <button data-mode="map" class="mode active">Map</button>
       <button data-mode="collide" class="mode">Collision</button>
-      <button data-mode="warp" class="mode">Warp</button>
       <button data-mode="region" class="mode">Region</button>
       <button data-mode="shadow" class="mode">Shadow</button>
       <button data-mode="event" class="mode">Event</button>
@@ -345,7 +344,6 @@
         <div class="row">
           <button id="mMap" class="modebtn active">▦ Map</button>
           <button id="mCollide" class="modebtn">⛔ Collision</button>
-          <button id="mWarp" class="modebtn">🚪 Warp</button>
           <button id="mRegion" class="modebtn">🅡 Region</button>
           <button id="mShadow" class="modebtn">🌑 Shadow</button>
           <button id="mEvent" class="modebtn">◆ Event</button>
@@ -373,18 +371,13 @@
       </div>
 
       <div class="card">
-        <h3>Warps <span class="lbl" id="warpHint"></span></h3>
-        <div id="warpList"></div>
-        <div class="hint">Warp mode, then click a tile to add. Set destination here.</div>
-      </div>
-
-      <div class="card">
         <h3>How to use</h3>
         <div class="hint">
           • Pick a <b>Tileset tab</b>, then a tile, and paint.<br>
           • <b>🌱 Auto / ▦ Tiles</b> toggle (Ground): Auto blends terrain edges; Tiles = raw — <b>drag a box</b> in the palette for a multi-tile stamp.<br>
           • <b>Layer</b>: paint Ground then Overlay (buildings/props). Other layer dims.<br>
           • Tools: Pencil / Rect / Ellipse / Fill / Pick / Eraser.<br>
+          • <b>◆ Event</b> mode: place NPCs/warps. Use <b>Transfer Player</b> to warp (choose map + X/Y).<br>
           • <b>Map List</b> (bottom-left): press-and-hold or right-click for New / Rename / Delete.<br>
           • <b>Export</b> writes <code>&lt;layout&gt;.json</code> + <code>&lt;map&gt;.json</code>.
         </div>
