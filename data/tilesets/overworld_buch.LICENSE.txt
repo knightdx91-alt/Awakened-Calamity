@@ -1,3 +1,0 @@
-overworld_buch — Buch's 'Overworld tiles'. License: CC-BY 3.0.
-REQUIRED CREDIT: Art by Buch (https://opengameart.org/users/buch); committed by
-Jeffrey Kern. Source: https://opengameart.org/content/overworld-tiles-0

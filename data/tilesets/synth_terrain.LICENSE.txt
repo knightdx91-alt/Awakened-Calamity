@@ -1,2 +1,0 @@
-synth_terrain — layered grass/sand/stone/water/void autotile terrains
-synthesised from CC0 fills (ufeff) + our own void art. Public-domain-clean.

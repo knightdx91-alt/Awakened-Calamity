@@ -1,2 +1,0 @@
-ac_props — official Awakened Calamity art (owner-produced, IP-clean).
-See design-system/.
