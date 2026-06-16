@@ -90,14 +90,14 @@ JOBS = [
          base=("grass", 0, 0), fills=[],
          terrains=[("dirt", 1, 0, 0), ("road", 2, 0, 0), ("cobble", 3, 0, 0)]),
     dict(out="rtp_inside_ground", src="rtp_inside_a2.png",
-         base=("wood", 0, 0),
-         fills=[("cobble", 1, 0, 0), ("rug", 2, 0, 0), ("straw", 3, 0, 0)],
-         terrains=[]),
+         base=("wood", 0, 0), fills=[],
+         terrains=[("cobble", 1, 0, 0), ("rug", 2, 0, 0), ("straw", 3, 0, 0)]),
     dict(out="rtp_dungeon_ground", src="rtp_dungeon_a2.png",
          base=("dirt_cave", 0, 0),
-         fills=[("grass_maze", 1, 0, 0), ("dark_dirt", 2, 0, 0),
-                ("dark_grass", 3, 0, 0), ("rock_cave", 0, 1, 0), ("crystal", 1, 1, 0)],
-         terrains=[]),
+         # alternate ground types people use as a base -> flat fills
+         fills=[("grass_maze", 1, 0, 0), ("rock_cave", 0, 1, 0), ("crystal", 1, 1, 0)],
+         # features painted OVER the cave ground -> real autotiles (hole blocks passage)
+         terrains=[("dark_dirt", 2, 0, 0), ("dark_grass", 3, 0, 0), ("hole", 4, 0, 1)]),
 ]
 
 def bake_job(job):
