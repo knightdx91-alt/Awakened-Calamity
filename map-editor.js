@@ -428,6 +428,9 @@
     var keys = Object.keys(layer.autotile.terrains);
     // erase swatch first
     keys.unshift('');
+    // Default to a real terrain (not the (erase) swatch) so Auto-mode painting
+    // is visible by default; do this BEFORE building so the right swatch lights up.
+    if (!state.selectedTerrain || keys.indexOf(state.selectedTerrain) < 0) state.selectedTerrain = keys[1] || '';
     keys.forEach(function (k) {
       var sw = document.createElement('div');
       sw.className = 'auto-swatch' + (k === state.selectedTerrain ? ' active' : '');
@@ -455,7 +458,6 @@
       });
       wrap.appendChild(sw);
     });
-    if (keys.indexOf(state.selectedTerrain) < 0) state.selectedTerrain = keys[1] || '';
   }
 
   // XP mode flat tile list: every tile of every sheet in the active set, stacked
@@ -1727,29 +1729,29 @@
       ['Shift Map…', '', function () { shiftMapPrompt(); }]
     ]],
     ['Mode', [
-      ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }],
-      ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }],
-      ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }],
-      ['Event layer', 'F6', function () { setModeBtn('event'); syncModeUI(); }],
+      ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }, function () { return state.active === 'ground'; }],
+      ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }, function () { return state.active === 'overlay'; }],
+      ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }, function () { return state.active === 'upper'; }],
+      ['Event layer', 'F6', function () { setModeBtn('event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
       'sep',
-      ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }],
-      ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }],
-      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }],
-      ['Shadow pen', '', function () { setModeBtn('shadow'); syncModeUI(); }]
+      ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }, function () { return state.mode === 'collide'; }],
+      ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }, function () { return state.mode === 'map'; }],
+      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }, function () { return state.mode === 'region'; }],
+      ['Shadow pen', '', function () { setModeBtn('shadow'); syncModeUI(); }, function () { return state.mode === 'shadow'; }]
     ]],
     ['Draw', [
-      ['Pencil', '', function () { setToolBtn('pencil'); }],
-      ['Rectangle', '', function () { setToolBtn('rect'); }],
-      ['Ellipse', '', function () { setToolBtn('ellipse'); }],
-      ['Flood Fill', '', function () { setToolBtn('fill'); }],
-      ['Select (box)', '', function () { setToolBtn('select'); }],
-      ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }],
-      ['Eraser', '', function () { clickEl('eraserBtn'); }]
+      ['Pencil', '', function () { setToolBtn('pencil'); }, function () { return state.tool === 'pencil' && !state.eraser; }],
+      ['Rectangle', '', function () { setToolBtn('rect'); }, function () { return state.tool === 'rect'; }],
+      ['Ellipse', '', function () { setToolBtn('ellipse'); }, function () { return state.tool === 'ellipse'; }],
+      ['Flood Fill', '', function () { setToolBtn('fill'); }, function () { return state.tool === 'fill'; }],
+      ['Select (box)', '', function () { setToolBtn('select'); }, function () { return state.tool === 'select'; }],
+      ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }, function () { return state.tool === 'pick'; }],
+      ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }]
     ]],
     ['Scale', [
-      ['1/1', '', function () { setScaleBtn(2); }],
-      ['1/2', '', function () { setScaleBtn(1); }],
-      ['1/4', '', function () { setScaleBtn(0.5); }]
+      ['1/1', '', function () { setScaleBtn(2); }, function () { return state.zoom === 2; }],
+      ['1/2', '', function () { setScaleBtn(1); }, function () { return state.zoom === 1; }],
+      ['1/4', '', function () { setScaleBtn(0.5); }, function () { return state.zoom === 0.5; }]
     ]],
     ['View', [
       ['Toggle Grid', '', function () { clickEl('gridBtn'); }],
@@ -1797,6 +1799,7 @@
         var lab = document.createElement('span'); lab.textContent = it[0];
         var key = document.createElement('span'); key.className = 'key'; key.textContent = it[1] || '';
         mi.appendChild(lab); mi.appendChild(key);
+        if (it[3]) { mi._activeFn = it[3]; mi._label = it[0]; mi._lab = lab; }   // active-state marker
         if (it[2]) mi.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); it[2](); });
         else mi.addEventListener('click', function (e) { e.stopPropagation(); });
         dd.appendChild(mi);
@@ -1806,12 +1809,20 @@
         e.stopPropagation();
         var wasOpen = menu.classList.contains('open');
         closeMenus();
-        if (!wasOpen) menu.classList.add('open');
+        if (!wasOpen) { markActiveItems(menu); menu.classList.add('open'); }
       });
       menu.addEventListener('mouseenter', function () {
-        if (bar.querySelector('.menu.open')) { closeMenus(); menu.classList.add('open'); }
+        if (bar.querySelector('.menu.open')) { closeMenus(); markActiveItems(menu); menu.classList.add('open'); }
       });
       bar.appendChild(menu);
+    });
+  }
+  function markActiveItems(menu) {       // prefix the active tool/mode/scale/layer with ●
+    menu.querySelectorAll('.mi').forEach(function (mi) {
+      if (!mi._activeFn) return;
+      var on = false; try { on = !!mi._activeFn(); } catch (e) {}
+      mi._lab.textContent = (on ? '● ' : '   ') + mi._label;
+      mi.style.fontWeight = on ? '700' : '';
     });
   }
   function closeMenus() {
@@ -1835,6 +1846,12 @@
 
   $('autoToggle').addEventListener('click', function () { setAutoMode(!state.autoMode); });
 
+  var TOOL_ICON = { pencil: '✏ Pencil', rect: '▭ Rectangle', ellipse: '◯ Ellipse',
+                    fill: '🪣 Fill', pick: '⛏ Pick', select: '⬚ Select' };
+  function updateToolStatus() {
+    var st = $('statTool'); if (!st) return;
+    st.textContent = state.eraser ? '⌫ Eraser' : (TOOL_ICON[state.tool] || state.tool);
+  }
   document.querySelectorAll('.tool').forEach(function (b) {
     if (!b.dataset.tool) return;
     b.addEventListener('click', function () {
@@ -1842,11 +1859,13 @@
       state.eraser = false; $('eraserBtn').classList.remove('active');
       document.querySelectorAll('.tool').forEach(function (x) { x.classList.remove('active'); });
       b.classList.add('active');
+      updateToolStatus();
     });
   });
   $('eraserBtn').addEventListener('click', function () {
     state.eraser = !state.eraser;
     this.classList.toggle('active', state.eraser);
+    updateToolStatus();
   });
 
   document.querySelectorAll('.mode').forEach(function (b) {
