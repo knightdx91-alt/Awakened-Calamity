@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Character Generator — Awakened Calamity</title>
+<style>
+  :root { --win:#e4e4e4; --panel:#f0f0f0; --line:#a8a8a8; --line2:#c4c4c4;
+    --text:#202020; --dim:#606060; --accent:#3a7bd5; --accent2:#cfe0f6; --btn:#f6f6f6; --btnH:#e2ecfb; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--win); color:var(--text);
+    font-family:"Segoe UI",Tahoma,system-ui,sans-serif; font-size:13px; }
+  #bar { display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:linear-gradient(#f4f4f4,#e6e6e6); border-bottom:1px solid var(--line); }
+  #bar h1 { font-size:15px; margin:0; color:#2b4a7a; }
+  button { font:inherit; background:var(--btn); border:1px solid var(--line); border-radius:4px;
+    padding:5px 10px; cursor:pointer; color:var(--text); }
+  button:hover { background:var(--btnH); }
+  button.primary { background:var(--accent); color:#fff; border-color:#2c63ad; font-weight:600; }
+  #main { display:flex; height:calc(100% - 44px); }
+  #parts { width:300px; min-width:260px; overflow:auto; border-right:1px solid var(--line);
+    background:var(--panel); padding:8px; }
+  .cat { margin-bottom:12px; }
+  .cat h3 { margin:0 0 5px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#2b4a7a;
+    display:flex; align-items:center; gap:8px; }
+  .cat h3 input[type=color] { width:30px; height:22px; padding:0; border:1px solid var(--line); border-radius:3px; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .chip { padding:5px 10px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; font-size:12px; }
+  .chip.active { background:var(--accent); color:#fff; border-color:#2c63ad; }
+  #stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; background:#9aa6b2;
+    background-image:linear-gradient(45deg,#8f9aa6 25%,transparent 25%),linear-gradient(-45deg,#8f9aa6 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#8f9aa6 75%),linear-gradient(-45deg,transparent 75%,#8f9aa6 75%);
+    background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0; }
+  #bigWrap { background:rgba(255,255,255,.15); border-radius:10px; padding:14px 26px; display:flex; gap:26px; align-items:flex-end; }
+  canvas { image-rendering:pixelated; }
+  #big { width:192px; height:288px; }
+  .dirs { display:flex; gap:14px; }
+  .dirs canvas { width:72px; height:108px; background:rgba(255,255,255,.12); border-radius:6px; }
+  #actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .hint { color:#fff; font-size:12px; text-shadow:0 1px 2px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+  <div id="bar">
+    <h1>🧬 Character Generator</h1>
+    <span class="hint" style="color:var(--dim);text-shadow:none;">Layered parts · recolour · export an MV charset</span>
+    <span style="margin-left:auto;"></span>
+    <button id="randomBtn">🎲 Randomize</button>
+    <a href="map-editor.html"><button>← Back to Editor</button></a>
+  </div>
+  <div id="main">
+    <div id="parts"><div class="hint" style="color:var(--dim);text-shadow:none;">Loading parts…</div></div>
+    <div id="stage">
+      <div id="bigWrap">
+        <canvas id="big" width="48" height="72" title="Walk preview"></canvas>
+        <div>
+          <div class="hint" style="margin-bottom:6px;">Facing</div>
+          <div class="dirs">
+            <canvas class="dirc" data-dir="0" width="48" height="72" title="Down"></canvas>
+            <canvas class="dirc" data-dir="1" width="48" height="72" title="Left"></canvas>
+            <canvas class="dirc" data-dir="2" width="48" height="72" title="Right"></canvas>
+            <canvas class="dirc" data-dir="3" width="48" height="72" title="Up"></canvas>
+          </div>
+        </div>
+      </div>
+      <div id="actions">
+        <button id="exportBtn">⬇ Export PNG</button>
+        <button id="playerBtn" class="primary">★ Set as Player</button>
+        <span id="status" class="hint"></span>
+      </div>
+    </div>
+  </div>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var FW = 48, FH = 72, COLS = 3, ROWS = 4;
+  var manifest = null, imgs = {}, sel = {}, color = {};
+
+  function load() {
+    return fetch('data/generator/parts.json').then(function (r) { return r.json(); }).then(function (m) {
+      manifest = m; FW = m.frame_w; FH = m.frame_h; COLS = m.cols; ROWS = m.rows;
+      var loads = [];
+      m.order.forEach(function (layer) {
+        var cat = m.categories[layer];
+        sel[layer] = cat.parts[0].id; color[layer] = cat.default_color;
+        cat.parts.forEach(function (p) {
+          if (!p.file) return;
+          var im = new Image(); im.src = 'data/generator/' + p.file; imgs[p.file] = im;
+          loads.push(new Promise(function (res) { im.onload = res; im.onerror = res; }));
+        });
+      });
+      return Promise.all(loads);
+    });
+  }
+
+  // Tint a white/greyscale part image to `hex`, preserving alpha. Returns a canvas.
+  var _tc = document.createElement('canvas');
+  function tinted(img, hex) {
+    _tc.width = img.width; _tc.height = img.height;
+    var c = _tc.getContext('2d');
+    c.clearRect(0, 0, _tc.width, _tc.height);
+    c.globalCompositeOperation = 'source-over'; c.drawImage(img, 0, 0);
+    c.globalCompositeOperation = 'multiply'; c.fillStyle = hex; c.fillRect(0, 0, _tc.width, _tc.height);
+    c.globalCompositeOperation = 'destination-in'; c.drawImage(img, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+    return _tc;
+  }
+
+  // Compose the full charset sheet into an offscreen canvas.
+  function composeSheet() {
+    var cv = document.createElement('canvas'); cv.width = FW * COLS; cv.height = FH * ROWS;
+    var x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+    manifest.order.forEach(function (layer) {
+      var part = manifest.categories[layer].parts.filter(function (p) { return p.id === sel[layer]; })[0];
+      if (!part || !part.file) return;
+      var im = imgs[part.file]; if (!im || !im.complete || !im.naturalWidth) return;
+      x.drawImage(tinted(im, color[layer]), 0, 0);
+    });
+    return cv;
+  }
+
+  var _frame = 0;
+  function drawPreview() {
+    var sheet = composeSheet();
+    // big = down row, animated walk (cols 1,0,1,2)
+    var cyc = [1, 0, 1, 2][_frame % 4];
+    var b = $('#big').getContext('2d'); b.imageSmoothingEnabled = false;
+    b.clearRect(0, 0, FW, FH);
+    b.drawImage(sheet, cyc * FW, 0, FW, FH, 0, 0, FW, FH);
+    // 4 direction stills (standing col 1)
+    document.querySelectorAll('.dirc').forEach(function (cv) {
+      var row = +cv.dataset.dir; var c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+      c.clearRect(0, 0, FW, FH);
+      c.drawImage(sheet, 1 * FW, row * FH, FW, FH, 0, 0, FW, FH);
+    });
+  }
+
+  function buildPanel() {
+    var p = $('#parts'); p.innerHTML = '';
+    manifest.order.forEach(function (layer) {
+      var cat = manifest.categories[layer];
+      var div = document.createElement('div'); div.className = 'cat';
+      var h = document.createElement('h3'); h.textContent = layer;
+      var col = document.createElement('input'); col.type = 'color'; col.value = color[layer];
+      col.title = 'Colour'; col.style.marginLeft = 'auto';
+      col.addEventListener('input', function () { color[layer] = this.value; drawPreview(); });
+      h.appendChild(col); div.appendChild(h);
+      var chips = document.createElement('div'); chips.className = 'chips';
+      cat.parts.forEach(function (part) {
+        var b = document.createElement('div'); b.className = 'chip' + (part.id === sel[layer] ? ' active' : '');
+        b.textContent = part.label || part.id;
+        b.addEventListener('click', function () {
+          sel[layer] = part.id;
+          chips.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+          b.classList.add('active'); drawPreview();
+        });
+        chips.appendChild(b);
+      });
+      div.appendChild(chips); p.appendChild(div);
+    });
+  }
+
+  function randomize() {
+    manifest.order.forEach(function (layer) {
+      var parts = manifest.categories[layer].parts;
+      sel[layer] = parts[Math.floor(Math.random() * parts.length)].id;
+      color[layer] = '#' + ('000000' + Math.floor(Math.random() * 0xffffff).toString(16)).slice(-6);
+    });
+    buildPanel(); drawPreview();
+  }
+
+  function exportPNG() {
+    var sheet = composeSheet();
+    var a = document.createElement('a');
+    a.href = sheet.toDataURL('image/png'); a.download = 'character.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    $('#status').textContent = 'Exported character.png';
+  }
+  function setPlayer() {
+    var sheet = composeSheet();
+    try {
+      localStorage.setItem('ac_player_sprite', JSON.stringify({
+        file: 'generated', dataUrl: sheet.toDataURL('image/png'),
+        frame_w: FW, frame_h: FH, cols: COLS, rows: ROWS, single: true
+      }));
+      $('#status').textContent = 'Set as player — playtest the game to see it.';
+    } catch (e) { $('#status').textContent = 'Could not save (storage blocked).'; }
+  }
+
+  $('#randomBtn').addEventListener('click', randomize);
+  $('#exportBtn').addEventListener('click', exportPNG);
+  $('#playerBtn').addEventListener('click', setPlayer);
+
+  load().then(function () {
+    buildPanel(); drawPreview();
+    setInterval(function () { _frame++; drawPreview(); }, 180);   // walk animation
+  }).catch(function (e) {
+    $('#parts').innerHTML = '<div class="hint" style="color:#c33;">Failed to load parts: ' + e.message + '</div>';
+  });
+})();
+</script>
+</body>
+</html>

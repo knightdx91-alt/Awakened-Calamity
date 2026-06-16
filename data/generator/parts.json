@@ -1,0 +1,85 @@
+{
+ "frame_w": 48,
+ "frame_h": 72,
+ "cols": 3,
+ "rows": 4,
+ "order": [
+  "body",
+  "bottom",
+  "top",
+  "hair"
+ ],
+ "categories": {
+  "body": {
+   "tintable": true,
+   "default_color": "#e8b894",
+   "parts": [
+    {
+     "id": "body1",
+     "label": "Body",
+     "file": "parts/body/body1.png"
+    }
+   ]
+  },
+  "bottom": {
+   "tintable": true,
+   "default_color": "#3a5a8a",
+   "parts": [
+    {
+     "id": "pants",
+     "label": "Pants",
+     "file": "parts/bottom/pants.png"
+    },
+    {
+     "id": "skirt",
+     "label": "Skirt",
+     "file": "parts/bottom/skirt.png"
+    },
+    {
+     "id": "none",
+     "label": "(none)"
+    }
+   ]
+  },
+  "top": {
+   "tintable": true,
+   "default_color": "#a83232",
+   "parts": [
+    {
+     "id": "tunic",
+     "label": "Tunic",
+     "file": "parts/top/tunic.png"
+    },
+    {
+     "id": "plain",
+     "label": "Shirt",
+     "file": "parts/top/plain.png"
+    },
+    {
+     "id": "none",
+     "label": "(none)"
+    }
+   ]
+  },
+  "hair": {
+   "tintable": true,
+   "default_color": "#5a3a1a",
+   "parts": [
+    {
+     "id": "short",
+     "label": "Short",
+     "file": "parts/hair/short.png"
+    },
+    {
+     "id": "long",
+     "label": "Long",
+     "file": "parts/hair/long.png"
+    },
+    {
+     "id": "none",
+     "label": "(bald)"
+    }
+   ]
+  }
+ }
+}

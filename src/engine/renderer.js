@@ -435,11 +435,12 @@ window.GameRenderer = (function () {
         let ov = null;
         try { ov = JSON.parse(localStorage.getItem('ac_player_sprite') || 'null'); } catch (e) {}
         const img = new Image();
-        if (ov && ov.file) {
+        if (ov && (ov.file || ov.dataUrl)) {
             _playerMV = { frame_w: ov.frame_w, frame_h: ov.frame_h, cols: ov.cols, rows: ov.rows };
             img.onload  = () => { _playerImg = img; };
             img.onerror = () => { _playerMV = null; console.warn('[Renderer] player charset load failed; falling back'); _loadDefaultPlayer(); };
-            img.src = 'data/sprites/' + ov.file + '?b=' + (window.__BUILD__ || '0');
+            // a generator-made charset stores the PNG inline as a data URL
+            img.src = ov.dataUrl ? ov.dataUrl : ('data/sprites/' + ov.file + '?b=' + (window.__BUILD__ || '0'));
         } else {
             _loadDefaultPlayer();
         }

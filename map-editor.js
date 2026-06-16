@@ -1582,6 +1582,7 @@
     ]],
     ['Tools', [
       ['Character Sprites…', '', function () { openSpriteModal('player'); }],
+      ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }],
       ['Database', '', null], ['Materials', '', null],
       ['Script editor', '', null], ['Sound test', '', null]
     ]],
