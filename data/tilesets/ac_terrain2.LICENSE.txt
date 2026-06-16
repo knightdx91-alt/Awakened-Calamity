@@ -1,2 +1,0 @@
-ac_terrain2 — official Awakened Calamity art (owner-produced, IP-clean).
-See design-system/.
