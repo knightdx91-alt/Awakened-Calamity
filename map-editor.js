@@ -1051,13 +1051,21 @@
     return null;
   }
   function eventClick(x, y) {
+    if (state._pickDest) {                       // arming a Transfer destination
+      var pd = state._pickDest; state._pickDest = null;
+      pd.cmd.map = $('mapName').value || pd.cmd.map; pd.cmd.x = x; pd.cmd.y = y;
+      state.selectedEvent = pd.ev; renderEventPanel();
+      toast('Destination set: ' + pd.cmd.map + ' (' + x + ',' + y + ')');
+      return;
+    }
     var ev = eventAt(x, y);
     if (ev) { state.selectedEvent = ev; }
     else {
       pushUndo();
       var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
       ev = { id: id, name: 'EV' + ('00' + id).slice(-3), x: x, y: y,
-             graphic: state._defaultGraphic || null, dir: 'down', trigger: 'action', through: false };
+             graphic: state._defaultGraphic || null, dir: 'down', trigger: 'action', through: false,
+             commands: [] };
       state.events.push(ev); state.selectedEvent = ev;
     }
     renderEventPanel(); drawMap();
@@ -1117,7 +1125,67 @@
     $('evThrough').addEventListener('change', function () { ev.through = this.checked; });
     $('evPick').addEventListener('click', function () { openSpriteModal('event'); });
     $('evDel').addEventListener('click', function () { deleteEvent(ev); });
+    renderEventCommands(ev);
     renderEventList();
+  }
+
+  // Command list (RPG Maker's event contents) — Transfer Player + Show Text.
+  function mapNameList() {
+    var names = Object.keys(treeModel || {});
+    if (!names.length && $('mapName')) names = [$('mapName').value];
+    return names.sort();
+  }
+  function renderEventCommands(ev) {
+    if (!ev.commands) ev.commands = [];
+    var host = document.createElement('div'); host.id = 'evCmds'; host.style.marginTop = '7px';
+    var head = document.createElement('div');
+    head.innerHTML = '<strong style="font-size:10px;color:#2b4a7a;">CONTENTS</strong>';
+    host.appendChild(head);
+    ev.commands.forEach(function (cmd, ci) {
+      var box = document.createElement('div'); box.className = 'card'; box.style.cssText = 'padding:6px;margin:4px 0;';
+      if (cmd.type === 'transfer') {
+        box.innerHTML = '<div class="row"><b style="color:#2b4a7a;font-size:11px;flex:1;">◈ Transfer Player</b>' +
+          '<button class="cmdDel" title="Remove">✕</button></div>' +
+          '<div class="row"><label class="lbl">Map</label><select class="cmMap" style="flex:1;min-width:0;"></select></div>' +
+          '<div class="row"><label class="lbl">X</label><input type="number" class="cmX" value="' + (cmd.x || 0) + '" style="width:50px;">' +
+          '<label class="lbl">Y</label><input type="number" class="cmY" value="' + (cmd.y || 0) + '" style="width:50px;"></div>' +
+          '<div class="row"><label class="lbl">Facing</label><select class="cmDir">' +
+          '<option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select>' +
+          '<button class="cmPick" title="Pick X,Y on a map">📍 Pick…</button></div>';
+        var msel = box.querySelector('.cmMap');
+        mapNameList().forEach(function (n) { var o = document.createElement('option'); o.value = o.textContent = n; msel.appendChild(o); });
+        if (cmd.map) msel.value = cmd.map; else cmd.map = msel.value;
+        msel.addEventListener('change', function () { cmd.map = this.value; });
+        box.querySelector('.cmX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+        box.querySelector('.cmY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+        var dsel = box.querySelector('.cmDir'); dsel.value = cmd.dir || 'retain';
+        dsel.addEventListener('change', function () { cmd.dir = this.value; });
+        box.querySelector('.cmPick').addEventListener('click', function () { pickDestination(cmd, ev); });
+      } else if (cmd.type === 'text') {
+        box.innerHTML = '<div class="row"><b style="color:#2b4a7a;font-size:11px;flex:1;">💬 Show Text</b>' +
+          '<button class="cmdDel" title="Remove">✕</button></div>' +
+          '<textarea class="cmText" rows="2" style="width:100%;box-sizing:border-box;">' + (cmd.text || '') + '</textarea>';
+        box.querySelector('.cmText').addEventListener('change', function () { cmd.text = this.value; });
+      }
+      box.querySelector('.cmdDel').addEventListener('click', function () { ev.commands.splice(ci, 1); renderEventPanel(); });
+      host.appendChild(box);
+    });
+    var add = document.createElement('div'); add.className = 'row'; add.style.marginTop = '4px';
+    add.innerHTML = '<label class="lbl">Add</label>' +
+      '<button id="addTransfer">◈ Transfer Player</button><button id="addText">💬 Show Text</button>';
+    host.appendChild(add);
+    $('eventProps').appendChild(host);
+    $('addTransfer').addEventListener('click', function () {
+      ev.commands.push({ type: 'transfer', map: mapNameList()[0] || '', x: 0, y: 0, dir: 'retain' });
+      if (!ev.trigger) ev.trigger = 'action'; renderEventPanel();
+    });
+    $('addText').addEventListener('click', function () { ev.commands.push({ type: 'text', text: '' }); renderEventPanel(); });
+  }
+  // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
+  function pickDestination(cmd, ev) {
+    toast('Click a tile on the CURRENT map to set the destination X,Y.');
+    state._pickDest = { cmd: cmd, ev: ev };
+    setModeBtn('event'); syncModeUI();
   }
   function renderEventList() {
     var list = $('eventList'); if (!list) return; list.innerHTML = '';
@@ -1193,7 +1261,8 @@
       }),
       events: state.events.map(function (ev) {
         return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
-                 dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through };
+                 dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through,
+                 commands: ev.commands || [] };
       }),
       triggers: [], signs: []
     };
@@ -1285,7 +1354,8 @@
         });
         state.events = (mapMeta.events || []).map(function (ev) {
           return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
-                   dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through };
+                   dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through,
+                   commands: ev.commands || [] };
         });
       } else { state.warps = []; state.events = []; }
       state.selectedEvent = null;

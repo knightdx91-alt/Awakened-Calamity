@@ -53,6 +53,13 @@
     function _interact() {
         const { x, y } = _facingTile();
 
+        // RPG-Maker event in front with an Action-button trigger?
+        const ev = _eventAt(x, y);
+        if (ev && (!ev.trigger || ev.trigger === 'action') && ev.commands && ev.commands.length) {
+            runEvent(ev);
+            return;
+        }
+
         // NPC in front?
         const npc = GameMap.getNpcAt(x, y);
         if (npc && npc.script && npc.script !== '0x0') {
@@ -157,6 +164,49 @@
         } finally {
             _transitioning = false;
         }
+    }
+
+    // ── RPG-Maker-style event execution (Transfer Player, Show Text) ──
+    function _eventAt(x, y) {
+        const evs = (GameMap.current && GameMap.current.events) || [];
+        for (const ev of evs) if (ev.x === x && ev.y === y) return ev;
+        return null;
+    }
+    async function transitionToEventTransfer(cmd) {
+        if (_transitioning || !cmd || !cmd.map) return;
+        _transitioning = true;
+        try {
+            await GameMap.load(cmd.map, currentRegion);
+            window._mapName = cmd.map; window._mapLoaded = true;
+            window._currentMapType = (GameMap.current && GameMap.current.map_type) || "";
+            player.x = Math.max(0, Math.min(cmd.x | 0, GameMap.width - 1));
+            player.y = Math.max(0, Math.min(cmd.y | 0, GameMap.height - 1));
+            if (cmd.dir && cmd.dir !== 'retain') player.direction = cmd.dir;
+            player.walkFrame = 0;
+            _snapPlayer();
+            GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+            if (window.GameSave) GameSave.markDirty();
+            _warpCooldownUntil = performance.now() + WARP_COOLDOWN_MS;
+            GameMap.loadEncounterData(currentRegion);
+        } finally {
+            _transitioning = false;
+        }
+    }
+    // Run an event's command list (sequential; Transfer ends the run).
+    function runEvent(ev) {
+        if (!ev || _transitioning) return;
+        const cmds = ev.commands || [];
+        let i = 0;
+        (function next() {
+            if (i >= cmds.length) return;
+            const c = cmds[i++];
+            if (c.type === 'transfer') { transitionToEventTransfer(c); return; }
+            if (c.type === 'text') {
+                if (window.GameDialogue) GameDialogue.show(c.text || '', next); else next();
+                return;
+            }
+            next();
+        })();
     }
 
     async function transitionToConnection(connInfo) {
@@ -341,9 +391,12 @@
                     const ny = player.y + dy;
                     const oob = nx < 0 || nx >= GameMap.width || ny < 0 || ny >= GameMap.height;
 
+                    const blockEv = _eventAt(nx, ny);
                     if (oob) {
                         const connInfo = GameMap.getConnectionAt(nx, ny);
                         if (connInfo) transitionToConnection(connInfo);
+                    } else if (blockEv && !blockEv.through && blockEv.trigger !== 'touch') {
+                        // A solid event blocks movement (you interact with A instead).
                     } else if (GameMap.isWalkable(nx, ny)) {
                         player.prevX = player.x;
                         player.prevY = player.y;
@@ -356,8 +409,12 @@
                                            player.walkFrame === 1 ? 2 : 1;
                         if (window.GameSave) GameSave.markDirty();
 
+                        const ev = _eventAt(nx, ny);
                         const warp = GameMap.getWarp(nx, ny);
-                        if (warp && performance.now() >= _warpCooldownUntil) {
+                        if (ev && (ev.trigger === 'touch' || ev.trigger === 'auto') &&
+                            ev.commands && ev.commands.length && performance.now() >= _warpCooldownUntil) {
+                            runEvent(ev);
+                        } else if (warp && performance.now() >= _warpCooldownUntil) {
                             transitionToWarp(warp);
                         } else {
                             _checkEncounter();
