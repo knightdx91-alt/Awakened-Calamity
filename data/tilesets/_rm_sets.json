@@ -7,12 +7,13 @@
       "tile": 48,
       "tabs": {
         "A1": "xp_a1",
-        "A2": "xp_a2_outside",
+        "A2": "xp_outside_ground",
         "A4": "xp_a4",
         "A5": "xp_a5",
         "B": "xp_001_grassland",
         "C": "xp_002_woods01",
-        "D": "xp_009_castletown01"
+        "D": "xp_009_castletown01",
+        "A2raw": "xp_a2_outside"
       }
     },
     {
@@ -20,12 +21,13 @@
       "name": "Town (XP)",
       "tile": 48,
       "tabs": {
-        "A2": "xp_a2_outside",
+        "A2": "xp_outside_ground",
         "A4": "xp_a4",
         "A5": "xp_a5",
         "B": "xp_009_castletown01",
         "C": "xp_036_shop01a",
-        "D": "xp_028_church01"
+        "D": "xp_028_church01",
+        "A2raw": "xp_a2_outside"
       }
     },
     {
@@ -51,7 +53,8 @@
         "A5": "xp_a5",
         "B": "xp_043_cave01",
         "C": "xp_044_cave02",
-        "D": "xp_047_mine01"
+        "D": "xp_047_mine01",
+        "A2raw": "xp_a2_outside"
       }
     },
     {
