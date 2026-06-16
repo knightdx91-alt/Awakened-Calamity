@@ -125,6 +125,24 @@
     for (var i = 0; i < layer.sheets.length; i++) if (layer.sheets[i].autotile) return layer.sheets[i];
     return null;
   }
+  // The GLOBAL id of the active set's A2 ground tile (grass) — the default fill
+  // for a blank map. Prefers the set's A2 sheet (autotile grass fill if baked,
+  // else tile 0), then any autotile sheet, then the first sheet.
+  function sheetInLayer(layer, name) {
+    for (var i = 0; i < layer.sheets.length; i++) if (layer.sheets[i].name === name) return layer.sheets[i];
+    return null;
+  }
+  function groundFillGid(layer) {
+    var a2name = state.activeSet && state.activeSet.tabs && state.activeSet.tabs.A2;
+    var s = a2name ? sheetInLayer(layer, a2name) : null;
+    if (!s) s = autotileSheet(layer);
+    if (s && s.autotile && s.autotile.fills) {
+      var baseKey = (s.autotile.priority && s.autotile.priority[0]) || 'grass';
+      return (s.autotile.fills[baseKey] != null) ? s.offset + s.autotile.fills[baseKey] : s.offset;
+    }
+    if (s) return s.offset;                 // A2 raw sheet: tile 0 = grass
+    return layer.sheets[0] ? layer.sheets[0].offset : 0;
+  }
 
   // ── Tileset loading (into the ACTIVE layer) ──
   function loadTilesetList() {
@@ -321,6 +339,8 @@
       // activate the A2 (ground/autotile) tab if present, else first tab
       var first = state.setTabs.filter(function (t) { return t.role === 'A2'; })[0] || state.setTabs[0];
       $('rmSetSel').value = set.id;
+      // erase/fill on the ground should use THIS set's grass (existing cells untouched)
+      if (state.layers.ground.data) state.layers.ground.baseFill = groundFillGid(state.layers.ground);
       if (first) return activateTab(first.sheet);
       syncActive(layer); afterTilesetChange();
     });
@@ -601,15 +621,11 @@
     state.width = w; state.height = h;
     ['ground', 'overlay', 'upper'].forEach(function (key) {
       var layer = state.layers[key];
-      // Ground default fill = the autotile base fill (clean grass) as a GLOBAL id.
+      // Ground default fill = the set's A2 GROUND tile (grass), as a GLOBAL id.
+      // (Not sheets[0] — A1/water sorts first in the tab order, so that would
+      // wrongly default the map to water.)
       var fill = layer.fill;
-      if (key === 'ground') {
-        var as = autotileSheet(layer);
-        if (as && as.autotile.fills) {
-          var baseKey = (as.autotile.priority && as.autotile.priority[0]) || 'grass';
-          fill = (as.autotile.fills[baseKey] != null) ? as.offset + as.autotile.fills[baseKey] : as.offset;
-        } else if (layer.sheets[0]) { fill = layer.sheets[0].offset; }
-      }
+      if (key === 'ground') fill = groundFillGid(layer);
       layer.baseFill = fill;
       var nd = new Int32Array(w * h);
       var nc = new Uint8Array(w * h);
