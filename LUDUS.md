@@ -2,8 +2,8 @@
 
 A playable, balanced reconstruction of **Ludus**, the chess-like strategy game from
 Jim Butcher's *Codex Alera*. Standalone browser game: local play vs an AI (3 difficulties)
-or online 2-player via Firebase. Lives in `ludus.html` + `ludus/*.js`, independent of the
-main AC engine.
+or online 2-player via Firebase. Self-contained under `ludus/` (`ludus/index.html` +
+`ludus/*.js`) — a standalone mini-site with its own URL, independent of the main AC engine.
 
 ## What's canon vs. what we designed
 The novels (esp. the *Cursor's Fury* prologue) describe Ludus only in narrative:
@@ -86,4 +86,4 @@ Lord hanging. This keeps move generation simple and the AI fast.)
 - `ludus/render.js` — canvas board (ground + sky overlay), input/selection, highlights.
 - `ludus/net.js` — Firebase Realtime DB rooms for online 2-player (config in `ludus/firebase-config.js`).
 - `ludus/main.js` — menu, mode wiring (local-bot / hotseat / online), glue.
-- `ludus.html` — standalone entry page.
+- `ludus/index.html` — standalone entry page (served at `…/ludus/`).
