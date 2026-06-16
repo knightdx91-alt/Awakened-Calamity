@@ -763,6 +763,19 @@
       mctx.strokeStyle = '#3a7bd5'; mctx.lineWidth = 2;
       mctx.setLineDash([6, 4]); mctx.strokeRect(sx + 1, sy + 1, sw - 2, sh - 2); mctx.setLineDash([]);
     }
+    if (state.dragPreview) {
+      var d = state.dragPreview;
+      var dcx = (d.x0 + d.x1) / 2, dcy = (d.y0 + d.y1) / 2;
+      var drx = (d.x1 - d.x0) / 2 + 0.5, dry = (d.y1 - d.y0) / 2 + 0.5;
+      mctx.fillStyle = 'rgba(58,123,213,0.30)';
+      for (var py = d.y0; py <= d.y1; py++)
+        for (var px = d.x0; px <= d.x1; px++) {
+          if (d.ellipse) { var nx = (px - dcx) / drx, ny = (py - dcy) / dry; if (nx * nx + ny * ny > 1) continue; }
+          mctx.fillRect(px * cs, py * cs, cs, cs);
+        }
+      mctx.strokeStyle = '#3a7bd5'; mctx.lineWidth = 2;
+      mctx.strokeRect(d.x0 * cs + 1, d.y0 * cs + 1, (d.x1 - d.x0 + 1) * cs - 2, (d.y1 - d.y0 + 1) * cs - 2);
+    }
     if (state.events && state.events.length) drawEvents();
   }
 
@@ -992,6 +1005,13 @@
                     x1: Math.max(rectStart.x, p.x), y1: Math.max(rectStart.y, p.y) };
       drawMap();
     }
+    // Live preview while dragging Rectangle/Ellipse (shows the shape before release).
+    if ((state.tool === 'rect' || state.tool === 'ellipse') && rectStart) {
+      state.dragPreview = { x0: Math.min(rectStart.x, p.x), y0: Math.min(rectStart.y, p.y),
+                            x1: Math.max(rectStart.x, p.x), y1: Math.max(rectStart.y, p.y),
+                            ellipse: state.tool === 'ellipse' };
+      drawMap();
+    }
     if (painting && state.mode === 'shadow') { applyShadow(eventQuarter(e)); drawMap(); return; }
     if (painting && inBounds(p.x, p.y)) { applyAt(p.x, p.y); drawMap(); }
   });
@@ -1007,7 +1027,7 @@
       var x0 = Math.min(rectStart.x, p.x), x1 = Math.max(rectStart.x, p.x);
       var y0 = Math.min(rectStart.y, p.y), y1 = Math.max(rectStart.y, p.y);
       fillRegion(x0, y0, x1, y1, state.tool === 'ellipse');
-      rectStart = null; drawMap();
+      rectStart = null; state.dragPreview = null; drawMap();
     }
     painting = false;
   });
