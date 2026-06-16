@@ -23,7 +23,7 @@
   var humanColors = {};
   var difficulty = 'medium', aiColor = 'black';
   var currentOpponent = null, currentSide = 'white';
-  var net = null, unsub = null, applying = false;
+  var net = null, unsub = null, unsubPlayers = null, applying = false;
 
   function $(id) { return document.getElementById(id); }
   function setStatus(m) { $('status').textContent = m; }
@@ -71,7 +71,7 @@
     beginLocal('hotseat', { white: true, black: true }, 'white', 'Pass & Play');
   }
   function beginLocal(m, hc, perspective, label) {
-    if (unsub) { unsub(); unsub = null; }
+    teardownNet();
     net = null; mode = m; humanColors = hc;
     state = E.initialState();
     $('oppLabel').innerHTML = label;
@@ -111,24 +111,67 @@
   }
 
   // ---- online ----------------------------------------------------------
-  function startOnline(promise) {
-    $('onlineStatus').textContent = 'Connecting…';
-    promise.then(function (room) {
+  function teardownNet() {
+    if (unsub) { unsub(); unsub = null; }
+    if (unsubPlayers) { unsubPlayers(); unsubPlayers = null; }
+  }
+
+  function onlineError(err) {
+    var msg = (err && err.message) || String(err);
+    if (/permission|denied/i.test(msg)) msg += ' — publish the Realtime Database rules (see LUDUS.md).';
+    $('onlineStatus').textContent = 'Online error: ' + msg;
+    showScreen('screenOnline');
+  }
+
+  // CREATE: open a room, sit in the lobby, and start the moment a foe joins.
+  function createOnline() {
+    teardownNet();
+    $('onlineStatus').textContent = 'Creating room…';
+    NET.createRoom(E.initialState()).then(function (room) {
       net = room; mode = 'online'; currentOpponent = null;
       humanColors = {}; humanColors[room.color] = true;
-      $('oppLabel').textContent = 'Online · you are ' + room.color;
-      ui.setPerspective(room.color); $('btnFlip').dataset.p = room.color;
-      $('roomBox').style.display = 'block';
-      $('roomCode').textContent = room.roomId; $('roomColor').textContent = room.color;
       $('onlineStatus').textContent = '';
-      showScreen('screenGame');
-      unsub = NET.onState(room.ref, function (remote) { if (applying) return; state = remote; loop(); });
-      setStatus('Room ' + room.roomId + ' — share the code. You are ' + room.color + '.');
-    }).catch(function (err) {
-      var msg = (err && err.message) || String(err);
-      if (/permission|denied/i.test(msg)) msg += ' — publish the Realtime Database rules (see LUDUS.md).';
-      $('onlineStatus').textContent = 'Online error: ' + msg;
-    });
+      $('lobbyCode').textContent = room.roomId;
+      $('lobbyColor').textContent = room.color;
+      $('lobbySpin').textContent = '⏳ Waiting for your opponent to join…';
+      showScreen('screenLobby');
+      // Watch the seats; when both are filled, both clients drop into the game.
+      unsubPlayers = NET.onPlayers(room.ref, function (players) {
+        if (NET.isFull(players)) { teardownNet(); enterOnlineGame(room); }
+      });
+    }).catch(onlineError);
+  }
+
+  // JOIN: claim a seat in an existing room and go straight into the game.
+  function joinOnline(code) {
+    teardownNet();
+    $('onlineStatus').textContent = 'Joining…';
+    NET.joinRoom(code).then(function (room) {
+      net = room; mode = 'online'; currentOpponent = null;
+      humanColors = {}; humanColors[room.color] = true;
+      $('onlineStatus').textContent = '';
+      enterOnlineGame(room);
+    }).catch(onlineError);
+  }
+
+  function enterOnlineGame(room) {
+    net = room; mode = 'online';
+    $('oppLabel').textContent = 'Online · you are ' + room.color;
+    ui.setPerspective(room.color); $('btnFlip').dataset.p = room.color;
+    $('roomBox').style.display = 'block';
+    $('roomCode').textContent = room.roomId; $('roomColor').textContent = room.color;
+    showScreen('screenGame');
+    ui.clearSelection();
+    state = E.initialState(); // safe placeholder; the state listener syncs the authoritative board
+    unsub = NET.onState(room.ref, function (remote) { if (applying) return; state = remote; loop(); });
+    setStatus('Room ' + room.roomId + ' — your opponent has joined. You are ' + room.color + '.');
+    loop();
+  }
+
+  function leaveOnline() {
+    teardownNet();
+    if (net) { NET.leaveRoom(net.ref); net = null; }
+    mode = null;
   }
 
   // ---- settings (difficulty w/ confirm-restart) ------------------------
@@ -155,16 +198,23 @@
     $('btnPassPlay').onclick = startHotseat;
     $('btnCreate').onclick = function () {
       if (!NET.configured()) { showScreen('screenOnline'); setStatus(''); alert('Online play is not configured yet (ludus/firebase-config.js).'); return; }
-      startOnline(NET.createRoom(E.initialState()));
+      createOnline();
     };
     $('btnJoin').onclick = function () {
       if (!NET.configured()) { alert('Online play is not configured yet (ludus/firebase-config.js).'); return; }
       var code = $('joinCode').value; if (!code) { alert('Enter a room code.'); return; }
-      startOnline(NET.joinRoom(code));
+      joinOnline(code);
     };
 
+    // lobby: cancel the room and go back to pick an opponent (e.g. play the AI)
+    $('lobbyBack').onclick = function () { leaveOnline(); showScreen('screenTitle'); };
+
     // game-screen tools
-    $('btnNewGame').onclick = function () { if (unsub) { unsub(); unsub = null; } showScreen('screenTitle'); };
+    $('btnNewGame').onclick = function () {
+      if (mode === 'online') leaveOnline(); else teardownNet();
+      $('roomBox').style.display = 'none';
+      showScreen('screenTitle');
+    };
     $('btnFlip').onclick = function () {
       var next = $('btnFlip').dataset.p === 'black' ? 'white' : 'black';
       $('btnFlip').dataset.p = next; ui.setPerspective(next);

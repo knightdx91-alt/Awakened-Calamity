@@ -93,8 +93,31 @@
 
   function pushState(ref, state) { return ref.update({ state: state, updated: Date.now() }); }
 
+  // Subscribe to the players node. cb(players|null). Returns unsubscribe fn.
+  function onPlayers(ref, cb) {
+    var handler = ref.child('players').on('value', function (snap) { cb(snap.val()); });
+    return function () { ref.child('players').off('value', handler); };
+  }
+
+  // Both seats filled?
+  function isFull(players) { return !!(players && players.white && players.black); }
+
+  // Cancel/leave a room. If we're the only one left, delete the whole room.
+  function leaveRoom(ref) {
+    if (!ref) return Promise.resolve();
+    var me = clientId();
+    return ref.child('players').transaction(function (players) {
+      if (players === null) return players;
+      if (players.white === me) players.white = null;
+      if (players.black === me) players.black = null;
+      if (!players.white && !players.black) return null; // empties room -> removed
+      return players;
+    }).then(function () {}).catch(function () {});
+  }
+
   window.LudusNet = {
     configured: configured, clientId: clientId,
-    createRoom: createRoom, joinRoom: joinRoom, onState: onState, pushState: pushState
+    createRoom: createRoom, joinRoom: joinRoom, onState: onState, pushState: pushState,
+    onPlayers: onPlayers, isFull: isFull, leaveRoom: leaveRoom
   };
 })();

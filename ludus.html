@@ -163,6 +163,21 @@
   <button id="onlineBack" class="ghost backlink">‹ Back to opponents</button>
 </section>
 
+<!-- ===== LOBBY (waiting for opponent) ===== -->
+<section id="screenLobby" class="screen">
+  <h2>Waiting Room</h2>
+  <p class="lead">Share this code with your opponent. The match starts automatically the moment they join.</p>
+  <div id="lobbyBox" style="background:#0e141b;border:1px solid #2a3848;border-radius:10px;padding:22px;text-align:center;max-width:420px">
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Room Code</div>
+    <div id="lobbyCode" style="font-size:40px;letter-spacing:8px;color:var(--cold);font-family:monospace;margin:8px 0 4px">—</div>
+    <div style="font-size:13px;color:var(--muted)">You play <b id="lobbyColor" style="color:var(--warm)">white</b></div>
+    <div id="lobbySpin" style="margin-top:18px;font-size:14px;color:var(--warm)">⏳ Waiting for your opponent to join…</div>
+  </div>
+  <div class="backlink">
+    <button id="lobbyBack" class="ghost">‹ Cancel &amp; back to opponents</button>
+  </div>
+</section>
+
 <!-- ===== GAME ===== -->
 <section id="screenGame" class="screen">
   <div class="game-top">
