@@ -51,6 +51,8 @@
     shadow: null,                // Uint8Array(w*h); 4-bit quarter mask (TL1 TR2 BL4 BR8)
     sel: null,                   // {x0,y0,x1,y1} selection rect (Select tool)
     clipboard: null,             // { w, h, ids:[gid...] } copied active-layer block
+    events: [],                  // map events: {id,name,x,y,sprite,dir,trigger,through}
+    selectedEvent: null,         // currently-edited event object
     eraser: false,
     showGrid: true,
     zoom: 2,
@@ -652,7 +654,7 @@
         }
     }
     state.region = nr; state.shadow = nsh;
-    if (!keep) state.warps = [];
+    if (!keep) { state.warps = []; state.events = []; state.selectedEvent = null; }
     $('statSize').textContent = w + ' × ' + h;
     drawMap();
     renderWarpList();
@@ -757,6 +759,7 @@
       mctx.strokeStyle = '#3a7bd5'; mctx.lineWidth = 2;
       mctx.setLineDash([6, 4]); mctx.strokeRect(sx + 1, sy + 1, sw - 2, sh - 2); mctx.setLineDash([]);
     }
+    if (state.events && state.events.length) drawEvents();
   }
 
   // ── Undo / Redo (snapshot history) ──
@@ -767,6 +770,7 @@
   function snapshot() {
     var s = { width: state.width, height: state.height, layers: {},
               warps: JSON.parse(JSON.stringify(state.warps)),
+              events: JSON.parse(JSON.stringify(state.events)),
               region: state.region ? Uint8Array.from(state.region) : null,
               shadow: state.shadow ? Uint8Array.from(state.shadow) : null };
     LAYER_KEYS.forEach(function (k) {
@@ -790,9 +794,11 @@
       if (d.terrain) L.terrain = d.terrain.slice();
     });
     state.warps = JSON.parse(JSON.stringify(s.warps));
+    if (s.events) { state.events = JSON.parse(JSON.stringify(s.events)); state.selectedEvent = null; }
     if (s.region) state.region = Uint8Array.from(s.region);
     if (s.shadow) state.shadow = Uint8Array.from(s.shadow);
     drawMap(); renderWarpList();
+    if (state.mode === 'event') renderEventPanel();
   }
   function pushUndo() {
     undoStack.push(snapshot());
@@ -929,6 +935,7 @@
     if (!inBounds(p.x, p.y)) return;
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
+    if (state.mode === 'event') { eventClick(p.x, p.y); return; }
     pushUndo();                                          // record state before any edit gesture
     if (state.mode === 'shadow') {
       var q0 = eventQuarter(e);
@@ -1037,6 +1044,94 @@
     });
   }
 
+  // ── Events (RPG-Maker-style map events) ──
+  var EVENT_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+  function eventAt(x, y) {
+    for (var i = 0; i < state.events.length; i++) if (state.events[i].x === x && state.events[i].y === y) return state.events[i];
+    return null;
+  }
+  function eventClick(x, y) {
+    var ev = eventAt(x, y);
+    if (ev) { state.selectedEvent = ev; }
+    else {
+      pushUndo();
+      var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
+      ev = { id: id, name: 'EV' + ('00' + id).slice(-3), x: x, y: y,
+             graphic: state._defaultGraphic || null, dir: 'down', trigger: 'action', through: false };
+      state.events.push(ev); state.selectedEvent = ev;
+    }
+    renderEventPanel(); drawMap();
+  }
+  function deleteEvent(ev) {
+    pushUndo();
+    var i = state.events.indexOf(ev); if (i >= 0) state.events.splice(i, 1);
+    if (state.selectedEvent === ev) state.selectedEvent = null;
+    renderEventPanel(); drawMap();
+  }
+  // Draw a charset's [row,col] frame into the map cell (feet aligned to bottom).
+  function blitCharFrame(g, row, col, dx, dy, size) {
+    var img = spriteImg(g.file);
+    if (!img.complete || !img.naturalWidth) { img.onload = drawMap; return false; }
+    var fw = g.frame_w, fh = g.frame_h, sh = size * (fh / fw);
+    mctx.drawImage(img, col * fw, row * fh, fw, fh, dx, dy + size - sh, size, sh);
+    return true;
+  }
+  function drawEvents() {
+    var cs = cell();
+    state.events.forEach(function (ev) {
+      var drew = false;
+      if (ev.graphic && ev.graphic.file) {
+        var row = EVENT_DIR_ROW[ev.dir] || 0;
+        drew = blitCharFrame(ev.graphic, row, 1, ev.x * cs, ev.y * cs, cs);
+      }
+      if (!drew) {                                   // no graphic: a diamond marker
+        mctx.fillStyle = 'rgba(120,90,200,0.55)';
+        mctx.beginPath();
+        mctx.moveTo(ev.x * cs + cs / 2, ev.y * cs + 3);
+        mctx.lineTo(ev.x * cs + cs - 3, ev.y * cs + cs / 2);
+        mctx.lineTo(ev.x * cs + cs / 2, ev.y * cs + cs - 3);
+        mctx.lineTo(ev.x * cs + 3, ev.y * cs + cs / 2);
+        mctx.closePath(); mctx.fill();
+      }
+      mctx.strokeStyle = ev === state.selectedEvent ? '#ff3030' : 'rgba(120,90,200,0.9)';
+      mctx.lineWidth = 2; mctx.strokeRect(ev.x * cs + 1, ev.y * cs + 1, cs - 2, cs - 2);
+    });
+  }
+  function renderEventPanel() {
+    var props = $('eventProps');
+    var ev = state.selectedEvent;
+    if (!ev) { props.innerHTML = '<div class="hint">No event selected. Click a tile to place one.</div>'; renderEventList(); return; }
+    props.innerHTML =
+      '<div class="row"><label class="lbl">Name</label><input type="text" id="evName" value="' + (ev.name || '') + '" style="flex:1;min-width:0;"></div>' +
+      '<div class="row"><label class="lbl">Graphic</label><span id="evGfx" class="hint" style="flex:1;">' + (ev.graphic ? ev.graphic.sprite : '(none)') + '</span><button id="evPick">Choose…</button></div>' +
+      '<div class="row"><label class="lbl">Facing</label><select id="evDir"><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select></div>' +
+      '<div class="row"><label class="lbl">Trigger</label><select id="evTrig"><option value="action">Action button</option><option value="touch">Player touch</option><option value="auto">Autorun</option><option value="parallel">Parallel</option></select></div>' +
+      '<div class="row"><label><input type="checkbox" id="evThrough"> Through (walk past)</label></div>' +
+      '<div class="row"><button id="evDel" style="color:#c02020;">✕ Delete event</button></div>';
+    $('evName').addEventListener('change', function () { ev.name = this.value; renderEventList(); });
+    $('evDir').value = ev.dir || 'down';
+    $('evDir').addEventListener('change', function () { ev.dir = this.value; drawMap(); });
+    $('evTrig').value = ev.trigger || 'action';
+    $('evTrig').addEventListener('change', function () { ev.trigger = this.value; });
+    $('evThrough').checked = !!ev.through;
+    $('evThrough').addEventListener('change', function () { ev.through = this.checked; });
+    $('evPick').addEventListener('click', function () { openSpriteModal('event'); });
+    $('evDel').addEventListener('click', function () { deleteEvent(ev); });
+    renderEventList();
+  }
+  function renderEventList() {
+    var list = $('eventList'); if (!list) return; list.innerHTML = '';
+    if (!state.events.length) { list.innerHTML = '<div class="hint">No events yet.</div>'; return; }
+    state.events.forEach(function (ev) {
+      var d = document.createElement('div'); d.className = 'warp-item';
+      d.style.cursor = 'pointer';
+      if (ev === state.selectedEvent) { d.style.background = 'var(--accent2)'; d.style.borderColor = 'var(--accent)'; }
+      d.textContent = ev.name + '  (' + ev.x + ',' + ev.y + ')' + (ev.graphic ? ' · ' + ev.graphic.sprite : '');
+      d.addEventListener('click', function () { state.selectedEvent = ev; renderEventPanel(); drawMap(); });
+      list.appendChild(d);
+    });
+  }
+
   // ── Export / Import ──
   function hasContent(arr, empty) {
     if (!arr) return false;
@@ -1095,6 +1190,10 @@
       connections: [], npcs: [],
       warps: state.warps.map(function (w) {
         return { x: w.x, y: w.y, dest_map: w.dest_map, dest_warp_id: w.dest_warp_id };
+      }),
+      events: state.events.map(function (ev) {
+        return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
+                 dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through };
       }),
       triggers: [], signs: []
     };
@@ -1184,7 +1283,12 @@
         state.warps = (mapMeta.warps || []).map(function (w2) {
           return { x: w2.x, y: w2.y, dest_map: w2.dest_map || 'MAP_NONE', dest_warp_id: w2.dest_warp_id || '0' };
         });
-      } else { state.warps = []; }
+        state.events = (mapMeta.events || []).map(function (ev) {
+          return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
+                   dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through };
+        });
+      } else { state.warps = []; state.events = []; }
+      state.selectedEvent = null;
       // reflect ground tileset in the dropdown + palette
       setActiveLayer('ground');
       drawMap(); renderWarpList();
@@ -1279,13 +1383,17 @@
   });
   // Side-panel Mode buttons (Map/Collision/Warp/Region) drive the hidden .mode
   // buttons and reflect active state + show the Region # picker in region mode.
-  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region', mShadow: 'shadow' };
+  var MODE_BTNS = { mMap: 'map', mCollide: 'collide', mWarp: 'warp', mRegion: 'region', mShadow: 'shadow', mEvent: 'event' };
   function syncModeUI() {
     Object.keys(MODE_BTNS).forEach(function (id) {
       var e = $(id); if (e) e.classList.toggle('active', MODE_BTNS[id] === state.mode);
     });
     var rr = $('regionRow'); if (rr) rr.style.display = state.mode === 'region' ? '' : 'none';
     var sr = $('shadowRow'); if (sr) sr.style.display = state.mode === 'shadow' ? '' : 'none';
+    var eh = $('eventHint'); if (eh) eh.style.display = state.mode === 'event' ? '' : 'none';
+    var ec = $('eventCard'); if (ec) ec.style.display = state.mode === 'event' ? '' : 'none';
+    if (state.mode === 'event') renderEventPanel();
+    drawMap();
   }
   Object.keys(MODE_BTNS).forEach(function (id) {
     var e = $(id); if (!e) return;
@@ -1299,7 +1407,7 @@
   });
   syncModeUI();
 
-  $('eventModeBtn').addEventListener('click', soon);
+  $('eventModeBtn').addEventListener('click', function () { setModeBtn('event'); syncModeUI(); });
   $('undoBtn').addEventListener('click', doUndo);
   $('redoBtn').addEventListener('click', doRedo);
   // Keyboard: Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) for undo/redo.
@@ -1368,7 +1476,7 @@
   });
   // Repurpose the Materials (🎨) toolbar button as the character-sprite picker.
   var matB = $('matBtn');
-  if (matB) { matB.title = 'Character Sprites'; matB.addEventListener('click', openSpriteModal); }
+  if (matB) { matB.title = 'Character Sprites'; matB.addEventListener('click', function () { openSpriteModal('player'); }); }
   $('cutBtn').addEventListener('click', cutSelection);
   $('copyBtn').addEventListener('click', copySelection);
   $('pasteBtn').addEventListener('click', pasteClipboard);
@@ -1473,7 +1581,7 @@
       ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
     ]],
     ['Tools', [
-      ['Character Sprites…', '', function () { openSpriteModal(); }],
+      ['Character Sprites…', '', function () { openSpriteModal('player'); }],
       ['Database', '', null], ['Materials', '', null],
       ['Script editor', '', null], ['Sound test', '', null]
     ]],
@@ -2142,7 +2250,10 @@
     });
     if (!list.length) grid.innerHTML = '<div class="hint">No sprites in this category.</div>';
   }
-  function openSpriteModal() {
+  var _spriteTarget = 'player';
+  function openSpriteModal(target) {
+    _spriteTarget = target || 'player';
+    $('setPlayerBtn').textContent = _spriteTarget === 'event' ? '◆ Use for Event' : '★ Set as Player';
     $('spriteModal').style.display = 'flex';
     loadSpriteIndex().then(function (d) {
       var sel = $('spriteCat');
@@ -2162,10 +2273,17 @@
   $('setPlayerBtn').addEventListener('click', function () {
     if (!_selectedSprite) return;
     var e = _selectedSprite;
+    var g = { sprite: e.id, file: e.file, frame_w: e.frame_w, frame_h: e.frame_h, cols: e.cols, rows: e.rows, single: e.single };
+    if (_spriteTarget === 'event' && state.selectedEvent) {
+      pushUndo();
+      state.selectedEvent.graphic = g;
+      state._defaultGraphic = g;                 // reuse for the next placed event
+      $('spriteModal').style.display = 'none';
+      renderEventPanel(); drawMap();
+      return;
+    }
     try {
-      localStorage.setItem('ac_player_sprite', JSON.stringify({
-        file: e.file, frame_w: e.frame_w, frame_h: e.frame_h, cols: e.cols, rows: e.rows, single: e.single
-      }));
+      localStorage.setItem('ac_player_sprite', JSON.stringify(g));
       toast('Player sprite set to ' + e.id + '. Playtest to see it.');
     } catch (err) { toast('Could not save (storage blocked).'); }
   });

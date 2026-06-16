@@ -312,6 +312,24 @@ window.GameRenderer = (function () {
             }
         }
 
+        // Map events (RPG-Maker-style) — static MV-charset NPCs placed in the editor.
+        if (_map.current && _map.current.events) {
+            const DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+            for (const ev of _map.current.events) {
+                if (!ev.graphic || !ev.graphic.file) continue;
+                if (ev.x < tileStartX - 1 || ev.x > tileStartX + vw + 1) continue;
+                if (ev.y < tileStartY - 1 || ev.y > tileStartY + vh + 1) continue;
+                const img = _getEventImg(ev.graphic.file);
+                if (!img || !img.complete || !img.naturalWidth) continue;
+                const ex = (ev.x - tileStartX) * _rt + subX;
+                const ey = (ev.y - tileStartY) * _rt + subY;
+                const fw = ev.graphic.frame_w, fh = ev.graphic.frame_h;
+                const row = DIR_ROW[ev.dir] !== undefined ? DIR_ROW[ev.dir] : 0;
+                const dh = _rt * (fh / fw);
+                ctx.drawImage(img, 1 * fw, row * fh, fw, fh, ex, ey + _rt - dh, _rt, dh);
+            }
+        }
+
         // Player
         const playerSX = (vx - vcamX) * _rt;
         const playerSY = (vy - vcamY) * _rt;
@@ -400,6 +418,15 @@ window.GameRenderer = (function () {
     function _gfxToStem(graphicsId) {
         if (!graphicsId) return null;
         return graphicsId.replace(/^OBJ_EVENT_GFX_/, '').toLowerCase();
+    }
+
+    const _eventImgCache = new Map();
+    function _getEventImg(file) {
+        if (_eventImgCache.has(file)) return _eventImgCache.get(file);
+        const img = new Image();
+        img.src = 'data/sprites/' + file + '?b=' + (window.__BUILD__ || '0');
+        _eventImgCache.set(file, img);
+        return img;
     }
 
     function _loadPlayerImg() {
