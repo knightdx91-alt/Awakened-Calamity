@@ -162,7 +162,12 @@
         rangedAttack(state, p, ORTHO, 1, out, true); break;
       case 'KI': slide(state, p, ORTHO, 2, out); rangedAttack(state, p, ORTHO, 2, out, false); break;
       case 'KA': slide(state, p, ALL8, 2, out); flyAndSkyMoves(state, p, out); break;
-      case 'HL': slide(state, p, ALL8, 2, out); flyAndSkyMoves(state, p, out); break;
+      case 'HL':
+        slide(state, p, ALL8, 2, out); flyAndSkyMoves(state, p, out);
+        // High Lords wield all furycraft except Flora's: an orthogonal strike to
+        // range 2 (fire) that pierces the enemy directly behind the target (earth).
+        rangedAttack(state, p, ORTHO, 2, out, true);
+        break;
       case 'FL': slide(state, p, ALL8, 2, out); flyAndSkyMoves(state, p, out); break;
     }
   }

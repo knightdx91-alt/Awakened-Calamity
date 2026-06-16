@@ -70,7 +70,9 @@ Lord hanging. This keeps move generation simple and the AI fast.)
   sky (when standing under the central 5×5) or land from sky, as its action; on the sky moves
   **1 square any direction**. A sky piece may attack/land on the ground square it shadows.
 - **High Lord (HL)** — moves **2 any direction** on ground; may **fly**; sky move 1 any
-  direction; lands by capture onto its shadowed ground square.
+  direction; lands by capture onto its shadowed ground square. *Furycraft (all crafts except
+  Flora's):* may instead make an **orthogonal ranged strike to range 2 that pierces** the enemy
+  directly behind the first target — combining Ignis's reach with Terra's pierce.
 - **First Lord (FL)** — like HL, moves 2 any direction / flies / sky move 1. **If captured,
   the game ends.**
 
