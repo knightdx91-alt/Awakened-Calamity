@@ -37,12 +37,51 @@
   .legend { font-size:12px; color:var(--muted); line-height:1.7; }
   .legend b { color:var(--ink); }
   a { color:var(--cold); }
+
+  /* Rules modal */
+  #rulesOverlay { position:fixed; inset:0; background:rgba(4,7,11,0.78);
+    backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center;
+    z-index:50; padding:20px; }
+  #rulesOverlay.open { display:flex; }
+  .rules-modal { background:linear-gradient(180deg,#161c25,#10151c);
+    border:1px solid #34506b; border-radius:12px; max-width:780px; width:100%;
+    max-height:88vh; overflow:hidden; display:flex; flex-direction:column;
+    box-shadow:0 24px 70px rgba(0,0,0,0.6); }
+  .rules-head { display:flex; align-items:center; justify-content:space-between;
+    padding:16px 22px; border-bottom:1px solid #243140;
+    background:linear-gradient(90deg,#1b2a3a,#16202b); }
+  .rules-head h2 { margin:0; font-size:18px; letter-spacing:2px; color:var(--cold); }
+  .rules-head .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+  .rules-close { width:34px; height:34px; flex:0 0 34px; margin:0; padding:0;
+    border-radius:8px; font-size:18px; line-height:1; }
+  .rules-body { padding:20px 22px; overflow-y:auto; }
+  .rules-body h3 { color:var(--warm); font-size:13px; text-transform:uppercase;
+    letter-spacing:1.5px; margin:22px 0 8px; border-bottom:1px solid #243140; padding-bottom:5px; }
+  .rules-body h3:first-child { margin-top:0; }
+  .rules-body p { font-size:14px; line-height:1.6; color:#d4deea; margin:0 0 10px; }
+  .rules-body .goal { background:#13212e; border-left:3px solid var(--cold);
+    padding:10px 14px; border-radius:0 6px 6px 0; font-size:14px; line-height:1.55; }
+  .rules-body ul { margin:0 0 10px; padding-left:18px; }
+  .rules-body li { font-size:13.5px; line-height:1.6; color:#d4deea; margin-bottom:5px; }
+  .pgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .pcard { background:#0e151d; border:1px solid #243140; border-radius:8px; padding:10px 12px; }
+  .pcard .top { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+  .pcard .badge { width:26px; height:26px; flex:0 0 26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-weight:bold;
+    font-family:monospace; background:#f2ead2; color:#2a2a32; }
+  .pcard .badge.air { box-shadow:0 0 0 2px var(--cold); }
+  .pcard .name { font-size:13px; font-weight:600; color:var(--ink); }
+  .pcard .desc { font-size:12px; line-height:1.5; color:var(--muted); }
+  .tag-air { color:var(--cold); font-size:11px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>LUDUS</h1>
-  <p>The Aleran war-game — 11×11 ground board + a 5×5 sky board over its centre. Capture the First Lord (★).</p>
+<header style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div>
+    <h1>LUDUS</h1>
+    <p>The Aleran war-game — 11×11 ground board + a 5×5 sky board over its centre. Capture the First Lord (★).</p>
+  </div>
+  <button id="btnRules" style="width:auto;flex:0 0 auto;margin:0;padding:9px 18px;background:#2b5a7a;border-color:#3a6f96">📜 Rules</button>
 </header>
 
 <div class="wrap">
@@ -89,6 +128,84 @@
     </section>
   </div>
 </div>
+
+<div id="rulesOverlay">
+  <div class="rules-modal" role="dialog" aria-modal="true" aria-label="Ludus rules">
+    <div class="rules-head">
+      <div>
+        <h2>HOW TO PLAY LUDUS</h2>
+        <div class="sub">The strategy game of Codex Alera — a balanced reconstruction</div>
+      </div>
+      <button class="rules-close" id="btnRulesClose" aria-label="Close">✕</button>
+    </div>
+    <div class="rules-body">
+      <h3>The Goal</h3>
+      <div class="goal">Ludus is a chess-like duel. Each commander leads 22 pieces.
+        <b>Capture your opponent's First Lord (★) and you win instantly.</b> Guard your own —
+        if it falls, the game is over. As in the novels: discipline over ferocity, and pieces
+        that support one another are stronger than pieces fighting alone.</div>
+
+      <h3>The Two Boards</h3>
+      <p>You fight on a <b>ground board of 11×11 squares</b>. Floating above its centre is a
+        smaller <b>sky board of 5×5 squares</b> — the skies above the battlefield. Each sky
+        square sits directly over the shaded centre square it shadows. Only <b>aerial</b> pieces
+        (ringed in cyan) can fly up to the sky board; from there they can drop back down onto
+        the ground square beneath them.</p>
+
+      <h3>Taking a Turn</h3>
+      <ul>
+        <li><b>One action per turn.</b> White moves first, then players alternate.</li>
+        <li>Click one of your pieces to select it — its legal destinations light up
+          (<span style="color:#7fffaf">green</span> = move, <span style="color:#ff8a8a">red</span> = capture).</li>
+        <li>A piece either <b>moves</b> (landing on an enemy captures it) <b>or</b>, for the
+          Knights, fires a <b>furycraft attack</b> that removes a target without moving.</li>
+        <li>Flying up to or down from the sky board uses your whole turn.</li>
+      </ul>
+
+      <h3>The Pieces</h3>
+      <div class="pgrid">
+        <div class="pcard"><div class="top"><span class="badge">L</span><span class="name">Legionnaire</span></div>
+          <div class="desc">Moves 1 forward/left/right (2 forward on its first move). Captures only forward-diagonally. Reaches the far rank → becomes a Veteran.</div></div>
+        <div class="pcard"><div class="top"><span class="badge">V</span><span class="name">Veteran</span></div>
+          <div class="desc">A promoted Legionnaire. Moves and captures 1 square in any of the 8 directions.</div></div>
+        <div class="pcard"><div class="top"><span class="badge">F</span><span class="name">Knight Flora</span></div>
+          <div class="desc">Slides up to 2 squares diagonally. Woodcraft: instead attack an enemy up to 2 diagonal squares away.</div></div>
+        <div class="pcard"><div class="top"><span class="badge">T</span><span class="name">Knight Terra</span></div>
+          <div class="desc">Leaps in an L-shape like a chess knight. Terracraft: strike an adjacent enemy — and any enemy directly behind it.</div></div>
+        <div class="pcard"><div class="top"><span class="badge">I</span><span class="name">Knight Ignis</span></div>
+          <div class="desc">Moves up to 2 squares straight (no diagonals). Firecraft: instead burn an enemy up to 2 squares away in a straight line.</div></div>
+        <div class="pcard"><div class="top"><span class="badge air">A</span><span class="name">Knight Aeris <span class="tag-air">air</span></span></div>
+          <div class="desc">Moves 2 squares any direction. Can fly to the sky board (from the centre) and strike down onto the ground.</div></div>
+        <div class="pcard"><div class="top"><span class="badge air">H</span><span class="name">High Lord <span class="tag-air">air</span></span></div>
+          <div class="desc">A powerful aerial piece. Moves 2 any direction, flies, and steps across the sky board.</div></div>
+        <div class="pcard"><div class="top"><span class="badge air">★</span><span class="name">First Lord <span class="tag-air">air</span></span></div>
+          <div class="desc">Your king. Moves 2 any direction and may fly. If captured, you lose — protect it above all.</div></div>
+      </div>
+
+      <h3>Modes</h3>
+      <ul>
+        <li><b>Vs Bot</b> — play the AI at Easy, Medium, or Hard.</li>
+        <li><b>Hotseat</b> — two players share one screen (use Flip Board to turn it around).</li>
+        <li><b>Online</b> — Create a room, share the 5-letter code, and your opponent joins to play live.</li>
+      </ul>
+      <p style="color:var(--muted);font-size:12px">Note: only the canonical board sizes, the First
+        Lord, and the support theme come from Jim Butcher's novels — the piece moves and furycraft are
+        a balanced design for play. Full notes in <a href="LUDUS.md">LUDUS.md</a>.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var ov = document.getElementById('rulesOverlay');
+    function open() { ov.classList.add('open'); }
+    function close() { ov.classList.remove('open'); }
+    document.getElementById('btnRules').addEventListener('click', open);
+    document.getElementById('btnRulesClose').addEventListener('click', close);
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  })();
+</script>
 
 <script src="ludus/firebase-config.js"></script>
 <script src="ludus/engine.js"></script>
