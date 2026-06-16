@@ -129,7 +129,7 @@
   #paletteHead { padding:3px 8px; border-bottom:1px solid var(--line2); display:flex;
     align-items:center; gap:6px; flex-wrap:wrap; background:var(--panel2); }
   #paletteWrap { flex:1; overflow:auto; padding:4px; background:#fafafa; }
-  #paletteCanvas { display:block; image-rendering:pixelated; cursor:crosshair; }
+  #paletteCanvas { display:block; image-rendering:pixelated; cursor:crosshair; touch-action:none; }
   #autoPalette { display:none; padding:6px; gap:6px; flex-wrap:wrap; }
   #autoPalette.show { display:flex; }
   .auto-swatch { width:64px; display:flex; flex-direction:column; align-items:center;
@@ -148,7 +148,7 @@
     background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0px;
     position:relative; }
   #mapCanvas { image-rendering:pixelated; display:block; margin:16px; cursor:crosshair;
-    box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; }
+    box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; touch-action:none; }
 
   /* Right: inspector */
   #sidePanel { width:226px; min-width:226px; flex:0 0 auto; background:var(--panel);

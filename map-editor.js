@@ -554,16 +554,18 @@
     return { cx: Math.max(0, Math.floor(p.x / (DT * PAL_SCALE))),
              cy: Math.max(0, Math.floor(p.y / (DT * PAL_SCALE))) };
   }
-  paletteCanvas.addEventListener('mousedown', function (e) {
+  paletteCanvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { paletteCanvas.setPointerCapture(e.pointerId); } catch (_) {}
     palDrag = palCellFromEvent(e);
     setStampFromPalette(palDrag.cx, palDrag.cy, palDrag.cx, palDrag.cy);
   });
-  paletteCanvas.addEventListener('mousemove', function (e) {
+  paletteCanvas.addEventListener('pointermove', function (e) {
     if (!palDrag) return;
     var p = palCellFromEvent(e);
     setStampFromPalette(palDrag.cx, palDrag.cy, p.cx, p.cy);
   });
-  window.addEventListener('mouseup', function () { palDrag = null; });
+  window.addEventListener('pointerup', function () { palDrag = null; });
 
   function setStampFromPalette(cx0, cy0, cx1, cy1) {
     var x0 = Math.min(cx0, cx1), x1 = Math.max(cx0, cx1);
@@ -954,7 +956,9 @@
       for (var rx2 = x0 - 1; rx2 <= x1 + 1; rx2++) recomputeTerrainCell(rx2, ry2);
   }
 
-  mapCanvas.addEventListener('mousedown', function (e) {
+  mapCanvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { mapCanvas.setPointerCapture(e.pointerId); } catch (_) {}   // keep drag tracking (touch+mouse)
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
@@ -975,7 +979,7 @@
     painting = true; applyAt(p.x, p.y); drawMap();
   });
 
-  mapCanvas.addEventListener('mousemove', function (e) {
+  mapCanvas.addEventListener('pointermove', function (e) {
     var p = eventCell(e);
     $('statCoord').textContent = 'x: ' + p.x + '  y: ' + p.y;
     if (inBounds(p.x, p.y)) {
@@ -992,7 +996,7 @@
     if (painting && inBounds(p.x, p.y)) { applyAt(p.x, p.y); drawMap(); }
   });
 
-  window.addEventListener('mouseup', function (e) {
+  window.addEventListener('pointerup', function (e) {
     if (state.tool === 'select' && rectStart) {
       var ps = eventCell(e);
       state.sel = { x0: Math.min(rectStart.x, ps.x), y0: Math.min(rectStart.y, ps.y),
