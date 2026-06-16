@@ -112,7 +112,7 @@
 
   // ---- online ----------------------------------------------------------
   function startOnline(promise) {
-    setStatus('Connecting…'); showScreen('screenGame'); $('oppLabel').textContent = 'Online match';
+    $('onlineStatus').textContent = 'Connecting…';
     promise.then(function (room) {
       net = room; mode = 'online'; currentOpponent = null;
       humanColors = {}; humanColors[room.color] = true;
@@ -120,9 +120,15 @@
       ui.setPerspective(room.color); $('btnFlip').dataset.p = room.color;
       $('roomBox').style.display = 'block';
       $('roomCode').textContent = room.roomId; $('roomColor').textContent = room.color;
+      $('onlineStatus').textContent = '';
+      showScreen('screenGame');
       unsub = NET.onState(room.ref, function (remote) { if (applying) return; state = remote; loop(); });
       setStatus('Room ' + room.roomId + ' — share the code. You are ' + room.color + '.');
-    }).catch(function (err) { setStatus('Online error: ' + err.message); showScreen('screenOnline'); });
+    }).catch(function (err) {
+      var msg = (err && err.message) || String(err);
+      if (/permission|denied/i.test(msg)) msg += ' — publish the Realtime Database rules (see LUDUS.md).';
+      $('onlineStatus').textContent = 'Online error: ' + msg;
+    });
   }
 
   // ---- settings (difficulty w/ confirm-restart) ------------------------
