@@ -892,6 +892,9 @@
   }
 
   function floodFill(x, y) {
+    // In Auto mode, flood the TERRAIN (not the raw tile ids) so the bucket fills
+    // a region of like terrain with the selected terrain and re-blends edges.
+    if (isAutoPaint() && !state.eraser) { floodFillTerrain(x, y); return; }
     var layer = L();
     var target = layer.data[idx(x, y)];
     var repl = state.eraser ? layer.baseFill : state.stamp.ids[0];
@@ -904,6 +907,25 @@
       if (state.active === 'ground') layer.terrain[idx(px, py)] = '';
       stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
     }
+  }
+  function floodFillTerrain(x, y) {
+    var layer = state.layers.ground;
+    var target = layer.terrain[idx(x, y)] || '';
+    var repl = state.selectedTerrain || '';
+    if (target === repl) return;
+    var minx = x, maxx = x, miny = y, maxy = y, seen = {}, stack = [[x, y]];
+    while (stack.length) {
+      var p = stack.pop(), px = p[0], py = p[1];
+      if (!inBounds(px, py)) continue;
+      var k = idx(px, py);
+      if (seen[k] || (layer.terrain[k] || '') !== target) continue;
+      seen[k] = 1; layer.terrain[k] = repl;
+      if (px < minx) minx = px; if (px > maxx) maxx = px;
+      if (py < miny) miny = py; if (py > maxy) maxy = py;
+      stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+    }
+    for (var ry = miny - 1; ry <= maxy + 1; ry++)
+      for (var rx = minx - 1; rx <= maxx + 1; rx++) recomputeTerrainCell(rx, ry);
   }
 
   // tile the stamp / single id over a rectangular or elliptical region
