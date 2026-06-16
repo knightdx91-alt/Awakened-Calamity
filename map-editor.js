@@ -2098,9 +2098,11 @@
   $('orientBtn').addEventListener('click', function (e) { e.stopPropagation(); toggleOrientMenu(); });
   document.addEventListener('click', function () { if (orientMenu) { orientMenu.remove(); orientMenu = null; } });
 
-  // ── Save to GitHub 'maps' branch (same mechanism as cloud-saves.js) ──
+  // ── Save maps straight to the live `main` branch (same mechanism as
+  // cloud-saves.js). Writing to main means an authored map deploys to Pages and
+  // the game can actually load it — everything lives together on one branch. ──
   var GH_REPO   = 'knightdx91-alt/awakened-calamity';
-  var GH_BRANCH = 'maps';
+  var GH_BRANCH = 'main';
   var GH_TOKEN  = 'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
                   .split('').reverse().join('');
   function ghHeaders() {
@@ -2172,7 +2174,7 @@
   }
   function mapIdOf(name) { return 'MAP_' + name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase(); }
 
-  // Rename a saved map (+ its layout) on the 'maps' branch: write the new
+  // Rename a saved map (+ its layout) on the live branch: write the new
   // files, update the region index, then delete the old files.
   function repoRename(oldName, newName, region) {
     var oldMapPath = 'data/maps/' + region + '/' + oldName + '.json';
@@ -2435,7 +2437,7 @@
     var node = treeModel[name];
     var wasSaved = !node.local, region = node.region;
     var msg = wasSaved
-      ? 'Delete "' + name + '" from the maps branch?\nThis removes the map AND its layout file, and updates the index. This cannot be undone.'
+      ? 'Delete "' + name + '" from the live game (main)?\nThis removes the map AND its layout file, and updates the index. This cannot be undone.'
       : 'Remove "' + name + '" from the list?';
     if (!confirm(msg)) return;
     var parent = node.parent || null;
