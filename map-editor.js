@@ -777,6 +777,15 @@
       mctx.strokeRect(d.x0 * cs + 1, d.y0 * cs + 1, (d.x1 - d.x0 + 1) * cs - 2, (d.y1 - d.y0 + 1) * cs - 2);
     }
     if (state.events && state.events.length) drawEvents();
+    // Player start marker (green "S" flag) when viewing the start map
+    if (state.startLoc && state.startLoc.map === ($('mapName') && $('mapName').value)) {
+      var sX = state.startLoc.x * cs, sY = state.startLoc.y * cs;
+      mctx.fillStyle = 'rgba(40,180,70,0.55)'; mctx.fillRect(sX, sY, cs, cs);
+      mctx.strokeStyle = '#1c7a32'; mctx.lineWidth = 2; mctx.strokeRect(sX + 1, sY + 1, cs - 2, cs - 2);
+      mctx.fillStyle = '#fff'; mctx.font = 'bold ' + Math.floor(cs * 0.6) + 'px sans-serif';
+      mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+      mctx.fillText('S', sX + cs / 2, sY + cs / 2);
+    }
   }
 
   // ── Undo / Redo (snapshot history) ──
@@ -974,6 +983,13 @@
     try { mapCanvas.setPointerCapture(e.pointerId); } catch (_) {}   // keep drag tracking (touch+mouse)
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
+    if (state._settingStart) {                   // Game → Set Player Start
+      state._settingStart = false;
+      state.startLoc = { map: $('mapName').value, region: $('mapRegion').value, x: p.x, y: p.y };
+      try { localStorage.setItem('ac_start_location', JSON.stringify(state.startLoc)); } catch (_) {}
+      toast('Player start: ' + state.startLoc.map + ' (' + p.x + ',' + p.y + ')');
+      drawMap(); return;
+    }
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
     if (state.mode === 'event') { eventClick(p.x, p.y); return; }
@@ -1885,7 +1901,11 @@
       ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }]
     ]],
     ['Game', [
-      ['Playtest', 'F12', function () { clickEl('playBtn'); }]
+      ['Playtest', 'F12', function () { clickEl('playBtn'); }],
+      'sep',
+      ['Set Player Start (click a tile)', '', function () {
+        state._settingStart = true; toast('Click a tile to set the player’s start position.');
+      }]
     ]],
     ['Help', [
       ['Send Screenshot…', '', function () { clickEl('shotBtn'); }],
@@ -2650,6 +2670,7 @@
     var open = firstSet ? loadSet(firstSet) : useTileset(L(), parts[0][0]).then(afterTilesetChange);
     return open;
   }).then(function () {
+    try { state.startLoc = JSON.parse(localStorage.getItem('ac_start_location') || 'null'); } catch (e) {}
     newMap(state.width, state.height, false);
     setStampFromPalette(0, 0, 0, 0);
     buildMapTree();

@@ -528,15 +528,25 @@
             // Optional startup override: ?map=VerdantHollow&region=custom lets you
             // drop straight into any map (e.g. one built in the map editor).
             const _params   = new URLSearchParams(window.location.search);
-            const _startMap = _params.get('map') || 'AwakeningCamp';
-            const _startReg = _params.get('region') || currentRegion;
+            let _startMap = _params.get('map');
+            let _startReg = _params.get('region');
+            let _startX = null, _startY = null;
+            // No URL override? Use the player start location set in the map editor.
+            if (!_startMap) {
+                try {
+                    const sl = JSON.parse(localStorage.getItem('ac_start_location') || 'null');
+                    if (sl && sl.map) { _startMap = sl.map; _startReg = _startReg || sl.region; _startX = sl.x; _startY = sl.y; }
+                } catch (e) {}
+            }
+            _startMap = _startMap || 'AwakeningCamp';
+            _startReg = _startReg || currentRegion;
             currentRegion = _startReg;
             await GameMap.load(_startMap, _startReg);
             window._mapName   = (GameMap.current && GameMap.current.name) || _startMap;
             window._mapLoaded = true;
 
-            player.x    = 7;
-            player.y    = 8;
+            player.x    = (_startX != null) ? _startX : 7;
+            player.y    = (_startY != null) ? _startY : 8;
             player.prevX = 7;
             player.prevY = 8;
             player.direction = 'down';
