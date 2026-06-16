@@ -1,0 +1,36 @@
+/* GameEventState — global state for RPG-Maker-style event scripting.
+ *
+ * Switches (on/off flags), Variables (numbers), and Self-Switches (per-event
+ * A/B/C/D flags keyed by map+eventId+letter). Persisted to localStorage so
+ * chests stay open, doors stay unlocked, quest stages persist across reloads.
+ *
+ * Pure-ish data layer (no DOM); the interpreter in main.js reads/writes it.
+ */
+window.GameEventState = (function () {
+    'use strict';
+    var KEY = 'ac_event_state';
+    var state = { switches: {}, variables: {}, selfSwitches: {} };
+
+    function load() {
+        try {
+            var d = JSON.parse(localStorage.getItem(KEY) || 'null');
+            if (d) { state.switches = d.switches || {}; state.variables = d.variables || {}; state.selfSwitches = d.selfSwitches || {}; }
+        } catch (e) { /* fresh */ }
+    }
+    function save() {
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage off */ }
+    }
+    function selfKey(map, evId, letter) { return (map || '') + '#' + (evId != null ? evId : '?') + '#' + letter; }
+
+    load();
+    return {
+        getSwitch:  function (id) { return !!state.switches[id]; },
+        setSwitch:  function (id, v) { state.switches[id] = !!v; save(); },
+        getVar:     function (id) { return state.variables[id] | 0; },
+        setVar:     function (id, v) { state.variables[id] = v | 0; save(); },
+        getSelf:    function (map, evId, letter) { return !!state.selfSwitches[selfKey(map, evId, letter)]; },
+        setSelf:    function (map, evId, letter, v) { state.selfSwitches[selfKey(map, evId, letter)] = !!v; save(); },
+        all:        function () { return state; },
+        reset:      function () { state = { switches: {}, variables: {}, selfSwitches: {} }; save(); }
+    };
+})();

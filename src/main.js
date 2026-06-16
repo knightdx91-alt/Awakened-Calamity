@@ -192,21 +192,88 @@
             _transitioning = false;
         }
     }
-    // Run an event's command list (sequential; Transfer ends the run).
-    function runEvent(ev) {
-        if (!ev || _transitioning) return;
-        const cmds = ev.commands || [];
-        let i = 0;
-        (function next() {
-            if (i >= cmds.length) return;
-            const c = cmds[i++];
-            if (c.type === 'transfer') { transitionToEventTransfer(c); return; }
-            if (c.type === 'text') {
-                if (window.GameDialogue) GameDialogue.show(c.text || '', next); else next();
-                return;
+    // ── Event command interpreter (RPG-Maker-style scripting) ──
+    var _eventRunning = false;
+    var ES = window.GameEventState;
+    function _say(text) { return new Promise(function (res) { if (window.GameDialogue) GameDialogue.show(String(text || '').split('\n'), res); else res(); }); }
+    function _wait(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+    function _choose(prompt, options) {
+        return new Promise(function (res) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;align-items:flex-end;justify-content:center;padding-bottom:9%;';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#0a0a18;border:2px solid #18b8c8;border-radius:10px;padding:14px 16px;min-width:230px;max-width:82%;color:#cfe;display:flex;flex-direction:column;gap:8px;font-family:monospace;font-size:13px;';
+            if (prompt) { var pr = document.createElement('div'); pr.textContent = prompt; pr.style.marginBottom = '4px'; inner.appendChild(pr); }
+            (options || []).forEach(function (label, i) {
+                var b = document.createElement('button');
+                b.textContent = label;
+                b.style.cssText = 'background:#16263a;color:#cfe;border:1px solid #18b8c8;border-radius:6px;padding:9px;cursor:pointer;font-family:monospace;text-align:left;';
+                b.addEventListener('click', function () { box.remove(); res(i); });
+                inner.appendChild(b);
+            });
+            box.appendChild(inner); document.body.appendChild(box);
+        });
+    }
+    function _evalCond(cond, ctx) {
+        if (!cond || !ES) return true;
+        if (cond.kind === 'switch') return ES.getSwitch(cond.id) === (cond.value !== false);
+        if (cond.kind === 'selfswitch') return ES.getSelf(ctx.mapName, ctx.evId, cond.letter || 'A') === (cond.value !== false);
+        if (cond.kind === 'variable') {
+            var v = ES.getVar(cond.id), t = cond.value | 0;
+            switch (cond.op) { case '>=': return v >= t; case '<=': return v <= t; case '>': return v > t; case '<': return v < t; case '!=': return v !== t; default: return v === t; }
+        }
+        return true;
+    }
+    function _runScript(code, ctx) {
+        var api = ES ? {
+            getSwitch: ES.getSwitch, setSwitch: ES.setSwitch, getVar: ES.getVar, setVar: ES.setVar,
+            getSelf: function (l) { return ES.getSelf(ctx.mapName, ctx.evId, l || 'A'); },
+            setSelf: function (l, v) { ES.setSelf(ctx.mapName, ctx.evId, l || 'A', v); },
+            say: _say, transfer: transitionToEventTransfer, player: player, map: GameMap, event: ctx.event
+        } : {};
+        try { (new Function('$', code)).call(null, api); } catch (e) { console.warn('[Event script]', e); }
+    }
+    async function runCmdList(list, ctx) {
+        for (var i = 0; i < list.length; i++) {
+            if (ctx.exited) return;
+            await runCmd(list[i], ctx);
+        }
+    }
+    async function runCmd(c, ctx) {
+        switch (c.type) {
+            case 'text': await _say(c.text || ''); break;
+            case 'choice': {
+                var idx = await _choose(c.prompt || '', (c.options || []).map(function (o) { return o.label; }));
+                var opt = (c.options || [])[idx];
+                if (opt && opt.then) await runCmdList(opt.then, ctx);
+                break;
             }
-            next();
-        })();
+            case 'conditional':
+                if (_evalCond(c.cond, ctx)) await runCmdList(c.then || [], ctx);
+                else await runCmdList(c.else || [], ctx);
+                break;
+            case 'switch':     if (ES) ES.setSwitch(c.id, c.value === 'toggle' ? !ES.getSwitch(c.id) : !!c.value); break;
+            case 'selfswitch': if (ES) ES.setSelf(ctx.mapName, ctx.evId, c.letter || 'A', c.value === 'toggle' ? !ES.getSelf(ctx.mapName, ctx.evId, c.letter || 'A') : !!c.value); break;
+            case 'variable': {
+                if (!ES) break;
+                var cur = ES.getVar(c.id), val = c.value | 0;
+                ES.setVar(c.id, c.op === '+' ? cur + val : c.op === '-' ? cur - val : c.op === '*' ? cur * val : val);
+                break;
+            }
+            case 'wait':   await _wait((c.frames || 30) * 16); break;
+            case 'se':     if (window.GameAudio && GameAudio.playSE) GameAudio.playSE(c.name); break;
+            case 'script': _runScript(c.code || '', ctx); break;
+            case 'transfer': ctx.exited = true; await transitionToEventTransfer(c); break;
+            case 'exit':   ctx.exited = true; break;
+        }
+    }
+    async function runEvent(ev) {
+        if (!ev || _transitioning || _eventRunning || !ev.commands || !ev.commands.length) return;
+        _eventRunning = true;
+        var ctx = { mapName: (GameMap.current && GameMap.current.name) || '', evId: ev.id, event: ev, exited: false };
+        try { await runCmdList(ev.commands, ctx); }
+        catch (e) { console.warn('[Event] error', e); }
+        finally { _eventRunning = false; }
     }
 
     async function transitionToConnection(connInfo) {
@@ -374,7 +441,7 @@
         // Movement
         // justPressed bypasses the cooldown for immediate tap-to-move response.
         // state (held) fires again once the cooldown expires for smooth walking.
-        if (!_transitioning) {
+        if (!_transitioning && !_eventRunning) {
             const elapsed = timestamp - lastMoveTime;
             const inp = GameInput.state;
             const anyJp = jp.up || jp.down || jp.left || jp.right;

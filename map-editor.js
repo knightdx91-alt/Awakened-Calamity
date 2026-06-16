@@ -1130,57 +1130,163 @@
     renderEventList();
   }
 
-  // Command list (RPG Maker's event contents) — Transfer Player + Show Text.
+  // ── Event command list (RPG-Maker contents) — full Phase A command set ──
   function mapNameList() {
     var names = Object.keys(treeModel || {});
     if (!names.length && $('mapName')) names = [$('mapName').value];
     return names.sort();
   }
+  var CMD_TYPES = [
+    ['text', '💬 Show Text'], ['choice', '❓ Show Choices'], ['conditional', '◇ Conditional Branch'],
+    ['switch', '🔘 Control Switch'], ['selfswitch', '🔲 Control Self-Switch'], ['variable', '🔢 Control Variable'],
+    ['transfer', '◈ Transfer Player'], ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'], ['exit', '⛔ Exit Event']
+  ];
+  function newCmd(type) {
+    switch (type) {
+      case 'text': return { type: 'text', text: '' };
+      case 'choice': return { type: 'choice', prompt: '', options: [{ label: 'Yes', then: [] }, { label: 'No', then: [] }] };
+      case 'conditional': return { type: 'conditional', cond: { kind: 'switch', id: '1', value: true }, then: [], else: [] };
+      case 'switch': return { type: 'switch', id: '1', value: true };
+      case 'selfswitch': return { type: 'selfswitch', letter: 'A', value: true };
+      case 'variable': return { type: 'variable', id: '1', op: '=', value: 0 };
+      case 'transfer': return { type: 'transfer', map: mapNameList()[0] || '', x: 0, y: 0, dir: 'retain' };
+      case 'wait': return { type: 'wait', frames: 30 };
+      case 'se': return { type: 'se', name: '' };
+      case 'script': return { type: 'script', code: '' };
+      case 'exit': return { type: 'exit' };
+    }
+    return { type: type };
+  }
+  function el(tag, css, html) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (html != null) e.innerHTML = html; return e; }
+  function lbl(t) { return '<label class="lbl">' + t + '</label>'; }
+  function boolSel(val) {
+    return '<select class="cBool"><option value="true">ON</option><option value="false">OFF</option><option value="toggle">Toggle</option></select>';
+  }
   function renderEventCommands(ev) {
     if (!ev.commands) ev.commands = [];
-    var host = document.createElement('div'); host.id = 'evCmds'; host.style.marginTop = '7px';
-    var head = document.createElement('div');
-    head.innerHTML = '<strong style="font-size:10px;color:#2b4a7a;">CONTENTS</strong>';
-    host.appendChild(head);
-    ev.commands.forEach(function (cmd, ci) {
-      var box = document.createElement('div'); box.className = 'card'; box.style.cssText = 'padding:6px;margin:4px 0;';
-      if (cmd.type === 'transfer') {
-        box.innerHTML = '<div class="row"><b style="color:#2b4a7a;font-size:11px;flex:1;">◈ Transfer Player</b>' +
-          '<button class="cmdDel" title="Remove">✕</button></div>' +
-          '<div class="row"><label class="lbl">Map</label><select class="cmMap" style="flex:1;min-width:0;"></select></div>' +
-          '<div class="row"><label class="lbl">X</label><input type="number" class="cmX" value="' + (cmd.x || 0) + '" style="width:50px;">' +
-          '<label class="lbl">Y</label><input type="number" class="cmY" value="' + (cmd.y || 0) + '" style="width:50px;"></div>' +
-          '<div class="row"><label class="lbl">Facing</label><select class="cmDir">' +
-          '<option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select>' +
-          '<button class="cmPick" title="Pick X,Y on a map">📍 Pick…</button></div>';
-        var msel = box.querySelector('.cmMap');
-        mapNameList().forEach(function (n) { var o = document.createElement('option'); o.value = o.textContent = n; msel.appendChild(o); });
-        if (cmd.map) msel.value = cmd.map; else cmd.map = msel.value;
-        msel.addEventListener('change', function () { cmd.map = this.value; });
-        box.querySelector('.cmX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
-        box.querySelector('.cmY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
-        var dsel = box.querySelector('.cmDir'); dsel.value = cmd.dir || 'retain';
-        dsel.addEventListener('change', function () { cmd.dir = this.value; });
-        box.querySelector('.cmPick').addEventListener('click', function () { pickDestination(cmd, ev); });
-      } else if (cmd.type === 'text') {
-        box.innerHTML = '<div class="row"><b style="color:#2b4a7a;font-size:11px;flex:1;">💬 Show Text</b>' +
-          '<button class="cmdDel" title="Remove">✕</button></div>' +
-          '<textarea class="cmText" rows="2" style="width:100%;box-sizing:border-box;">' + (cmd.text || '') + '</textarea>';
-        box.querySelector('.cmText').addEventListener('change', function () { cmd.text = this.value; });
-      }
-      box.querySelector('.cmdDel').addEventListener('click', function () { ev.commands.splice(ci, 1); renderEventPanel(); });
-      host.appendChild(box);
-    });
-    var add = document.createElement('div'); add.className = 'row'; add.style.marginTop = '4px';
-    add.innerHTML = '<label class="lbl">Add</label>' +
-      '<button id="addTransfer">◈ Transfer Player</button><button id="addText">💬 Show Text</button>';
-    host.appendChild(add);
+    var host = el('div', 'margin-top:7px;', '<strong style="font-size:10px;color:#2b4a7a;">CONTENTS</strong>');
+    host.id = 'evCmds';
+    renderCmdList(ev.commands, host, 0, ev);
     $('eventProps').appendChild(host);
-    $('addTransfer').addEventListener('click', function () {
-      ev.commands.push({ type: 'transfer', map: mapNameList()[0] || '', x: 0, y: 0, dir: 'retain' });
-      if (!ev.trigger) ev.trigger = 'action'; renderEventPanel();
+  }
+  function renderCmdList(list, container, depth, ev) {
+    var wrap = el('div', depth > 0 ? 'border-left:2px solid var(--accent2);margin:2px 0 2px 6px;padding-left:6px;' : '');
+    list.forEach(function (cmd, ci) {
+      var card = el('div', 'background:#fafafa;border:1px solid var(--line2);border-radius:4px;padding:5px;margin:4px 0;');
+      renderCmdEditor(cmd, card, list, ci, ev, depth);
+      wrap.appendChild(card);
     });
-    $('addText').addEventListener('click', function () { ev.commands.push({ type: 'text', text: '' }); renderEventPanel(); });
+    var add = el('div', 'margin:3px 0;');
+    var sel = el('select'); sel.style.fontSize = '11px';
+    sel.appendChild(el('option', null, '+ Add command…'));
+    CMD_TYPES.forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
+    sel.addEventListener('change', function () {
+      if (!this.value) return;
+      list.push(newCmd(this.value));
+      if (this.value === 'transfer' && !ev.trigger) ev.trigger = 'action';
+      renderEventPanel();
+    });
+    add.appendChild(sel); wrap.appendChild(add);
+    container.appendChild(wrap);
+  }
+  function renderCmdEditor(cmd, card, list, ci, ev, depth) {
+    var label = (CMD_TYPES.filter(function (t) { return t[0] === cmd.type; })[0] || ['', cmd.type])[1];
+    var head = el('div', 'display:flex;align-items:center;gap:6px;',
+      '<b style="color:#2b4a7a;font-size:11px;flex:1;">' + label + '</b><button class="cmdDel" title="Remove">✕</button>');
+    card.appendChild(head);
+    head.querySelector('.cmdDel').addEventListener('click', function () { list.splice(ci, 1); renderEventPanel(); });
+    var body = el('div'); card.appendChild(body);
+
+    if (cmd.type === 'text' || cmd.type === 'script') {
+      var ta = el('textarea'); ta.rows = 2; ta.style.cssText = 'width:100%;box-sizing:border-box;font-family:' + (cmd.type === 'script' ? 'monospace' : 'inherit') + ';';
+      ta.value = cmd.type === 'text' ? (cmd.text || '') : (cmd.code || '');
+      if (cmd.type === 'script') ta.placeholder = "$.setSwitch('1',true); $.say('hi')";
+      ta.addEventListener('change', function () { if (cmd.type === 'text') cmd.text = this.value; else cmd.code = this.value; });
+      body.appendChild(ta);
+    } else if (cmd.type === 'switch' || cmd.type === 'variable' || cmd.type === 'selfswitch') {
+      var row = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      if (cmd.type === 'selfswitch') {
+        row.innerHTML = lbl('Self-SW') + '<select class="cLetter"><option>A</option><option>B</option><option>C</option><option>D</option></select>' + boolSel();
+        row.querySelector('.cLetter').value = cmd.letter || 'A';
+        row.querySelector('.cLetter').addEventListener('change', function () { cmd.letter = this.value; });
+      } else if (cmd.type === 'switch') {
+        row.innerHTML = lbl('Switch #') + '<input type="text" class="cId" value="' + (cmd.id || '1') + '" style="width:54px;">' + boolSel();
+        row.querySelector('.cId').addEventListener('change', function () { cmd.id = this.value; });
+      } else {
+        row.innerHTML = lbl('Var #') + '<input type="text" class="cId" value="' + (cmd.id || '1') + '" style="width:46px;">' +
+          '<select class="cOp"><option value="=">=</option><option value="+">+=</option><option value="-">-=</option><option value="*">*=</option></select>' +
+          '<input type="number" class="cVal" value="' + (cmd.value | 0) + '" style="width:56px;">';
+        row.querySelector('.cId').addEventListener('change', function () { cmd.id = this.value; });
+        row.querySelector('.cOp').value = cmd.op || '='; row.querySelector('.cOp').addEventListener('change', function () { cmd.op = this.value; });
+        row.querySelector('.cVal').addEventListener('change', function () { cmd.value = parseInt(this.value, 10) || 0; });
+      }
+      var bs = row.querySelector('.cBool');
+      if (bs) { bs.value = cmd.value === 'toggle' ? 'toggle' : (cmd.value ? 'true' : 'false'); bs.addEventListener('change', function () { cmd.value = this.value === 'toggle' ? 'toggle' : this.value === 'true'; }); }
+      body.appendChild(row);
+    } else if (cmd.type === 'wait') {
+      body.innerHTML = '<div class="row">' + lbl('Frames') + '<input type="number" class="cF" value="' + (cmd.frames || 30) + '" style="width:60px;"></div>';
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'se') {
+      body.innerHTML = '<div class="row">' + lbl('SE name') + '<input type="text" class="cN" value="' + (cmd.name || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cN').addEventListener('change', function () { cmd.name = this.value; });
+    } else if (cmd.type === 'transfer') {
+      body.innerHTML =
+        '<div class="row">' + lbl('Map') + '<select class="cmMap" style="flex:1;min-width:0;"></select></div>' +
+        '<div class="row">' + lbl('X') + '<input type="number" class="cmX" value="' + (cmd.x || 0) + '" style="width:50px;">' + lbl('Y') + '<input type="number" class="cmY" value="' + (cmd.y || 0) + '" style="width:50px;"></div>' +
+        '<div class="row">' + lbl('Facing') + '<select class="cmDir"><option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select>' +
+        '<button class="cmPick" title="Pick X,Y on the current map">📍 Pick…</button></div>';
+      var msel = body.querySelector('.cmMap');
+      mapNameList().forEach(function (n) { var o = el('option', null, n); o.value = n; msel.appendChild(o); });
+      if (cmd.map) msel.value = cmd.map; else cmd.map = msel.value;
+      msel.addEventListener('change', function () { cmd.map = this.value; });
+      body.querySelector('.cmX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+      body.querySelector('.cmY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+      var dsel = body.querySelector('.cmDir'); dsel.value = cmd.dir || 'retain';
+      dsel.addEventListener('change', function () { cmd.dir = this.value; });
+      body.querySelector('.cmPick').addEventListener('click', function () { pickDestination(cmd, ev); });
+    } else if (cmd.type === 'conditional') {
+      if (!cmd.cond) cmd.cond = { kind: 'switch', id: '1', value: true };
+      var cr = el('div', 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;');
+      cr.innerHTML = lbl('If') +
+        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option></select>' +
+        '<span class="cParams"></span>';
+      cr.querySelector('.cKind').value = cmd.cond.kind;
+      cr.querySelector('.cKind').addEventListener('change', function () { cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true }; renderEventPanel(); });
+      var cp = cr.querySelector('.cParams');
+      if (cmd.cond.kind === 'switch') {
+        cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:42px;"> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
+        cp.querySelector('.kId').addEventListener('change', function () { cmd.cond.id = this.value; });
+        cp.querySelector('.kV').value = cmd.cond.value === false ? 'false' : 'true'; cp.querySelector('.kV').addEventListener('change', function () { cmd.cond.value = this.value === 'true'; });
+      } else if (cmd.cond.kind === 'selfswitch') {
+        cp.innerHTML = '<select class="kL"><option>A</option><option>B</option><option>C</option><option>D</option></select> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
+        cp.querySelector('.kL').value = cmd.cond.letter || 'A'; cp.querySelector('.kL').addEventListener('change', function () { cmd.cond.letter = this.value; });
+        cp.querySelector('.kV').value = cmd.cond.value === false ? 'false' : 'true'; cp.querySelector('.kV').addEventListener('change', function () { cmd.cond.value = this.value === 'true'; });
+      } else {
+        cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:36px;"> <select class="kOp"><option>==</option><option>&gt;=</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
+        cp.querySelector('.kId').addEventListener('change', function () { cmd.cond.id = this.value; });
+        var ko = cp.querySelector('.kOp'); ko.value = cmd.cond.op || '=='; ko.addEventListener('change', function () { cmd.cond.op = this.value; });
+        cp.querySelector('.kVal').addEventListener('change', function () { cmd.cond.value = parseInt(this.value, 10) || 0; });
+      }
+      body.appendChild(cr);
+      body.appendChild(el('div', 'font-size:10px;color:#2b8a2b;margin-top:3px;', 'THEN'));
+      renderCmdList(cmd.then = cmd.then || [], body, depth + 1, ev);
+      body.appendChild(el('div', 'font-size:10px;color:#8a2b2b;margin-top:3px;', 'ELSE'));
+      renderCmdList(cmd.else = cmd.else || [], body, depth + 1, ev);
+    } else if (cmd.type === 'choice') {
+      body.innerHTML = '<div class="row">' + lbl('Prompt') + '<input type="text" class="cP" value="' + (cmd.prompt || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.prompt = this.value; });
+      (cmd.options = cmd.options || []).forEach(function (opt, oi) {
+        var ob = el('div', 'margin:3px 0;border-top:1px dashed var(--line2);padding-top:3px;');
+        ob.innerHTML = '<div class="row"><input type="text" class="oL" value="' + (opt.label || '') + '" style="flex:1;min-width:0;" placeholder="choice label"><button class="oDel">✕</button></div>';
+        ob.querySelector('.oL').addEventListener('change', function () { opt.label = this.value; });
+        ob.querySelector('.oDel').addEventListener('click', function () { cmd.options.splice(oi, 1); renderEventPanel(); });
+        renderCmdList(opt.then = opt.then || [], ob, depth + 1, ev);
+        body.appendChild(ob);
+      });
+      var addOpt = el('button', 'font-size:11px;', '+ choice');
+      addOpt.addEventListener('click', function () { cmd.options.push({ label: 'Option', then: [] }); renderEventPanel(); });
+      body.appendChild(addOpt);
+    }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
   function pickDestination(cmd, ev) {
