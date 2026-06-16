@@ -86,7 +86,7 @@ file/format convention, and **how it maps to our engine**.
 | File | Size | What / VX Ace use |
 |------|------|-------------------|
 | `Window.png` | 128×128 | **Windowskin** — the 9-slice message/menu frame + cursor + arrows + tone. *Database ▸ System ▸ Window*. |
-| `IconSet.png` | 384×936 | **All item/skill/weapon/state icons**, 32×32 each in a 16-wide grid. *Everywhere an icon index is set.* |
+| `IconSet.png` | 384×936 | **All item/skill/weapon/state icons**, 24×24 each in a 16-wide grid (624 icons). *Everywhere an icon index is set.* |
 | `Balloon.png` | 256×320 | **Balloon icons** (!,?,♪,…) for *Show Balloon Icon* over events. |
 | `BattleStart.png` | 544×416 | Battle-transition flash image. |
 | `GameOver.png` | 544×416 | The **Game Over** screen. *Database ▸ System*. |
