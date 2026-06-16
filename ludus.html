@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ludus — Awakened Calamity</title>
+<style>
+  :root { --warm:#d9c4a3; --cold:#5ac8ff; --bg:#0b0f14; --panel:#161c25; --ink:#e7eef7; --muted:#8fa3bb; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid #223; }
+  header h1 { margin:0; font-size:20px; letter-spacing:1px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .wrap { display:flex; gap:20px; padding:18px; flex-wrap:wrap; align-items:flex-start; }
+  .boardwrap { flex:1 1 640px; min-width:320px; }
+  canvas#board { width:100%; height:auto; max-width:760px; image-rendering:auto;
+    border:1px solid #2a3848; border-radius:8px; background:#11161d; }
+  .panel { flex:0 0 280px; background:var(--panel); border:1px solid #2a3848;
+    border-radius:8px; padding:14px; }
+  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--cold);
+    margin:0 0 8px; }
+  .panel section { margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #223; }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  select, input, button { font:inherit; }
+  select, input { width:100%; padding:7px 8px; background:#0e141b; color:var(--ink);
+    border:1px solid #2a3848; border-radius:6px; }
+  button { width:100%; padding:9px; margin-top:8px; cursor:pointer; border-radius:6px;
+    border:1px solid #2a3848; background:#22303f; color:var(--ink); }
+  button:hover { background:#2c3e52; }
+  button.primary { background:#2b5a7a; border-color:#3a6f96; }
+  button.primary:hover { background:#356d93; }
+  #status { font-size:13px; color:var(--warm); min-height:18px; margin-top:6px; }
+  #roomBox { display:none; background:#0e141b; border:1px solid #2a3848; border-radius:6px;
+    padding:8px; font-size:13px; }
+  #roomCode { font-size:20px; letter-spacing:3px; color:var(--cold); font-family:monospace; }
+  .legend { font-size:12px; color:var(--muted); line-height:1.7; }
+  .legend b { color:var(--ink); }
+  a { color:var(--cold); }
+</style>
+</head>
+<body>
+<header>
+  <h1>LUDUS</h1>
+  <p>The Aleran war-game — 11×11 ground board + a 5×5 sky board over its centre. Capture the First Lord (★).</p>
+</header>
+
+<div class="wrap">
+  <div class="boardwrap">
+    <canvas id="board"></canvas>
+    <div id="status">Loading…</div>
+  </div>
+
+  <div class="panel">
+    <section>
+      <h2>Play vs Bot</h2>
+      <label for="playAs">Play as</label>
+      <select id="playAs"><option value="white">White (moves first)</option><option value="black">Black</option></select>
+      <label for="difficulty">Difficulty</label>
+      <select id="difficulty">
+        <option value="easy">Easy — random</option>
+        <option value="medium" selected>Medium — greedy</option>
+        <option value="hard">Hard — lookahead</option>
+      </select>
+      <button id="btnBot" class="primary">New Bot Game</button>
+      <button id="btnHotseat">Local Hotseat (2 players)</button>
+      <button id="btnFlip" data-p="white">Flip Board</button>
+    </section>
+
+    <section>
+      <h2>Online (Firebase)</h2>
+      <button id="btnCreate" class="primary">Create Room</button>
+      <label for="joinCode">Join with code</label>
+      <input id="joinCode" maxlength="5" placeholder="ABCDE" />
+      <button id="btnJoin">Join Room</button>
+      <div id="roomBox">Room <span id="roomCode">—</span><br>You are <b id="roomColor">—</b>. Share the code with your opponent.</div>
+    </section>
+
+    <section style="border-bottom:none">
+      <h2>Pieces</h2>
+      <div class="legend">
+        <b>L</b> Legionnaire · <b>V</b> Veteran · <b>F</b> Knight Flora ·
+        <b>T</b> Knight Terra · <b>I</b> Knight Ignis · <b>A</b> Knight Aeris ·
+        <b>H</b> High Lord · <b>★</b> First Lord.<br>
+        Cyan-ringed pieces are <b>aerial</b> (can fly to the sky board).
+        Shaded centre squares lie under the sky board.
+        See <a href="LUDUS.md">LUDUS.md</a> for full rules.
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="ludus/firebase-config.js"></script>
+<script src="ludus/engine.js"></script>
+<script src="ludus/ai.js"></script>
+<script src="ludus/render.js"></script>
+<script src="ludus/net.js"></script>
+<script src="ludus/main.js"></script>
+</body>
+</html>
