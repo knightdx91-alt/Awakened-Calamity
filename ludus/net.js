@@ -102,16 +102,19 @@
   // Both seats filled?
   function isFull(players) { return !!(players && players.white && players.black); }
 
-  // Cancel/leave a room. If we're the only one left, delete the whole room.
+  // Cancel/leave a room. If we're the last one out, delete the whole room
+  // (so abandoned rooms — including their state — don't linger in the DB).
   function leaveRoom(ref) {
     if (!ref) return Promise.resolve();
     var me = clientId();
-    return ref.child('players').transaction(function (players) {
-      if (players === null) return players;
+    return ref.transaction(function (room) {
+      if (room === null) return room;
+      var players = room.players || {};
       if (players.white === me) players.white = null;
       if (players.black === me) players.black = null;
-      if (!players.white && !players.black) return null; // empties room -> removed
-      return players;
+      if (!players.white && !players.black) return null; // empty -> remove whole room
+      room.players = players;
+      return room;
     }).then(function () {}).catch(function () {});
   }
 
