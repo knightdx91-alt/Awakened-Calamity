@@ -1,61 +1,110 @@
-/* ludus/main.js — menu + game controller wiring engine/ai/render/net together.
- * Global: window.LudusGame (mostly self-starting on DOMContentLoaded).
+/* ludus/main.js — screen flow + game controller.
+ * Screens: title (opponent select) -> side select -> game ; or title -> online.
+ * Difficulty lives in in-game Settings and restarts the game (with confirm).
  */
 (function () {
   'use strict';
   var E = window.Ludus, AI = window.LudusAI, UI = window.LudusUI, NET = window.LudusNet;
 
-  var ui, state, mode = null;          // 'bot' | 'hotseat' | 'online'
-  var humanColors = {};                // colors the local player controls
-  var aiDifficulty = 'medium', aiColor = 'black';
+  // Opponents from across the Realm. Difficulty maps to the AI strength.
+  var OPPONENTS = [
+    { id: 'max', name: 'Antillar Maximus', faction: 'Alera', difficulty: 'easy', blurb: 'Brash and fearless — he plays on instinct, not patience.' },
+    { id: 'ehren', name: 'Ehren ex Cursori', faction: 'Alera', difficulty: 'medium', blurb: 'A Cursor\'s careful, clever calculation. Misses little.' },
+    { id: 'kitai', name: 'Kitai', faction: 'Alera', difficulty: 'medium', blurb: 'Marat-sharp and endlessly adaptable to your plans.' },
+    { id: 'tavi', name: 'Tavi', faction: 'Alera', difficulty: 'hard', blurb: 'The finest Ludus mind in the Realm. He sees the endgame from the first move.' },
+    { id: 'nasaug', name: 'Nasaug', faction: 'Canim', difficulty: 'medium', blurb: 'A Canim battlemaster who never wastes a move.' },
+    { id: 'varg', name: 'Warmaster Varg', faction: 'Canim', difficulty: 'hard', blurb: 'Patient, disciplined, and utterly relentless once committed.' },
+    { id: 'queen', name: 'The Vord Queen', faction: 'Vord', difficulty: 'hard', blurb: 'Cold, inhuman calculation. She studies you as you play.' }
+  ];
+  var FACTIONS = ['Alera', 'Canim', 'Vord'];
+  var DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+  var ui, state, mode = null;            // 'bot' | 'hotseat' | 'online'
+  var humanColors = {};
+  var difficulty = 'medium', aiColor = 'black';
+  var currentOpponent = null, currentSide = 'white';
   var net = null, unsub = null, applying = false;
 
   function $(id) { return document.getElementById(id); }
+  function setStatus(m) { $('status').textContent = m; }
 
-  function setStatus(msg) { $('status').textContent = msg; }
+  function showScreen(id) {
+    var s = document.querySelectorAll('.screen');
+    for (var i = 0; i < s.length; i++) s[i].classList.toggle('active', s[i].id === id);
+  }
 
-  function newGame(opts) {
+  // ---- title: build opponent cards ------------------------------------
+  function buildOpponents() {
+    var host = $('oppGroups'); host.innerHTML = '';
+    FACTIONS.forEach(function (fac) {
+      var inFac = OPPONENTS.filter(function (o) { return o.faction === fac; });
+      if (!inFac.length) return;
+      var g = document.createElement('div'); g.className = 'opp-group';
+      g.innerHTML = '<h3>' + fac + '</h3>';
+      var grid = document.createElement('div'); grid.className = 'opp-grid';
+      inFac.forEach(function (o) {
+        var b = document.createElement('button'); b.className = 'opp-card';
+        b.innerHTML = '<div class="nm">' + o.name + '</div>' +
+          '<div class="meta diff-' + o.difficulty + '">' + DIFF_LABEL[o.difficulty] + '</div>' +
+          '<div class="bl">' + o.blurb + '</div>';
+        b.onclick = function () { chooseOpponent(o); };
+        grid.appendChild(b);
+      });
+      g.appendChild(grid); host.appendChild(g);
+    });
+  }
+
+  function chooseOpponent(o) {
+    currentOpponent = o; difficulty = o.difficulty;
+    $('sideOpp').innerHTML = 'Facing <b>' + o.name + '</b> · ' + DIFF_LABEL[o.difficulty] + ' difficulty.';
+    showScreen('screenSide');
+  }
+
+  // ---- start a local (bot/hotseat) game --------------------------------
+  function startBot(side) {
+    currentSide = side;
+    aiColor = side === 'white' ? 'black' : 'white';
+    var hc = {}; hc[side] = true;
+    beginLocal('bot', hc, side, currentOpponent ? 'vs ' + currentOpponent.name + ' · ' + DIFF_LABEL[difficulty] : 'vs Bot');
+  }
+  function startHotseat() {
+    beginLocal('hotseat', { white: true, black: true }, 'white', 'Pass & Play');
+  }
+  function beginLocal(m, hc, perspective, label) {
     if (unsub) { unsub(); unsub = null; }
-    net = null;
-    mode = opts.mode;
+    net = null; mode = m; humanColors = hc;
     state = E.initialState();
-    humanColors = opts.humanColors;
-    if (opts.aiColor) aiColor = opts.aiColor;
-    if (opts.difficulty) aiDifficulty = opts.difficulty;
-    ui.setPerspective(opts.perspective || 'white');
-    ui.clearSelection();
+    $('oppLabel').innerHTML = label;
     $('roomBox').style.display = 'none';
+    $('btnFlip').dataset.p = perspective;
+    ui.setPerspective(perspective);
+    ui.clearSelection();
+    showScreen('screenGame');
     loop();
   }
 
   function loop() {
     ui.render(state);
     if (state.winner) {
-      setStatus(state.winner.toUpperCase() + ' wins — the First Lord has fallen.');
+      var youWin = humanColors[state.winner];
+      setStatus((mode === 'hotseat' ? state.winner.toUpperCase() + ' wins' : (youWin ? 'Victory — you' : 'Defeat — your foe') + ' captured the First Lord') + '.');
       ui.setInteractive(false);
       return;
     }
     var humanTurn = !!humanColors[state.turn];
-    ui.setInteractive(humanTurn && (mode !== 'online' || true));
-    if (mode === 'online') {
-      setStatus(humanTurn ? 'Your move (' + state.turn + ').' : 'Waiting for ' + state.turn + '…');
-      return; // remote turns arrive via onState
-    }
+    ui.setInteractive(humanTurn);
+    if (mode === 'online') { setStatus(humanTurn ? 'Your move (' + state.turn + ').' : 'Waiting for ' + state.turn + '…'); return; }
     if (humanTurn) { setStatus(state.turn.toUpperCase() + ' to move.'); return; }
-    // AI turn (bot mode)
-    setStatus(state.turn.toUpperCase() + ' (' + aiDifficulty + ' AI) is thinking…');
-    ui.setInteractive(false);
+    setStatus((currentOpponent ? currentOpponent.name : state.turn.toUpperCase()) + ' is thinking…');
     setTimeout(function () {
-      var a = AI.chooseAction(state, state.turn, aiDifficulty);
-      if (a) { state = E.applyAction(state, a); }
+      var a = AI.chooseAction(state, state.turn, difficulty);
+      if (a) state = E.applyAction(state, a);
       loop();
-    }, 120);
+    }, 140);
   }
 
-  // committed by a human via the board
   function onAction(action) {
-    if (state.winner) return;
-    if (!humanColors[state.turn]) return;
+    if (state.winner || !humanColors[state.turn]) return;
     state = E.applyAction(state, action);
     if (mode === 'online' && net) { applying = true; NET.pushState(net.ref, state).finally(function () { applying = false; }); }
     loop();
@@ -63,58 +112,88 @@
 
   // ---- online ----------------------------------------------------------
   function startOnline(promise) {
-    setStatus('Connecting…');
+    setStatus('Connecting…'); showScreen('screenGame'); $('oppLabel').textContent = 'Online match';
     promise.then(function (room) {
-      net = room; mode = 'online';
+      net = room; mode = 'online'; currentOpponent = null;
       humanColors = {}; humanColors[room.color] = true;
-      ui.setPerspective(room.color);
+      $('oppLabel').textContent = 'Online · you are ' + room.color;
+      ui.setPerspective(room.color); $('btnFlip').dataset.p = room.color;
       $('roomBox').style.display = 'block';
-      $('roomCode').textContent = room.roomId;
-      $('roomColor').textContent = room.color;
-      unsub = NET.onState(room.ref, function (remote) {
-        if (applying) return; // ignore the echo of our own write
-        state = remote; loop();
-      });
-      setStatus('Room ' + room.roomId + ' — you are ' + room.color + '. Share the code.');
-    }).catch(function (err) { setStatus('Online error: ' + err.message); });
+      $('roomCode').textContent = room.roomId; $('roomColor').textContent = room.color;
+      unsub = NET.onState(room.ref, function (remote) { if (applying) return; state = remote; loop(); });
+      setStatus('Room ' + room.roomId + ' — share the code. You are ' + room.color + '.');
+    }).catch(function (err) { setStatus('Online error: ' + err.message); showScreen('screenOnline'); });
   }
 
-  function init() {
-    ui = UI.create({ canvas: $('board'), onAction: onAction, canSelect: function (color) { return !!humanColors[color]; } });
+  // ---- settings (difficulty w/ confirm-restart) ------------------------
+  function openSettings() {
+    $('settingsDifficulty').value = difficulty;
+    $('diffWarn').style.display = 'none';
+    $('settingsOverlay').classList.add('open');
+  }
+  function closeSettings() { $('settingsOverlay').classList.remove('open'); }
 
-    $('btnBot').onclick = function () {
-      var diff = $('difficulty').value, side = $('playAs').value;
-      var aic = side === 'white' ? 'black' : 'white';
-      var hc = {}; hc[side] = true;
-      newGame({ mode: 'bot', humanColors: hc, aiColor: aic, difficulty: diff, perspective: side });
-    };
-    $('btnHotseat').onclick = function () {
-      newGame({ mode: 'hotseat', humanColors: { white: true, black: true }, perspective: 'white' });
-    };
-    $('btnFlip').onclick = function () {
-      ui.setPerspective($('btnFlip').dataset.p === 'black' ? 'white' : 'black');
-      $('btnFlip').dataset.p = $('btnFlip').dataset.p === 'black' ? 'white' : 'black';
-    };
+  function init() {
+    ui = UI.create({ canvas: $('board'), onAction: onAction, canSelect: function (c) { return !!humanColors[c]; } });
+    buildOpponents();
+
+    // side select
+    document.querySelectorAll('#screenSide [data-side]').forEach(function (b) {
+      b.onclick = function () { startBot(b.dataset.side); };
+    });
+    $('sideBack').onclick = function () { showScreen('screenTitle'); };
+
+    // online
+    $('btnAnotherPlayer').onclick = function () { showScreen('screenOnline'); };
+    $('onlineBack').onclick = function () { showScreen('screenTitle'); };
+    $('btnPassPlay').onclick = startHotseat;
     $('btnCreate').onclick = function () {
-      if (!NET.configured()) { setStatus('Online disabled — fill in ludus/firebase-config.js first.'); return; }
+      if (!NET.configured()) { showScreen('screenOnline'); setStatus(''); alert('Online play is not configured yet (ludus/firebase-config.js).'); return; }
       startOnline(NET.createRoom(E.initialState()));
     };
     $('btnJoin').onclick = function () {
-      if (!NET.configured()) { setStatus('Online disabled — fill in ludus/firebase-config.js first.'); return; }
-      var code = $('joinCode').value; if (!code) { setStatus('Enter a room code.'); return; }
+      if (!NET.configured()) { alert('Online play is not configured yet (ludus/firebase-config.js).'); return; }
+      var code = $('joinCode').value; if (!code) { alert('Enter a room code.'); return; }
       startOnline(NET.joinRoom(code));
     };
 
-    if (!NET.configured()) {
-      $('btnCreate').title = $('btnJoin').title = 'Configure ludus/firebase-config.js to enable online play';
-    }
+    // game-screen tools
+    $('btnNewGame').onclick = function () { if (unsub) { unsub(); unsub = null; } showScreen('screenTitle'); };
+    $('btnFlip').onclick = function () {
+      var next = $('btnFlip').dataset.p === 'black' ? 'white' : 'black';
+      $('btnFlip').dataset.p = next; ui.setPerspective(next);
+    };
 
-    // default: start a bot game so the board isn't empty
-    newGame({ mode: 'bot', humanColors: { white: true }, aiColor: 'black', difficulty: 'medium', perspective: 'white' });
+    // settings modal
+    $('btnSettings').onclick = openSettings;
+    $('btnSettingsClose').onclick = closeSettings;
+    $('settingsDifficulty').onchange = function () {
+      $('diffWarn').style.display = (this.value !== difficulty) ? 'block' : 'none';
+    };
+    $('diffCancel').onclick = function () { $('settingsDifficulty').value = difficulty; $('diffWarn').style.display = 'none'; };
+    $('diffConfirm').onclick = function () {
+      difficulty = $('settingsDifficulty').value;
+      closeSettings();
+      if (mode === 'bot') startBot(currentSide); // restart with same side, new difficulty
+    };
+
+    // rules modal
+    $('btnRules').onclick = function () { $('rulesOverlay').classList.add('open'); };
+    $('btnRulesClose').onclick = function () { $('rulesOverlay').classList.remove('open'); };
+
+    // overlay backdrop + Esc close
+    document.querySelectorAll('.overlay').forEach(function (ov) {
+      ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('open'); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(function (o) { o.classList.remove('open'); });
+    });
+
+    if (!NET.configured()) $('btnCreate').title = $('btnJoin').title = 'Configure ludus/firebase-config.js to enable online play';
+
+    showScreen('screenTitle');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-
-  window.LudusGame = { newGame: newGame };
 })();
