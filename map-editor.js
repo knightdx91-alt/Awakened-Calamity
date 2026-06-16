@@ -2580,8 +2580,20 @@
   var _spriteIndex = null, _spriteCache = {}, _selectedSprite = null;
   function loadSpriteIndex() {
     if (_spriteIndex) return Promise.resolve(_spriteIndex);
-    return fetch('data/sprites/xp_index.json').then(function (r) { return r.json(); })
-      .then(function (d) { _spriteIndex = d; return d; });
+    // Merge every available sprite set (RTP first, then XP) so the picker shows
+    // all charsets. Each entry's `file` carries its own subdir, so they coexist.
+    var sets = ['rtp_index.json', 'xp_index.json'];
+    return Promise.all(sets.map(function (f) {
+      return fetch('data/sprites/' + f).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    })).then(function (parts) {
+      var sprites = [], cats = {};
+      parts.filter(Boolean).forEach(function (d) {
+        (d.sprites || []).forEach(function (s) { sprites.push(s); });
+        (d.categories || []).forEach(function (c) { cats[c] = 1; });
+      });
+      _spriteIndex = { categories: Object.keys(cats).sort(), sprites: sprites };
+      return _spriteIndex;
+    });
   }
   function spriteImg(file) {
     if (_spriteCache[file]) return _spriteCache[file];
