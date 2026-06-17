@@ -86,13 +86,42 @@ ROOF_BLOCKS = {"orange": (0, 0), "brown": (1, 0), "green": (2, 0), "blue": (3, 0
 WALL_BLOCKS = {"stone": (0, 1), "brick": (1, 1), "block": (2, 1),
                "plank": (0, 2), "log": (1, 2), "thatch": (2, 2), "white": (5, 2)}
 
-PACK = []   # (source_sheet, source_index, name)
-for col, blk in ROOF_BLOCKS.items():
-    for q, t in zip(("tl", "tr", "bl", "br"), a3_block(*blk)):
-        PACK.append(("rtp_outside_a3", t, f"roof_{col}_{q}"))
-for mat, blk in WALL_BLOCKS.items():
-    for q, t in zip(("tl", "tr", "bl", "br"), a3_block(*blk)):
-        PACK.append(("rtp_outside_a3", t, f"wall_{mat}_{q}"))
+# A3 building blocks are 2x2 TRUE autotiles: each tile carries top-cap / base /
+# left / right edges, so a raw repeat puts edges on every tile (the "missing
+# pieces" look). Compose a proper 9-slice from the block's 16px quarters instead:
+# each output tile = 4 quarters chosen so interior=edge-free fill, borders get a
+# single edge, corners get two. Quarter spec per slice = [TL,TR,BL,BR] as
+# (block_tile 0=A 1=B 2=C 3=D, qx, qy). A=top-left tile … D=bottom-right tile.
+NINE = {
+    "tl": [(0, 0, 0), (1, 0, 0), (2, 0, 0), (3, 0, 0)],
+    "t":  [(0, 1, 0), (1, 0, 0), (2, 1, 0), (3, 0, 0)],
+    "tr": [(0, 1, 0), (1, 1, 0), (2, 1, 0), (3, 1, 0)],
+    "l":  [(0, 0, 1), (1, 0, 1), (2, 0, 0), (3, 0, 0)],
+    "f":  [(0, 1, 1), (1, 0, 1), (2, 1, 0), (3, 0, 0)],
+    "r":  [(0, 1, 1), (1, 1, 1), (2, 1, 0), (3, 1, 0)],
+    "bl": [(0, 0, 1), (1, 0, 1), (2, 0, 1), (3, 0, 1)],
+    "b":  [(0, 1, 1), (1, 0, 1), (2, 1, 1), (3, 0, 1)],
+    "br": [(0, 1, 1), (1, 1, 1), (2, 1, 1), (3, 1, 1)],
+}
+
+def nineslice(sheet, block_idx):
+    """block_idx = [A,B,C,D] metatile indices in `sheet`. Returns {slice: Image}."""
+    cols = sheet.width // T
+    def tile(idx):
+        return sheet.crop(((idx % cols) * T, (idx // cols) * T,
+                           (idx % cols) * T + T, (idx // cols) * T + T))
+    A, B, C, D = [tile(i) for i in block_idx]
+    blk = [A, B, C, D]
+    dst = [(0, 0), (16, 0), (0, 16), (16, 16)]
+    out = {}
+    for name, picks in NINE.items():
+        im = Image.new("RGBA", (T, T), (0, 0, 0, 0))
+        for (ti, qx, qy), (dx, dy) in zip(picks, dst):
+            im.paste(blk[ti].crop((qx * 16, qy * 16, qx * 16 + 16, qy * 16 + 16)), (dx, dy))
+        out[name] = im
+    return out
+
+PACK = []   # raw (source_sheet, source_index, name) items; 9-slices added in builder
 # C-sheet castle parts + banners
 PACK += [("rtp_outside_c", 71, "tower_top"), ("rtp_outside_c", 87, "tower_mid"),
          ("rtp_outside_c", 103, "tower_door"), ("rtp_outside_c", 119, "tower_base"),
@@ -122,15 +151,25 @@ def build_props_sheet():
         if n not in cache:
             cache[n] = Image.open(os.path.join(TS, n + ".png")).convert("RGBA")
         return cache[n]
+    a3 = sheet("rtp_outside_a3")
+    # build the full tile list: 9-slice roofs + walls first, then raw PACK items
+    tiles = []   # list of (name, Image)
+    for col, blk in ROOF_BLOCKS.items():
+        for s, im in nineslice(a3, a3_block(*blk)).items():
+            tiles.append((f"roof_{col}_{s}", im))
+    for mat, blk in WALL_BLOCKS.items():
+        for s, im in nineslice(a3, a3_block(*blk)).items():
+            tiles.append((f"wall_{mat}_{s}", im))
+    for (sn, idx, name) in PACK:
+        s = sheet(sn); cols = s.width // T
+        tiles.append((name, s.crop(((idx % cols) * T, (idx // cols) * T,
+                                    (idx % cols) * T + T, (idx // cols) * T + T))))
     PR = 16
-    n = len(PACK); rows = (n + PR - 1) // PR
+    n = len(tiles); rows = (n + PR - 1) // PR
     out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
     gid = {}
-    for i, (sn, idx, name) in enumerate(PACK):
-        s = sheet(sn); cols = s.width // T
-        out.paste(s.crop(((idx % cols) * T, (idx // cols) * T,
-                          (idx % cols) * T + T, (idx // cols) * T + T)),
-                  ((i % PR) * T, (i // PR) * T))
+    for i, (name, im) in enumerate(tiles):
+        out.paste(im, ((i % PR) * T, (i // PR) * T))
         gid[name] = i
     out.save(os.path.join(TS, "town_props.png"))
     json.dump({"total_metatiles": n, "primary_count": n, "secondary_count": 0, "tile": T,
@@ -201,47 +240,43 @@ def dirt_path(x0, y0, x1, y1, jitter=0.0):
 ROOF_COLS = list(ROOF_BLOCKS)
 WALL_MATS = list(WALL_BLOCKS)
 
+def _grid9(prefix, x0, y0, w, h):
+    """Stamp a w x h rectangle of `prefix` 9-slice tiles (corners/edges/fill)."""
+    for j in range(h):
+        for i in range(w):
+            vy = "t" if j == 0 else ("b" if j == h - 1 else "")
+            vx = "l" if i == 0 else ("r" if i == w - 1 else "")
+            s = (vy + vx) or "f"          # tl/t/tr/l/f/r/bl/b/br
+            setp(x0 + i, y0 + j, f"{prefix}_{s}")
+
 def house(wx, wy, ww, wh, roof, wall, wall_h=2):
     """wx,wy = top-left of the WALL face; ww x wh wall footprint (solid).
-    Roof = 2 rows above the wall, overhanging 1 tile each side. Door at centre,
-    windows flanking. Returns (door_x, door_y) for path carving."""
-    wall_h = min(wall_h, wh)
-    # ---- roof: 2 rows, overhang ----
-    rx0, rx1 = wx - 1, wx + ww          # inclusive overhang
-    ry_top, ry_bot = wy - 2, wy - 1
-    rt = ROOF_BLOCKS[roof]
-    tiles = {"tl": f"roof_{roof}_tl", "tr": f"roof_{roof}_tr",
-             "bl": f"roof_{roof}_bl", "br": f"roof_{roof}_br"}
-    for x in range(rx0, rx1 + 1):
-        col = (x - rx0) % 2
-        setp(x, ry_top, tiles["tl"] if col == 0 else tiles["tr"])
-        setp(x, ry_bot, tiles["bl"] if col == 0 else tiles["br"])
-    # ---- walls ----
-    wt = {"tl": f"wall_{wall}_tl", "tr": f"wall_{wall}_tr",
-          "bl": f"wall_{wall}_bl", "br": f"wall_{wall}_br"}
-    for j in range(wh):
-        for i in range(ww):
-            x, y = wx + i, wy + j
-            top = (j == 0)
-            left = (i % 2 == 0)
-            key = ("tl" if left else "tr") if top else ("bl" if left else "br")
-            setp(x, y, wt[key])
-    # door + windows on the FRONT (bottom) row
+    Roof = 2 rows above the wall, overhanging 1 tile each side (9-slice). Door at
+    centre, windows flanking. Returns (door_x, door_y) for path carving."""
+    # ---- roof: 2 rows tall, 1-tile overhang each side, full 9-slice ----
+    rx0 = wx - 1
+    rw = ww + 2
+    rh = 2
+    ry0 = wy - rh
+    _grid9(f"roof_{roof}", rx0, ry0, rw, rh)
+    # ---- walls: full 9-slice (clean fill + edges + corners) ----
+    _grid9(f"wall_{wall}", wx, wy, ww, wh)
+    # door + windows on the FRONT (bottom) wall row, over the wall tiles
     fy = wy + wh - 1
     dxr = ww // 2
     door_x = wx + dxr
     setp(door_x, fy, "door"); events.append({"x": door_x, "y": fy})
     for wxi in (dxr - 1, dxr + 1):
-        if 0 <= wxi < ww and wxi != dxr:
+        if 0 < wxi < ww - 1 and wxi != dxr:
             setp(wx + wxi, fy, "window")
-    # second-row windows for tall walls
+    # upper-row windows for taller walls (skip the very corners)
     if wh >= 2:
-        for wxi in range(0, ww, 2):
+        for wxi in range(1, ww - 1, 2):
             if wxi != dxr:
                 setp(wx + wxi, wy, "window")
-    # chimney on the roof
+    # chimney sits on the roof ridge
     if ww >= 3:
-        setp(wx + ww - 1, ry_top, "chimney")
+        setp(wx + ww - 1, ry0, "chimney")
     return door_x, fy + 1
 
 # placed houses: (wx,wy,ww,wh,roof,wall, garden?)
@@ -279,10 +314,8 @@ def keep(x0, y0, w, h):
     for (tx, ty) in [(x0, y0), (x0 + w - 1, y0), (x0, y0 + h - 1), (x0 + w - 1, y0 + h - 1)]:
         for k, name in enumerate(["tower_top", "tower_mid", "tower_door", "tower_base"]):
             setp(tx, ty - 3 + k, name)
-    # stone curtain walls between towers (2 tall)
-    for x in range(x0 + 1, x0 + w - 1):
-        setp(x, y0 - 1, "wall_stone_tl" if x % 2 == 0 else "wall_stone_tr")
-        setp(x, y0, "wall_stone_bl" if x % 2 == 0 else "wall_stone_br")
+    # stone curtain walls between towers (2 tall, clean 9-slice)
+    _grid9("wall_stone", x0 + 1, y0 - 1, w - 2, 2)
     # inner keep building
     kx, ky, kw = x0 + 2, y0 + 1, w - 4
     house(kx, ky + 2, kw, 2, "sage", "stone", wall_h=2)
