@@ -1915,12 +1915,12 @@
       ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }, function () { return state.active === 'ground'; }],
       ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }, function () { return state.active === 'overlay'; }],
       ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }, function () { return state.active === 'upper'; }],
-      ['Event layer', 'F6', function () { setModeBtn('event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
+      ['Event layer', 'F6', function () { setModeBtn(state.mode === 'event' ? 'map' : 'event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
       'sep',
-      ['Collision / Passage', '', function () { setModeBtn('collide'); syncModeUI(); }, function () { return state.mode === 'collide'; }],
+      ['Collision / Passage', '', function () { setModeBtn(state.mode === 'collide' ? 'map' : 'collide'); syncModeUI(); }, function () { return state.mode === 'collide'; }],
       ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }, function () { return state.mode === 'map'; }],
-      ['Region IDs', '', function () { setModeBtn('region'); syncModeUI(); }, function () { return state.mode === 'region'; }],
-      ['Shadow pen', '', function () { setModeBtn('shadow'); syncModeUI(); }, function () { return state.mode === 'shadow'; }]
+      ['Region IDs', '', function () { setModeBtn(state.mode === 'region' ? 'map' : 'region'); syncModeUI(); }, function () { return state.mode === 'region'; }],
+      ['Shadow pen', '', function () { setModeBtn(state.mode === 'shadow' ? 'map' : 'shadow'); syncModeUI(); }, function () { return state.mode === 'shadow'; }]
     ]],
     ['Draw', [
       ['Pencil', '', function () { setToolBtn('pencil'); }, function () { return state.tool === 'pencil' && !state.eraser; }],
