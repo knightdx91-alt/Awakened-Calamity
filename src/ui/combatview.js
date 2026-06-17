@@ -7,6 +7,7 @@
     'use strict';
 
     var db = null, state = null, active = false;
+    var _onEnd = null;   // optional callback fired when combat tears down
     var mode = 'idle';                  // 'beat' | 'ticking' | 'menu' | 'target' | 'over'
     var awaitingClose = false, pendingActorId = null;
     var menuSkills = [], cursor = 0;
@@ -112,6 +113,7 @@
     function start(opts) {
         if (active) return;
         opts = opts || {}; active = true;
+        _onEnd = (typeof opts.onEnd === 'function') ? opts.onEnd : null;
         if (opts.battleback) _battleback = opts.battleback;
         _playerSprite = _buildPlayerSprite();
         loadDB().then(function () {
@@ -365,6 +367,9 @@
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
         if (els.root && els.root.parentNode) els.root.parentNode.removeChild(els.root);
         els = {}; cards = {}; state = null;
+        // Notify any awaiter (e.g. an event 'battle' command) that combat is over.
+        var cb = _onEnd; _onEnd = null;
+        if (cb) try { cb(); } catch (e) {}
     }
 
     function _injectCSS() {

@@ -233,10 +233,99 @@
         } : {};
         try { (new Function('$', code)).call(null, api); } catch (e) { console.warn('[Event script]', e); }
     }
+    // Resolve a command target: 'player' | 'this' (the running event) | event id.
+    function _eventById(id) {
+        var evs = (GameMap.current && GameMap.current.events) || [];
+        for (var i = 0; i < evs.length; i++) if (evs[i].id === id) return evs[i];
+        return null;
+    }
+    function _resolveTarget(c, ctx) {
+        var t = c.target;
+        if (t == null || t === 'this') return ctx.event;
+        if (t === 'player') return player;
+        return _eventById(t | 0);
+    }
+    var _DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+    // Walk a target along a list of steps ('up'/'down'/'left'/'right'/'wait').
+    async function _moveRoute(t, steps, isPlayer) {
+        if (!t || !steps || !steps.length) return;
+        for (var i = 0; i < steps.length; i++) {
+            if (steps[i] === 'wait') { await _wait(MOVE_COOLDOWN_MS); continue; }
+            var d = _DELTA[steps[i]];
+            if (!d) continue;
+            if (isPlayer) {
+                player.direction = steps[i];
+                var nx = player.x + d[0], ny = player.y + d[1];
+                if (nx >= 0 && ny >= 0 && nx < GameMap.width && ny < GameMap.height && GameMap.isWalkable(nx, ny)) {
+                    player.prevX = player.x; player.prevY = player.y;
+                    player.x = nx; player.y = ny;
+                    player.moveStartTime = performance.now(); player.moveDuration = MOVE_COOLDOWN_MS;
+                    player.walkFrame = player.walkFrame === 1 ? 2 : 1;
+                    if (window.GameSave) GameSave.markDirty();
+                }
+            } else {
+                t.dir = steps[i];
+                var ex = t.x + d[0], ey = t.y + d[1];
+                if (ex >= 0 && ey >= 0 && ex < GameMap.width && ey < GameMap.height && GameMap.isWalkable(ex, ey)) { t.x = ex; t.y = ey; }
+            }
+            await _wait(MOVE_COOLDOWN_MS);
+        }
+        if (isPlayer) player.walkFrame = 0;
+    }
+    // Screen fade: mode 'out' (to color) or 'in' (back to clear).
+    function _fade(c) {
+        return new Promise(function (res) {
+            var ms = (((c.frames | 0) || 30)) * 16, mode = c.mode || 'out';
+            var d = document.getElementById('ac-fade');
+            if (!d) { d = document.createElement('div'); d.id = 'ac-fade'; d.style.cssText = 'position:fixed;inset:0;z-index:8000;pointer-events:none;'; document.body.appendChild(d); }
+            d.style.background = c.color || '#000';
+            d.style.transition = 'none';
+            d.style.opacity = (mode === 'out') ? '0' : '1';
+            void d.offsetWidth; // force reflow so the transition runs
+            d.style.transition = 'opacity ' + ms + 'ms linear';
+            d.style.opacity = (mode === 'out') ? '1' : '0';
+            setTimeout(res, ms);
+        });
+    }
+    // Screen shake the game canvas.
+    function _shake(c) {
+        return new Promise(function (res) {
+            var elx = document.getElementById('canvas-primary') || document.body;
+            var power = (c.power | 0) || 5, ms = (((c.frames | 0) || 30)) * 16, start = performance.now();
+            (function tick() {
+                var t = performance.now() - start;
+                if (t >= ms) { elx.style.transform = ''; res(); return; }
+                elx.style.transform = 'translateX(' + ((Math.random() * 2 - 1) * power).toFixed(1) + 'px)';
+                requestAnimationFrame(tick);
+            })();
+        });
+    }
+    // Battle processing — start a combat and resolve when it ends.
+    function _battle(c) {
+        return new Promise(function (res) {
+            if (!window.GameCombatView || !GameCombatView.start) { res(); return; }
+            var opts = { onEnd: function () { res(); } };
+            if (c.enemies && c.enemies.length) opts.enemies = c.enemies;
+            GameCombatView.start(opts);
+            if (!GameCombatView.isActive()) res(); // start refused (already active)
+        });
+    }
+
     async function runCmdList(list, ctx) {
-        for (var i = 0; i < list.length; i++) {
+        var i = 0;
+        while (i < list.length) {
             if (ctx.exited) return;
-            await runCmd(list[i], ctx);
+            var c = list[i];
+            if (c.type === 'label') { i++; continue; }
+            await runCmd(c, ctx);
+            if (ctx._jumpTo != null) {
+                var target = ctx._jumpTo; ctx._jumpTo = null;
+                var idx = -1;
+                for (var j = 0; j < list.length; j++) { if (list[j].type === 'label' && list[j].label === target) { idx = j; break; } }
+                if (idx >= 0) { i = idx + 1; continue; }
+                // label not found in this list — fall through to next command
+            }
+            i++;
         }
     }
     async function runCmd(c, ctx) {
@@ -264,6 +353,36 @@
             case 'se':     if (window.GameAudio && GameAudio.playSE) GameAudio.playSE(c.name); break;
             case 'script': _runScript(c.code || '', ctx); break;
             case 'transfer': ctx.exited = true; await transitionToEventTransfer(c); break;
+            case 'money': {
+                if (window.GameSave && GameSave.state && GameSave.state.player) {
+                    var pl = GameSave.state.player, amt = (c.amount | 0), cur = pl.money || 0;
+                    pl.money = Math.max(0, c.op === '-' ? cur - amt : c.op === '=' ? amt : cur + amt);
+                    GameSave.markDirty();
+                }
+                break;
+            }
+            case 'item': {
+                if (window.GameSave && GameSave.state && GameSave.state.inventory && c.id) {
+                    var inv = GameSave.state.inventory, pk = c.pocket || 'items';
+                    if (!inv[pk]) inv[pk] = {};
+                    var n = (c.qty | 0) || 1, q = (inv[pk][c.id] || 0) + (c.op === '-' ? -n : n);
+                    if (q <= 0) delete inv[pk][c.id]; else inv[pk][c.id] = q;
+                    GameSave.markDirty();
+                }
+                break;
+            }
+            case 'setdir': {
+                var td = _resolveTarget(c, ctx);
+                if (td) { if (td === player) player.direction = c.dir || 'down'; else td.dir = c.dir || 'down'; }
+                break;
+            }
+            case 'move':   await _moveRoute(_resolveTarget(c, ctx), c.steps || [], _resolveTarget(c, ctx) === player); break;
+            case 'fade':   await _fade(c); break;
+            case 'shake':  await _shake(c); break;
+            case 'battle': await _battle(c); break;
+            case 'jump':   ctx._jumpTo = c.label || ''; break;
+            case 'label':  break; // resolved in runCmdList
+            case 'comment': break; // author note; no-op at runtime
             case 'exit':   ctx.exited = true; break;
         }
     }

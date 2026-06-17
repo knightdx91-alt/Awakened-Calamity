@@ -451,6 +451,14 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     `GameRenderer.reloadPlayer()` so the choice shows in the overworld, plays `Fanfare1` ME.
     `gameLoop` pauses the world while `GamePlayerCreation.isActive()`. Node-stub + HTTP-200 verified;
     **not browser-verified** (no headless Chromium this session).
+  - **Event commands — 10 new RPG-Maker-style commands** added to BOTH the engine event runner
+    (`src/main.js runCmd`/`runCmdList`) and the **map editor events tab** (`map-editor.js` CMD_TYPES +
+    `newCmd` + form editors): **Move Route** (player/this/Ev#, step tokens up/down/left/right/wait,
+    wall-aware), **Set Direction**, **Change Money** (+/−/=), **Give/Take Item** (any inventory
+    pocket), **Battle Processing** (enemies `key:level`; awaits combat via new `GameCombatView`
+    `onEnd` callback), **Fade Screen** (out/in + color), **Shake Screen**, **Label** + **Jump to
+    Label** (flow control in `runCmdList`), **Comment** (no-op note). All engine-honored (no stubs).
+    Syntax-checked; core test suites still pass; **not browser-verified**.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

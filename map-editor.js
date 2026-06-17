@@ -1258,7 +1258,11 @@
   var CMD_TYPES = [
     ['text', '💬 Show Text'], ['choice', '❓ Show Choices'], ['conditional', '◇ Conditional Branch'],
     ['switch', '🔘 Control Switch'], ['selfswitch', '🔲 Control Self-Switch'], ['variable', '🔢 Control Variable'],
-    ['transfer', '◈ Transfer Player'], ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'], ['exit', '⛔ Exit Event']
+    ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
+    ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
+    ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
+    ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
+    ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
   ];
   function newCmd(type) {
     switch (type) {
@@ -1272,6 +1276,16 @@
       case 'wait': return { type: 'wait', frames: 30 };
       case 'se': return { type: 'se', name: '' };
       case 'script': return { type: 'script', code: '' };
+      case 'move': return { type: 'move', target: 'player', steps: [] };
+      case 'setdir': return { type: 'setdir', target: 'player', dir: 'down' };
+      case 'money': return { type: 'money', op: '+', amount: 100 };
+      case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
+      case 'battle': return { type: 'battle', enemies: [] };
+      case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
+      case 'shake': return { type: 'shake', power: 5, frames: 30 };
+      case 'label': return { type: 'label', label: '' };
+      case 'jump': return { type: 'jump', label: '' };
+      case 'comment': return { type: 'comment', text: '' };
       case 'exit': return { type: 'exit' };
     }
     return { type: type };
@@ -1434,6 +1448,93 @@
       var addOpt = el('button', 'font-size:11px;', '+ choice');
       addOpt.addEventListener('click', function () { cmd.options.push({ label: 'Option', then: [] }); renderEventPanel(); });
       body.appendChild(addOpt);
+    } else if (cmd.type === 'move' || cmd.type === 'setdir') {
+      var tr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      tr.innerHTML = lbl('Target') +
+        '<select class="cTgt"><option value="player">Player</option><option value="this">This event</option></select>' +
+        lbl('or Ev#') + '<input type="number" class="cTgtId" style="width:46px;" title="event id (overrides)">';
+      var tgtSel = tr.querySelector('.cTgt'), tgtId = tr.querySelector('.cTgtId');
+      if (typeof cmd.target === 'number') tgtId.value = cmd.target; else tgtSel.value = cmd.target || 'player';
+      tgtSel.addEventListener('change', function () { cmd.target = this.value; tgtId.value = ''; });
+      tgtId.addEventListener('change', function () { cmd.target = this.value === '' ? tgtSel.value : (parseInt(this.value, 10) | 0); });
+      body.appendChild(tr);
+      if (cmd.type === 'setdir') {
+        var dr = el('div', 'display:flex;gap:5px;align-items:center;margin-top:4px;');
+        dr.innerHTML = lbl('Face') + '<select class="cDir"><option>down</option><option>left</option><option>right</option><option>up</option></select>';
+        dr.querySelector('.cDir').value = cmd.dir || 'down';
+        dr.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
+        body.appendChild(dr);
+      } else {
+        var mr = el('div', 'margin-top:4px;');
+        mr.innerHTML = lbl('Steps') +
+          '<input type="text" class="cSteps" style="width:100%;box-sizing:border-box;" placeholder="up,up,left,wait,down">';
+        var stIn = mr.querySelector('.cSteps');
+        stIn.value = (cmd.steps || []).join(',');
+        stIn.addEventListener('change', function () {
+          cmd.steps = this.value.split(',').map(function (s) { return s.trim().toLowerCase(); })
+            .filter(function (s) { return ['up', 'down', 'left', 'right', 'wait'].indexOf(s) >= 0; });
+          this.value = cmd.steps.join(',');
+        });
+        mr.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'tokens: up · down · left · right · wait'));
+        body.appendChild(mr);
+      }
+    } else if (cmd.type === 'money') {
+      body.innerHTML = '<div class="row">' + lbl('Money') +
+        '<select class="cOp"><option value="+">+ gain</option><option value="-">− lose</option><option value="=">= set</option></select>' +
+        '<input type="number" class="cAmt" value="' + (cmd.amount | 0) + '" style="width:80px;"></div>';
+      body.querySelector('.cOp').value = cmd.op || '+';
+      body.querySelector('.cOp').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'item') {
+      body.innerHTML = '<div class="row">' + lbl('Pocket') +
+        '<select class="cPk"><option>items</option><option>campKits</option><option>food</option><option>tethers</option><option>tonics</option><option>materials</option><option>gear</option><option>keyItems</option></select></div>' +
+        '<div class="row">' + lbl('Item id') + '<input type="text" class="cIid" value="' + (cmd.id || '') + '" style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('') +
+        '<select class="cOp"><option value="+">+ give</option><option value="-">− take</option></select>' +
+        lbl('Qty') + '<input type="number" class="cQty" value="' + ((cmd.qty | 0) || 1) + '" style="width:56px;"></div>';
+      body.querySelector('.cPk').value = cmd.pocket || 'items';
+      body.querySelector('.cPk').addEventListener('change', function () { cmd.pocket = this.value; });
+      body.querySelector('.cIid').addEventListener('change', function () { cmd.id = this.value.trim(); });
+      body.querySelector('.cOp').value = cmd.op || '+';
+      body.querySelector('.cOp').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cQty').addEventListener('change', function () { cmd.qty = parseInt(this.value, 10) || 1; });
+    } else if (cmd.type === 'battle') {
+      var br = el('div');
+      br.innerHTML = lbl('Enemies') +
+        '<input type="text" class="cEn" style="width:100%;box-sizing:border-box;" placeholder="emberling:2, thornwolf:3">';
+      var enIn = br.querySelector('.cEn');
+      enIn.value = (cmd.enemies || []).map(function (e) { return e.key + ':' + (e.level || 2); }).join(', ');
+      enIn.addEventListener('change', function () {
+        cmd.enemies = this.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) {
+          var p = s.split(':'); return { key: p[0].trim(), level: parseInt(p[1], 10) || 2 };
+        });
+        this.value = cmd.enemies.map(function (e) { return e.key + ':' + e.level; }).join(', ');
+      });
+      br.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'key:level — blank = random test pack'));
+      body.appendChild(br);
+    } else if (cmd.type === 'fade') {
+      body.innerHTML = '<div class="row">' + lbl('Fade') +
+        '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +
+        '<div class="row">' + lbl('Color') + '<input type="color" class="cCol" value="' + (cmd.color || '#000000') + '">' +
+        lbl('Frames') + '<input type="number" class="cF" value="' + ((cmd.frames | 0) || 30) + '" style="width:56px;"></div>';
+      body.querySelector('.cMode').value = cmd.mode || 'out';
+      body.querySelector('.cMode').addEventListener('change', function () { cmd.mode = this.value; });
+      body.querySelector('.cCol').addEventListener('change', function () { cmd.color = this.value; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'shake') {
+      body.innerHTML = '<div class="row">' + lbl('Power') + '<input type="number" class="cP" value="' + ((cmd.power | 0) || 5) + '" style="width:56px;">' +
+        lbl('Frames') + '<input type="number" class="cF" value="' + ((cmd.frames | 0) || 30) + '" style="width:56px;"></div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.power = parseInt(this.value, 10) || 5; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'label' || cmd.type === 'jump') {
+      body.innerHTML = '<div class="row">' + lbl(cmd.type === 'label' ? 'Name' : 'Jump to') +
+        '<input type="text" class="cL" value="' + (cmd.label || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cL').addEventListener('change', function () { cmd.label = this.value.trim(); });
+    } else if (cmd.type === 'comment') {
+      var ca = el('textarea'); ca.rows = 2; ca.style.cssText = 'width:100%;box-sizing:border-box;color:#2b8a2b;';
+      ca.value = cmd.text || ''; ca.placeholder = 'author note (not shown in game)';
+      ca.addEventListener('change', function () { cmd.text = this.value; });
+      body.appendChild(ca);
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
