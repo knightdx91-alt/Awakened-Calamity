@@ -486,6 +486,16 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       (was a hardcoded Smith). Node-stub verified (classes fetched, chips build, no errors).
     - **Next on classes:** sync `player.class.level` with `progression.js`; attribute-point allocation;
       specializations/evolutions UI; non-combat lifestyle skill use; the STATUS menu to show class.
+  - **BASE TIER COMPLETE — 50 Basic classes** (was 20 → +30) + **54 new foundation skills** (→166
+    total). New classes span every lifestyle: combat (brawler/lancer/fencer/archer/sentinel/spellblade/
+    monk), tamer (beastmaster/falconer/rider), craft (woodwright/tailor/jeweler/mason/fletcher),
+    support (apothecary/cleric/shaman), survival (ranger/survivalist/hermit), social (performer/
+    emissary), espionage (saboteur/infiltrator), scholar (arcanist/cartographer/seer), gathering
+    (logger/farmer). Each: statProfile + 5 grantsSkills + signature (specializations/evolvesInto left
+    `[]` for the per-tier build order). New skills use the existing schema (combat power/effect ones
+    are engine-honored; craft/gather/social/etc. are data hooks). **Added `tools/validate_classes.mjs`**
+    (every grantsSkill resolves; reports per-tier counts) — 0 errors; combat/effects/progression tests
+    still pass. **Next tier: author the ~50 Advanced classes as the basics' path-gated evolutions.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
