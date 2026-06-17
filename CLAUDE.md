@@ -459,6 +459,22 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     `onEnd` callback), **Fade Screen** (out/in + color), **Shake Screen**, **Label** + **Jump to
     Label** (flow control in `runCmdList`), **Comment** (no-op note). All engine-honored (no stubs).
     Syntax-checked; core test suites still pass; **not browser-verified**.
+  - **2 more event commands:** **Change Graphic** (`setgfx` — swap a target's charset; player target
+    rewrites `ac_player_sprite` + `reloadPlayer()`) and **Spawn NPC/Monster** (`spawn` — drops a new
+    event at x,y; NPC = action+optional dialogue, Monster = touch→`battle`→auto-`despawn`). Editor
+    forms reuse the charset sprite picker via new `openSpriteModalForCmd`. Internal `despawn` removes
+    the running event.
+  - **Title / New Game / Continue + save fallback + Dawnhearth start:**
+    - **`src/ui/title.js`** (`GameTitle`) — boot title shown unless `?map=` override; **CONTINUE**
+      (only when a save exists, shows name/map/playtime) + **NEW GAME** (confirms overwrite if a save
+      exists). `gameLoop` pauses the world while title/creation active.
+    - **`main.js`**: title drives `_continueGame()` (load first non-empty slot → `_enterMap` saved
+      location) or `_newGame()` (fresh state → the Awakening → **Dawnhearth**, spiral-search a walkable
+      tile near a door, save slot 0). New `_enterMap`/`_findWalkable` helpers.
+    - **Save storage = localStorage PRIMARY + IndexedDB BACKUP, each a fallback** (`save.js`): writes
+      mirror to both; `initStorage()` (awaited at boot) restores localStorage from IndexedDB if LS was
+      cleared (or seeds IDB from LS). Added `hasAnySave()`. Node-harness verified the full
+      save→wipe-LS→restore round-trip; storage logic + all files syntax-checked. **Not browser-verified.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

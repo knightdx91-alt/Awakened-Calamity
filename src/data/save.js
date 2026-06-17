@@ -233,13 +233,63 @@
         }
     }
 
-    // --- Helper: write full save file ---
+    // --- IndexedDB backup store -------------------------------------------
+    // Saves live primarily in localStorage (synchronous, simple). We ALSO
+    // mirror them into IndexedDB so the two back each other up: if localStorage
+    // is cleared but IndexedDB survives (or vice-versa), boot restores from
+    // whichever still has data. IndexedDB writes are async and best-effort.
+    var _IDB_DB = 'ac_saves', _IDB_STORE = 'kv', _idbPromise = null;
+    function _idbOpen() {
+        if (_idbPromise) return _idbPromise;
+        _idbPromise = new Promise(function (resolve) {
+            try {
+                if (typeof indexedDB === 'undefined') { resolve(null); return; }
+                var req = indexedDB.open(_IDB_DB, 1);
+                req.onupgradeneeded = function () {
+                    var db = req.result;
+                    if (!db.objectStoreNames.contains(_IDB_STORE)) db.createObjectStore(_IDB_STORE);
+                };
+                req.onsuccess = function () { resolve(req.result); };
+                req.onerror = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+        return _idbPromise;
+    }
+    function _idbSet(key, value) {
+        return _idbOpen().then(function (db) {
+            if (!db) return;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).put(value, key);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { resolve(); };
+                } catch (e) { resolve(); }
+            });
+        });
+    }
+    function _idbGet(key) {
+        return _idbOpen().then(function (db) {
+            if (!db) return null;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readonly');
+                    var rq = tx.objectStore(_IDB_STORE).get(key);
+                    rq.onsuccess = function () { resolve(rq.result != null ? rq.result : null); };
+                    rq.onerror = function () { resolve(null); };
+                } catch (e) { resolve(null); }
+            });
+        });
+    }
+
+    // --- Helper: write full save file (localStorage + IndexedDB mirror) ----
     function _writeFile(slots) {
-        try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(slots));
-        } catch (e) {
-            console.error('[GameSave] Failed to write save file:', e);
-        }
+        var json = JSON.stringify(slots);
+        var wroteLS = false;
+        try { localStorage.setItem(SAVE_KEY, json); wroteLS = true; }
+        catch (e) { console.warn('[GameSave] localStorage write failed; relying on IndexedDB:', e); }
+        _idbSet(SAVE_KEY, json); // best-effort async mirror (also the fallback when LS is blocked)
+        return wroteLS;
     }
 
     // --- Migration stub ---
@@ -340,6 +390,33 @@
                 this.currentSlot = -1;
                 this.state = null;
             }
+        },
+
+        /**
+         * Reconcile localStorage with the IndexedDB backup at boot. If
+         * localStorage has no save but IndexedDB does, hydrate localStorage
+         * from it (and vice-versa). Async; call once before reading slots.
+         */
+        initStorage() {
+            return Promise.resolve().then(function () {
+                var lsRaw = null;
+                try { lsRaw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+                return _idbGet(SAVE_KEY).then(function (idbRaw) {
+                    // localStorage missing but IndexedDB has it → restore LS.
+                    if ((!lsRaw || lsRaw === 'null') && idbRaw) {
+                        try { localStorage.setItem(SAVE_KEY, idbRaw); } catch (e) {}
+                        return;
+                    }
+                    // localStorage has it but IndexedDB doesn't → seed the backup.
+                    if (lsRaw && !idbRaw) { _idbSet(SAVE_KEY, lsRaw); }
+                });
+            }).catch(function () {});
+        },
+
+        /** True if any of the 3 slots holds a save. */
+        hasAnySave() {
+            var slots = _readFile();
+            return slots.some(function (s) { return !!s; });
         },
 
         /** Migration stub — returns data as-is for v1. */

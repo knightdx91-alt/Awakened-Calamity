@@ -1259,6 +1259,7 @@
     ['text', '💬 Show Text'], ['choice', '❓ Show Choices'], ['conditional', '◇ Conditional Branch'],
     ['switch', '🔘 Control Switch'], ['selfswitch', '🔲 Control Self-Switch'], ['variable', '🔢 Control Variable'],
     ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
+    ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
@@ -1278,6 +1279,8 @@
       case 'script': return { type: 'script', code: '' };
       case 'move': return { type: 'move', target: 'player', steps: [] };
       case 'setdir': return { type: 'setdir', target: 'player', dir: 'down' };
+      case 'setgfx': return { type: 'setgfx', target: 'this', graphic: null };
+      case 'spawn': return { type: 'spawn', kind: 'npc', x: 0, y: 0, graphic: null, dir: 'down', text: '', enemies: [] };
       case 'money': return { type: 'money', op: '+', amount: 100 };
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
@@ -1477,6 +1480,60 @@
         });
         mr.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'tokens: up · down · left · right · wait'));
         body.appendChild(mr);
+      }
+    } else if (cmd.type === 'setgfx') {
+      var gtr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      gtr.innerHTML = lbl('Target') +
+        '<select class="cTgt"><option value="this">This event</option><option value="player">Player</option></select>' +
+        lbl('or Ev#') + '<input type="number" class="cTgtId" style="width:46px;">';
+      var gtSel = gtr.querySelector('.cTgt'), gtId = gtr.querySelector('.cTgtId');
+      if (typeof cmd.target === 'number') gtId.value = cmd.target; else gtSel.value = cmd.target || 'this';
+      gtSel.addEventListener('change', function () { cmd.target = this.value; gtId.value = ''; });
+      gtId.addEventListener('change', function () { cmd.target = this.value === '' ? gtSel.value : (parseInt(this.value, 10) | 0); });
+      body.appendChild(gtr);
+      var gr2 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
+      gr2.innerHTML = '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr2.querySelector('.cGfxPick').addEventListener('click', function () {
+        openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
+      });
+      body.appendChild(gr2);
+    } else if (cmd.type === 'spawn') {
+      var kr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      kr.innerHTML = lbl('Kind') +
+        '<select class="cKind"><option value="npc">NPC</option><option value="monster">Monster</option></select>' +
+        lbl('X') + '<input type="number" class="cX" value="' + (cmd.x | 0) + '" style="width:48px;">' +
+        lbl('Y') + '<input type="number" class="cY" value="' + (cmd.y | 0) + '" style="width:48px;">' +
+        lbl('Face') + '<select class="cDir"><option>down</option><option>left</option><option>right</option><option>up</option></select>';
+      kr.querySelector('.cKind').value = cmd.kind || 'npc';
+      kr.querySelector('.cKind').addEventListener('change', function () { cmd.kind = this.value; renderEventPanel(); });
+      kr.querySelector('.cX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+      kr.querySelector('.cY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+      kr.querySelector('.cDir').value = cmd.dir || 'down';
+      kr.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
+      body.appendChild(kr);
+      var gr3 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
+      gr3.innerHTML = lbl('Graphic') + '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr3.querySelector('.cGfxPick').addEventListener('click', function () {
+        openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
+      });
+      body.appendChild(gr3);
+      if ((cmd.kind || 'npc') === 'monster') {
+        var sr = el('div', 'margin-top:4px;');
+        sr.innerHTML = lbl('Enemies') + '<input type="text" class="cEn" style="width:100%;box-sizing:border-box;" placeholder="emberling:2, thornwolf:3">';
+        var sEn = sr.querySelector('.cEn');
+        sEn.value = (cmd.enemies || []).map(function (en) { return en.key + ':' + (en.level || 2); }).join(', ');
+        sEn.addEventListener('change', function () {
+          cmd.enemies = this.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) {
+            var p = s.split(':'); return { key: p[0].trim(), level: parseInt(p[1], 10) || 2 };
+          });
+          this.value = cmd.enemies.map(function (en) { return en.key + ':' + en.level; }).join(', ');
+        });
+        body.appendChild(sr);
+      } else {
+        var tr2 = el('div', 'margin-top:4px;');
+        tr2.innerHTML = lbl('Says') + '<input type="text" class="cTxt" value="' + (cmd.text || '').replace(/"/g, '&quot;') + '" style="width:100%;box-sizing:border-box;" placeholder="optional dialogue">';
+        tr2.querySelector('.cTxt').addEventListener('change', function () { cmd.text = this.value; });
+        body.appendChild(tr2);
       }
     } else if (cmd.type === 'money') {
       body.innerHTML = '<div class="row">' + lbl('Money') +
@@ -2915,10 +2972,14 @@
     });
     if (!list.length) grid.innerHTML = '<div class="hint">No sprites in this category.</div>';
   }
-  var _spriteTarget = 'player';
+  var _spriteTarget = 'player', _spriteApply = null;
+  // Open the sprite picker and hand the chosen graphic to a callback (used by
+  // event commands like Change Graphic / Spawn that store their own graphic).
+  function openSpriteModalForCmd(cb) { _spriteApply = cb; openSpriteModal('cmd'); }
   function openSpriteModal(target) {
     _spriteTarget = target || 'player';
-    $('setPlayerBtn').textContent = _spriteTarget === 'event' ? '◆ Use for Event' : '★ Set as Player';
+    $('setPlayerBtn').textContent = _spriteTarget === 'event' ? '◆ Use for Event'
+                                   : _spriteTarget === 'cmd' ? '◆ Use Graphic' : '★ Set as Player';
     $('spriteModal').style.display = 'flex';
     loadSpriteIndex().then(function (d) {
       var sel = $('spriteCat');
@@ -3003,6 +3064,12 @@
     if (!_selectedSprite) return;
     var e = _selectedSprite;
     var g = { sprite: e.id, file: e.file, frame_w: e.frame_w, frame_h: e.frame_h, cols: e.cols, rows: e.rows, single: e.single };
+    if (_spriteTarget === 'cmd' && _spriteApply) {
+      var apply = _spriteApply; _spriteApply = null;
+      $('spriteModal').style.display = 'none';
+      apply(g);
+      return;
+    }
     if (_spriteTarget === 'event' && state.selectedEvent) {
       pushUndo();
       state.selectedEvent.graphic = g;

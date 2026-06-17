@@ -192,6 +192,79 @@
             _transitioning = false;
         }
     }
+    // ── Title / New Game / Continue flow ──
+    var DAWNHEARTH_SEED = { x: 8, y: 18 };   // street tile below a door
+    function _firstSlotIndex() {
+        if (!window.GameSave) return -1;
+        var metas = GameSave.getAllSlotMeta();
+        for (var i = 0; i < metas.length; i++) if (metas[i]) return i;
+        return -1;
+    }
+    function _firstSlotMeta() {
+        var i = _firstSlotIndex();
+        return i >= 0 ? GameSave.getAllSlotMeta()[i] : null;
+    }
+    // Spiral out from (cx,cy) for the first walkable tile.
+    function _findWalkable(cx, cy) {
+        if (GameMap.isWalkable(cx, cy)) return { x: cx, y: cy };
+        for (var r = 1; r < 24; r++) {
+            for (var dy = -r; dy <= r; dy++) {
+                for (var dx = -r; dx <= r; dx++) {
+                    if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+                    var x = cx + dx, y = cy + dy;
+                    if (x < 0 || y < 0 || x >= GameMap.width || y >= GameMap.height) continue;
+                    if (GameMap.isWalkable(x, y)) return { x: x, y: y };
+                }
+            }
+        }
+        return { x: cx, y: cy };
+    }
+    async function _enterMap(map, region, x, y) {
+        currentRegion = region || currentRegion;
+        await GameMap.load(map, currentRegion);
+        window._mapName = (GameMap.current && GameMap.current.name) || map;
+        window._mapLoaded = true;
+        window._currentMapType = (GameMap.current && GameMap.current.map_type) || '';
+        var px = (x != null) ? x : Math.floor(GameMap.width / 2);
+        var py = (y != null) ? y : Math.floor(GameMap.height / 2);
+        px = Math.max(0, Math.min(px, GameMap.width - 1));
+        py = Math.max(0, Math.min(py, GameMap.height - 1));
+        player.x = px; player.y = py; player.prevX = px; player.prevY = py;
+        player.direction = 'down'; player.walkFrame = 0; player.moveStartTime = 0;
+        _snapPlayer();
+        GameRenderer.setScene(GameMap, GameCamera, player);
+        GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+        GameMap.loadEncounterData(currentRegion);
+    }
+    async function _continueGame() {
+        var slot = _firstSlotIndex();
+        if (slot < 0) { _newGame(); return; }
+        GameSave.load(slot);
+        var loc = (GameSave.state && GameSave.state.currentLocation) || {};
+        await _enterMap(loc.mapName || 'Dawnhearth', loc.region || 'awakened', loc.x, loc.y);
+        console.log('[Main] Continued slot', slot, '→', window._mapName);
+    }
+    function _newGame() {
+        if (window.GameSave) {
+            GameSave.state = GameSave.DEFAULT_SLOT_DATA();
+            GameSave.currentSlot = 0;
+        }
+        var finish = async function () {
+            await _enterMap('Dawnhearth', 'awakened', null, null);
+            var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
+            player.x = w.x; player.y = w.y; player.prevX = w.x; player.prevY = w.y; _snapPlayer();
+            GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+            if (window.GameSave && GameSave.state) {
+                GameSave.state.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
+                if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Dawnhearth';
+                GameSave.save(0, GameSave.state);
+            }
+            console.log('[Main] New game → Dawnhearth at', w.x, w.y);
+        };
+        if (window.GamePlayerCreation) GamePlayerCreation.start(finish);
+        else finish();
+    }
+
     // ── Event command interpreter (RPG-Maker-style scripting) ──
     var _eventRunning = false;
     var ES = window.GameEventState;
@@ -377,6 +450,44 @@
                 break;
             }
             case 'move':   await _moveRoute(_resolveTarget(c, ctx), c.steps || [], _resolveTarget(c, ctx) === player); break;
+            case 'setgfx': {
+                var tgf = _resolveTarget(c, ctx);
+                if (tgf && c.graphic) {
+                    if (tgf === player) {
+                        try { localStorage.setItem('ac_player_sprite', JSON.stringify(c.graphic)); } catch (e) {}
+                        if (window.GameRenderer && GameRenderer.reloadPlayer) GameRenderer.reloadPlayer();
+                    } else { tgf.graphic = c.graphic; if (c.dir) tgf.dir = c.dir; }
+                }
+                break;
+            }
+            case 'spawn': {
+                if (GameMap.current) {
+                    if (!GameMap.current.events) GameMap.current.events = [];
+                    var evs2 = GameMap.current.events, nid = 1;
+                    for (var si = 0; si < evs2.length; si++) if (evs2[si].id >= nid) nid = evs2[si].id + 1;
+                    var sev = {
+                        id: nid, name: c.name || (c.kind === 'monster' ? 'Monster' : 'NPC'),
+                        x: c.x | 0, y: c.y | 0, graphic: c.graphic || null, dir: c.dir || 'down',
+                        trigger: c.kind === 'monster' ? 'touch' : 'action', through: false,
+                        commands: [], _spawned: true
+                    };
+                    if (c.kind === 'monster') {
+                        var foes = (c.enemies && c.enemies.length) ? c.enemies
+                                   : [{ key: c.creature || 'emberling', level: c.level || 2 }];
+                        sev.commands = [{ type: 'battle', enemies: foes }, { type: 'despawn' }];
+                    } else if (c.text) {
+                        sev.commands = [{ type: 'text', text: c.text, face: c.face }];
+                    }
+                    evs2.push(sev);
+                }
+                break;
+            }
+            case 'despawn': {
+                var devs = GameMap.current && GameMap.current.events;
+                if (devs) { var di = devs.indexOf(ctx.event); if (di >= 0) devs.splice(di, 1); }
+                ctx.exited = true;
+                break;
+            }
             case 'fade':   await _fade(c); break;
             case 'shake':  await _shake(c); break;
             case 'battle': await _battle(c); break;
@@ -482,9 +593,10 @@
             } catch(_) { _mapLoading = false; }
         }
 
-        // Character creation (the Awakening) holds the world — its DOM overlay
-        // handles its own input; just pause movement/menus underneath.
-        if (window.GamePlayerCreation && GamePlayerCreation.isActive()) {
+        // Title screen and character creation hold the world — their DOM overlays
+        // handle their own input; just pause movement/menus underneath.
+        if ((window.GameTitle && GameTitle.isActive()) ||
+            (window.GamePlayerCreation && GamePlayerCreation.isActive())) {
             GameInput.consumeJustPressed();
             requestAnimationFrame(gameLoop);
             return;
@@ -691,6 +803,11 @@
             player.prevX = player.x;
             player.prevY = player.y;
 
+            // Reconcile localStorage with the IndexedDB backup before reading slots.
+            if (window.GameSave && GameSave.initStorage) {
+                try { await GameSave.initStorage(); } catch (e) {}
+            }
+
             // Initialize save state — must happen after map/renderer setup
             try {
                 if (window.GameSave) {
@@ -714,14 +831,17 @@
             GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
             console.log('[Main] Game started. Map:', GameMap.current && GameMap.current.name);
 
-            // The Awakening — show character creation on a fresh game (no name yet).
+            // Title screen → New Game (Awakening → Dawnhearth) / Continue.
             // Skipped when an explicit ?map= override is used (editor Play / testing).
-            var _fresh = !(window.GameSave && GameSave.state && GameSave.state.player
-                           && GameSave.state.player.name);
-            if (_fresh && !_params.get('map') && window.GamePlayerCreation) {
-                GamePlayerCreation.start(function () {
-                    console.log('[Main] Awakening complete:',
-                        GameSave.state.player.name, '/', GameSave.state.player.affinity);
+            if (!_params.get('map') && window.GameTitle) {
+                var _hasSave = !!(window.GameSave && GameSave.hasAnySave());
+                GameTitle.show({
+                    hasSave: _hasSave,
+                    meta: _hasSave ? _firstSlotMeta() : null,
+                    onChoose: function (choice) {
+                        if (choice === 'continue') _continueGame();
+                        else _newGame();
+                    }
                 });
             }
         } catch (e) {
