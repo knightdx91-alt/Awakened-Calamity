@@ -984,8 +984,31 @@
       for (var rx2 = x0 - 1; rx2 <= x1 + 1; rx2++) recomputeTerrainCell(rx2, ry2);
   }
 
+  // ── Pan: hold & drag to scroll the map. Active with the Pan tool, the middle
+  // mouse button, or Space held. Scrolls #canvasPanel by the drag delta. ──
+  var panState = null;
+  var spaceHeld = false;
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && !/INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ''))) {
+      spaceHeld = true; mapCanvas.style.cursor = 'grab'; e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.code === 'Space') { spaceHeld = false; mapCanvas.style.cursor = ''; }
+  });
+  function panPanel() { return document.getElementById('canvasPanel'); }
+  function startPan(e) {
+    var panel = panPanel(); if (!panel) return false;
+    panState = { x: e.clientX, y: e.clientY, sl: panel.scrollLeft, st: panel.scrollTop };
+    mapCanvas.style.cursor = 'grabbing';
+    try { mapCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+    return true;
+  }
+
   mapCanvas.addEventListener('pointerdown', function (e) {
     e.preventDefault();
+    // middle button, Space-held, or the Pan tool → pan instead of paint
+    if (e.button === 1 || spaceHeld || state.tool === 'pan') { startPan(e); return; }
     try { mapCanvas.setPointerCapture(e.pointerId); } catch (_) {}   // keep drag tracking (touch+mouse)
     var p = eventCell(e);
     if (!inBounds(p.x, p.y)) return;
@@ -1015,6 +1038,14 @@
   });
 
   mapCanvas.addEventListener('pointermove', function (e) {
+    if (panState) {
+      var panel = panPanel();
+      if (panel) {
+        panel.scrollLeft = panState.sl - (e.clientX - panState.x);
+        panel.scrollTop  = panState.st - (e.clientY - panState.y);
+      }
+      return;
+    }
     var p = eventCell(e);
     $('statCoord').textContent = 'x: ' + p.x + '  y: ' + p.y;
     if (inBounds(p.x, p.y)) {
@@ -1039,6 +1070,11 @@
   });
 
   window.addEventListener('pointerup', function (e) {
+    if (panState) {
+      panState = null;
+      mapCanvas.style.cursor = (state.tool === 'pan' || spaceHeld) ? 'grab' : '';
+      return;
+    }
     if (state.tool === 'select' && rectStart) {
       var ps = eventCell(e);
       state.sel = { x0: Math.min(rectStart.x, ps.x), y0: Math.min(rectStart.y, ps.y),
@@ -2073,7 +2109,7 @@
   $('autoToggle').addEventListener('click', function () { setAutoMode(!state.autoMode); });
 
   var TOOL_ICON = { pencil: '✏ Pencil', rect: '▭ Rectangle', ellipse: '◯ Ellipse',
-                    fill: '🪣 Fill', pick: '⛏ Pick', select: '⬚ Select' };
+                    fill: '🪣 Fill', pick: '⛏ Pick', select: '⬚ Select', pan: '🖐 Pan' };
   function updateToolStatus() {
     var st = $('statTool'); if (!st) return;
     st.textContent = state.eraser ? '⌫ Eraser' : (TOOL_ICON[state.tool] || state.tool);
@@ -2085,6 +2121,7 @@
       state.eraser = false; $('eraserBtn').classList.remove('active');
       document.querySelectorAll('.tool').forEach(function (x) { x.classList.remove('active'); });
       b.classList.add('active');
+      mapCanvas.style.cursor = (state.tool === 'pan') ? 'grab' : '';
       updateToolStatus();
     });
   });
