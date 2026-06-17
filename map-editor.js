@@ -1262,6 +1262,7 @@
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
+    ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
@@ -1286,6 +1287,9 @@
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
       case 'system': return { type: 'system' };
+      case 'grantclass': return { type: 'grantclass', classId: '', unlockOnly: false };
+      case 'grantspec': return { type: 'grantspec', specId: '' };
+      case 'grantskill': return { type: 'grantskill', skill: '' };
       case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
       case 'shake': return { type: 'shake', power: 5, frames: 30 };
       case 'label': return { type: 'label', label: '' };
@@ -1571,6 +1575,33 @@
       });
       br.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'key:level — blank = random test pack'));
       body.appendChild(br);
+    } else if (cmd.type === 'grantclass') {
+      var gc = el('div');
+      gc.innerHTML = '<div class="row">' + lbl('Class') + '<select class="cCls" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+        '<div class="row"><label class="lbl" style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="cUnlock"> unlock only (don\'t switch to it)</label></div>';
+      var clsSel = gc.querySelector('.cCls');
+      loadClassList().then(function (list) {
+        list.forEach(function (c2) { var o = el('option', null, c2.name + ' (' + (c2.tier || '?') + ')'); o.value = c2.id; clsSel.appendChild(o); });
+        if (cmd.classId) clsSel.value = cmd.classId;
+      });
+      clsSel.addEventListener('change', function () { cmd.classId = this.value; });
+      var unl = gc.querySelector('.cUnlock'); unl.checked = !!cmd.unlockOnly;
+      unl.addEventListener('change', function () { cmd.unlockOnly = this.checked; });
+      body.appendChild(gc);
+    } else if (cmd.type === 'grantspec') {
+      body.innerHTML = '<div class="row">' + lbl('Spec id') + '<input type="text" class="cSp" value="' + (cmd.specId || '') + '" style="flex:1;min-width:0;" placeholder="e.g. two_handed"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">must be a specialization of the player\'s current class</div>';
+      body.querySelector('.cSp').addEventListener('change', function () { cmd.specId = this.value.trim(); });
+    } else if (cmd.type === 'grantskill') {
+      var gk = el('div');
+      gk.innerHTML = '<div class="row">' + lbl('Skill') + '<select class="cSk" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>';
+      var skSel = gk.querySelector('.cSk');
+      loadSkillList().then(function (list) {
+        list.forEach(function (s2) { var o = el('option', null, s2.name); o.value = s2.id; skSel.appendChild(o); });
+        if (cmd.skill) skSel.value = cmd.skill;
+      });
+      skSel.addEventListener('change', function () { cmd.skill = this.value; });
+      body.appendChild(gk);
     } else if (cmd.type === 'fade') {
       body.innerHTML = '<div class="row">' + lbl('Fade') +
         '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +
@@ -2910,6 +2941,19 @@
     return fetch('data/faces/rtp_faces_index.json').then(function (r) { return r.json(); })
       .then(function (d) { _faceSheets = d.sheets || []; return _faceSheets; })
       .catch(function () { return (_faceSheets = []); });
+  }
+  var _classList = null, _skillList = null;
+  function loadClassList() {
+    if (_classList) return Promise.resolve(_classList);
+    return fetch('data/systems/classes.json').then(function (r) { return r.json(); })
+      .then(function (j) { _classList = Object.keys(j).filter(function (k) { return k !== '_meta' && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k, tier: j[k].tier }; }); return _classList; })
+      .catch(function () { return (_classList = []); });
+  }
+  function loadSkillList() {
+    if (_skillList) return Promise.resolve(_skillList);
+    return fetch('data/systems/skills.json').then(function (r) { return r.json(); })
+      .then(function (j) { _skillList = Object.keys(j).filter(function (k) { return k !== '_meta' && k.indexOf('_comment') !== 0 && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k }; }); return _skillList; })
+      .catch(function () { return (_skillList = []); });
   }
   function loadSpriteIndex() {
     if (_spriteIndex) return Promise.resolve(_spriteIndex);

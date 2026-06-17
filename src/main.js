@@ -265,6 +265,19 @@
         else finish();
     }
 
+    // Lazy class/skill DB for reward commands (grantclass/grantspec/grantskill).
+    var _classDbCache = null, _classDbPromise = null;
+    function _loadClassDb() {
+        if (_classDbCache) return Promise.resolve(_classDbCache);
+        if (_classDbPromise) return _classDbPromise;
+        var b = '?b=' + (window.__BUILD__ || '0');
+        _classDbPromise = Promise.all([
+            fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
+        ]).then(function (res) { _classDbCache = { classes: res[0] || {}, skills: res[1] || {} }; return _classDbCache; });
+        return _classDbPromise;
+    }
+
     // ── Event command interpreter (RPG-Maker-style scripting) ──
     var _eventRunning = false;
     var ES = window.GameEventState;
@@ -489,6 +502,44 @@
                 break;
             }
             case 'system': await new Promise(function (res) { if (window.GameSystemShop) GameSystemShop.open(res); else res(); }); break;
+            case 'grantclass': {
+                // NPC/quest reward: give a Classification (the non-shop source).
+                var st0 = window.GameSave && GameSave.state;
+                if (st0 && st0.player) {
+                    var dbg = await _loadClassDb();
+                    var p0 = st0.player; p0.ownedClasses = p0.ownedClasses || (p0.class ? [p0.class.id] : []);
+                    if (c.unlockOnly) {
+                        if (p0.ownedClasses.indexOf(c.classId) < 0) p0.ownedClasses.push(c.classId);
+                    } else if (window.GameClasses) {
+                        GameClasses.changeClass(st0, c.classId, dbg);
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'grantspec': {
+                var st1 = window.GameSave && GameSave.state;
+                if (st1 && st1.player && st1.player.class && c.specId) {
+                    st1.player.class.spec = c.specId;
+                    var dbs = await _loadClassDb();
+                    var cls1 = dbs.classes[st1.player.class.id];
+                    var sp1 = ((cls1 && cls1.specializations) || []).filter(function (x) { return x.id === c.specId; })[0];
+                    if (sp1 && sp1.grantsSkill) {
+                        st1.player.skills = st1.player.skills || [];
+                        if (st1.player.skills.indexOf(sp1.grantsSkill) < 0) st1.player.skills.push(sp1.grantsSkill);
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'grantskill': {
+                var st2 = window.GameSave && GameSave.state;
+                if (st2 && st2.player && c.skill) {
+                    st2.player.skills = st2.player.skills || [];
+                    if (st2.player.skills.indexOf(c.skill) < 0) { st2.player.skills.push(c.skill); if (window.GameSave) GameSave.markDirty(); }
+                }
+                break;
+            }
             case 'fade':   await _fade(c); break;
             case 'shake':  await _shake(c); break;
             case 'battle': await _battle(c); break;

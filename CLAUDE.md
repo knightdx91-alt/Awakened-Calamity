@@ -558,6 +558,14 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     placed on a **Crystal-graphic event in Dawnhearth (id 13 @28,28)** — the hub. Wired guards + script;
     suites pass, assets serve 200. **Not browser-verified** (crystal placement @28,28 may need nudging
     in the editor). Note: startmenu's old `_buildSystem` panel is now unreachable (left as dead code).
+  - **Reward event commands (NPC/quest sources for class/spec/skill).** System-shop access is the
+    existing **`system`** command (reusable on any event/NPC, not just the crystal). Added three reward
+    commands (engine `runCmd` + editor forms, all engine-honored): **`grantclass`** (🎓 — give a
+    Classification; `unlockOnly` adds to `ownedClasses` without switching, else `GameClasses.changeClass`),
+    **`grantspec`** (✦ — set the current class's specialization + grant its skill, bypassing level
+    gate as a reward), **`grantskill`** (📖 — teach a skill id). Engine lazily loads classes/skills
+    (`_loadClassDb`); editor gained `loadClassList`/`loadSkillList` for dropdowns. Node-tested; suites
+    pass. **Not browser-verified.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
