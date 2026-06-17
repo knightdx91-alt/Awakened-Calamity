@@ -269,6 +269,10 @@ window.GamePlayerCreation = (function () {
                 var cl = _classes && _classId && _classes[_classId];
                 p.class = { id: _classId, level: 1, xp: 0 };
                 p.skills = (cl && cl.grantsSkills ? cl.grantsSkills.slice() : []);
+                // Seed the canonical progression state from the chosen class tier.
+                if (window.GameProgression) {
+                    GameSave.state.progress = GameProgression.createProgress((cl && cl.tier) || 'basic', 1);
+                }
                 if (GameSave.state.meta) GameSave.state.meta.playerName = p.name;
                 if (window.GameSave.markDirty) GameSave.markDirty();
                 try { GameSave.save(GameSave.currentSlot != null ? GameSave.currentSlot : 0); } catch (e) {}

@@ -496,6 +496,18 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     are engine-honored; craft/gather/social/etc. are data hooks). **Added `tools/validate_classes.mjs`**
     (every grantsSkill resolves; reports per-tier counts) — 0 errors; combat/effects/progression tests
     still pass. **Next tier: author the ~50 Advanced classes as the basics' path-gated evolutions.**
+  - **Build-out: leveling made real + STATUS screen.**
+    - **Unified progression with the class** (`combatview.js` + `creation.js`): `state.progress` is now
+      the single source of truth, seeded from the chosen class's tier/level at creation; combat's
+      `_saveProg` mirrors `level`/`xp` back onto `player.class`. So combat XP/level-ups actually advance
+      the character's class.
+    - **STATUS menu rebuilt** (`startmenu.js _buildCamp`): shows real **Class name + Level**, Affinity,
+      an **XP-to-next bar** (via `GameProgression.xpToNext` + lazy-loaded `progression.json`), **Attribute
+      Points** when any are banked, and a **SKILLS** chip list (player's learned/class-granted skills) —
+      plus the existing survival meters. Lazy-loads `classes.json`/`progression.json` and re-renders.
+      (Fixes the old stale `state.klass` read.) Syntax-checked; core tests still pass. **Not browser-verified.**
+    - **Still pending build-out:** attribute-point *allocation* UI (count shown, no spend yet);
+      specializations/evolutions UI; non-combat lifestyle skill use.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

@@ -51,13 +51,28 @@
     // ---- persistent progression ------------------------------------------
     function _loadProg() {
         var s = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
-        if (s) { s.progress = s.progress || root.GameProgression.createProgress('basic', 1); return s.progress; }
+        if (s) {
+            if (!s.progress) {
+                // Seed progression from the player's chosen class (tier + level).
+                var cls = s.player && s.player.class;
+                var tier = (cls && db && db.classes && db.classes[cls.id] && db.classes[cls.id].tier) || 'basic';
+                s.progress = root.GameProgression.createProgress(tier, (cls && cls.level) || 1);
+                if (cls && cls.xp) s.progress.xp = cls.xp;
+            }
+            return s.progress;
+        }
         _localProg = _localProg || root.GameProgression.createProgress('basic', 1);
         return _localProg;
     }
     function _saveProg() {
         var s = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
-        if (s) { s.progress = prog; if (root.GameSave.markDirty) root.GameSave.markDirty(); } else { _localProg = prog; }
+        if (s) {
+            s.progress = prog;
+            // Mirror level/xp back onto player.class so the STATUS screen + class
+            // logic share one source of truth.
+            if (s.player && s.player.class) { s.player.class.level = prog.level; s.player.class.xp = prog.xp; }
+            if (root.GameSave.markDirty) root.GameSave.markDirty();
+        } else { _localProg = prog; }
     }
 
     // ---- actors -----------------------------------------------------------

@@ -483,15 +483,44 @@ window.GameStartMenu = (function () {
         return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
     }
 
+    // Lazy-load class + progression data so STATUS can show class name, level,
+    // XP-to-next, and skills. Cached; re-renders the camp page once available.
+    var _clsData = null, _progData = null, _clsLoading = false;
+    function _ensureClassData() {
+        if (_clsData && _progData) return;
+        if (_clsLoading) return;
+        _clsLoading = true;
+        var b = '?b=' + (window.__BUILD__ || '0');
+        Promise.all([
+            fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+            fetch('data/systems/progression.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+        ]).then(function (res) {
+            _clsData = res[0] || {}; _progData = res[1] || null; _clsLoading = false;
+            if (page === 'camp') _render();   // refresh STATUS with real data
+        });
+    }
+    function _prettySkill(id) {
+        return String(id || '').replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+    }
+
     function _buildCamp(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        _ensureClassData();
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var prog = (window.GameSave && GameSave.state && GameSave.state.progress) || null;
+        var clsId = (p.class && p.class.id) || null;
+        var cls = (_clsData && clsId && _clsData[clsId]) || null;
+        var clsName = cls ? cls.name : (clsId ? _prettySkill(clsId) : 'Unclassed');
+        var level = prog ? prog.level : ((p.class && p.class.level) || 1);
+
         var hd = document.createElement('div');
         hd.style.cssText = 'font:9px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:6px;margin-bottom:8px;';
         hd.textContent = _playerName().toUpperCase();
         el.appendChild(hd);
         var info = [
             ['Designation', _subjectId()],
-            ['Class', (window.GameSave && GameSave.state && GameSave.state.klass) || 'Unclassed'],
+            ['Class', clsName + '  Lv' + level],
+            ['Affinity', _prettySkill(p.affinity || '—')],
             ['Credits', 'Cr ' + _credits()],
             ['Time Awake', _playtime()],
             ['Bonds', String(((window.GameSave && GameSave.state && GameSave.state.bonds) || []).length)],
@@ -500,6 +529,40 @@ window.GameStartMenu = (function () {
             var r = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';' });
             r.innerHTML = '<span>' + kv[0] + '</span><span style="color:' + _FR.text + '">' + kv[1] + '</span>';
         });
+
+        // XP-to-next bar (needs progression tuning data).
+        if (prog && _progData && window.GameProgression) {
+            var need = GameProgression.xpToNext(prog.level, prog.tier || 'basic', _progData);
+            var pct = need > 0 ? Math.max(0, Math.min(100, Math.round((prog.xp / need) * 100))) : 0;
+            var xr = document.createElement('div');
+            xr.style.cssText = 'margin-top:6px;';
+            xr.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:7px;color:' + _FR.dim + ';margin-bottom:2px;"><span>XP</span><span>' + prog.xp + ' / ' + need + '</span></div>' +
+                '<div style="height:5px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + _FR.blue + '"></div></div>';
+            el.appendChild(xr);
+            if (prog.attrPoints > 0) {
+                var ap = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';margin-top:4px;' });
+                ap.innerHTML = '<span>Attribute Points</span><span style="color:' + _SYS.warn + '">+' + prog.attrPoints + '</span>';
+            }
+        }
+
+        // Skills the class has granted / the player has learned.
+        var skills = (p.skills && p.skills.length) ? p.skills : (cls && cls.grantsSkills) || [];
+        if (skills.length) {
+            var sk = document.createElement('div');
+            sk.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+            sk.textContent = 'SKILLS';
+            el.appendChild(sk);
+            var sl = document.createElement('div');
+            sl.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;';
+            skills.forEach(function (id) {
+                var chip = document.createElement('span');
+                chip.style.cssText = 'font-size:7px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:4px;padding:3px 5px;color:' + _FR.text + ';';
+                chip.textContent = _prettySkill(id);
+                sl.appendChild(chip);
+            });
+            el.appendChild(sl);
+        }
+
         var sub = document.createElement('div');
         sub.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
         sub.textContent = 'SURVIVAL';
