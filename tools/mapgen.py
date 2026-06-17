@@ -177,6 +177,7 @@ class MapBuilder:
         self.base_name, self.props_name = "vt_ground", "town_props"
         self.terr = [["grass"] * w for _ in range(h)]
         self.over = [-1] * (w * h)
+        self.upper = [-1] * (w * h)        # Layer 3 (drawn above the player)
         self.coll = [0] * (w * h)
         self.events = []
         # terrain priority for autotile baking (low->high)
@@ -188,6 +189,9 @@ class MapBuilder:
         if self.inb(x, y):
             self.over[y * self.W + x] = self.gid[name]
             if block: self.coll[y * self.W + x] = 1
+    def setu(self, x, y, name):                 # Layer 3 — above the player, never blocks
+        if self.inb(x, y) and name in self.gid:
+            self.upper[y * self.W + x] = self.gid[name]
     def blkc(self, x, y):
         if self.inb(x, y): self.coll[y * self.W + x] = 1
     def setterr(self, x, y, t):
@@ -239,18 +243,20 @@ class MapBuilder:
                 self.setterr(ax, ay, t)
 
     # ---- buildings ----
-    def _grid9(self, prefix, x0, y0, w, h):
+    def _grid9(self, prefix, x0, y0, w, h, up=False):
         for j in range(h):
             for i in range(w):
                 vy = "t" if j == 0 else ("b" if j == h - 1 else "")
                 vx = "l" if i == 0 else ("r" if i == w - 1 else "")
-                self.setp(x0 + i, y0 + j, f"{prefix}_{(vy + vx) or 'f'}")
+                nm = f"{prefix}_{(vy + vx) or 'f'}"
+                (self.setu if up else self.setp)(x0 + i, y0 + j, nm)
 
     def house(self, wx, wy, ww, wh, roof, wall):
         """wx,wy = top-left of WALL face. Roof scales with size (ridge+body+eave),
-        1-tile overhang. Door + windows composited. Returns (door_x, path_y)."""
+        1-tile overhang. Roof goes on Layer 3 (walk under the eaves); door + windows
+        composited onto the walls. Returns (door_x, path_y)."""
         rh = 3 if (ww >= 6 or wh >= 3) else 2          # taller roof on big houses
-        self._grid9(f"roof_{roof}", wx - 1, wy - rh, ww + 2, rh)
+        self._grid9(f"roof_{roof}", wx - 1, wy - rh, ww + 2, rh, up=True)
         self._grid9(f"wall_{wall}", wx, wy, ww, wh)
         fy = wy + wh - 1
         dxr = ww // 2
@@ -265,7 +271,7 @@ class MapBuilder:
                 if wxi != dxr:
                     self.setp(wx + wxi, wy, f"wall_{wall}_window_t")
         if ww >= 3:
-            self.setp(wx + ww - 1, wy - rh, f"roof_{roof}_chimney")
+            self.setu(wx + ww - 1, wy - rh, f"roof_{roof}_chimney")
         return door_x, fy + 1
 
     def tower(self, x, y0):
@@ -346,6 +352,10 @@ class MapBuilder:
                   "tileset_group": [{"name": self.base_name, "offset": 0, "count": self.base_n}],
                   "metatiles": meta, "collision": self.coll, "terrain": flat,
                   "overlay_tileset": self.props_name, "overlay": self.over, "tileSize": T}
+        if any(v >= 0 for v in self.upper):
+            layout["upper_tileset"] = self.props_name
+            layout["upper_group"] = [{"name": self.props_name, "offset": 0, "count": self.props_n}]
+            layout["upper"] = self.upper
         os.makedirs(os.path.join(ROOT, "data", "layouts", region), exist_ok=True)
         json.dump(layout, open(os.path.join(ROOT, "data", "layouts", region, lid + ".json"), "w"))
         mapobj = {"id": mid, "name": name, "region": region, "parent": "", "layout": lid,

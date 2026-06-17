@@ -30,6 +30,13 @@ def main():
             for x in range(W):
                 g = ovl[y * W + x]
                 if g >= 0: blit(ov, g, opr, x, y)
+    if L.get("upper_tileset"):
+        up, uT, upr = load(L["upper_tileset"])
+        ul = L.get("upper", [])
+        for y in range(H):
+            for x in range(W):
+                g = ul[y * W + x] if y * W + x < len(ul) else -1
+                if g >= 0: blit(up, g, upr, x, y)
     p = os.path.join("/tmp", lay + ".png")
     out.save(p)
     out.resize((W * T // 2, H * T // 2), Image.NEAREST).save(os.path.join("/tmp", lay + "_half.png"))

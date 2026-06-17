@@ -54,7 +54,7 @@
         dirt: gcfg.terrains.dirt.lut, cobble: gcfg.terrains.cobble.lut, road: gcfg.terrains.road.lut,
         water: wcfg.terrains.water.lut.map(function (v) { return gcount + (v - 1); }),
       };
-      return { gid: gid, baseN: baseN, LUT: LUT };
+      return { gid: gid, baseN: baseN, LUT: LUT, propsN: Object.keys(gid).length };
     });
   }
 
@@ -62,6 +62,7 @@
     this.W = w; this.H = h; this.r = RNG(seed); this.a = asset;
     this.terr = []; for (var y = 0; y < h; y++) { var row = []; for (var x = 0; x < w; x++) row.push('grass'); this.terr.push(row); }
     this.over = new Array(w * h).fill(-1);
+    this.upper = new Array(w * h).fill(-1);   // Layer 3 (drawn above the player)
     this.coll = new Array(w * h).fill(0);
     this.events = [];
     this.PRI = { grass: 0, dirt: 1, cobble: 2, road: 2, water: 3 };
@@ -112,16 +113,22 @@
     }
     brush(x1, y1);
   };
-  Builder.prototype.grid9 = function (prefix, x0, y0, w, h) {
+  Builder.prototype.setu = function (x, y, name) {   // Layer 3 — above player, never blocks
+    if (!this.inb(x, y)) return;
+    var g = this.a.gid[name]; if (g == null) return;
+    this.upper[y * this.W + x] = g;
+  };
+  Builder.prototype.grid9 = function (prefix, x0, y0, w, h, up) {
     for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) {
       var vy = j === 0 ? 't' : (j === h - 1 ? 'b' : '');
       var vx = i === 0 ? 'l' : (i === w - 1 ? 'r' : '');
-      this.setp(x0 + i, y0 + j, prefix + '_' + ((vy + vx) || 'f'));
+      var nm = prefix + '_' + ((vy + vx) || 'f');
+      if (up) this.setu(x0 + i, y0 + j, nm); else this.setp(x0 + i, y0 + j, nm);
     }
   };
   Builder.prototype.house = function (wx, wy, ww, wh, roof, wall) {
     var rh = (ww >= 6 || wh >= 3) ? 3 : 2;
-    this.grid9('roof_' + roof, wx - 1, wy - rh, ww + 2, rh);
+    this.grid9('roof_' + roof, wx - 1, wy - rh, ww + 2, rh, true);   // roof → Layer 3 (walk under the eaves)
     this.grid9('wall_' + wall, wx, wy, ww, wh);
     var fy = wy + wh - 1, dxr = (ww / 2) | 0, doorX = wx + dxr;
     this.setp(doorX, fy, 'wall_' + wall + '_door'); this.events.push({ x: doorX, y: fy });
@@ -129,7 +136,7 @@
       if (wxi > 0 && wxi < ww - 1 && wxi !== dxr) this.setp(wx + wxi, fy, 'wall_' + wall + '_window');
     }, this);
     if (wh >= 2) for (var wxi = 1; wxi < ww - 1; wxi += 2) if (wxi !== dxr) this.setp(wx + wxi, wy, 'wall_' + wall + '_window_t');
-    if (ww >= 3) this.setp(wx + ww - 1, wy - rh, 'roof_' + roof + '_chimney');
+    if (ww >= 3) this.setu(wx + ww - 1, wy - rh, 'roof_' + roof + '_chimney');
     return [doorX, fy + 1];
   };
   Builder.prototype.tower = function (x, y0) {
@@ -193,6 +200,11 @@
       metatiles: b.meta, collision: this.coll, terrain: b.flat,
       overlay_tileset: 'town_props', overlay: this.over, tileSize: T,
     };
+    if (this.upper.some(function (v) { return v >= 0; })) {
+      layout.upper_tileset = 'town_props';
+      layout.upper_group = [{ name: 'town_props', offset: 0, count: this.a.propsN || 256 }];
+      layout.upper = this.upper;
+    }
     var map = {
       name: name, region: region, map_type: mapType,
       events: this.events.map(function (e, i) {

@@ -842,6 +842,7 @@
 
   // ── Painting ──
   var painting = false, rectStart = null;
+  var _collidePaint = 1;   // value a collide-drag writes (set at gesture start)
 
   function eventCell(e) {
     var p = screenToLocal(mapCanvas, e.clientX, e.clientY);
@@ -893,8 +894,7 @@
       return;
     }
     if (state.mode === 'collide') {
-      var c = state.layers.ground.collision;
-      c[idx(x, y)] = c[idx(x, y)] ? 0 : 1;
+      state.layers.ground.collision[idx(x, y)] = _collidePaint;
       return;
     }
     if (state.tool === 'pick') {
@@ -1018,6 +1018,16 @@
       try { localStorage.setItem('ac_start_location', JSON.stringify(state.startLoc)); } catch (_) {}
       toast('Player start: ' + state.startLoc.map + ' (' + p.x + ',' + p.y + ')');
       drawMap(); return;
+    }
+    // Collision / Region modes act regardless of the active draw tool (so picking
+    // Pan/Rectangle/etc. doesn't stop collision painting). Pan still wins (above).
+    if (state.mode === 'collide') {
+      pushUndo();
+      _collidePaint = state.eraser ? 0 : (state.layers.ground.collision[idx(p.x, p.y)] ? 0 : 1);
+      painting = true; applyAt(p.x, p.y); drawMap(); return;
+    }
+    if (state.mode === 'region') {
+      pushUndo(); painting = true; applyAt(p.x, p.y); drawMap(); return;
     }
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
