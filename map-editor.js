@@ -1286,6 +1286,35 @@
       if (cmd.type === 'script') ta.placeholder = "$.setSwitch('1',true); $.say('hi')";
       ta.addEventListener('change', function () { if (cmd.type === 'text') cmd.text = this.value; else cmd.code = this.value; });
       body.appendChild(ta);
+      if (cmd.type === 'text') {            // optional RTP face portrait for this line
+        var fr = el('div', 'display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap;');
+        fr.innerHTML = lbl('Face') +
+          '<select class="cFaceSheet" style="max-width:120px"><option value="">— none —</option></select>' +
+          '<input type="number" class="cFaceIdx" min="0" max="7" style="width:46px" title="face index 0-7">' +
+          '<span class="cFacePrev" style="width:32px;height:32px;display:inline-block;border:1px solid var(--line2);background-repeat:no-repeat;"></span>';
+        body.appendChild(fr);
+        var sheetSel = fr.querySelector('.cFaceSheet'), idxIn = fr.querySelector('.cFaceIdx'), prev = fr.querySelector('.cFacePrev');
+        function updFacePrev() {
+          if (sheetSel.value) {
+            var i = parseInt(idxIn.value || 0, 10), c = i % 4, r = (i / 4) | 0;
+            prev.style.backgroundImage = "url('data/faces/rtp/" + sheetSel.value + ".png')";
+            prev.style.backgroundSize = '128px 64px';
+            prev.style.backgroundPosition = '-' + (c * 32) + 'px -' + (r * 32) + 'px';
+          } else prev.style.backgroundImage = '';
+        }
+        function applyFace() {
+          if (sheetSel.value) cmd.face = { sheet: sheetSel.value, index: parseInt(idxIn.value || 0, 10) };
+          else delete cmd.face;
+          updFacePrev();
+        }
+        loadFaceSheets().then(function (sheets) {
+          sheets.forEach(function (s) { var o = el('option'); o.value = o.textContent = s.id; sheetSel.appendChild(o); });
+          if (cmd.face) { sheetSel.value = cmd.face.sheet || ''; idxIn.value = cmd.face.index || 0; }
+          updFacePrev();
+        });
+        sheetSel.addEventListener('change', applyFace);
+        idxIn.addEventListener('change', applyFace);
+      }
     } else if (cmd.type === 'switch' || cmd.type === 'variable' || cmd.type === 'selfswitch') {
       var row = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
       if (cmd.type === 'selfswitch') {
@@ -2611,6 +2640,13 @@
 
   // ── Character sprite picker (XP/MV charsets) ──
   var _spriteIndex = null, _spriteCache = {}, _selectedSprite = null;
+  var _faceSheets = null;
+  function loadFaceSheets() {
+    if (_faceSheets) return Promise.resolve(_faceSheets);
+    return fetch('data/faces/rtp_faces_index.json').then(function (r) { return r.json(); })
+      .then(function (d) { _faceSheets = d.sheets || []; return _faceSheets; })
+      .catch(function () { return (_faceSheets = []); });
+  }
   function loadSpriteIndex() {
     if (_spriteIndex) return Promise.resolve(_spriteIndex);
     // Merge every available sprite set (RTP first, then XP) so the picker shows

@@ -195,7 +195,7 @@
     // ── Event command interpreter (RPG-Maker-style scripting) ──
     var _eventRunning = false;
     var ES = window.GameEventState;
-    function _say(text) { return new Promise(function (res) { if (window.GameDialogue) GameDialogue.show(String(text || '').split('\n'), res); else res(); }); }
+    function _say(text, face) { return new Promise(function (res) { if (window.GameDialogue) GameDialogue.show(String(text || '').split('\n'), res, face ? { face: face } : null); else res(); }); }
     function _wait(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
     function _choose(prompt, options) {
         return new Promise(function (res) {
@@ -241,7 +241,7 @@
     }
     async function runCmd(c, ctx) {
         switch (c.type) {
-            case 'text': await _say(c.text || ''); break;
+            case 'text': await _say(c.text || '', c.face); break;
             case 'choice': {
                 var idx = await _choose(c.prompt || '', (c.options || []).map(function (o) { return o.label; }));
                 var opt = (c.options || [])[idx];

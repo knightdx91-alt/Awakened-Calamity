@@ -6,6 +6,7 @@ window.GameDialogue = (function () {
     let _boxEl    = null;   // outer frame
     let _textEl   = null;   // inner text area
     let _arrowEl  = null;   // ▼ advance indicator
+    let _faceEl   = null;   // optional RTP face portrait
     let _lines    = [];     // queued dialogue lines
     let _idx      = 0;      // current line index
     let _typing   = false;  // typewriter in progress
@@ -77,12 +78,13 @@ window.GameDialogue = (function () {
     let _onCloseCallback = null;
 
     // --- Public ---
-    function show(lines, onClose) {
+    function show(lines, onClose, opts) {
         if (!_boxEl) _build();
         if (!lines || !lines.length) { if (onClose) onClose(); return; }
         _onCloseCallback = onClose || null;
         _lines = lines;
         _idx   = 0;
+        _setFace(opts && opts.face);
         _boxEl.style.display = 'block';
         _showLine(0);
     }
@@ -153,10 +155,31 @@ window.GameDialogue = (function () {
         _arrowEl.textContent = '▼';
         _arrowEl.style.visibility = 'hidden';
 
+        // Optional RTP face portrait (left side). 96x96 cells, 4 per row.
+        _faceEl = document.createElement('div');
+        _faceEl.id = 'dialogue-face';
+        _faceEl.style.cssText = 'display:none;flex:0 0 auto;width:52px;height:52px;' +
+            'background-repeat:no-repeat;border-radius:4px;align-self:flex-start;margin-right:8px;' +
+            'box-shadow:0 0 0 1px rgba(120,200,255,0.45);';
+        inner.style.display = 'flex';
+        inner.style.alignItems = 'flex-start';
+        _textEl.style.flex = '1';
+        inner.appendChild(_faceEl);
         inner.appendChild(_textEl);
         inner.appendChild(_arrowEl);
         _boxEl.appendChild(inner);
         screen.appendChild(_boxEl);
+    }
+
+    // face = { sheet:'Actor1', index:0 } -> crop the 96px cell from data/faces/rtp/<sheet>.png
+    function _setFace(face) {
+        if (!_faceEl) return;
+        if (!face || !face.sheet) { _faceEl.style.display = 'none'; _faceEl.style.backgroundImage = ''; return; }
+        var S = 52, idx = face.index || 0, col = idx % 4, row = (idx / 4) | 0;
+        _faceEl.style.display = 'block';
+        _faceEl.style.backgroundImage = "url('data/faces/rtp/" + face.sheet + ".png')";
+        _faceEl.style.backgroundSize = (4 * S) + 'px ' + (2 * S) + 'px';   // sheet is 4x2 cells
+        _faceEl.style.backgroundPosition = '-' + (col * S) + 'px -' + (row * S) + 'px';
     }
 
     function init() {
