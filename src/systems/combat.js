@@ -55,6 +55,7 @@
         }
         return {
             id: d.id, side: d.side, name: d.name, affinity: d.affinity || null, ai: !!d.ai,
+            battler: d.battler || null, charset: d.charset || null,   // presentation: sprite art travels with the actor
             atk: d.stats.atk, def: d.stats.def, speed: d.stats.speed,
             hp: maxHp, maxHp, tempo: 0, hasActed: false,
             defBonus, evadeChance, critChance, counterChance,
@@ -194,6 +195,7 @@
         const id = 'sum' + (++state._sumN);
         state.actors[id] = {
             id, side: summoner.side, name: 'Turret', affinity: summoner.affinity, ai: true, summon: true,
+            battler: 'rtp/Puppet.png',   // construct ally art
             atk: Math.max(6, Math.round(summoner.atk * 0.6)), def: 10, speed: 50,
             hp: 25, maxHp: 25, tempo: 0, hasActed: false,
             defBonus: 0, evadeChance: 0, critChance: 0, counterChance: 0,

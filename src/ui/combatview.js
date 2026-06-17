@@ -82,7 +82,7 @@
             var c = db.creatures[spec.key] || db.creatures.emberling;
             var id = 'e' + (i + 1);
             enemyMeta[id] = { key: spec.key, level: spec.level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, name: c.name, battler: c.battler || null };
-            return { id: id, side: 'enemy', name: c.name, affinity: c.affinity, stats: Object.assign({}, c.stats), loadout: (c.loadout || ['jab']).slice() };
+            return { id: id, side: 'enemy', name: c.name, affinity: c.affinity, stats: Object.assign({}, c.stats), loadout: (c.loadout || ['jab']).slice(), battler: c.battler || null, charset: c.charset || null };
         });
     }
 
@@ -255,12 +255,19 @@
         field.style.backgroundSize = 'cover, auto 42%';
         field.style.backgroundPosition = 'center top, center bottom';
     }
+    // charset spec on a creature: { file:'rtp/Monster1.png', cols, rows, frame, char }
+    function _creatureCharsetHTML(ch, dir) {
+        return _charSpriteHTML({ src: 'data/sprites/' + ch.file, cols: ch.cols, rows: ch.rows, fw: ch.frame, fh: ch.frame, char: ch.char || 0 }, 56, dir);
+    }
     function _sprite(a) {
-        // Real sprites: enemy = imported battler art; player = their charset sprite.
-        if (a.side === 'enemy' && enemyMeta[a.id] && enemyMeta[a.id].battler)
-            return '<img class="cv-battler" src="data/battlers/' + enemyMeta[a.id].battler + '" alt="">';
-        if (a.side === 'player' && !a.summon)
-            return _charSpriteHTML(_playerSprite || (_playerSprite = _buildPlayerSprite()), 58, 1);  // face left, toward foes
+        // toward the foe: enemies (left) face right (2), allies/hero (right) face left (1)
+        var dir = a.side === 'enemy' ? 2 : 1;
+        // The player hero = their own overworld charset.
+        if (a.side === 'player' && a.id === 'p1' && !a.battler && !a.charset)
+            return _charSpriteHTML(_playerSprite || (_playerSprite = _buildPlayerSprite()), 58, 1);
+        // Anyone with real art (enemy creature, summon, or a bonded-creature ally):
+        if (a.battler) return '<img class="cv-battler" src="data/battlers/' + a.battler + '" alt="">';
+        if (a.charset) return _creatureCharsetHTML(a.charset, dir);
         return a.side === 'enemy' ? '👹' : (a.summon ? '⚙' : '🛠');
     }
     function _card(a) {
@@ -340,7 +347,7 @@
         var css =
         '#combat-view{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;font-family:"Courier New",monospace;color:#e6eef6;background:radial-gradient(circle at 50% 35%,#2a2330,#0b0a12 80%);}' +
         // Side-view (FF-style): enemies left, SYSTEM centre, hero(es) right.
-        '.cv-field{position:relative;flex:1;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:6px 8px;}' +
+        '.cv-field{position:relative;flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7%;padding:6px 8px;}' +
         '.cv-row{display:flex;flex-direction:column;gap:8px;justify-content:center;flex-wrap:wrap;max-height:100%;}' +
         '.cv-enemies{align-items:flex-start;} .cv-players{align-items:flex-end;}' +
         '.cv-card{position:relative;flex:0 1 auto;min-width:20%;max-width:40%;display:flex;flex-direction:column;align-items:center;padding:0 2px;background:transparent;}' +
