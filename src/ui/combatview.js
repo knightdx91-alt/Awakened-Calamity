@@ -443,9 +443,16 @@
             var s = db.skills[id]; if (!s) return false;
             return s.power > 0 || (s.effect && ['heal', 'defUp', 'slow', 'markTarget', 'sunder', 'applyToxin', 'taunt', 'partyBuff', 'summon'].indexOf(s.effect.type) >= 0);
         });
-        // Always offer the free basic Strike (no resource regen means you must
-        // always be able to act even when out of MP/Stamina).
-        menuSkills = (skills.indexOf('strike') < 0 && db.skills.strike) ? ['strike'].concat(skills) : skills;
+        // Everyone gets a universal basic combat kit (Strike/Jab/Guard) so no one
+        // is ever stuck with only Strike — crafting/lifestyle classes grant
+        // non-combat skills that all filter out of the battle menu, which left
+        // their FIGHT menu empty but for the free Strike. Class skills come first
+        // (after Strike), then any missing basics, deduped.
+        var order = ['strike'].concat(skills).concat(['jab', 'guard']);
+        var seen = {}; menuSkills = [];
+        order.forEach(function (id) {
+            if (db.skills[id] && !seen[id]) { seen[id] = 1; menuSkills.push(id); }
+        });
         cursor = 0;
     }
     function _closeMenu() { menuSkills = []; itemList = []; chosenItem = null; }

@@ -637,12 +637,12 @@
    "x": 24,
    "y": 28,
    "graphic": {
-    "sprite": "Other1",
-    "file": "rtp/Other1.png",
+    "sprite": "NoticeBoard",
+    "file": "rtp/NoticeBoard.png",
     "frame_w": 32,
     "frame_h": 32,
-    "cols": 12,
-    "rows": 8,
+    "cols": 3,
+    "rows": 4,
     "single": false
    },
    "dir": "down",
