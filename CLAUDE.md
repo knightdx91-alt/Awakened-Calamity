@@ -173,6 +173,18 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Dawnhearth opening — content/writing pass (2026-06-17)
+Fleshed the opening from a 16-box skeleton to **32 faced text boxes** + a 4-option Mira info choice +
+the cold-open. Added townsfolk (all with RTP face portraits, browser-verified): **Old Bram** (cycle
+foreshadow), **Tessa** (Surveillance/Audit dread), **Pip** (child flavor/nudge), **Lys** (the hook —
+brother Joran taken for going off-grid), **Vanguard Sentry Corwin** (enforcer). Examinable props:
+**Well**, **System Poster**, **Memorial** (cycle hints, faceless). Mira now has personality + an
+[name]/[designation]-aware info choice (System / Dawnhearth / Self). **`docs/DAWNHEARTH.md`** tracks
+street content (built) + the **interiors to BUILD** (Mira's Hearth, Infirmary w/ Sister Wenna, the Inn
+[DawnhearthInn.json exists — wire Door12], Market/off-grid supplier, Joran's locked house, the Ashlab
+OWPS annex [DawnhearthLab.json exists]) with door→building links + contents. Verified in headless
+chromium: faces render, the choice menu shows, zero errors.
+
 ## Dawnhearth opening tutorial — SCRIPTED & browser-verified (2026-06-17)
 The `awakening` quest is now a playable opening, authored as map events in `data/maps/awakened/
 Dawnhearth.json` + a cold-open in `_newGame`:
