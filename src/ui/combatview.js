@@ -257,10 +257,10 @@
         var host = document.getElementById('screen-primary') || document.body;
         var r = document.createElement('div'); r.id = 'combat-view';
         r.innerHTML =
+            '<div class="cv-system" id="cv-system"><div class="cv-sys-label">SYSTEM</div>' +
+            '  <div class="cv-bar cv-iv"><span></span></div><div class="cv-surv" id="cv-surv">Surveillance 0</div></div>' +
             '<div class="cv-field">' +
             '  <div class="cv-row cv-enemies" id="cv-enemies"></div>' +
-            '  <div class="cv-system" id="cv-system"><div class="cv-sys-label">SYSTEM</div>' +
-            '    <div class="cv-bar cv-iv"><span></span></div><div class="cv-surv" id="cv-surv">Surveillance 0</div></div>' +
             '  <div class="cv-row cv-players" id="cv-players"></div>' +
             '</div><div class="cv-msg" id="cv-msg"></div><div class="cv-menu" id="cv-menu"></div>';
         host.appendChild(r);
@@ -355,6 +355,8 @@
                 var s = db.skills[id];
                 return '<div class="cv-opt' + (i === cursor ? ' sel' : '') + '">' + (i === cursor ? '▶ ' : '') + s.name + (s.tempoCost ? ' <em>' + s.tempoCost + '</em>' : '') + '</div>';
             }).join('');
+            var selOpt = els.menu.querySelector('.cv-opt.sel');   // keep the highlighted option visible when scrolling
+            if (selOpt) selOpt.scrollIntoView({ block: 'nearest' });
         } else { els.menu.style.display = 'none'; els.menu.innerHTML = ''; }
     }
 
@@ -370,7 +372,7 @@
         var css =
         '#combat-view{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;font-family:"Courier New",monospace;color:#e6eef6;background:radial-gradient(circle at 50% 35%,#2a2330,#0b0a12 80%);}' +
         // Side-view (FF-style): enemies left, SYSTEM centre, hero(es) right.
-        '.cv-field{position:relative;flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7%;padding:6px 8px;}' +
+        '.cv-field{position:relative;flex:1;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:6px 8%;}' +
         '.cv-row{display:flex;flex-direction:column;gap:8px;justify-content:center;flex-wrap:wrap;max-height:100%;}' +
         '.cv-enemies{align-items:flex-start;} .cv-players{align-items:flex-end;}' +
         '.cv-card{position:relative;flex:0 1 auto;min-width:20%;max-width:40%;display:flex;flex-direction:column;align-items:center;padding:0 2px;background:transparent;}' +
@@ -389,12 +391,13 @@
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:9px;margin-top:1px;}' +
         '.cv-sprite{font-size:26px;text-align:center;min-height:30px;}' +
         '.cv-battler{max-width:100%;max-height:66px;image-rendering:auto;vertical-align:bottom;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.6));}' +
-        '.cv-system{align-self:center;flex:0 0 auto;text-align:center;width:26%;min-width:96px;padding:3px 6px;background:rgba(2,12,18,0.7);border:1px solid #002830;box-shadow:0 0 0 1px #18b8c8;border-radius:3px;}' +
-        '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;}' +
-        '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{border-color:#0a3038;}' +
-        '.cv-surv{font-size:8px;color:#80d0e8;margin-top:1px;}' +
+        // SYSTEM surveillance meter — a slim bar across the TOP of the battle.
+        '.cv-system{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 10px;background:rgba(2,12,18,0.8);border-bottom:1px solid #18b8c8;}' +
+        '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;flex:0 0 auto;}' +
+        '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{flex:1 1 auto;max-width:240px;margin:0;border-color:#0a3038;}' +
+        '.cv-surv{font-size:8px;color:#80d0e8;flex:0 0 auto;}' +
         '.cv-msg{min-height:28px;padding:5px 10px;font-size:11px;background:#060610;border-top:1px solid #18b8c8;box-shadow:inset 0 1px 0 #002830;display:flex;align-items:center;}' +
-        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:#0a1830;border-top:1px solid #18b8c8;}' +
+        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:#0a1830;border-top:1px solid #18b8c8;max-height:40%;overflow-y:auto;align-content:start;}' +
         '.cv-opt{font-size:11px;padding:3px 6px;color:#c8d8e8;border-radius:2px;}' +
         '.cv-opt.sel{background:rgba(24,184,200,0.18);color:#fff;}' +
         '.cv-opt em{float:right;font-style:normal;color:#8aa0b4;font-size:9px;}';
