@@ -1714,13 +1714,24 @@
       var sz = (window.MapGen && MapGen.DEFAULT_SIZE[a]) || [50, 50];
       $('genW').value = sz[0]; $('genH').value = sz[1];
     }
-    function open() {
-      $('genName').value = $('mapName') ? ($('mapName').value || 'NewMap') : 'NewMap';
+    var genParent = null;   // when set, the generated map nests under this map
+    function open(parent) {
+      genParent = parent || null;
+      if (genParent) {
+        $('genName').value = uniqueName(genParent + 'Sub');
+        var pr = treeModel[genParent] && treeModel[genParent].region;
+        if (pr) setRegionSelect(pr);
+        $('genModal').querySelector('.ed-head strong').textContent = '🎲 Generate Child of ' + genParent;
+      } else {
+        $('genName').value = $('mapName') ? ($('mapName').value || 'NewMap') : 'NewMap';
+        $('genModal').querySelector('.ed-head strong').textContent = '🎲 Generate Map';
+      }
       $('genSeed').value = '';   // blank = a fresh random map every time
       syncOpts(); modal.style.display = 'flex';
     }
     function close() { modal.style.display = 'none'; }
-    $('genBtn').addEventListener('click', open);
+    window._openGenModal = open;   // tree context menu → Generate child map
+    $('genBtn').addEventListener('click', function () { open(null); });
     $('genClose').addEventListener('click', close);
     $('genCancel').addEventListener('click', close);
     $('genArch').addEventListener('change', syncOpts);
@@ -1739,9 +1750,17 @@
         houses: parseInt($('genHouses').value, 10), tier: parseInt($('genTierIn').value, 10) || 1,
       };
       var go = $('genGo'); go.disabled = true; go.textContent = 'Generating…';
+      var parent = genParent;
       Promise.resolve().then(function () { return MapGen.generate(opt); })
         .then(function (res) { try { pushUndo(); } catch (_) {} return applyLayout(res.layout, res.map); })
-        .then(function () { close(); try { toast('Generated ' + name); } catch (_) {} })
+        .then(function () {
+          // register the generated map in the tree (nested if a parent was given)
+          treeModel[name] = treeModel[name] || { region: opt.region, parent: parent || null, local: true };
+          treeModel[name].region = opt.region; treeModel[name].local = true;
+          if (parent) { treeModel[name].parent = parent; treeExpanded[parent] = true; }
+          currentNode = name; persistTree(); renderTree();
+          close(); try { toast('Generated ' + name + (parent ? ' (child of ' + parent + ')' : '')); } catch (_) {}
+        })
         .catch(function (err) { alert('Generate failed: ' + ((err && err.message) || err)); })
         .then(function () { go.disabled = false; go.textContent = 'Generate'; });
     });
@@ -2608,6 +2627,7 @@
     var items;
     if (name) items = [
       ['New Map (child)', function () { newMapNode(name); }],
+      ['Generate child map…', function () { selectNode(name); if (window._openGenModal) window._openGenModal(name); }],
       ['Edit', function () { selectNode(name); }],
       ['Map Properties…', function () { selectNode(name); window._openMapProps(); }],
       ['Rename…', function () { renameNode(name); }],
@@ -2816,12 +2836,43 @@
   $('spriteModal').addEventListener('click', function (e) { if (e.target === $('spriteModal')) $('spriteModal').style.display = 'none'; });
 
   // ── Map Properties + Event editor modal wiring (RM XP-style dialogs) ──
-  function openMapProps() { $('mapPropsModal').style.display = 'flex'; }
+  function openMapProps() {
+    state._propsOrig = $('mapName').value || '';   // remember identity to detect a rename
+    $('mapPropsModal').style.display = 'flex';
+  }
   function closeMapProps() { $('mapPropsModal').style.display = 'none'; }
   $('mapPropsClose').addEventListener('click', closeMapProps);
   if ($('mapPropsDone')) $('mapPropsDone').addEventListener('click', closeMapProps);
   if ($('mapPropsSaveRepo')) $('mapPropsSaveRepo').addEventListener('click', function () {
-    closeMapProps(); saveToRepo();   // properties are live fields; persist the map to the repo
+    var orig = state._propsOrig || '';
+    var newName = ($('mapName').value || '').trim();
+    if (!newName) { alert('Map name cannot be empty.'); return; }
+    $('mapName').value = newName;
+    // Name changed → RENAME the existing map (don't create a duplicate).
+    if (orig && newName !== orig) {
+      if (treeModel[newName]) { alert('A map named "' + newName + '" already exists.'); return; }
+      var node = treeModel[orig] || { region: $('mapRegion').value, parent: null, local: true };
+      var oldRegion = node.region || $('mapRegion').value;
+      var wasSaved = !node.local;
+      // move the tree node old → new (keep parent/region; reparent children)
+      treeModel[newName] = { region: $('mapRegion').value || oldRegion, parent: node.parent || null, local: node.local };
+      delete treeModel[orig];
+      Object.keys(treeModel).forEach(function (k) { if (treeModel[k].parent === orig) treeModel[k].parent = newName; });
+      if (treeExpanded[orig] != null) { treeExpanded[newName] = treeExpanded[orig]; delete treeExpanded[orig]; }
+      if (currentNode === orig) currentNode = newName;
+      $('layoutId').value = layoutIdFor(newName);
+      persistTree(); renderTree();
+      closeMapProps();
+      // remove the old repo files (if it was saved), then write the current content as the new name
+      if (wasSaved) {
+        setRepoBtn('☁ Renaming…', '#b58900');
+        repoDelete(orig, oldRegion).then(saveToRepo).catch(function () { saveToRepo(); });
+      } else {
+        saveToRepo();
+      }
+      return;
+    }
+    closeMapProps(); saveToRepo();   // no rename — just persist
   });
   $('mapPropsModal').addEventListener('click', function (e) { if (e.target === $('mapPropsModal')) closeMapProps(); });
   $('eventEditorClose').addEventListener('click', closeEventEditor);
