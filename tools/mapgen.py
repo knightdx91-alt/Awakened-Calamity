@@ -127,9 +127,10 @@ def build_outside_props(force=False):
     def over(base, top):
         c = base.copy(); c.alpha_composite(top); return c
     for mat, sl in wall_slices.items():
+        # NOTE: keep this order stable — existing maps store gids into this sheet.
         tiles.append((f"wall_{mat}_door", over(sl["b"], door)))
-        tiles.append((f"wall_{mat}_window", over(sl["b"], window)))
-        tiles.append((f"wall_{mat}_window_t", over(sl["t"], window)))
+        tiles.append((f"wall_{mat}_window", over(sl["b"], window)))    # front row
+        tiles.append((f"wall_{mat}_window_t", over(sl["t"], window)))  # under-eave row
     for col, sl in roof_slices.items():
         tiles.append((f"roof_{col}_chimney", over(sl["t"], chimney)))
     PACK = [
@@ -152,6 +153,10 @@ def build_outside_props(force=False):
     ]
     for (sn, idx, name) in PACK:
         tiles.append((name, b_tile(sn, idx)))
+    # Appended LAST so older maps' gids stay stable: middle-row window variant
+    # (lets a multi-row wall column carry windows on every floor).
+    for mat, sl in wall_slices.items():
+        tiles.append((f"wall_{mat}_window_f", over(sl["f"], window)))
     PR = 16; n = len(tiles); rows = (n + PR - 1) // PR
     out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
     gid = {}
@@ -263,13 +268,24 @@ class MapBuilder:
         door_x = wx + dxr
         self.setp(door_x, fy, f"wall_{wall}_door")
         self.events.append({"x": door_x, "y": fy})
-        for wxi in (dxr - 1, dxr + 1):
-            if 0 < wxi < ww - 1 and wxi != dxr:
-                self.setp(wx + wxi, fy, f"wall_{wall}_window")
-        if wh >= 2:
-            for wxi in range(1, ww - 1, 2):
-                if wxi != dxr:
-                    self.setp(wx + wxi, wy, f"wall_{wall}_window_t")
+        # Window columns: symmetric, flanking the door, never on the corner or
+        # door columns. Each column gets a window on EVERY wall row (edge-correct
+        # variant) so multi-row walls read as a real facade — no floating boxes.
+        win_cols = [c for c in (dxr - 2, dxr + 2, dxr - 1, dxr + 1)
+                    if 0 < c < ww - 1 and c != dxr]
+        if ww <= 4:
+            win_cols = [c for c in (dxr - 1, dxr + 1) if 0 < c < ww - 1 and c != dxr][:1]
+        seen = set()
+        for c in win_cols:
+            if c in seen:
+                continue
+            seen.add(c)
+            for j in range(wh):
+                yy = wy + j
+                if yy == fy and c == dxr:
+                    continue
+                variant = "window_t" if j == 0 else ("window" if yy == fy else "window_f")
+                self.setp(wx + c, yy, f"wall_{wall}_{variant}")
         if ww >= 3:
             self.setu(wx + ww - 1, wy - rh, f"roof_{roof}_chimney")
         return door_x, fy + 1
@@ -289,7 +305,7 @@ class MapBuilder:
         # inner keep building
         kx, ky, kw = x0 + 2, y0 + 1, w - 4
         if kw >= 3:
-            self.house(kx, ky + 2, kw, 2, "sage", "stone")
+            self.house(kx, ky + 2, kw, 2, "green", "stone")
         # gate + banners
         gx = x0 + w // 2
         self.setp(gx, y0, "wall_stone_door"); self.events.append({"x": gx, "y": y0})
@@ -363,7 +379,7 @@ class MapBuilder:
                   "allow_running": True, "show_map_name": True, "connections": [],
                   "npcs": [], "warps": [], "triggers": [], "signs": [],
                   "events": [{"id": i + 1, "name": "Door%d" % (i + 1), "x": e["x"], "y": e["y"],
-                              "graphic": {"sprite": "Door1", "file": "rtp/!Door1.png", "frame_w": 32,
+                              "graphic": {"sprite": "Door1", "file": "rtp/Door1.png", "frame_w": 32,
                                           "frame_h": 32, "cols": 3, "rows": 4, "single": True},
                               "dir": "down", "trigger": "action", "through": False,
                               "commands": [{"type": "text", "text": door_text}]}
@@ -378,7 +394,10 @@ class MapBuilder:
 
 
 # ───────────────────────── archetypes (outside) ─────────────────────────
-ROOFS = list(ROOF_BLOCKS); WALLS = list(WALL_BLOCKS)
+# Only the A3 blocks that actually read as roofs (gold & sage are a berry/mat
+# texture, not a roof — excluded from random selection).
+ROOFS = ["orange", "brown", "green", "blue", "red"]
+WALLS = list(WALL_BLOCKS)
 FLOWERS = ["flower_w", "flower_r", "flower_p", "flower_y"]
 
 def _tree_border(b, density=0.55, ring=2):
@@ -438,7 +457,14 @@ def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True,
         ry = b.rng.randint(6, h - 6)
         for x in range(0, w): b.setterr(x, ry, "dirt"); b.setterr(x, ry + 1, "dirt")
     if keep and b.rng.random() < 0.8:
-        b.keep(b.rng.randint(4, w - 18), b.rng.randint(7, 9), 14, 6)
+        kw, kh = 14, 6
+        for _ in range(30):                       # find a clear (grass) keep site
+            kx = b.rng.randint(4, w - kw - 4); ky = b.rng.randint(7, 9)
+            if all(b.inb(xx, yy) and b.terr[yy][xx] == "grass"
+                   for yy in range(ky - 4, ky + kh + 1)
+                   for xx in range(kx - 1, kx + kw + 1)):
+                b.keep(kx, ky, kw, kh)
+                break
     _place_houses(b, houses, cx, cy)
     b.setp(cx, cy, "well")
     for (dx, dy, obj) in [(-3, -2, "barrel"), (-3, -1, "barrel_open"), (3, -2, "crate"),
