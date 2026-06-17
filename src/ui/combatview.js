@@ -16,6 +16,24 @@
     var rafId = 0, lastTs = 0, acc = 0, waitUntil = 0, seedCounter = 1;
     var prog = null, enemyMeta = {}, _localProg = null;
     var _battleback = 'Grassland';   // RTP battleback id (floor+wall layer share the name)
+    var _playerSprite = null;        // player charset for the battle sprite
+
+    // The player's chosen overworld charset (editor picker) or a default RTP hero.
+    function _buildPlayerSprite() {
+        var ov = null; try { ov = JSON.parse(localStorage.getItem('ac_player_sprite') || 'null'); } catch (e) {}
+        if (ov && ov.file && ov.frame_w) return { src: 'data/sprites/' + ov.file, cols: ov.cols, rows: ov.rows, fw: ov.frame_w, fh: ov.frame_h, char: 0 };
+        return { src: 'data/sprites/rtp/Actor1.png', cols: 12, rows: 8, fw: 32, fh: 32, char: 0 };
+    }
+    // A scaled, cropped DOWN-facing standing frame of a charset (div + bg-position).
+    function _charSpriteHTML(sp, hpx) {
+        var perRow = Math.max(1, (sp.cols / 3) | 0), ch = sp.char || 0;
+        var cc = ch % perRow, cr = (ch / perRow) | 0;
+        var fx = (cc * 3 + 1) * sp.fw, fy = (cr * 4) * sp.fh;     // middle col = stand, row 0 = down
+        var S = hpx / sp.fh, sw = sp.cols * sp.fw, sh = sp.rows * sp.fh;
+        return '<div class="cv-charsprite" style="width:' + (sp.fw * S) + 'px;height:' + (sp.fh * S) + 'px;' +
+            "background-image:url('" + sp.src + "');background-size:" + (sw * S) + 'px ' + (sh * S) + 'px;' +
+            'background-position:-' + (fx * S) + 'px -' + (fy * S) + 'px;"></div>';
+    }
 
     var BUILD = (root.__BUILD__ || 'dev');
     var MS_PER_STEP = 45;
@@ -73,6 +91,7 @@
         if (active) return;
         opts = opts || {}; active = true;
         if (opts.battleback) _battleback = opts.battleback;
+        _playerSprite = _buildPlayerSprite();
         loadDB().then(function () {
             prog = _loadProg();
             var actors = [buildPlayer()].concat(buildEnemies(opts));
@@ -237,18 +256,23 @@
         field.style.backgroundPosition = 'center top, center bottom';
     }
     function _sprite(a) {
-        // Enemy with an imported battler image -> show the art; else emoji fallback.
-        if (a.side === 'enemy' && enemyMeta[a.id] && enemyMeta[a.id].battler) {
+        // Real sprites: enemy = imported battler art; player = their charset sprite.
+        if (a.side === 'enemy' && enemyMeta[a.id] && enemyMeta[a.id].battler)
             return '<img class="cv-battler" src="data/battlers/' + enemyMeta[a.id].battler + '" alt="">';
-        }
+        if (a.side === 'player' && !a.summon)
+            return _charSpriteHTML(_playerSprite || (_playerSprite = _buildPlayerSprite()), 58);
         return a.side === 'enemy' ? '👹' : (a.summon ? '⚙' : '🛠');
     }
     function _card(a) {
         var c = document.createElement('div');
         c.className = 'cv-card cv-' + a.side + (a.summon ? ' cv-summon' : '');
-        c.innerHTML = (a.side === 'enemy'
-            ? '<div class="cv-tgt">▼</div><div class="cv-name"></div><div class="cv-bar cv-hp"><span></span></div><div class="cv-bar cv-tempo"><span></span></div><div class="cv-status"></div><div class="cv-sprite">' + _sprite(a) + '</div>'
-            : '<div class="cv-sprite">' + _sprite(a) + '</div><div class="cv-name"></div><div class="cv-bar cv-hp"><span></span></div><div class="cv-bar cv-tempo"><span></span></div><div class="cv-status"></div>');
+        // Sprite stands on the battleback; a small translucent strip holds name + bars.
+        c.innerHTML = '<div class="cv-tgt">▼</div>' +
+            '<div class="cv-sprite">' + _sprite(a) + '</div>' +
+            '<div class="cv-info"><div class="cv-name"></div>' +
+            '<div class="cv-bar cv-hp"><span></span></div>' +
+            '<div class="cv-bar cv-tempo"><span></span></div>' +
+            '<div class="cv-status"></div></div>';
         return c;
     }
     function _openMenu(a) {
@@ -318,20 +342,22 @@
         '.cv-field{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:4px;}' +
         '.cv-row{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}' +
         '.cv-enemies{align-items:flex-start;} .cv-players{align-items:flex-end;}' +
-        '.cv-card{position:relative;flex:0 1 auto;min-width:28%;max-width:46%;padding:4px 6px;background:#060610;border:1px solid #000;box-shadow:0 0 0 2px #3a2f1e,0 0 0 3px #000;border-radius:3px;}' +
-        '.cv-card.cv-summon{box-shadow:0 0 0 2px #2a4a52,0 0 0 3px #000;}' +
-        '.cv-card.dead{opacity:0.3;filter:grayscale(1);}' +
-        '.cv-card.targeted{box-shadow:0 0 0 2px #ffd96a,0 0 6px #ffd96a;}' +
-        '.cv-tgt{position:absolute;top:-12px;left:50%;transform:translateX(-50%);color:#ffd96a;font-size:12px;display:none;}' +
+        '.cv-card{position:relative;flex:0 1 auto;min-width:20%;max-width:40%;display:flex;flex-direction:column;align-items:center;padding:0 2px;background:transparent;}' +
+        '.cv-card.dead{opacity:0.32;filter:grayscale(1);}' +
+        '.cv-card.targeted .cv-sprite{filter:drop-shadow(0 0 5px #ffd96a) drop-shadow(0 0 2px #ffd96a);}' +
+        '.cv-tgt{position:absolute;top:-10px;left:50%;transform:translateX(-50%);color:#ffd96a;font-size:12px;display:none;text-shadow:0 1px 2px #000;}' +
         '.cv-card.targeted .cv-tgt{display:block;}' +
-        '.cv-name{font-size:10px;font-weight:bold;color:#f2d39a;margin-bottom:2px;}' +
+        '.cv-sprite{min-height:58px;display:flex;align-items:flex-end;justify-content:center;}' +
+        '.cv-charsprite{image-rendering:pixelated;background-repeat:no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.55));}' +
+        '.cv-info{background:rgba(6,8,16,0.6);border:1px solid rgba(120,160,200,0.25);border-radius:4px;padding:2px 6px;margin-top:1px;min-width:96px;text-align:center;}' +
+        '.cv-name{font-size:10px;font-weight:bold;color:#f2d39a;margin-bottom:2px;text-shadow:0 1px 1px #000;}' +
         '.cv-bar{height:6px;background:#1a1a24;border:1px solid #000;border-radius:3px;margin:2px 0;overflow:hidden;}' +
         '.cv-bar span{display:block;height:100%;width:100%;}' +
         '.hp-fill{background:linear-gradient(#7bd66a,#3da13a);transition:width 140ms ease;} .hp-fill.low{background:linear-gradient(#e06a4a,#b03020);transition:width 140ms ease;}' +
         '.tempo-fill{background:linear-gradient(#e8c46a,#b88a2a);} .tempo-fill.ready{background:linear-gradient(#ffe9a0,#e8b94a);box-shadow:0 0 4px #ffd96a;}' +
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:9px;margin-top:1px;}' +
         '.cv-sprite{font-size:26px;text-align:center;min-height:30px;}' +
-        '.cv-battler{max-width:100%;max-height:54px;image-rendering:auto;vertical-align:middle;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));}' +
+        '.cv-battler{max-width:100%;max-height:66px;image-rendering:auto;vertical-align:bottom;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.6));}' +
         '.cv-system{align-self:center;text-align:center;width:36%;padding:3px 6px;background:rgba(2,12,18,0.7);border:1px solid #002830;box-shadow:0 0 0 1px #18b8c8;border-radius:3px;}' +
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;}' +
         '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{border-color:#0a3038;}' +
