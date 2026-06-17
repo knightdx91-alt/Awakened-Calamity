@@ -32,6 +32,11 @@ ROOF_BLOCKS = {"orange": (0, 0), "brown": (1, 0), "green": (2, 0), "blue": (3, 0
 WALL_BLOCKS = {"stone": (0, 1), "brick": (1, 1), "block": (2, 1),
                "plank": (0, 2), "log": (1, 2), "thatch": (2, 2), "white": (5, 2)}
 
+def roof_rows(ww, wh):
+    """Roof height in tiles for a ww×wh house — kept proportional so a roof
+    never out-towers its own footprint."""
+    return 3 if ww >= 6 else 2
+
 # 9-slice quarter spec: each output tile = [TL,TR,BL,BR] quarters as
 # (block_tile 0=A 1=B 2=C 3=D, qx, qy). Interior = edge-free fill.
 NINE = {
@@ -257,11 +262,14 @@ class MapBuilder:
                 (self.setu if up else self.setp)(x0 + i, y0 + j, nm)
 
     def house(self, wx, wy, ww, wh, roof, wall):
-        """wx,wy = top-left of WALL face. Roof scales with size (ridge+body+eave),
-        1-tile overhang. Roof goes on Layer 3 (walk under the eaves); door + windows
-        composited onto the walls. Returns (door_x, path_y)."""
-        rh = 3 if (ww >= 6 or wh >= 3) else 2          # taller roof on big houses
-        self._grid9(f"roof_{roof}", wx - 1, wy - rh, ww + 2, rh, up=True)
+        """wx,wy = top-left of WALL face. Flush RM-style house: ONE solid
+        ww-wide rectangle — rh roof rows stacked directly on top of wh wall
+        rows, the same width, so nothing overhangs into open ground (the roof's
+        own bottom row is the eave). Roof + chimney go on Layer 3 so the player
+        walks under the eaves; door (an event) + windows on the walls.
+        Returns (door_x, path_y)."""
+        rh = roof_rows(ww, wh)
+        self._grid9(f"roof_{roof}", wx, wy - rh, ww, rh, up=True)
         self._grid9(f"wall_{wall}", wx, wy, ww, wh)
         fy = wy + wh - 1
         dxr = ww // 2
@@ -286,8 +294,8 @@ class MapBuilder:
                     continue
                 variant = "window_t" if j == 0 else ("window" if yy == fy else "window_f")
                 self.setp(wx + c, yy, f"wall_{wall}_{variant}")
-        if ww >= 3:
-            self.setu(wx + ww - 1, wy - rh, f"roof_{roof}_chimney")
+        if ww >= 4:                              # chimney on the ridge, off the corner
+            self.setu(wx + ww - 2, wy - rh, f"roof_{roof}_chimney")
         return door_x, fy + 1
 
     def tower(self, x, y0):
@@ -418,8 +426,10 @@ def _nature_pass(b, trees, bushes, flowers, tufts, rocks):
     b.scatter("firewood", max(2, rocks // 2))
 
 def _house_fits(b, wx, wy, ww, wh, rh):
+    # footprint = roof rows (wy-rh..wy-1) + wall rows (wy..wy+wh-1), ww wide,
+    # plus 1 tile of clearance all round so houses never butt against anything.
     for yy in range(wy - rh - 1, wy + wh + 2):
-        for xx in range(wx - 2, wx + ww + 2):
+        for xx in range(wx - 1, wx + ww + 1):
             if not b.inb(xx, yy): return False
             if b.terr[yy][xx] != "grass" or b.over[yy * b.W + xx] != -1: return False
     return True
@@ -429,7 +439,7 @@ def _place_houses(b, n, cx, cy):
     while placed < n and tries < n * 40:
         tries += 1
         ww, wh = b.rng.choice([(4, 2), (5, 2), (4, 2), (6, 3), (5, 3), (4, 2)])
-        rh = 3 if (ww >= 6 or wh >= 3) else 2
+        rh = roof_rows(ww, wh)
         wx = b.rng.randint(3, b.W - ww - 3); wy = b.rng.randint(rh + 2, b.H - wh - 3)
         if not _house_fits(b, wx, wy, ww, wh, rh): continue
         dx, dy = b.house(wx, wy, ww, wh, b.rng.choice(ROOFS), b.rng.choice(WALLS))
