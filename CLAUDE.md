@@ -173,6 +173,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Instant freshness + SAVE-screen fix (2026-06-17)
+- **Network-first service worker** (`sw.js`, was a kill-switch): every same-origin GET fetches from
+  **network first** (beats GitHub Pages' HTML cache → always the latest deploy on reload), cache only
+  as **offline fallback**; `skipWaiting`+`clients.claim` so it controls pages immediately. This is the
+  freshness *guarantee*; the `version.txt` check stays as an advisory reload notice for long sessions
+  (kept as notify, not auto-reload, to avoid any reload-loop before the SW controls the page).
+- **SAVE screen** (`_drawSaveCanvas`) now shows **Class + Level** (+ Subject, Map, Time) instead of
+  **Bonds** (which never belonged there). Loads class data on the save page so the class name resolves.
+
 ## Updates & save compatibility (2026-06-17)
 **Save migration (`save.js`):** `SAVE_VERSION` → 2. `migrate()` now does (1) explicit version steps
 then (2) **`_ensureShape`** — a deep backfill that adds any field in the current `DEFAULT_SLOT_DATA`

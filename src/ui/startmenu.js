@@ -523,7 +523,7 @@ window.GameStartMenu = (function () {
             fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
         ]).then(function (res) {
             _clsData = res[0] || {}; _progData = res[1] || null; _skillsData = res[2] || {}; _clsLoading = false;
-            if (page === 'camp') _render();   // refresh STATUS with real data
+            if (page === 'camp' || page === 'save') _render();   // refresh with real class data
         });
     }
     function _classDb() { return { classes: _clsData || {}, skills: _skillsData || {} }; }
@@ -1005,6 +1005,7 @@ window.GameStartMenu = (function () {
     }
 
     function _buildSave(el) {
+        _ensureClassData();   // so the slot summary can show the real class name
         var shell = _makeCanvasShell(el, function(ctx, canvas) {
             _drawSaveCanvas(ctx);
             canvas.addEventListener('click', function(e) {
@@ -1032,9 +1033,12 @@ window.GameStartMenu = (function () {
         ctx.fillStyle = _tc.hi;
         ctx.fillText('SAVE', 8*S, 5*S);
 
-        // Info box
-        var bondCount = (window.GameSave && GameSave.state && GameSave.state.bonds)
-            ? GameSave.state.bonds.length : 0;
+        // Info box — basic character summary (Class + Level, not Bonds).
+        var _p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var _prog = (window.GameSave && GameSave.state && GameSave.state.progress) || null;
+        var _clsId = _p.class && _p.class.id;
+        var _clsName = (_clsData && _clsId && _clsData[_clsId] && _clsData[_clsId].name) || (_clsId ? _prettySkill(_clsId) : 'Unclassed');
+        var _lvl = _prog ? _prog.level : ((_p.class && _p.class.level) || 1);
 
         ctx.font = (7*S)+'px "Press Start 2P", monospace';
         ctx.fillStyle = COL_CYAN;
@@ -1042,7 +1046,8 @@ window.GameStartMenu = (function () {
 
         var infoRows = [
             ['Subject:', _playerName()],
-            ['Bonds:', String(bondCount)],
+            ['Class:', _clsName],
+            ['Level:', String(_lvl)],
             ['Time:', _playtime()],
         ];
         infoRows.forEach(function(r, i) {
