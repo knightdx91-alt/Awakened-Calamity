@@ -363,6 +363,14 @@
             } catch(_) { _mapLoading = false; }
         }
 
+        // Character creation (the Awakening) holds the world — its DOM overlay
+        // handles its own input; just pause movement/menus underneath.
+        if (window.GamePlayerCreation && GamePlayerCreation.isActive()) {
+            GameInput.consumeJustPressed();
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+
         // Tempo + Intervention combat view gets first priority on all input.
         if (window.GameCombatView && GameCombatView.isActive()) {
             GameCombatView.consumeInput(jp);
@@ -518,6 +526,7 @@
             GameLayout.init();
             GameControls.init();
             GameHUD.init(GameMap, player);
+            if (window.GameAudio) GameAudio.init();
 
             if (window.GameDialogue) GameDialogue.init();
 
@@ -585,6 +594,17 @@
             GameRenderer.setScene(GameMap, GameCamera, player);
             GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
             console.log('[Main] Game started. Map:', GameMap.current && GameMap.current.name);
+
+            // The Awakening — show character creation on a fresh game (no name yet).
+            // Skipped when an explicit ?map= override is used (editor Play / testing).
+            var _fresh = !(window.GameSave && GameSave.state && GameSave.state.player
+                           && GameSave.state.player.name);
+            if (_fresh && !_params.get('map') && window.GamePlayerCreation) {
+                GamePlayerCreation.start(function () {
+                    console.log('[Main] Awakening complete:',
+                        GameSave.state.player.name, '/', GameSave.state.player.affinity);
+                });
+            }
         } catch (e) {
             console.error('[Main] init() error:', e);
             window._initError = e && e.message ? e.message : String(e);

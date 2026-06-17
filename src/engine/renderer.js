@@ -473,5 +473,9 @@ window.GameRenderer = (function () {
         if (rafId) cancelAnimationFrame(rafId);
     }
 
-    return { init, setScene, stop, render };
+    // Reload the player sprite from localStorage (e.g. after character
+    // creation writes a new `ac_player_sprite`). Presentation-only.
+    function reloadPlayer() { _playerImg = null; _loadPlayerImg(); }
+
+    return { init, setScene, stop, render, reloadPlayer };
 })();

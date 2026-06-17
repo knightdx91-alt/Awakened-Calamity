@@ -436,6 +436,21 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     gardens, leafy trees), re-render until good, then commit + register `VerdantTown`.
   - **📋 Agenda:** Bind flow (capture → `bonds[]`); A4 wall + A3 roof + A1 water autotile ports;
     audio (BGM + `GameAudio`); finish the 50×50 town.
+- **2026-06-17 (2)** — **Audio system + character-creation slice.**
+  - **`GameAudio` BUILT** (`src/ui/audio.js`, wired in `game.html` + `GameAudio.init()` in
+    `src/main.js`): SE (one-shot, overlapping) / ME (fanfare, ducks BGM) / BGS (looped ambience) /
+    BGM (looped; **no-op when not pulled** — index `bgm.present:false`). Mixer (per-channel volume +
+    mute) persisted to `localStorage ac_audio`. Plays the imported RTP `data/audio/*`; the event
+    runner's existing `case 'se'` now actually sounds. **Still TODO:** pull BGM (`--bgm`), wire BGS
+    ambience per-biome + BGM per-area, hook UI nav SE into start menu, Animations/Parallaxes/Titles.
+  - **The Awakening — player creation BUILT** (`src/ui/creation.js`): cold-System DOM overlay shown
+    on a fresh game (no `player.name`, and not when `?map=` overrides for editor Play). Pick name +
+    appearance (8 RTP Actor1 chars, live canvas preview) + Affinity (11, tinted chips + blurbs).
+    Confirm → writes `player.{name,appearance,affinity}` to save, **crops the chosen charset
+    character into a single-char 96×128 sheet** (data URL → `ac_player_sprite`), calls new
+    `GameRenderer.reloadPlayer()` so the choice shows in the overworld, plays `Fanfare1` ME.
+    `gameLoop` pauses the world while `GamePlayerCreation.isActive()`. Node-stub + HTTP-200 verified;
+    **not browser-verified** (no headless Chromium this session).
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
