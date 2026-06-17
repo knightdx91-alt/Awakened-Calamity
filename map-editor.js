@@ -1261,6 +1261,7 @@
     ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
+    ['system', '🔮 Open System Shop'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
@@ -1284,6 +1285,7 @@
       case 'money': return { type: 'money', op: '+', amount: 100 };
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
+      case 'system': return { type: 'system' };
       case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
       case 'shake': return { type: 'shake', power: 5, frames: 30 };
       case 'label': return { type: 'label', label: '' };

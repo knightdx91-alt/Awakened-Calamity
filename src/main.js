@@ -488,6 +488,7 @@
                 ctx.exited = true;
                 break;
             }
+            case 'system': await new Promise(function (res) { if (window.GameSystemShop) GameSystemShop.open(res); else res(); }); break;
             case 'fade':   await _fade(c); break;
             case 'shake':  await _shake(c); break;
             case 'battle': await _battle(c); break;
@@ -597,7 +598,8 @@
         // their DOM overlays handle their own input; pause everything underneath.
         if ((window.GameTitle && GameTitle.isActive()) ||
             (window.GamePlayerCreation && GamePlayerCreation.isActive()) ||
-            (window.GameEvolvePopup && GameEvolvePopup.isActive())) {
+            (window.GameEvolvePopup && GameEvolvePopup.isActive()) ||
+            (window.GameSystemShop && GameSystemShop.isActive())) {
             GameInput.consumeJustPressed();
             requestAnimationFrame(gameLoop);
             return;

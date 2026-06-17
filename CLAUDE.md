@@ -549,6 +549,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     - **`GameClasses` gained `changeClass`** (lateral: keep level/xp/skills, set Tier, record
       `ownedClasses`) + `classesOfTier` (shop catalogue). `ownedClasses` seeded at creation.
     - Node-tested (changeClass union/owned, catalogue=50) + suites pass. **Not browser-verified.**
+  - **System = town-only hub (floating crystal).** The System is no longer in the pause menu —
+    **removed `SYSTEM` from the start-menu** ITEMS. New standalone **`src/ui/systemshop.js`
+    (`GameSystemShop`)**: a cold full-screen hub with SUPPLIES (buy Tether/Tonic/Camp Kit/Ration for
+    credits), SERVICES (Restore/Fast-Travel/Register Camp), and CLASSES (Specialize · Reclassify =
+    switch owned free / buy a new Basic class Cr500). Every purchase raises Surveillance; pauses the
+    world. Opened by a new **`system` event command** (engine `runCmd` + editor `🔮 Open System Shop`),
+    placed on a **Crystal-graphic event in Dawnhearth (id 13 @28,28)** — the hub. Wired guards + script;
+    suites pass, assets serve 200. **Not browser-verified** (crystal placement @28,28 may need nudging
+    in the editor). Note: startmenu's old `_buildSystem` panel is now unreachable (left as dead code).
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

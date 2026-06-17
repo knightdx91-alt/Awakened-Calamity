@@ -24,7 +24,9 @@ window.GameStartMenu = (function () {
     function _rebuildItems() {
         ITEMS = [_ITEM.CAMP];
         if (_hasBonds()) ITEMS.push(_ITEM.BONDS);   // hidden until first bond
-        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.REACHES, _ITEM.SYSTEM,
+        // SYSTEM is intentionally NOT in the pause menu — the System is only
+        // reachable in town, via the floating crystal hub (opens GameSystemShop).
+        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.REACHES,
                    _ITEM.SAVE, _ITEM.OPTIONS, _ITEM.EXIT);
     }
     _rebuildItems();
