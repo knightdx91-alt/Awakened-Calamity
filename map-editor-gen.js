@@ -220,28 +220,50 @@
     b.scatter('boulder', rocks); b.scatter('rock', rocks, false);
     b.scatter('firewood', Math.max(2, (rocks / 2) | 0));
   }
-  function genTown(b, opt) {
-    var w = b.W, h = b.H, cx = (w / 2) | 0, cy = (h / 2) | 0;
-    if (opt.pond !== false) b.pond((w * 0.84) | 0, (h * 0.84) | 0, 5.2, 4.2);
-    b.rectTerr(cx - 5, cy - 5, cx + 4, cy + 4, 'cobble');
-    [cx, cx + 1].forEach(function (ax) { for (var y = 8; y < h; y++) b.setterr(ax, y, 'cobble'); });
-    [cy, cy + 1].forEach(function (ay) { for (var x = 0; x < w; x++) b.setterr(x, ay, 'cobble'); });
-    if (opt.keep !== false) b.keep(cx - 7, 8, 14, 6);
-    var band = [[6, 16], [13, 15], [w - 17, 15], [w - 10, 17], [6, 30], [13, 33],
-      [6, h - 10], [14, h - 8], [w - 18, h - 10], [w - 9, h - 8], [w - 17, 31], [cx + 1, cy - 8]];
-    var houses = opt.houses || 12;
-    for (var i = 0; i < Math.min(houses, band.length); i++) {
-      var wx = band[i][0], wy = band[i][1];
-      var sz = b.r.choice([[4, 2], [5, 2], [4, 2], [6, 3]]), ww = sz[0], wh = sz[1];
-      if (!b.inb(wx + ww + 1, wy + wh + 1)) continue;
-      var rf = b.r.choice(ROOFS), wl = b.r.choice(WALLS);
-      var d = b.house(wx, wy, ww, wh, rf, wl);
-      b.path(d[0], d[1], d[0], Math.abs(d[1] - cy) < 14 ? cy : d[1], 'dirt', 1, 0.3);
-      b.path(d[0], Math.min(d[1] + 2, h - 1), cx, cy, 'dirt', 1, 0.35);
+  function houseFits(b, wx, wy, ww, wh, rh) {
+    for (var yy = wy - rh - 1; yy <= wy + wh + 1; yy++)
+      for (var xx = wx - 2; xx <= wx + ww + 1; xx++) {
+        if (!b.inb(xx, yy)) return false;
+        if (b.terr[yy][xx] !== 'grass' || b.over[yy * b.W + xx] !== -1) return false;
+      }
+    return true;
+  }
+  function placeHouses(b, n, cx, cy) {
+    var R = b.r, placed = 0, tries = 0;
+    while (placed < n && tries < n * 40) {
+      tries++;
+      var sz = R.choice([[4, 2], [5, 2], [4, 2], [6, 3], [5, 3], [4, 2]]), ww = sz[0], wh = sz[1];
+      var rh = (ww >= 6 || wh >= 3) ? 3 : 2;
+      var wx = R.randint(3, b.W - ww - 3), wy = R.randint(rh + 2, b.H - wh - 3);
+      if (!houseFits(b, wx, wy, ww, wh, rh)) continue;
+      var d = b.house(wx, wy, ww, wh, R.choice(ROOFS), R.choice(WALLS));
+      if (Math.abs(d[1] - cy) <= Math.abs(d[0] - cx)) b.path(d[0], d[1], d[0], cy, 'dirt', 1, 0.3);
+      else b.path(d[0], d[1], cx, d[1], 'dirt', 1, 0.3);
+      if (R.rnd() < 0.4) for (var fx = wx - 1; fx <= wx + ww; fx++)
+        if (b.empty(fx, d[1] + 1) && b.terr[d[1] + 1][fx] === 'grass' && R.rnd() < 0.5)
+          b.setp(fx, d[1] + 1, R.choice(FLOWERS), false);
+      placed++;
     }
+  }
+  function genTown(b, opt) {
+    var w = b.W, h = b.H, R = b.r;
+    var cx = ((w / 2) | 0) + R.randint(-3, 3), cy = ((h / 2) | 0) + R.randint(-3, 3);
+    if (opt.pond !== false && R.rnd() < 0.8) {
+      var pc = R.choice([[0.82, 0.82], [0.18, 0.82], [0.84, 0.2], [0.18, 0.2]]);
+      b.pond((w * pc[0]) | 0, (h * pc[1]) | 0, 4 + R.rnd() * 2, 3 + R.rnd() * 2);
+    }
+    var ph = R.randint(4, 6);
+    b.rectTerr(cx - ph, cy - ph, cx + ph - 1, cy + ph - 1, 'cobble');
+    [cx, cx + 1].forEach(function (ax) { for (var y = 0; y < h; y++) b.setterr(ax, y, 'cobble'); });
+    [cy, cy + 1].forEach(function (ay) { for (var x = 0; x < w; x++) b.setterr(x, ay, 'cobble'); });
+    if (R.rnd() < 0.5) { var ry = R.randint(6, h - 6); for (var x2 = 0; x2 < w; x2++) { b.setterr(x2, ry, 'dirt'); b.setterr(x2, ry + 1, 'dirt'); } }
+    if (opt.keep !== false && R.rnd() < 0.8) b.keep(R.randint(4, w - 18), R.randint(7, 9), 14, 6);
+    placeHouses(b, opt.houses || 12, cx, cy);
     b.setp(cx, cy, 'well');
     [[-3, -2, 'barrel'], [-3, -1, 'barrel_open'], [3, -2, 'crate'], [3, -1, 'crate'],
-     [-2, 3, 'sign_h'], [2, 3, 'sign_v'], [0, -3, 'oven']].forEach(function (o) { b.setp(cx + o[0], cy + o[1], o[2]); });
+     [-2, 3, 'sign_h'], [2, 3, 'sign_v'], [0, -3, 'oven']].forEach(function (o) {
+      if (b.empty(cx + o[0], cy + o[1])) b.setp(cx + o[0], cy + o[1], o[2]);
+    });
     treeBorder(b, 0.6); naturePass(b, 22, 24, 8, 30, 8);
     return b.result(opt.name, opt.region, 'MAP_TYPE_TOWN');
   }

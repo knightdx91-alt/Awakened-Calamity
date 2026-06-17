@@ -1007,7 +1007,7 @@
 
   mapCanvas.addEventListener('pointerdown', function (e) {
     e.preventDefault();
-    // middle button, Space-held, or the Pan tool → pan instead of paint
+    // Pan tool (one-finger drag), middle button, or Space-held → pan instead of paint
     if (e.button === 1 || spaceHeld || state.tool === 'pan') { startPan(e); return; }
     try { mapCanvas.setPointerCapture(e.pointerId); } catch (_) {}   // keep drag tracking (touch+mouse)
     var p = eventCell(e);
@@ -1714,7 +1714,11 @@
       var sz = (window.MapGen && MapGen.DEFAULT_SIZE[a]) || [50, 50];
       $('genW').value = sz[0]; $('genH').value = sz[1];
     }
-    function open() { $('genName').value = $('mapName') ? ($('mapName').value || 'NewMap') : 'NewMap'; syncOpts(); modal.style.display = 'flex'; }
+    function open() {
+      $('genName').value = $('mapName') ? ($('mapName').value || 'NewMap') : 'NewMap';
+      $('genSeed').value = '';   // blank = a fresh random map every time
+      syncOpts(); modal.style.display = 'flex';
+    }
     function close() { modal.style.display = 'none'; }
     $('genBtn').addEventListener('click', open);
     $('genClose').addEventListener('click', close);
@@ -2038,6 +2042,7 @@
       ['Flood Fill', '', function () { setToolBtn('fill'); }, function () { return state.tool === 'fill'; }],
       ['Select (box)', '', function () { setToolBtn('select'); }, function () { return state.tool === 'select'; }],
       ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }, function () { return state.tool === 'pick'; }],
+      ['Pan (drag to move map)', '', function () { setToolBtn('pan'); }, function () { return state.tool === 'pan'; }],
       ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }],
       'sep',
       ['Multi-tile brush', '', function () {
@@ -2058,6 +2063,8 @@
       ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
     ]],
     ['Tools', [
+      ['Generate Map…', '', function () { clickEl('genBtn'); }],
+      'sep',
       ['Character Sprites…', '', function () { openSpriteModal('player'); }],
       ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }]
     ]],

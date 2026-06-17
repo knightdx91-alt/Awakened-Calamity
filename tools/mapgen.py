@@ -388,42 +388,52 @@ def _nature_pass(b, trees, bushes, flowers, tufts, rocks):
     b.scatter("boulder", rocks); b.scatter("rock", rocks, False)
     b.scatter("firewood", max(2, rocks // 2))
 
+def _house_fits(b, wx, wy, ww, wh, rh):
+    for yy in range(wy - rh - 1, wy + wh + 2):
+        for xx in range(wx - 2, wx + ww + 2):
+            if not b.inb(xx, yy): return False
+            if b.terr[yy][xx] != "grass" or b.over[yy * b.W + xx] != -1: return False
+    return True
+
+def _place_houses(b, n, cx, cy):
+    placed = tries = 0
+    while placed < n and tries < n * 40:
+        tries += 1
+        ww, wh = b.rng.choice([(4, 2), (5, 2), (4, 2), (6, 3), (5, 3), (4, 2)])
+        rh = 3 if (ww >= 6 or wh >= 3) else 2
+        wx = b.rng.randint(3, b.W - ww - 3); wy = b.rng.randint(rh + 2, b.H - wh - 3)
+        if not _house_fits(b, wx, wy, ww, wh, rh): continue
+        dx, dy = b.house(wx, wy, ww, wh, b.rng.choice(ROOFS), b.rng.choice(WALLS))
+        if abs(dy - cy) <= abs(dx - cx): b.path(dx, dy, dx, cy, "dirt", 1, 0.3)
+        else: b.path(dx, dy, cx, dy, "dirt", 1, 0.3)
+        if b.rng.random() < 0.4:
+            for fx in range(wx - 1, wx + ww + 1):
+                if b.empty(fx, dy + 1) and b.terr[dy + 1][fx] == "grass" and b.rng.random() < 0.5:
+                    b.setp(fx, dy + 1, b.rng.choice(FLOWERS), False)
+        placed += 1
+
 def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True, pond=True):
     b = MapBuilder(w, h, seed)
-    if pond:
-        b.pond(int(w * 0.84), int(h * 0.84), 5.2, 4.2)
-    # plaza + crossing avenues
-    cx, cy = w // 2, h // 2
-    b.rect_terr(cx - 5, cy - 5, cx + 4, cy + 4, "cobble")
+    cx = w // 2 + b.rng.randint(-3, 3); cy = h // 2 + b.rng.randint(-3, 3)
+    if pond and b.rng.random() < 0.8:
+        pc = b.rng.choice([(0.82, 0.82), (0.18, 0.82), (0.84, 0.2), (0.18, 0.2)])
+        b.pond(int(w * pc[0]), int(h * pc[1]), 4 + b.rng.random() * 2, 3 + b.rng.random() * 2)
+    ph = b.rng.randint(4, 6)
+    b.rect_terr(cx - ph, cy - ph, cx + ph - 1, cy + ph - 1, "cobble")
     for ax in (cx, cx + 1):
-        for y in range(8, h): b.setterr(ax, y, "cobble")
+        for y in range(0, h): b.setterr(ax, y, "cobble")
     for ay in (cy, cy + 1):
         for x in range(0, w): b.setterr(x, ay, "cobble")
-    # keep (top centre)
-    if keep:
-        b.keep(cx - 7, 8, 14, 6)
-    # houses ringed around the plaza, doors out, paths to the avenue
-    spots = []
-    band = [(6, 16), (13, 15), (w - 17, 15), (w - 10, 17), (6, 30), (13, 33),
-            (6, h - 10), (14, h - 8), (w - 18, h - 10), (w - 9, h - 8),
-            (w - 17, 31), (cx + 1, cy - 8)]
-    for i in range(min(houses, len(band))):
-        wx, wy = band[i]
-        ww, wh = b.rng.choice([(4, 2), (5, 2), (4, 2), (6, 3)])
-        rf, wl = b.rng.choice(ROOFS), b.rng.choice(WALLS)
-        if not b.inb(wx + ww + 1, wy + wh + 1): continue
-        dx, dy = b.house(wx, wy, ww, wh, rf, wl)
-        b.path(dx, dy, dx, cy if abs(dy - cy) < 14 else dy, "dirt", 1, 0.3)
-        b.path(dx, min(dy + 2, h - 1), cx, cy, "dirt", 1, 0.35)
-        if b.rng.random() < 0.5:
-            for fx in range(wx - 1, wx + ww + 1):
-                if b.empty(fx, dy + 1) and b.terr[dy + 1][fx] == "grass":
-                    if b.rng.random() < 0.5: b.setp(fx, dy + 1, b.rng.choice(FLOWERS), False)
-    # plaza well + market
+    if b.rng.random() < 0.5:
+        ry = b.rng.randint(6, h - 6)
+        for x in range(0, w): b.setterr(x, ry, "dirt"); b.setterr(x, ry + 1, "dirt")
+    if keep and b.rng.random() < 0.8:
+        b.keep(b.rng.randint(4, w - 18), b.rng.randint(7, 9), 14, 6)
+    _place_houses(b, houses, cx, cy)
     b.setp(cx, cy, "well")
     for (dx, dy, obj) in [(-3, -2, "barrel"), (-3, -1, "barrel_open"), (3, -2, "crate"),
                           (3, -1, "crate"), (-2, 3, "sign_h"), (2, 3, "sign_v"), (0, -3, "oven")]:
-        b.setp(cx + dx, cy + dy, obj)
+        if b.empty(cx + dx, cy + dy): b.setp(cx + dx, cy + dy, obj)
     _tree_border(b, 0.6)
     _nature_pass(b, trees=22, bushes=24, flowers=8, tufts=30, rocks=8)
     return b.write(name, region, "MAP_TYPE_TOWN")
