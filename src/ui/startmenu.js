@@ -540,14 +540,15 @@ window.GameStartMenu = (function () {
 
     function _buildSupplies(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        // [name, desc, RTP IconSet index]
         var pockets = [
-            ['Camp Kits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.'],
-            ['Food', 'Cooked & raw — restores Stamina in the field.'],
-            ['Tethers', "The System's binding protocol. Spend to Bind a weakened creature."],
-            ['Tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.'],
-            ['Materials', 'Scavenge for field crafting & hazard gear.'],
-            ['Gear', 'Affinity-defended equipment vs. biome hazards.'],
-            ['Key', 'Story & landmark items.'],
+            ['Camp Kits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.', 272],
+            ['Food', 'Cooked & raw — restores Stamina in the field.', 291],
+            ['Tethers', "The System's binding protocol. Spend to Bind a weakened creature.", 182],
+            ['Tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192],
+            ['Materials', 'Scavenge for field crafting & hazard gear.', 300],
+            ['Gear', 'Affinity-defended equipment vs. biome hazards.', 161],
+            ['Key', 'Story & landmark items.', 242],
         ];
         var inv = (window.GameSave && GameSave.state && GameSave.state.inventory) || {};
         var counts = {
@@ -558,8 +559,18 @@ window.GameStartMenu = (function () {
         pockets.forEach(function (p) {
             var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
             var top = document.createElement('div');
-            top.style.cssText = 'display:flex;justify-content:space-between;width:100%;';
-            top.innerHTML = '<span>' + p[0].toUpperCase() + '</span><span style="color:' + _FR.blue + '">×' + (counts[p[0]] || 0) + '</span>';
+            top.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
+            var left = document.createElement('span');
+            left.style.cssText = 'display:flex;align-items:center;gap:6px;';
+            var ic = document.createElement('canvas'); ic.width = ic.height = 24;
+            ic.style.cssText = 'width:18px;height:18px;flex:none;';
+            (function (cv, idx) {                 // draw the RTP item icon once the sheet loads
+                if (window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); });
+            })(ic, p[2]);
+            var nm = document.createElement('span'); nm.textContent = p[0].toUpperCase();
+            left.appendChild(ic); left.appendChild(nm);
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (counts[p[0]] || 0);
+            top.appendChild(left); top.appendChild(cnt);
             var desc = document.createElement('div');
             desc.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
             desc.textContent = p[1];
