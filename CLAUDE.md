@@ -566,6 +566,12 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     gate as a reward), **`grantskill`** (📖 — teach a skill id). Engine lazily loads classes/skills
     (`_loadClassDb`); editor gained `loadClassList`/`loadSkillList` for dropdowns. Node-tested; suites
     pass. **Not browser-verified.**
+  - **Class-selection screen now shows Advanced classes, ringed by tier.** Creation (`creation.js`)
+    grids classes grouped by tier (`TIERS=['basic','advanced']`, Master+ slot in later) with per-tier
+    section headers. **Advanced and up get a glowing colored ring** (`TIER_RING`: advanced cyan, master
+    gold, grandmaster purple, heroic orange, legendary pale-gold) via a pulsing `pcRing` animation;
+    basic stays un-ringed. Detail panel shows a tier tag. Now 50 basic + 53 advanced selectable.
+    DOM-stub verified. **Not browser-verified.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

@@ -112,16 +112,26 @@ window.GamePlayerCreation = (function () {
         gathering: '#b0a070'
     };
 
+    // Tiers shown on the selection screen, in order. Master+ slot in here as
+    // their content lands; the ring/glow logic below keys off the tier name.
+    var TIERS = ['basic', 'advanced'];
+    var TIER_LABEL = { basic: 'BASIC', advanced: 'ADVANCED', master: 'MASTER', grandmaster: 'GRANDMASTER', heroic: 'HEROIC', legendary: 'LEGENDARY' };
+    // Ring colour per tier (basic = no glow). Advanced and up glow.
+    var TIER_RING = { basic: null, advanced: '#00ccff', master: '#f8d000', grandmaster: '#c050f0', heroic: '#ff7030', legendary: '#ffe070' };
+
     function _loadClasses() {
         var base = 'data/systems/';
         fetch(base + 'classes.json' + '?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
                 if (!j) return;
-                _classes = {};
-                Object.keys(j).forEach(function (k) {
-                    if (k === '_meta') return;
-                    if (j[k] && j[k].tier === 'basic') { _classes[k] = j[k]; _classOrder.push(k); }
+                _classes = {}; _classOrder = [];
+                // Group by tier in TIERS order so the grid reads basic → advanced → …
+                TIERS.forEach(function (tier) {
+                    Object.keys(j).forEach(function (k) {
+                        if (k === '_meta') return;
+                        if (j[k] && j[k].tier === tier) { _classes[k] = j[k]; _classOrder.push(k); }
+                    });
                 });
                 _buildClassChips();
             })
@@ -132,12 +142,25 @@ window.GamePlayerCreation = (function () {
         var wrap = _root && _root.querySelector('#pc-class');
         if (!wrap) return;
         wrap.innerHTML = '';
+        var lastTier = null;
         _classOrder.forEach(function (id) {
             var cl = _classes[id];
+            // Per-tier section header (spans the full grid row).
+            if (cl.tier !== lastTier) {
+                lastTier = cl.tier;
+                var hd = document.createElement('div');
+                hd.className = 'pc-class-tierhd';
+                var ring = TIER_RING[cl.tier];
+                hd.style.color = ring || '#6b7a8d';
+                hd.textContent = TIER_LABEL[cl.tier] || (cl.tier || '').toUpperCase();
+                wrap.appendChild(hd);
+            }
+            var ringC = TIER_RING[cl.tier];
             var b = document.createElement('button');
-            b.className = 'pc-class-chip';
+            b.className = 'pc-class-chip' + (ringC ? ' pc-ringed' : '');
             b.dataset.cls = id;
             b.style.setProperty('--tint', LIFE_TINT[cl.lifestyle] || '#80e8ff');
+            if (ringC) b.style.setProperty('--ring', ringC);
             b.innerHTML = '<span class="pc-class-name">' + (cl.name || id) + '</span>' +
                 '<span class="pc-class-life">' + (cl.lifestyle || '') + '</span>';
             b.addEventListener('click', function () {
@@ -213,9 +236,11 @@ window.GamePlayerCreation = (function () {
                 // Note: the class `signature` is intentionally NOT shown here —
                 // several signatures name evolution targets (e.g. "foundation for
                 // Paladin/Reaver"), which would spoil the hidden evolution paths.
+                var ringC = TIER_RING[cl.tier];
+                var tierTag = '<span class="pc-class-tiertag" style="color:' + (ringC || '#6b7a8d') + ';border-color:' + (ringC || '#3a4656') + '">' + (TIER_LABEL[cl.tier] || cl.tier || '') + '</span>';
                 det.innerHTML =
-                    '<div class="pc-class-title">' + (cl.name || _classId) +
-                        ' <span class="pc-class-sub">' + (cl.lifestyle || '') + ' · ' + (cl.affinityLean || '') + '</span></div>' +
+                    '<div class="pc-class-title">' + (cl.name || _classId) + ' ' + tierTag +
+                        '<span class="pc-class-sub" style="display:block">' + (cl.lifestyle || '') + ' · ' + (cl.affinityLean || '') + '</span></div>' +
                     '<div class="pc-class-stats" style="margin-top:6px">' + _statBars(cl.statProfile) + '</div>' +
                     '<div class="pc-class-skills"><b>Starting skills:</b> ' + ((cl.grantsSkills || []).join(', ') || '—') + '</div>';
             } else {
@@ -359,6 +384,12 @@ window.GamePlayerCreation = (function () {
             'color:#c8d8e8;font-family:monospace;padding:6px 4px;border-radius:4px;cursor:pointer;transition:all .1s;text-align:left;}' +
         '#pc-root .pc-class-chip:hover{border-color:var(--tint);}' +
         '#pc-root .pc-class-chip.sel{border-color:var(--tint);box-shadow:0 0 8px var(--tint) inset;}' +
+        // Tier ring + glow (advanced and up). basic chips stay un-ringed.
+        '#pc-root .pc-class-chip.pc-ringed{border-color:var(--ring);box-shadow:0 0 5px var(--ring),0 0 5px var(--ring) inset;animation:pcRing 1.8s ease-in-out infinite;}' +
+        '#pc-root .pc-class-chip.pc-ringed.sel{box-shadow:0 0 11px var(--ring),0 0 7px var(--ring) inset;}' +
+        '@keyframes pcRing{0%,100%{box-shadow:0 0 4px var(--ring),0 0 4px var(--ring) inset;}50%{box-shadow:0 0 10px var(--ring),0 0 7px var(--ring) inset;}}' +
+        '#pc-root .pc-class-tierhd{grid-column:1/-1;font-size:9px;letter-spacing:2px;margin:6px 0 1px;padding-bottom:2px;border-bottom:1px solid #1a2230;}' +
+        '#pc-root .pc-class-tiertag{font-size:8px;letter-spacing:1px;border:1px solid;border-radius:3px;padding:1px 4px;vertical-align:middle;}' +
         '#pc-root .pc-class-name{font-size:12px;color:#e0eaf2;}' +
         '#pc-root .pc-class-chip.sel .pc-class-name{color:var(--tint);font-weight:bold;}' +
         '#pc-root .pc-class-life{font-size:9px;letter-spacing:1px;color:var(--tint);opacity:.8;text-transform:uppercase;}' +
