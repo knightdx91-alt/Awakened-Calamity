@@ -37,6 +37,7 @@ window.GameTitle = (function () {
                 ' · ' + _fmtPlaytime(meta.playtimeSeconds) + '</div>';
         }
         _root.innerHTML = _css() +
+            '<button class="tt-gear" id="tt-gear" title="Options">&#9881;</button>' +
             '<div class="tt-wrap">' +
                 '<div class="tt-logo">AWAKENED<span class="tt-logo2">CALAMITY</span></div>' +
                 '<div class="tt-tag">The System helps you. That is the horror.</div>' +
@@ -53,6 +54,49 @@ window.GameTitle = (function () {
         _root.querySelector('.tt-new').addEventListener('click', function () {
             if (hasSave) { _confirmNew(); } else { _pick('new'); }
         });
+        _root.querySelector('#tt-gear').addEventListener('click', _openOptions);
+    }
+
+    // Gear → options overlay (currently: delete save game; wipes BOTH stores).
+    function _openOptions() {
+        if (window.GameAudio) GameAudio.playSE('Cursor1');
+        var hasSave = !!(window.GameSave && GameSave.hasAnySave());
+        var ov = document.createElement('div');
+        ov.className = 'tt-opt';
+        ov.innerHTML =
+            '<div class="tt-opt-box">' +
+                '<div class="tt-opt-h">OPTIONS</div>' +
+                '<button class="tt-opt-del"' + (hasSave ? '' : ' disabled') + '>DELETE SAVE GAME</button>' +
+                '<div class="tt-opt-note">Erases your save from this browser (local storage + backup). Cannot be undone.</div>' +
+                '<button class="tt-opt-close">CLOSE</button>' +
+            '</div>';
+        _root.appendChild(ov);
+        var close = function () { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+        ov.querySelector('.tt-opt-close').addEventListener('click', function () { if (window.GameAudio) GameAudio.playSE('Cancel1'); close(); });
+        ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+        var del = ov.querySelector('.tt-opt-del');
+        if (hasSave) del.addEventListener('click', function () { _confirmDelete(ov, del); });
+    }
+
+    function _confirmDelete(ov, del) {
+        if (del.dataset.armed === '1') {
+            del.dataset.armed = '0';
+            var done = function () {
+                if (window.GameAudio) GameAudio.playSE('Decision1');
+                if (ov.parentNode) ov.parentNode.removeChild(ov);
+                // Rebuild the title — Continue is now gone.
+                var keep = _onChoose; _teardown();
+                show({ hasSave: false, meta: null, onChoose: keep });
+            };
+            if (window.GameSave && GameSave.wipeAllSaves) {
+                var p = GameSave.wipeAllSaves();
+                if (p && p.then) p.then(done); else done();
+            } else { done(); }
+        } else {
+            del.dataset.armed = '1';
+            del.textContent = 'CONFIRM DELETE?';
+            del.classList.add('tt-opt-armed');
+        }
     }
 
     // New Game over an existing save → confirm (it will overwrite).
@@ -106,6 +150,20 @@ window.GameTitle = (function () {
         '#title-root .tt-yes{border-color:#e60808;color:#ff8a8a;}' +
         '#title-root .tt-yes:hover{background:#e60808;color:#fff;}' +
         '#title-root .tt-foot{margin-top:34px;font-size:10px;color:#4a5a6d;letter-spacing:2px;}' +
+        '#title-root .tt-gear{position:absolute;top:12px;right:12px;width:38px;height:38px;font-size:20px;line-height:1;' +
+            'background:#11131f;border:1px solid #2a3a4a;color:#7ee0ec;border-radius:8px;cursor:pointer;}' +
+        '#title-root .tt-gear:hover{border-color:#18b8c8;color:#80f0ff;box-shadow:0 0 10px rgba(0,204,255,.4);}' +
+        '#title-root .tt-opt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,15,.8);}' +
+        '#title-root .tt-opt-box{width:min(88vw,360px);background:#02060f;border:1px solid #18b8c8;border-radius:8px;padding:18px;text-align:center;}' +
+        '#title-root .tt-opt-h{font-size:14px;letter-spacing:3px;color:#80f0ff;margin-bottom:14px;}' +
+        '#title-root .tt-opt-del{width:100%;background:#11131f;border:1px solid #e60808;color:#ff8a8a;font-family:monospace;font-size:13px;letter-spacing:2px;padding:11px;border-radius:5px;cursor:pointer;}' +
+        '#title-root .tt-opt-del:hover{background:#e60808;color:#fff;}' +
+        '#title-root .tt-opt-del:disabled{opacity:.35;cursor:not-allowed;border-color:#4a5a6d;color:#6b7a8d;}' +
+        '#title-root .tt-opt-del.tt-opt-armed{background:#e60808;color:#fff;animation:ttPulse .7s ease-in-out infinite;}' +
+        '@keyframes ttPulse{0%,100%{box-shadow:0 0 0 rgba(230,8,8,.6);}50%{box-shadow:0 0 12px rgba(230,8,8,.8);}}' +
+        '#title-root .tt-opt-note{font-size:10px;color:#6b7a8d;line-height:1.6;margin:10px 0 14px;}' +
+        '#title-root .tt-opt-close{width:100%;background:#11131f;border:1px solid #4a5a6d;color:#9fb0c0;font-family:monospace;font-size:12px;letter-spacing:2px;padding:9px;border-radius:5px;cursor:pointer;}' +
+        '#title-root .tt-opt-close:hover{border-color:#9fb0c0;}' +
         '</style>';
     }
 

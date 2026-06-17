@@ -268,6 +268,19 @@
             });
         });
     }
+    function _idbDel(key) {
+        return _idbOpen().then(function (db) {
+            if (!db) return;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).delete(key);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { resolve(); };
+                } catch (e) { resolve(); }
+            });
+        });
+    }
     function _idbGet(key) {
         return _idbOpen().then(function (db) {
             if (!db) return null;
@@ -411,6 +424,18 @@
                     if (lsRaw && !idbRaw) { _idbSet(SAVE_KEY, lsRaw); }
                 });
             }).catch(function () {});
+        },
+
+        /**
+         * Erase ALL save data from BOTH stores (localStorage + IndexedDB) and
+         * reset in-memory state. Async (IndexedDB). Settings are NOT touched.
+         */
+        wipeAllSaves() {
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+            this.state = null;
+            this.currentSlot = -1;
+            this._dirty = false;
+            return _idbDel(SAVE_KEY).catch(function () {});
         },
 
         /** True if any of the 3 slots holds a save. */
