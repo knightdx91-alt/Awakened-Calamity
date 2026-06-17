@@ -62,10 +62,20 @@
 
     // ---- actors -----------------------------------------------------------
     function buildPlayer() {
-        var smith = (db.classes && db.classes.smith) || { statProfile: { hp: 80, atk: 16, def: 18, speed: 46 }, affinityLean: 'stone' };
-        return { id: 'p1', side: 'player', name: 'Smith', affinity: smith.affinityLean || 'stone',
-            stats: Object.assign({}, smith.statProfile),
-            loadout: ['jab', 'heavy_strike', 'cleave', 'guard', 'mend', 'pin_shot', 'coat_blade', 'unmake', 'riposte'] };
+        var ps = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var clsId = (ps.class && ps.class.id) || 'smith';
+        var cls = (db.classes && (db.classes[clsId] || db.classes.smith)) ||
+                  { name: 'Survivor', statProfile: { hp: 80, atk: 16, def: 18, speed: 46 }, affinityLean: 'stone', grantsSkills: ['jab'] };
+        // Loadout = the skills the player has learned, else the class's granted set.
+        var loadout = (ps.skills && ps.skills.length) ? ps.skills.slice() : (cls.grantsSkills || ['jab']).slice();
+        if (!loadout.length) loadout = ['jab'];
+        return {
+            id: 'p1', side: 'player',
+            name: ps.name || cls.name || 'Survivor',
+            affinity: ps.affinity || cls.affinityLean || 'stone',
+            stats: Object.assign({}, cls.statProfile),
+            loadout: loadout
+        };
     }
     // Bonded creatures fight at your side. Bond shape: { key, nickname?, level? }
     // (key = creature id in creatures.json). Up to 3 active. AI-controlled.

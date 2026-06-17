@@ -475,6 +475,17 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       mirror to both; `initStorage()` (awaited at boot) restores localStorage from IndexedDB if LS was
       cleared (or seeds IDB from LS). Added `hasAnySave()`. Node-harness verified the full
       save→wipe-LS→restore round-trip; storage logic + all files syntax-checked. **Not browser-verified.**
+  - **Class screen + class wired into play (start of class build-out):**
+    - **Creation now has a CLASS step** (`src/ui/creation.js`): loads `data/systems/classes.json`,
+      shows the **20 Basic classes** as a scrollable grid (lifestyle-tinted), with a detail panel
+      (signature, HP/ATK/DEF/SPD stat bars, starting skills). AWAKEN now requires name + appearance +
+      affinity + **class**. Persists `player.class = {id,level:1,xp:0}` + `player.skills` (the class's
+      `grantsSkills`).
+    - **Combat reads the chosen class** (`src/ui/combatview.js buildPlayer`): player actor's name,
+      affinity, stat profile, and skill loadout now come from `player.class` + `player.skills`
+      (was a hardcoded Smith). Node-stub verified (classes fetched, chips build, no errors).
+    - **Next on classes:** sync `player.class.level` with `progression.js`; attribute-point allocation;
+      specializations/evolutions UI; non-combat lifestyle skill use; the STATUS menu to show class.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

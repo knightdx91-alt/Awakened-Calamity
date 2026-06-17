@@ -42,6 +42,9 @@ window.GamePlayerCreation = (function () {
     var _name = '';
     var _appIdx = 0;
     var _affId = null;
+    var _classId = null;
+    var _classes = null;     // loaded data/systems/classes.json (basic tier only)
+    var _classOrder = [];    // ids in display order
 
     function isActive() { return _active; }
 
@@ -56,7 +59,7 @@ window.GamePlayerCreation = (function () {
         if (_active) return;
         _active = true;
         _onDone = onDone || function () {};
-        _name = ''; _appIdx = 0; _affId = null;
+        _name = ''; _appIdx = 0; _affId = null; _classId = null;
         _build();
     }
 
@@ -88,6 +91,8 @@ window.GamePlayerCreation = (function () {
             affWrap.appendChild(b);
         });
 
+        _loadClasses();
+
         _root.querySelector('#pc-confirm').addEventListener('click', _confirm);
 
         // Allow Enter to confirm when valid.
@@ -98,6 +103,64 @@ window.GamePlayerCreation = (function () {
         _drawPreview();
         _refresh();
         setTimeout(function () { nameInput.focus(); }, 50);
+    }
+
+    // Lifestyle → small tag color, so the class grid reads at a glance.
+    var LIFE_TINT = {
+        combat: '#e07050', craft: '#d0a040', support: '#5fd06f', survival: '#8fb060',
+        tamer: '#c89050', social: '#5fb0e0', espionage: '#9070c0', scholar: '#70c0c0',
+        gathering: '#b0a070'
+    };
+
+    function _loadClasses() {
+        var base = 'data/systems/';
+        fetch(base + 'classes.json' + '?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+                if (!j) return;
+                _classes = {};
+                Object.keys(j).forEach(function (k) {
+                    if (k === '_meta') return;
+                    if (j[k] && j[k].tier === 'basic') { _classes[k] = j[k]; _classOrder.push(k); }
+                });
+                _buildClassChips();
+            })
+            .catch(function () {});
+    }
+
+    function _buildClassChips() {
+        var wrap = _root && _root.querySelector('#pc-class');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        _classOrder.forEach(function (id) {
+            var cl = _classes[id];
+            var b = document.createElement('button');
+            b.className = 'pc-class-chip';
+            b.dataset.cls = id;
+            b.style.setProperty('--tint', LIFE_TINT[cl.lifestyle] || '#80e8ff');
+            b.innerHTML = '<span class="pc-class-name">' + (cl.name || id) + '</span>' +
+                '<span class="pc-class-life">' + (cl.lifestyle || '') + '</span>';
+            b.addEventListener('click', function () {
+                _classId = id;
+                if (window.GameAudio) GameAudio.playSE('Cursor1');
+                _refresh();
+            });
+            wrap.appendChild(b);
+        });
+        _refresh();
+    }
+
+    function _statBars(sp) {
+        if (!sp) return '';
+        // Normalize against rough maxima for a readable bar.
+        var MAX = { hp: 120, atk: 30, def: 30, speed: 80 };
+        var rows = [['HP', 'hp'], ['ATK', 'atk'], ['DEF', 'def'], ['SPD', 'speed']];
+        return rows.map(function (r) {
+            var v = sp[r[1]] || 0, pct = Math.max(4, Math.min(100, Math.round(v / MAX[r[1]] * 100)));
+            return '<div class="pc-stat"><span class="pc-stat-l">' + r[0] + '</span>' +
+                '<span class="pc-stat-bar"><i style="width:' + pct + '%"></i></span>' +
+                '<span class="pc-stat-v">' + v + '</span></div>';
+        }).join('');
     }
 
     function _cycleApp(d) {
@@ -127,7 +190,7 @@ window.GamePlayerCreation = (function () {
         if (lbl) lbl.textContent = (_appIdx + 1) + ' / ' + OPTIONS.length;
     }
 
-    function _isValid() { return _name.trim().length > 0 && !!_affId; }
+    function _isValid() { return _name.trim().length > 0 && !!_affId && !!_classId; }
 
     function _refresh() {
         // highlight selected affinity
@@ -137,8 +200,27 @@ window.GamePlayerCreation = (function () {
         var aff = AFFINITIES.filter(function (a) { return a.id === _affId; })[0];
         var blurb = _root.querySelector('#pc-aff-blurb');
         blurb.textContent = aff ? aff.blurb : 'Select an Affinity. The System will classify you accordingly.';
-        if (aff) blurb.style.color = aff.tint;
-        else blurb.style.color = '';
+        blurb.style.color = aff ? aff.tint : '';
+
+        // highlight selected class + render its detail
+        Array.prototype.forEach.call(_root.querySelectorAll('.pc-class-chip'), function (b) {
+            b.classList.toggle('sel', b.dataset.cls === _classId);
+        });
+        var det = _root.querySelector('#pc-class-detail');
+        if (det) {
+            var cl = _classes && _classId && _classes[_classId];
+            if (cl) {
+                det.innerHTML =
+                    '<div class="pc-class-title">' + (cl.name || _classId) +
+                        ' <span class="pc-class-sub">' + (cl.lifestyle || '') + ' · ' + (cl.affinityLean || '') + '</span></div>' +
+                    '<div class="pc-class-sig">' + (cl.signature || '') + '</div>' +
+                    '<div class="pc-class-stats">' + _statBars(cl.statProfile) + '</div>' +
+                    '<div class="pc-class-skills"><b>Starting skills:</b> ' + ((cl.grantsSkills || []).join(', ') || '—') + '</div>';
+            } else {
+                det.innerHTML = '<div class="pc-class-sub">Choose a starting Class — your lifestyle, stats, and first skills. (You can grow, specialize, or change it later.)</div>';
+            }
+        }
+
         var btn = _root.querySelector('#pc-confirm');
         btn.disabled = !_isValid();
     }
@@ -182,6 +264,9 @@ window.GamePlayerCreation = (function () {
                 p.name = _name.trim();
                 p.appearance = { sheet: opt.sheet, char: opt.char };
                 p.affinity = _affId;
+                var cl = _classes && _classId && _classes[_classId];
+                p.class = { id: _classId, level: 1, xp: 0 };
+                p.skills = (cl && cl.grantsSkills ? cl.grantsSkills.slice() : []);
                 if (GameSave.state.meta) GameSave.state.meta.playerName = p.name;
                 if (window.GameSave.markDirty) GameSave.markDirty();
                 try { GameSave.save(GameSave.currentSlot != null ? GameSave.currentSlot : 0); } catch (e) {}
@@ -226,6 +311,9 @@ window.GamePlayerCreation = (function () {
                     '<div id="pc-aff-blurb" class="pc-aff-blurb">Select an Affinity. The System will classify you accordingly.</div>' +
                 '</div>' +
             '</div>' +
+            '<div class="pc-label" style="margin-top:14px">CLASS</div>' +
+            '<div id="pc-class" class="pc-class"><div class="pc-sub" style="text-align:left">Loading classes…</div></div>' +
+            '<div id="pc-class-detail" class="pc-class-detail"></div>' +
             '<button id="pc-confirm" class="pc-confirm" disabled>AWAKEN</button>' +
         '</div>';
     }
@@ -259,6 +347,26 @@ window.GamePlayerCreation = (function () {
         '#pc-root .pc-aff-chip:hover{border-color:var(--tint);color:var(--tint);}' +
         '#pc-root .pc-aff-chip.sel{background:var(--tint);color:#02060f;border-color:var(--tint);font-weight:bold;}' +
         '#pc-root .pc-aff-blurb{margin-top:10px;font-size:11px;line-height:1.5;min-height:34px;color:#6b7a8d;}' +
+        '#pc-root .pc-class{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;max-height:150px;overflow:auto;padding:2px;}' +
+        '#pc-root .pc-class-chip{--tint:#80e8ff;display:flex;flex-direction:column;gap:1px;background:#11131f;border:1px solid #1a2230;' +
+            'color:#c8d8e8;font-family:monospace;padding:6px 4px;border-radius:4px;cursor:pointer;transition:all .1s;text-align:left;}' +
+        '#pc-root .pc-class-chip:hover{border-color:var(--tint);}' +
+        '#pc-root .pc-class-chip.sel{border-color:var(--tint);box-shadow:0 0 8px var(--tint) inset;}' +
+        '#pc-root .pc-class-name{font-size:12px;color:#e0eaf2;}' +
+        '#pc-root .pc-class-chip.sel .pc-class-name{color:var(--tint);font-weight:bold;}' +
+        '#pc-root .pc-class-life{font-size:9px;letter-spacing:1px;color:var(--tint);opacity:.8;text-transform:uppercase;}' +
+        '#pc-root .pc-class-detail{margin-top:8px;min-height:96px;background:#060610;border:1px solid #1a2230;border-radius:4px;padding:8px 10px;}' +
+        '#pc-root .pc-class-title{font-size:14px;color:#80f0ff;}' +
+        '#pc-root .pc-class-sub{font-size:10px;color:#6b7a8d;letter-spacing:1px;text-transform:uppercase;}' +
+        '#pc-root .pc-class-sig{font-size:11px;color:#9fb0c0;margin:4px 0 6px;line-height:1.4;}' +
+        '#pc-root .pc-class-stats{display:flex;flex-direction:column;gap:3px;margin-bottom:6px;}' +
+        '#pc-root .pc-stat{display:flex;align-items:center;gap:6px;font-size:10px;}' +
+        '#pc-root .pc-stat-l{width:30px;color:#6b7a8d;}' +
+        '#pc-root .pc-stat-bar{flex:1;height:7px;background:#11131f;border:1px solid #1a2230;border-radius:3px;overflow:hidden;}' +
+        '#pc-root .pc-stat-bar i{display:block;height:100%;background:linear-gradient(90deg,#18b8c8,#80f0ff);}' +
+        '#pc-root .pc-stat-v{width:28px;text-align:right;color:#9fb0c0;}' +
+        '#pc-root .pc-class-skills{font-size:10px;color:#7e9aab;line-height:1.4;}' +
+        '#pc-root .pc-class-skills b{color:#6b7a8d;}' +
         '#pc-root .pc-confirm{display:block;margin:18px auto 4px;background:#11131f;border:1px solid #18b8c8;' +
             'color:#80f0ff;font-family:monospace;font-size:16px;letter-spacing:4px;padding:10px 36px;border-radius:4px;cursor:pointer;}' +
         '#pc-root .pc-confirm:not(:disabled):hover{background:#00ccff;color:#02060f;box-shadow:0 0 12px rgba(0,204,255,.5);}' +
