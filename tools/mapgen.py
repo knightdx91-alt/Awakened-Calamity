@@ -162,6 +162,9 @@ def build_outside_props(force=False):
     # (lets a multi-row wall column carry windows on every floor).
     for mat, sl in wall_slices.items():
         tiles.append((f"wall_{mat}_window_f", over(sl["f"], window)))
+    # More appended-last props (kept after window_f to preserve every prior gid).
+    for (sn, idx, name) in [("rtp_outside_b", 165, "fence")]:
+        tiles.append((name, b_tile(sn, idx)))
     PR = 16; n = len(tiles); rows = (n + PR - 1) // PR
     out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
     gid = {}
@@ -305,23 +308,33 @@ class MapBuilder:
                 self.setp(x + dx, y0 - 3 + k, nm)
 
     def keep(self, x0, y0, w, h):
-        # 2-wide corner towers
-        for (tx, ty) in [(x0, y0), (x0 + w - 2, y0), (x0, y0 + h - 1), (x0 + w - 2, y0 + h - 1)]:
+        """Compact stone castle (footprint x0,y0 .. x0+w-1,y0+h-1): a curtain
+        wall ring around a cobbled courtyard, four corner towers, a front gate
+        with banners, and a tall inner keep building. y0 is the TOP wall row."""
+        # cobble the whole footprint (courtyard floor under everything)
+        for yy in range(y0, y0 + h):
+            for xx in range(x0, x0 + w):
+                self.setterr(xx, yy, "cobble")
+        # curtain wall ring (1-tile-thick stone 9-slice), courtyard carved back out
+        self._grid9("wall_stone", x0, y0, w, h)
+        for yy in range(y0 + 1, y0 + h - 1):
+            for xx in range(x0 + 1, x0 + w - 1):
+                self.over[yy * self.W + xx] = -1
+                self.coll[yy * self.W + xx] = 0
+        # four corner towers sit on the ring corners
+        for (tx, ty) in [(x0 - 1, y0 + 1), (x0 + w - 1, y0 + 1),
+                         (x0 - 1, y0 + h - 1), (x0 + w - 1, y0 + h - 1)]:
             self.tower(tx, ty)
-        # stone curtain walls between the towers (2 tall)
-        self._grid9("wall_stone", x0 + 2, y0 - 1, w - 4, 2)
-        # inner keep building
-        kx, ky, kw = x0 + 2, y0 + 1, w - 4
-        if kw >= 3:
-            self.house(kx, ky + 2, kw, 2, "green", "stone")
-        # gate + banners
+        # front gate (bottom-centre) + flanking banners on the wall above
         gx = x0 + w // 2
-        self.setp(gx, y0, "wall_stone_door"); self.events.append({"x": gx, "y": y0})
-        self.setp(gx - 2, y0 - 1, "banner_red"); self.setp(gx + 1, y0 - 1, "banner_blue")
-        # courtyard cobble
-        for yy in range(y0 + 1, y0 + h):
-            for xx in range(x0 + 2, x0 + w - 2):
-                if self.over[yy * self.W + xx] == -1: self.setterr(xx, yy, "cobble")
+        self.setp(gx, y0 + h - 1, "wall_stone_door")
+        self.events.append({"x": gx, "y": y0 + h - 1})
+        self.setp(gx - 1, y0, "banner_red"); self.setp(gx + 1, y0, "banner_blue")
+        # tall inner keep building, centred in the courtyard, facing the gate
+        kw = min(6, w - 4)
+        if kw >= 4:
+            kx = x0 + (w - kw) // 2
+            self.house(kx, y0 + h - 4, kw, 2, "blue", "block")
         return gx
 
     # ---- nature ----
@@ -467,12 +480,12 @@ def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True,
         ry = b.rng.randint(6, h - 6)
         for x in range(0, w): b.setterr(x, ry, "dirt"); b.setterr(x, ry + 1, "dirt")
     if keep and b.rng.random() < 0.8:
-        kw, kh = 14, 6
-        for _ in range(30):                       # find a clear (grass) keep site
-            kx = b.rng.randint(4, w - kw - 4); ky = b.rng.randint(7, 9)
+        kw, kh = 12, 11                            # squarer, castle-like footprint
+        for _ in range(40):                        # find a clear (grass) keep site
+            kx = b.rng.randint(5, w - kw - 5); ky = b.rng.randint(4, 8)
             if all(b.inb(xx, yy) and b.terr[yy][xx] == "grass"
-                   for yy in range(ky - 4, ky + kh + 1)
-                   for xx in range(kx - 1, kx + kw + 1)):
+                   for yy in range(ky - 2, ky + kh + 1)
+                   for xx in range(kx - 2, kx + kw + 2)):
                 b.keep(kx, ky, kw, kh)
                 break
     _place_houses(b, houses, cx, cy)
@@ -486,29 +499,59 @@ def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True,
 
 def gen_route(name, w=64, h=30, seed=5, region="awakened", vertical=False):
     b = MapBuilder(w, h, seed)
+    # A route is a thoroughfare: one CONTINUOUS wide road (no holes), gently
+    # wandering, with the playable corridor kept clear and dense tree walls
+    # channelling the player along it (RM field convention).
     if vertical:
-        b.path(w // 2, 0, w // 2, h - 1, "dirt", 2, 0.55, 0.04)
+        mid = w // 2
+        b.path(mid, 0, mid, h - 1, "dirt", 3, 0.35, 0.0)
+        corridor = lambda x, y: abs(x - mid) <= 3        # keep this band walkable
     else:
-        b.path(0, h // 2, w - 1, h // 2, "dirt", 2, 0.55, 0.04)
-    # a pond off to one side
+        mid = h // 2
+        b.path(0, mid, w - 1, mid, "dirt", 3, 0.35, 0.0)
+        corridor = lambda x, y: abs(y - mid) <= 3
+    # a pond off to one side, away from the road
     if b.rng.random() < 0.7:
-        b.pond(int(w * 0.7), int(h * 0.78), 4.0, 3.0)
-    # dense tree edges line the corridor (not in straight lines)
-    _tree_border(b, 0.7, ring=3)
-    _nature_pass(b, trees=28, bushes=20, flowers=10, tufts=34, rocks=10)
-    # signposts at the ends + a rest camp
-    b.setp(2, h // 2 - 1, "sign_v", False) if not vertical else b.setp(w // 2 + 2, 2, "sign_v", False)
-    cx2, cy2 = int(w * 0.4), int(h * 0.35)
-    if b.empty(cx2, cy2):
-        for o, dx in [("barrel", 0), ("crate", 1), ("firewood", -1)]:
-            b.setp(cx2 + dx, cy2, o)
+        px, py = (int(w * 0.72), int(h * 0.2)) if not vertical else (int(w * 0.2), int(h * 0.72))
+        b.pond(px, py, 4.0, 3.0)
+    # dense tree walls hug the long edges (3 deep), never in straight lines
+    _tree_border(b, 0.78, ring=3)
+    # fence posts skirt the road shoulder here and there
+    for _ in range(w // 6):
+        if not vertical:
+            fx = b.rng.randint(3, w - 4); fy = mid + b.rng.choice([-2, 2])
+        else:
+            fy = b.rng.randint(3, h - 4); fx = mid + b.rng.choice([-2, 2])
+        if b.empty(fx, fy) and b.terr[fy][fx] == "grass":
+            b.setp(fx, fy, "fence", False)
+    # decoration: scattered, not clumped, off the road
+    _nature_pass(b, trees=18, bushes=22, flowers=12, tufts=34, rocks=12)
+    # signposts where the road leaves the map
+    if not vertical:
+        if b.empty(2, mid - 2): b.setp(2, mid - 2, "sign_v", False)
+        if b.empty(w - 3, mid + 2): b.setp(w - 3, mid + 2, "sign_v", False)
+    else:
+        if b.empty(mid - 2, 2): b.setp(mid - 2, 2, "sign_v", False)
+        if b.empty(mid + 2, h - 3): b.setp(mid + 2, h - 3, "sign_v", False)
+    # a small rest camp tucked beside the road (a clearing, not a clump)
+    cx2 = int(w * 0.32); cy2 = (mid - 3) if not vertical else int(h * 0.32)
+    if not vertical and b.empty(cx2, cy2):
+        for o, dx in [("firewood", 0), ("crate", 1), ("barrel", 2)]:
+            if b.empty(cx2 + dx, cy2): b.setp(cx2 + dx, cy2, o)
+    # nothing must block the walking corridor
+    for y in range(h):
+        for x in range(w):
+            if corridor(x, y) and b.terr[y][x] in ("dirt", "road"):
+                if b.over[y * w + x] != -1: b.over[y * w + x] = -1
+                b.coll[y * w + x] = 0
     return b.write(name, region, "MAP_TYPE_ROUTE")
 
 def gen_forest(name, w=50, h=50, seed=9, region="awakened"):
     b = MapBuilder(w, h, seed)
-    # winding, overgrown trail crossing the map (both axes) — leaves walking space
-    b.path(0, int(h * 0.4), w - 1, int(h * 0.6), "dirt", 2, 0.6, 0.18)
-    b.path(int(w * 0.55), 0, int(w * 0.45), h - 1, "dirt", 1, 0.6, 0.22)
+    # winding trails crossing the map (both axes) — continuous (no holes) so they
+    # read as real paths, just gently wandering through the trees.
+    b.path(0, int(h * 0.4), w - 1, int(h * 0.6), "dirt", 2, 0.5, 0.0)
+    b.path(int(w * 0.55), 0, int(w * 0.45), h - 1, "dirt", 1, 0.5, 0.0)
     # a stream/pond
     b.pond(int(w * 0.25), int(h * 0.7), 4.5, 3.2)
     # clearings (open grass pockets with flowers) — break up the density

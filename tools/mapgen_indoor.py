@@ -23,10 +23,10 @@ SCENE = {
                           "stairs": 4, "goldpile": 110}},
     "interior": {"ground": "rtp_inside_ground", "a4": "rtp_inside_a4",
                  "wall_block": (0, 0), "b": "rtp_inside_b",
-                 "props": {"bed": 144, "bed2": 160, "table": 160, "chair": 75,
-                           "shelf": 112, "cabinet": 96, "barrel": 38, "pot": 136,
-                           "fireplace": 6, "throne": 123, "crate": 208, "rug": 90,
-                           "stairs": 4, "exit": 39}},
+                 "props": {"bed": 144, "bed2": 160, "table": 177, "chair": 124,
+                           "shelf": 99, "cabinet": 154, "barrel": 156, "pot": 170,
+                           "fireplace": 36, "throne": 123, "crate": 208, "rug": 90,
+                           "stairs": 4, "exit": 39, "column": 140}},
 }
 
 def a4_block(bc, br):
@@ -202,22 +202,39 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
 def gen_interior(name, w=26, h=18, seed=2, region="awakened", tier=1, hazard=""):
     b = IndoorBuilder(w, h, seed, "interior")
     rng = b.rng
-    # one or two connected rooms inside an outer wall
-    b.carve_rect(2, 2, w - 3, h - 3)
-    if w >= 22 and rng.random() < 0.6:
-        # split with a partial inner wall + doorway
+    # Room floor starts at y=3, leaving a 2-tile-tall BACK WALL (rows 1-2) so the
+    # top wall reads with height — the RM interior convention. Side/bottom walls
+    # are the usual 1-tile border. Furniture sits IN FRONT of the walls.
+    top = 3
+    b.carve_rect(2, top, w - 3, h - 3)
+    twin = (w >= 22 and rng.random() < 0.6)
+    if twin:                                   # split into two rooms + a doorway
         mx = w // 2
-        for y in range(2, h - 2):
-            b.walk[y * b.W + mx] = (y == h // 2)   # wall except a doorway
+        for y in range(top, h - 2):
+            b.walk[y * b.W + mx] = (y == h - 4)
     b.finalize_walls()
     # exit at the bottom-centre (back outside)
     exx = w // 2
     b.setp(exx, h - 3, "stairs", block=False)
     b.events.append({"x": exx, "y": h - 3, "name": "Exit", "text": "Leave."})
-    # furniture along the walls
-    b.setp(3, 2, "bed", block=True); b.setp(4, 2, "bed2", block=True)
-    b.setp(w - 4, 2, "shelf"); b.setp(w - 5, 2, "cabinet")
-    b.setp(w // 2 - 1, 3, "table"); b.setp(w // 2, 3, "chair", block=False)
-    b.setp(3, h - 4, "fireplace"); b.setp(w - 4, h - 4, "barrel")
-    b.scatter_in_rooms("pot", 3); b.scatter_in_rooms("crate", 3)
+    fy = top                                    # first floor row (against back wall)
+    by = h - 3                                  # last floor row (against front wall)
+    # bedroom corner: bed against the back wall (1-wide, 2-tall: head over foot)
+    b.setp(3, fy, "bed"); b.setp(3, fy + 1, "bed2")
+    b.setp(4, fy, "cabinet")                    # nightstand/dresser beside it
+    # storage along the back wall: bookshelf
+    b.setp(w - 4, fy, "shelf"); b.setp(w - 5, fy, "shelf")
+    # hearth on the front wall + a barrel beside it
+    b.setp(3, by, "fireplace"); b.setp(4, by, "barrel")
+    # dining set: a round table with a chair, roughly centred
+    tx, ty = (w // 3 if twin else w // 2), h // 2
+    b.setp(tx, ty, "table"); b.setp(tx, ty + 1, "chair", block=False)
+    if "rug" in b.gid: b.setp(tx - 1, ty, "rug", block=False)
+    # potted plants flanking the exit
+    b.setp(exx - 2, by, "pot"); b.setp(exx + 2, by, "pot")
+    # the second room (if split): a little store
+    if twin:
+        b.setp(w - 4, by, "crate"); b.setp(w - 5, by, "crate")
+        b.setp(w - 4, fy + 2, "barrel")
+    b.scatter_in_rooms("pot", 2); b.scatter_in_rooms("crate", 2)
     return b.write(name, region, "MAP_TYPE_INTERIOR", "...")
