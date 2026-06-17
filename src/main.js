@@ -261,6 +261,12 @@
                 if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
                 GameSave.save(0, GameSave.state);
             }
+            // Cold open — the System's first words, then a nudge toward Mira.
+            runCmdList([
+                { type: 'text', text: 'SYSTEM: Welcome, [designation]. Classification complete.' },
+                { type: 'text', text: 'SYSTEM: You have Awakened in Dawnhearth. I am here to help you. Always.' },
+                { type: 'text', text: 'A woman by the roadside is waving you over.' }
+            ], { mapName: 'Dawnhearth', evId: 0, event: null });
             console.log('[Main] New game → Dawnhearth at', w.x, w.y);
         };
         if (window.GamePlayerCreation) GamePlayerCreation.start(finish);
@@ -450,9 +456,16 @@
             i++;
         }
     }
+    // Substitute [name] / [designation] tokens in dialogue text.
+    function _subTokens(s) {
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        return String(s || '')
+            .replace(/\[name\]/g, p.name || 'Awakened')
+            .replace(/\[designation\]/g, p.designation || 'SUBJECT');
+    }
     async function runCmd(c, ctx) {
         switch (c.type) {
-            case 'text': await _say(c.text || '', c.face); break;
+            case 'text': await _say(_subTokens(c.text || ''), c.face); break;
             case 'choice': {
                 var idx = await _choose(c.prompt || '', (c.options || []).map(function (o) { return o.label; }));
                 var opt = (c.options || [])[idx];

@@ -173,6 +173,23 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Dawnhearth opening tutorial — SCRIPTED & browser-verified (2026-06-17)
+The `awakening` quest is now a playable opening, authored as map events in `data/maps/awakened/
+Dawnhearth.json` + a cold-open in `_newGame`:
+1. **Cold open** — `_newGame` runs a System intro (`runCmdList`: "Welcome, [designation]…") then nudges
+   toward Mira. (New `_subTokens` substitutes `[name]`/`[designation]` in dialogue text.)
+2. **Mira** (id14 @12,18, face People1) — quest-stage-gated: greets + directs to the crystal
+   (`quest stage 1`); reminds during the hunt; on return **completes the quest**, grants `first_aid`,
+   heals, (quest `reward.money:200` pays once).
+3. **System crystal** (id13) — opens the shop, then advances `stage 1→2` (nested conditional).
+4. **TutorialFiend** (id15 @34,24, Monster1, touch) — `stage 2`: battle an emberling →
+   advance `stage 3` → despawn.
+5. **NoticeBoard** (id16 @24,28) — the hook (Vanguard notice + scratched plea about Joran taken for
+   going off-grid).
+**Verified end-to-end via headless chromium:** Mira→1, crystal/shop→2, monster fight→3, return→done +
+200Cr + First Aid + full heal; zero JS errors. (Engine only fires touch/auto on stepping, so the
+cold-open is triggered from `_newGame`, not an auto tile.)
+
 ## No in-battle regen + persistent vitals + healing (2026-06-17)
 - **No passive HP/MP/SP regen in battle** (removed the per-turn regen). Recovery only via items,
   healing skills, or a healer ally. To avoid soft-locks, every fighter always has a **free basic
