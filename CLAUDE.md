@@ -536,6 +536,19 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     Fanfare). STATUS loader now also fetches `skills.json` (for tag gating). Node-tested
     (brawler→champion gated by level; warrior specs; tier/skill grants) + combat/progression suites
     pass. **Not browser-verified.** Next: Master tier content; non-combat lifestyle skill use.
+  - **Class-growth ACCESS reworked to the owner's design (evolve = pop-up; specialize/change = System
+    Shop).** Removed the EVOLVE/SPECIALIZE sections from STATUS (now display-only: shows chosen spec).
+    - **Evolve = automatic pop-up** (`src/ui/evolve.js`, `GameEvolvePopup`): `check()` fires after combat
+      (combatview teardown) and shows a System modal when an evolution becomes eligible (Lv≥10 + path
+      gates). Pick an ascension or NOT YET (deferred per-level via `player.class.evoDeferredAt`; re-offers
+      on next level). `gameLoop` pauses the world while active.
+    - **System Shop services** in the SYSTEM start-menu panel: **Specialize Class** (pick a focus,
+      +5 Surveillance) and **Reclassify** (switch among **owned** classes free; **acquire a new Basic
+      class** for Cr 500 + 15 Surveillance — the only non-reward way to get a new class). Sub-screens
+      with BACK; `_sysSub` state reset on enter/back.
+    - **`GameClasses` gained `changeClass`** (lateral: keep level/xp/skills, set Tier, record
+      `ownedClasses`) + `classesOfTier` (shop catalogue). `ownedClasses` seeded at creation.
+    - Node-tested (changeClass union/owned, catalogue=50) + suites pass. **Not browser-verified.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

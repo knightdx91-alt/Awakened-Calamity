@@ -593,10 +593,11 @@
             } catch(_) { _mapLoading = false; }
         }
 
-        // Title screen and character creation hold the world — their DOM overlays
-        // handle their own input; just pause movement/menus underneath.
+        // Title, character creation, and the evolution offer hold the world —
+        // their DOM overlays handle their own input; pause everything underneath.
         if ((window.GameTitle && GameTitle.isActive()) ||
-            (window.GamePlayerCreation && GamePlayerCreation.isActive())) {
+            (window.GamePlayerCreation && GamePlayerCreation.isActive()) ||
+            (window.GameEvolvePopup && GameEvolvePopup.isActive())) {
             GameInput.consumeJustPressed();
             requestAnimationFrame(gameLoop);
             return;

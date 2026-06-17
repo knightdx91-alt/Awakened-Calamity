@@ -401,6 +401,8 @@
         // Notify any awaiter (e.g. an event 'battle' command) that combat is over.
         var cb = _onEnd; _onEnd = null;
         if (cb) try { cb(); } catch (e) {}
+        // Combat may have leveled the player past an evolution threshold.
+        if (root.GameEvolvePopup) try { root.GameEvolvePopup.check(); } catch (e) {}
     }
 
     function _injectCSS() {

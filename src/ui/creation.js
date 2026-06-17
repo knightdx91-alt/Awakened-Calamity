@@ -268,6 +268,7 @@ window.GamePlayerCreation = (function () {
                 p.affinity = _affId;
                 var cl = _classes && _classId && _classes[_classId];
                 p.class = { id: _classId, level: 1, xp: 0 };
+                p.ownedClasses = [_classId];
                 p.skills = (cl && cl.grantsSkills ? cl.grantsSkills.slice() : []);
                 // Seed the canonical progression state from the chosen class tier.
                 if (window.GameProgression) {

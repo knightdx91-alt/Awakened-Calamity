@@ -97,6 +97,34 @@
         return true;
     }
 
+    // Lateral class change (CLASSES.md §1.7 axis 4): keep level/xp + all learned
+    // skills; switch id, union the new class's grants, set Tier to the new class.
+    // Source of a NEW class is gated by the caller (System Shop / NPC / quest).
+    function changeClass(state, targetId, db) {
+        var target = _def(db, targetId);
+        if (!target || !state || !state.player) return false;
+        var p = state.player;
+        if (!p.class) p.class = { id: targetId, level: 1, xp: 0 };
+        p.class.id = targetId;
+        p.class.spec = null;
+        p.skills = p.skills || [];
+        (target.grantsSkills || []).forEach(function (s) { if (p.skills.indexOf(s) < 0) p.skills.push(s); });
+        if (state.progress) state.progress.tier = target.tier || state.progress.tier;
+        // Record ownership so you can switch back for free later.
+        p.ownedClasses = p.ownedClasses || [];
+        if (p.ownedClasses.indexOf(targetId) < 0) p.ownedClasses.push(targetId);
+        return true;
+    }
+
+    // All classes of a tier (default 'basic') — the System Shop catalogue.
+    function classesOfTier(tier, db) {
+        tier = tier || 'basic';
+        var out = [];
+        var cs = (db && db.classes) || {};
+        for (var id in cs) { if (id === '_meta') continue; if (cs[id] && cs[id].tier === tier) out.push({ id: id, name: cs[id].name, lifestyle: cs[id].lifestyle }); }
+        return out;
+    }
+
     function _ctxFromState(state) {
         var p = state.player || {}, prog = state.progress || {};
         return { level: prog.level || (p.class && p.class.level) || 1,
@@ -107,6 +135,7 @@
     root.GameClasses = {
         evolveOptions: evolveOptions, evolve: evolve,
         specOptions: specOptions, chooseSpec: chooseSpec,
+        changeClass: changeClass, classesOfTier: classesOfTier,
         requiresMet: requiresMet, ctxFromState: _ctxFromState,
         EVOLVE_MIN_LEVEL: EVOLVE_MIN_LEVEL,
     };

@@ -606,75 +606,12 @@ window.GameStartMenu = (function () {
             }
         }
 
-        // Specialize + Evolve (class growth) — needs class data + GameClasses.
-        if (cls && window.GameClasses && GameSave && GameSave.state) {
-            var ctx = GameClasses.ctxFromState(GameSave.state);
-            var db = _classDb();
-
-            // SPECIALIZE — pick a focus (permanent) once unlocked.
-            var specs = GameClasses.specOptions(clsId, ctx, db);
-            var chosenSpec = p.class && p.class.spec;
-            if (specs.length) {
-                var sph = document.createElement('div');
-                sph.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
-                sph.textContent = 'SPECIALIZE';
-                el.appendChild(sph);
-                if (chosenSpec) {
-                    var cur = specs.filter(function (s) { return s.id === chosenSpec; })[0];
-                    var cr = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';' });
-                    cr.innerHTML = '<span>Focus</span><span style="color:' + _FR.text + '">' + (cur ? cur.name : _prettySkill(chosenSpec)) + '</span>';
-                } else {
-                    specs.forEach(function (sp) {
-                        var r = _row(el, { css: 'justify-content:space-between;align-items:center;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
-                        var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
-                        nm.innerHTML = sp.name + (sp.grantsSkill ? ' <span style="font-size:6px;color:' + _FR.dim + '">(' + _prettySkill(sp.grantsSkill) + ')</span>' : '');
-                        r.appendChild(nm);
-                        var btn = document.createElement('button');
-                        btn.textContent = sp.eligible ? 'PICK' : ('Lv' + sp.unlockAtLevel);
-                        btn.disabled = !sp.eligible;
-                        btn.style.cssText = 'font:7px "Press Start 2P";padding:4px 6px;border-radius:3px;border:none;cursor:' + (sp.eligible ? 'pointer' : 'not-allowed') + ';background:' + (sp.eligible ? _FR.blue : _FR.border) + ';color:#fff;';
-                        if (sp.eligible) btn.addEventListener('click', function () {
-                            if (GameClasses.chooseSpec(GameSave.state, clsId, sp.id, db)) {
-                                if (window.GameAudio) GameAudio.playSE('Decision1');
-                                if (GameSave.markDirty) GameSave.markDirty();
-                                _render();
-                            }
-                        });
-                        r.appendChild(btn);
-                    });
-                }
-            }
-
-            // EVOLVE — advance up a Tier along a declared branch.
-            var evos = GameClasses.evolveOptions(clsId, ctx, db);
-            if (evos.length) {
-                var eh = document.createElement('div');
-                eh.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _SYS.cyan + ';';
-                eh.textContent = 'EVOLVE';
-                el.appendChild(eh);
-                evos.forEach(function (ev) {
-                    var pending = (_pendingEvolve === ev.id);
-                    var r = _row(el, { css: 'justify-content:space-between;align-items:center;background:' + _FR.body + ';border:1px solid ' + (ev.eligible ? _SYS.cyan : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
-                    var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (ev.eligible ? _FR.text : _FR.dim) + ';';
-                    nm.innerHTML = '→ ' + ev.name + (ev.eligible ? '' : ' <span style="font-size:6px;color:' + _FR.dim + '">(' + ev.reason + ')</span>');
-                    r.appendChild(nm);
-                    if (ev.eligible) {
-                        var btn = document.createElement('button');
-                        btn.textContent = pending ? 'CONFIRM?' : 'EVOLVE';
-                        btn.style.cssText = 'font:7px "Press Start 2P";padding:4px 6px;border-radius:3px;border:none;cursor:pointer;background:' + (pending ? _SYS.warn : _SYS.cyan) + ';color:#02060f;';
-                        btn.addEventListener('click', function () {
-                            if (!pending) { _pendingEvolve = ev.id; _render(); return; }
-                            _pendingEvolve = null;
-                            if (GameClasses.evolve(GameSave.state, clsId, ev.id, db)) {
-                                if (window.GameAudio) GameAudio.playME('Fanfare1');
-                                if (GameSave.markDirty) GameSave.markDirty();
-                                _render();
-                            }
-                        });
-                        r.appendChild(btn);
-                    }
-                });
-            }
+        // Class growth happens elsewhere: EVOLVE is an automatic System pop-up on
+        // reaching requirements (GameEvolvePopup); SPECIALIZE and CHANGE CLASS are
+        // System Shop services (the SYSTEM panel). STATUS is display-only.
+        if (cls && p.class && p.class.spec) {
+            var sr = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';margin-top:6px;' });
+            sr.innerHTML = '<span>Specialization</span><span style="color:' + _FR.text + '">' + _prettySkill(p.class.spec) + '</span>';
         }
 
         var sub = document.createElement('div');
@@ -793,7 +730,12 @@ window.GameStartMenu = (function () {
         });
     }
 
+    var _sysSub = null;   // System Shop sub-screen: null | 'specialize' | 'change'
     function _buildSystem(el) {
+        _ensureClassData();
+        // System Shop sub-screens (specialize / change class) get their own page.
+        if (_sysSub === 'specialize') { _sysSpecialize(el); return; }
+        if (_sysSub === 'change')     { _sysChangeClass(el); return; }
         // COLD panel — near-black glass, cyan/danger, interactive services.
         var s = _survival();
         var sv = Math.max(0, Math.min(100, s.surveillance || 0));
@@ -850,6 +792,113 @@ window.GameStartMenu = (function () {
         service('Register Camp', 'Audit-proof your refuge — but flagged.', 10, function (c) {
             raise(c, 'Camp registered. You are protected. You are watched.');
         });
+        service('Specialize Class', 'Focus your current Classification.', 5, function () {
+            _sysSub = 'specialize'; _render();
+        });
+        service('Reclassify', 'Acquire or switch Classification.', 0, function () {
+            _sysSub = 'change'; _render();
+        });
+    }
+
+    // Shared chrome for a System Shop sub-screen: cold header + BACK button.
+    function _sysShell(el, title) {
+        el.style.cssText = 'background:' + _SYS.panel + ';color:' + _SYS.ink + ';padding:11px;overflow:auto;font-family:"Press Start 2P",monospace;';
+        var back = document.createElement('button');
+        back.textContent = '‹ BACK';
+        back.style.cssText = 'font:7px "Press Start 2P";background:none;border:none;color:' + _SYS.dim + ';cursor:pointer;margin-bottom:8px;';
+        back.addEventListener('click', function () { _sysSub = null; _render(); });
+        el.appendChild(back);
+        var h = document.createElement('div');
+        h.style.cssText = 'font:7px "Press Start 2P";letter-spacing:2px;color:' + _SYS.cyan + ';margin-bottom:10px;';
+        h.textContent = title;
+        el.appendChild(h);
+    }
+    function _sysRaise(by, msg) {
+        if (window.GameSave && GameSave.state) {
+            var st = GameSave.state.survival || { surveillance: 0, stamina: 100, exposure: 0 };
+            st.surveillance = Math.min(100, (st.surveillance || 0) + by);
+            GameSave.state.survival = st; GameSave.markDirty();
+            if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(st);
+        }
+        if (msg && window.GameSystem && GameSystem.notify) GameSystem.notify(msg, 'danger');
+    }
+
+    function _sysSpecialize(el) {
+        _sysShell(el, '[ SPECIALIZE ]');
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var clsId = p.class && p.class.id;
+        var db = _classDb();
+        if (!window.GameClasses || !clsId) { el.appendChild(_sysMsg('No Classification on record.')); return; }
+        if (p.class.spec) { el.appendChild(_sysMsg('Focus locked: ' + _prettySkill(p.class.spec) + '. Reclassify to change paths.')); return; }
+        var ctx = GameClasses.ctxFromState(GameSave.state);
+        var specs = GameClasses.specOptions(clsId, ctx, db);
+        if (!specs.length) { el.appendChild(_sysMsg('This Classification offers no specializations.')); return; }
+        el.appendChild(_sysMsg('Choose one focus — permanent. (+5 Surveillance)'));
+        specs.forEach(function (sp) {
+            var b = _sysBtn(el, sp.name + (sp.grantsSkill ? '  +' + _prettySkill(sp.grantsSkill) : ''),
+                sp.eligible ? 'Available' : ('Requires Lv' + sp.unlockAtLevel), sp.eligible);
+            if (sp.eligible) b.addEventListener('click', function () {
+                if (GameClasses.chooseSpec(GameSave.state, clsId, sp.id, db)) {
+                    if (window.GameAudio) GameAudio.playME('Fanfare2');
+                    _sysRaise(5, 'Specialization registered: ' + sp.name + '.');
+                    _sysSub = null; _render();
+                }
+            });
+        });
+    }
+
+    function _sysChangeClass(el) {
+        _sysShell(el, '[ RECLASSIFY ]');
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var db = _classDb();
+        if (!window.GameClasses || !p.class) { el.appendChild(_sysMsg('No Classification on record.')); return; }
+        var owned = p.ownedClasses || (p.ownedClasses = [p.class.id]);
+        var NEW_COST = 500, SURV = 15;
+
+        // Switch among owned classes (free, lateral).
+        el.appendChild(_sysMsg('Switch Classification (owned — free):'));
+        owned.forEach(function (id) {
+            var cl = (_clsData && _clsData[id]);
+            var isCur = id === p.class.id;
+            var b = _sysBtn(el, (cl ? cl.name : _prettySkill(id)) + (isCur ? '  ◄ current' : ''),
+                isCur ? '' : 'Switch (free)', !isCur);
+            if (!isCur) b.addEventListener('click', function () {
+                if (GameClasses.changeClass(GameSave.state, id, db)) {
+                    if (window.GameAudio) GameAudio.playSE('Decision1');
+                    GameSave.markDirty(); _render();
+                }
+            });
+        });
+
+        // Acquire a NEW Basic class (costs credits + Surveillance).
+        el.appendChild(_sysMsg('Acquire new Classification — Cr ' + NEW_COST + ' (+' + SURV + ' Surveillance):'));
+        var credits = _credits();
+        var basics = GameClasses.classesOfTier('basic', db).filter(function (c) { return owned.indexOf(c.id) < 0; });
+        basics.forEach(function (c) {
+            var afford = credits >= NEW_COST;
+            var b = _sysBtn(el, c.name, c.lifestyle + ' · ' + (afford ? 'Cr ' + NEW_COST : 'insufficient Cr'), afford);
+            if (afford) b.addEventListener('click', function () {
+                if (GameSave.state.player) GameSave.state.player.money = Math.max(0, (GameSave.state.player.money || 0) - NEW_COST);
+                if (GameClasses.changeClass(GameSave.state, c.id, db)) {
+                    if (window.GameAudio) GameAudio.playME('Fanfare1');
+                    _sysRaise(SURV, 'Reclassified: ' + c.name + '. The System has re-catalogued you.');
+                    _sysSub = null; _render();
+                }
+            });
+        });
+    }
+
+    function _sysMsg(t) {
+        var d = document.createElement('div');
+        d.style.cssText = 'font:7px "Press Start 2P";color:' + _SYS.dim + ';line-height:1.7;margin:6px 0;';
+        d.textContent = t; return d;
+    }
+    function _sysBtn(el, label, sub, enabled) {
+        var b = document.createElement('button');
+        b.disabled = !enabled;
+        b.style.cssText = 'display:block;width:100%;text-align:left;background:rgba(0,40,55,' + (enabled ? '.55' : '.2') + ');border:1px solid ' + (enabled ? _SYS.cyan : _SYS.dim) + ';border-radius:5px;padding:7px;margin-bottom:5px;color:' + (enabled ? _SYS.ink : _SYS.dim) + ';font:7px "Press Start 2P";cursor:' + (enabled ? 'pointer' : 'not-allowed') + ';';
+        b.innerHTML = '<div style="color:' + (enabled ? _SYS.cyan : _SYS.dim) + '">' + label + '</div>' + (sub ? '<div style="font-size:6px;color:' + _SYS.dim + ';margin-top:3px;">' + sub + '</div>' : '');
+        el.appendChild(b); return b;
     }
 
     function _buildSave(el) {
@@ -1167,6 +1216,8 @@ window.GameStartMenu = (function () {
         // In battle bag mode, B/back closes entirely and returns to battle
         if (_battleBagCancel) { close(); return; }
         if (_battlePartyCancel) { close(); return; }
+        if (page==='system' && _sysSub) { _sysSub=null; _render(); return; }  // sub-screen → services
+        _sysSub=null;
         page='main'; _subIdx=0; _render();
     }
 
@@ -1185,7 +1236,7 @@ window.GameStartMenu = (function () {
             case 'SUPPLIES':   page='supplies';   _subIdx=0; _render(); break;
             case 'AFFINITIES': page='affinities'; _subIdx=0; _render(); break;
             case 'REACHES':    page='reaches';    _subIdx=0; _render(); break;
-            case 'SYSTEM':     page='system';     _subIdx=0; _render(); break;
+            case 'SYSTEM':     page='system';     _subIdx=0; _sysSub=null; _render(); break;
             default: close(); break;
         }
     }
