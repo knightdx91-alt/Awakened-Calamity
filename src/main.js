@@ -192,6 +192,129 @@
             _transitioning = false;
         }
     }
+    // ── Title / New Game / Continue flow ──
+    var DAWNHEARTH_SEED = { x: 8, y: 18 };   // street tile below a door
+    function _firstSlotIndex() {
+        if (!window.GameSave) return -1;
+        var metas = GameSave.getAllSlotMeta();
+        for (var i = 0; i < metas.length; i++) if (metas[i]) return i;
+        return -1;
+    }
+    function _firstSlotMeta() {
+        var i = _firstSlotIndex();
+        return i >= 0 ? GameSave.getAllSlotMeta()[i] : null;
+    }
+    // Spiral out from (cx,cy) for the first walkable tile.
+    function _findWalkable(cx, cy) {
+        if (GameMap.isWalkable(cx, cy)) return { x: cx, y: cy };
+        for (var r = 1; r < 24; r++) {
+            for (var dy = -r; dy <= r; dy++) {
+                for (var dx = -r; dx <= r; dx++) {
+                    if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+                    var x = cx + dx, y = cy + dy;
+                    if (x < 0 || y < 0 || x >= GameMap.width || y >= GameMap.height) continue;
+                    if (GameMap.isWalkable(x, y)) return { x: x, y: y };
+                }
+            }
+        }
+        return { x: cx, y: cy };
+    }
+    async function _enterMap(map, region, x, y) {
+        currentRegion = region || currentRegion;
+        await GameMap.load(map, currentRegion);
+        window._mapName = (GameMap.current && GameMap.current.name) || map;
+        window._mapLoaded = true;
+        window._currentMapType = (GameMap.current && GameMap.current.map_type) || '';
+        var px = (x != null) ? x : Math.floor(GameMap.width / 2);
+        var py = (y != null) ? y : Math.floor(GameMap.height / 2);
+        px = Math.max(0, Math.min(px, GameMap.width - 1));
+        py = Math.max(0, Math.min(py, GameMap.height - 1));
+        player.x = px; player.y = py; player.prevX = px; player.prevY = py;
+        player.direction = 'down'; player.walkFrame = 0; player.moveStartTime = 0;
+        _snapPlayer();
+        GameRenderer.setScene(GameMap, GameCamera, player);
+        GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+        GameMap.loadEncounterData(currentRegion);
+    }
+    async function _continueGame() {
+        var slot = _firstSlotIndex();
+        if (slot < 0) { _newGame(); return; }
+        GameSave.load(slot);
+        var loc = (GameSave.state && GameSave.state.currentLocation) || {};
+        await _enterMap(loc.mapName || 'Dawnhearth', loc.region || 'awakened', loc.x, loc.y);
+        console.log('[Main] Continued slot', slot, '→', window._mapName);
+    }
+    function _newGame() {
+        if (window.GameSave) {
+            GameSave.state = GameSave.DEFAULT_SLOT_DATA();
+            GameSave.currentSlot = 0;
+        }
+        var finish = async function () {
+            await _enterMap('Dawnhearth', 'awakened', null, null);
+            var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
+            player.x = w.x; player.y = w.y; player.prevX = w.x; player.prevY = w.y; _snapPlayer();
+            GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+            if (window.GameSave && GameSave.state) {
+                GameSave.state.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
+                if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Dawnhearth';
+                // Kick off the opening quest (scripted beats advance it).
+                if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
+                GameSave.save(0, GameSave.state);
+            }
+            // Cold open — the System's first words, then a nudge toward Mira.
+            runCmdList([
+                { type: 'text', text: 'SYSTEM: Welcome, [designation]. Classification complete.' },
+                { type: 'text', text: 'SYSTEM: You have Awakened in Dawnhearth. I am here to help you. Always.' },
+                { type: 'text', text: 'A woman by the roadside is waving you over.' }
+            ], { mapName: 'Dawnhearth', evId: 0, event: null });
+            console.log('[Main] New game → Dawnhearth at', w.x, w.y);
+        };
+        if (window.GamePlayerCreation) GamePlayerCreation.start(finish);
+        else finish();
+    }
+
+    // Compare the running build to the deployed version.txt; if a newer build is
+    // live, the client copy is stale → nudge a reload. Saves stay compatible
+    // regardless (see GameSave.migrate), so this is purely advisory.
+    function _checkForUpdate() {
+        var build = window.__BUILD__;
+        if (!build || build === '__CACHE_BUST__') return;   // local/dev, not deployed
+        fetch('version.txt?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (latest) {
+                if (!latest) return;
+                latest = latest.trim();
+                if (latest && latest !== build && window.GameSystem && GameSystem.notify) {
+                    GameSystem.notify('A new version is available. Reload to update.', 'warning');
+                }
+            })
+            .catch(function () {});
+    }
+
+    // Lazy class/skill DB for reward commands (grantclass/grantspec/grantskill).
+    var _classDbCache = null, _classDbPromise = null;
+    function _loadClassDb() {
+        if (_classDbCache) return Promise.resolve(_classDbCache);
+        if (_classDbPromise) return _classDbPromise;
+        var b = '?b=' + (window.__BUILD__ || '0');
+        _classDbPromise = Promise.all([
+            fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
+        ]).then(function (res) { _classDbCache = { classes: res[0] || {}, skills: res[1] || {} }; return _classDbCache; });
+        return _classDbPromise;
+    }
+
+    var _questDbCache = null, _questDbPromise = null;
+    function _loadQuestDb() {
+        if (_questDbCache) return Promise.resolve(_questDbCache);
+        if (_questDbPromise) return _questDbPromise;
+        _questDbPromise = fetch('data/systems/quests.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .then(function (j) { _questDbCache = {}; for (var k in j) if (k !== '_meta') _questDbCache[k] = j[k]; return _questDbCache; })
+            .catch(function () { return (_questDbCache = {}); });
+        return _questDbPromise;
+    }
+
     // ── Event command interpreter (RPG-Maker-style scripting) ──
     var _eventRunning = false;
     var ES = window.GameEventState;
@@ -215,7 +338,12 @@
         });
     }
     function _evalCond(cond, ctx) {
-        if (!cond || !ES) return true;
+        if (!cond) return true;
+        if (cond.kind === 'quest') {
+            var qs = (window.GameSave && GameSave.state && GameSave.state.quests) || {};
+            return window.GameQuests ? GameQuests.check(qs, _questDbCache || {}, cond.id, cond.check || 'active', cond.stage) : false;
+        }
+        if (!ES) return true;
         if (cond.kind === 'switch') return ES.getSwitch(cond.id) === (cond.value !== false);
         if (cond.kind === 'selfswitch') return ES.getSelf(ctx.mapName, ctx.evId, cond.letter || 'A') === (cond.value !== false);
         if (cond.kind === 'variable') {
@@ -233,15 +361,111 @@
         } : {};
         try { (new Function('$', code)).call(null, api); } catch (e) { console.warn('[Event script]', e); }
     }
-    async function runCmdList(list, ctx) {
-        for (var i = 0; i < list.length; i++) {
-            if (ctx.exited) return;
-            await runCmd(list[i], ctx);
+    // Resolve a command target: 'player' | 'this' (the running event) | event id.
+    function _eventById(id) {
+        var evs = (GameMap.current && GameMap.current.events) || [];
+        for (var i = 0; i < evs.length; i++) if (evs[i].id === id) return evs[i];
+        return null;
+    }
+    function _resolveTarget(c, ctx) {
+        var t = c.target;
+        if (t == null || t === 'this') return ctx.event;
+        if (t === 'player') return player;
+        return _eventById(t | 0);
+    }
+    var _DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+    // Walk a target along a list of steps ('up'/'down'/'left'/'right'/'wait').
+    async function _moveRoute(t, steps, isPlayer) {
+        if (!t || !steps || !steps.length) return;
+        for (var i = 0; i < steps.length; i++) {
+            if (steps[i] === 'wait') { await _wait(MOVE_COOLDOWN_MS); continue; }
+            var d = _DELTA[steps[i]];
+            if (!d) continue;
+            if (isPlayer) {
+                player.direction = steps[i];
+                var nx = player.x + d[0], ny = player.y + d[1];
+                if (nx >= 0 && ny >= 0 && nx < GameMap.width && ny < GameMap.height && GameMap.isWalkable(nx, ny)) {
+                    player.prevX = player.x; player.prevY = player.y;
+                    player.x = nx; player.y = ny;
+                    player.moveStartTime = performance.now(); player.moveDuration = MOVE_COOLDOWN_MS;
+                    player.walkFrame = player.walkFrame === 1 ? 2 : 1;
+                    if (window.GameSave) GameSave.markDirty();
+                }
+            } else {
+                t.dir = steps[i];
+                var ex = t.x + d[0], ey = t.y + d[1];
+                if (ex >= 0 && ey >= 0 && ex < GameMap.width && ey < GameMap.height && GameMap.isWalkable(ex, ey)) { t.x = ex; t.y = ey; }
+            }
+            await _wait(MOVE_COOLDOWN_MS);
         }
+        if (isPlayer) player.walkFrame = 0;
+    }
+    // Screen fade: mode 'out' (to color) or 'in' (back to clear).
+    function _fade(c) {
+        return new Promise(function (res) {
+            var ms = (((c.frames | 0) || 30)) * 16, mode = c.mode || 'out';
+            var d = document.getElementById('ac-fade');
+            if (!d) { d = document.createElement('div'); d.id = 'ac-fade'; d.style.cssText = 'position:fixed;inset:0;z-index:8000;pointer-events:none;'; document.body.appendChild(d); }
+            d.style.background = c.color || '#000';
+            d.style.transition = 'none';
+            d.style.opacity = (mode === 'out') ? '0' : '1';
+            void d.offsetWidth; // force reflow so the transition runs
+            d.style.transition = 'opacity ' + ms + 'ms linear';
+            d.style.opacity = (mode === 'out') ? '1' : '0';
+            setTimeout(res, ms);
+        });
+    }
+    // Screen shake the game canvas.
+    function _shake(c) {
+        return new Promise(function (res) {
+            var elx = document.getElementById('canvas-primary') || document.body;
+            var power = (c.power | 0) || 5, ms = (((c.frames | 0) || 30)) * 16, start = performance.now();
+            (function tick() {
+                var t = performance.now() - start;
+                if (t >= ms) { elx.style.transform = ''; res(); return; }
+                elx.style.transform = 'translateX(' + ((Math.random() * 2 - 1) * power).toFixed(1) + 'px)';
+                requestAnimationFrame(tick);
+            })();
+        });
+    }
+    // Battle processing — start a combat and resolve when it ends.
+    function _battle(c) {
+        return new Promise(function (res) {
+            if (!window.GameCombatView || !GameCombatView.start) { res(); return; }
+            var opts = { onEnd: function () { res(); } };
+            if (c.enemies && c.enemies.length) opts.enemies = c.enemies;
+            GameCombatView.start(opts);
+            if (!GameCombatView.isActive()) res(); // start refused (already active)
+        });
+    }
+
+    async function runCmdList(list, ctx) {
+        var i = 0;
+        while (i < list.length) {
+            if (ctx.exited) return;
+            var c = list[i];
+            if (c.type === 'label') { i++; continue; }
+            await runCmd(c, ctx);
+            if (ctx._jumpTo != null) {
+                var target = ctx._jumpTo; ctx._jumpTo = null;
+                var idx = -1;
+                for (var j = 0; j < list.length; j++) { if (list[j].type === 'label' && list[j].label === target) { idx = j; break; } }
+                if (idx >= 0) { i = idx + 1; continue; }
+                // label not found in this list — fall through to next command
+            }
+            i++;
+        }
+    }
+    // Substitute [name] / [designation] tokens in dialogue text.
+    function _subTokens(s) {
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        return String(s || '')
+            .replace(/\[name\]/g, p.name || 'Awakened')
+            .replace(/\[designation\]/g, p.designation || 'SUBJECT');
     }
     async function runCmd(c, ctx) {
         switch (c.type) {
-            case 'text': await _say(c.text || '', c.face); break;
+            case 'text': await _say(_subTokens(c.text || ''), c.face); break;
             case 'choice': {
                 var idx = await _choose(c.prompt || '', (c.options || []).map(function (o) { return o.label; }));
                 var opt = (c.options || [])[idx];
@@ -264,6 +488,156 @@
             case 'se':     if (window.GameAudio && GameAudio.playSE) GameAudio.playSE(c.name); break;
             case 'script': _runScript(c.code || '', ctx); break;
             case 'transfer': ctx.exited = true; await transitionToEventTransfer(c); break;
+            case 'money': {
+                if (window.GameSave && GameSave.state && GameSave.state.player) {
+                    var pl = GameSave.state.player, amt = (c.amount | 0), cur = pl.money || 0;
+                    pl.money = Math.max(0, c.op === '-' ? cur - amt : c.op === '=' ? amt : cur + amt);
+                    GameSave.markDirty();
+                }
+                break;
+            }
+            case 'item': {
+                if (window.GameSave && GameSave.state && GameSave.state.inventory && c.id) {
+                    var inv = GameSave.state.inventory, pk = c.pocket || 'items';
+                    if (!inv[pk]) inv[pk] = {};
+                    var n = (c.qty | 0) || 1, q = (inv[pk][c.id] || 0) + (c.op === '-' ? -n : n);
+                    if (q <= 0) delete inv[pk][c.id]; else inv[pk][c.id] = q;
+                    GameSave.markDirty();
+                }
+                break;
+            }
+            case 'setdir': {
+                var td = _resolveTarget(c, ctx);
+                if (td) { if (td === player) player.direction = c.dir || 'down'; else td.dir = c.dir || 'down'; }
+                break;
+            }
+            case 'move':   await _moveRoute(_resolveTarget(c, ctx), c.steps || [], _resolveTarget(c, ctx) === player); break;
+            case 'setgfx': {
+                var tgf = _resolveTarget(c, ctx);
+                if (tgf && c.graphic) {
+                    if (tgf === player) {
+                        try { localStorage.setItem('ac_player_sprite', JSON.stringify(c.graphic)); } catch (e) {}
+                        if (window.GameRenderer && GameRenderer.reloadPlayer) GameRenderer.reloadPlayer();
+                    } else { tgf.graphic = c.graphic; if (c.dir) tgf.dir = c.dir; }
+                }
+                break;
+            }
+            case 'spawn': {
+                if (GameMap.current) {
+                    if (!GameMap.current.events) GameMap.current.events = [];
+                    var evs2 = GameMap.current.events, nid = 1;
+                    for (var si = 0; si < evs2.length; si++) if (evs2[si].id >= nid) nid = evs2[si].id + 1;
+                    var sev = {
+                        id: nid, name: c.name || (c.kind === 'monster' ? 'Monster' : 'NPC'),
+                        x: c.x | 0, y: c.y | 0, graphic: c.graphic || null, dir: c.dir || 'down',
+                        trigger: c.kind === 'monster' ? 'touch' : 'action', through: false,
+                        commands: [], _spawned: true
+                    };
+                    if (c.kind === 'monster') {
+                        var foes = (c.enemies && c.enemies.length) ? c.enemies
+                                   : [{ key: c.creature || 'emberling', level: c.level || 2 }];
+                        sev.commands = [{ type: 'battle', enemies: foes }, { type: 'despawn' }];
+                    } else if (c.text) {
+                        sev.commands = [{ type: 'text', text: c.text, face: c.face }];
+                    }
+                    evs2.push(sev);
+                }
+                break;
+            }
+            case 'despawn': {
+                var devs = GameMap.current && GameMap.current.events;
+                if (devs) { var di = devs.indexOf(ctx.event); if (di >= 0) devs.splice(di, 1); }
+                ctx.exited = true;
+                break;
+            }
+            case 'system': await new Promise(function (res) { if (window.GameSystemShop) GameSystemShop.open(res); else res(); }); break;
+            case 'grantclass': {
+                // NPC/quest reward: give a Classification (the non-shop source).
+                var st0 = window.GameSave && GameSave.state;
+                if (st0 && st0.player) {
+                    var dbg = await _loadClassDb();
+                    var p0 = st0.player; p0.ownedClasses = p0.ownedClasses || (p0.class ? [p0.class.id] : []);
+                    if (c.unlockOnly) {
+                        if (p0.ownedClasses.indexOf(c.classId) < 0) p0.ownedClasses.push(c.classId);
+                    } else if (window.GameClasses) {
+                        GameClasses.changeClass(st0, c.classId, dbg);
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'grantspec': {
+                var st1 = window.GameSave && GameSave.state;
+                if (st1 && st1.player && st1.player.class && c.specId) {
+                    st1.player.class.spec = c.specId;
+                    var dbs = await _loadClassDb();
+                    var cls1 = dbs.classes[st1.player.class.id];
+                    var sp1 = ((cls1 && cls1.specializations) || []).filter(function (x) { return x.id === c.specId; })[0];
+                    if (sp1 && sp1.grantsSkill) {
+                        st1.player.skills = st1.player.skills || [];
+                        if (st1.player.skills.indexOf(sp1.grantsSkill) < 0) st1.player.skills.push(sp1.grantsSkill);
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'quest': {
+                var stq = window.GameSave && GameSave.state;
+                if (stq && window.GameQuests && c.id) {
+                    stq.quests = stq.quests || {};
+                    var qdb = (await _loadQuestDb()) || {};
+                    var op = c.op || 'start';
+                    if (op === 'start') GameQuests.start(stq.quests, c.id);
+                    else if (op === 'advance') GameQuests.advance(stq.quests, qdb, c.id);
+                    else if (op === 'complete') GameQuests.complete(stq.quests, qdb, c.id);
+                    else if (op === 'fail') GameQuests.fail(stq.quests, c.id);
+                    else if (op === 'stage') GameQuests.setStage(stq.quests, qdb, c.id, (c.stage != null ? c.stage : 0));
+                    // Apply rewards when a quest completes.
+                    if (op === 'complete' && qdb[c.id] && qdb[c.id].reward) {
+                        var rw = qdb[c.id].reward, p = stq.player;
+                        if (p && rw.money) p.money = (p.money || 0) + (rw.money | 0);
+                        if (p && rw.skill) { p.skills = p.skills || []; if (p.skills.indexOf(rw.skill) < 0) p.skills.push(rw.skill); }
+                        if (rw.item) { stq.inventory = stq.inventory || {}; var def = window.GameItems && GameItems.get(rw.item); var pk = (def && def.pocket) || 'items'; stq.inventory[pk] = stq.inventory[pk] || {}; stq.inventory[pk][rw.item] = (stq.inventory[pk][rw.item] || 0) + 1; }
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameSystem && GameSystem.notify) {
+                        var qn = (qdb[c.id] && qdb[c.id].name) || c.id;
+                        GameSystem.notify(op === 'complete' ? ('Quest complete: ' + qn) : ('Quest updated: ' + qn), 'info');
+                    }
+                }
+                break;
+            }
+            case 'heal': {
+                // Healer NPC / town infirmary / wild healer: restore persistent
+                // vitals (HP/MP/SP %). c.amount (0–100) or full when omitted.
+                var sth = window.GameSave && GameSave.state;
+                if (sth) {
+                    var sv = sth.survival || (sth.survival = { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 });
+                    var amt = (c.amount != null) ? Math.max(0, Math.min(100, c.amount | 0)) : 100;
+                    var set = function (k) { sv[k] = (c.amount != null) ? Math.min(100, (sv[k] || 0) + amt) : 100; };
+                    if (c.what === 'hp' || !c.what || c.what === 'all') set('hp');
+                    if (c.what === 'mp' || !c.what || c.what === 'all') set('mana');
+                    if (c.what === 'sp' || !c.what || c.what === 'all') set('stamina');
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv);
+                    if (window.GameAudio) GameAudio.playSE('Heal1');
+                }
+                break;
+            }
+            case 'grantskill': {
+                var st2 = window.GameSave && GameSave.state;
+                if (st2 && st2.player && c.skill) {
+                    st2.player.skills = st2.player.skills || [];
+                    if (st2.player.skills.indexOf(c.skill) < 0) { st2.player.skills.push(c.skill); if (window.GameSave) GameSave.markDirty(); }
+                }
+                break;
+            }
+            case 'fade':   await _fade(c); break;
+            case 'shake':  await _shake(c); break;
+            case 'battle': await _battle(c); break;
+            case 'jump':   ctx._jumpTo = c.label || ''; break;
+            case 'label':  break; // resolved in runCmdList
+            case 'comment': break; // author note; no-op at runtime
             case 'exit':   ctx.exited = true; break;
         }
     }
@@ -361,6 +735,17 @@
                     _mapLoading = false;
                 }).catch(function () { _mapLoading = false; });
             } catch(_) { _mapLoading = false; }
+        }
+
+        // Title, character creation, and the evolution offer hold the world —
+        // their DOM overlays handle their own input; pause everything underneath.
+        if ((window.GameTitle && GameTitle.isActive()) ||
+            (window.GamePlayerCreation && GamePlayerCreation.isActive()) ||
+            (window.GameEvolvePopup && GameEvolvePopup.isActive()) ||
+            (window.GameSystemShop && GameSystemShop.isActive())) {
+            GameInput.consumeJustPressed();
+            requestAnimationFrame(gameLoop);
+            return;
         }
 
         // Tempo + Intervention combat view gets first priority on all input.
@@ -518,6 +903,9 @@
             GameLayout.init();
             GameControls.init();
             GameHUD.init(GameMap, player);
+            if (window.GameAudio) GameAudio.init();
+            if (window.GameItems) GameItems.load();   // preload item DB (battle/menus)
+            _loadQuestDb();   // preload so quest conditionals resolve
 
             if (window.GameDialogue) GameDialogue.init();
 
@@ -563,6 +951,11 @@
             player.prevX = player.x;
             player.prevY = player.y;
 
+            // Reconcile localStorage with the IndexedDB backup before reading slots.
+            if (window.GameSave && GameSave.initStorage) {
+                try { await GameSave.initStorage(); } catch (e) {}
+            }
+
             // Initialize save state — must happen after map/renderer setup
             try {
                 if (window.GameSave) {
@@ -585,6 +978,21 @@
             GameRenderer.setScene(GameMap, GameCamera, player);
             GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
             console.log('[Main] Game started. Map:', GameMap.current && GameMap.current.name);
+            _checkForUpdate();
+
+            // Title screen → New Game (Awakening → Dawnhearth) / Continue.
+            // Skipped when an explicit ?map= override is used (editor Play / testing).
+            if (!_params.get('map') && window.GameTitle) {
+                var _hasSave = !!(window.GameSave && GameSave.hasAnySave());
+                GameTitle.show({
+                    hasSave: _hasSave,
+                    meta: _hasSave ? _firstSlotMeta() : null,
+                    onChoose: function (choice) {
+                        if (choice === 'continue') _continueGame();
+                        else _newGame();
+                    }
+                });
+            }
         } catch (e) {
             console.error('[Main] init() error:', e);
             window._initError = e && e.message ? e.message : String(e);

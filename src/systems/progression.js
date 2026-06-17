@@ -31,11 +31,43 @@
     }
 
     // ---- state ------------------------------------------------------------
-    function createProgress(tier, level) {
+    var DEFAULT_ATTRS = ['strength', 'agility', 'constitution', 'intelligence', 'wisdom', 'perception', 'charisma', 'luck'];
+
+    function createProgress(tier, level, db) {
         tier = tier || 'basic'; level = level || 1;
+        var list = (db && db.attributes) || DEFAULT_ATTRS;
         var attrs = {};
-        // attributes filled lazily; left empty here (allocation is a later system)
+        list.forEach(function (a) { attrs[a] = 0; });   // allocated points (bonuses on top of class base)
         return { tier: tier, level: level, xp: 0, attrPoints: 0, attributes: attrs, totalXP: 0 };
+    }
+
+    // ---- attribute allocation --------------------------------------------
+    // Spend one banked point into an attribute. Returns true on success.
+    function spendPoint(prog, attr, db) {
+        if (!prog || prog.attrPoints <= 0) return false;
+        var list = (db && db.attributes) || DEFAULT_ATTRS;
+        if (list.indexOf(attr) < 0) return false;
+        if (!prog.attributes) prog.attributes = {};
+        prog.attributes[attr] = (prog.attributes[attr] || 0) + 1;
+        prog.attrPoints -= 1;
+        return true;
+    }
+
+    // Apply attribute-derived bonuses on top of a base combat stat block
+    // {hp,atk,def,speed}. Pure — returns a new object.
+    function applyAttributes(base, attributes, db) {
+        var out = Object.assign({}, base || {});
+        var eff = (db && db.attrEffects) || {};
+        attributes = attributes || {};
+        for (var attr in attributes) {
+            var pts = attributes[attr] | 0;
+            if (!pts || !eff[attr]) continue;
+            for (var stat in eff[attr]) {
+                if (stat === '_note') continue;
+                out[stat] = (out[stat] || 0) + eff[attr][stat] * pts;
+            }
+        }
+        return out;
     }
 
     // Award raw XP; auto-levels while the threshold is met. Returns the level-up
@@ -69,6 +101,7 @@
         xpToNext: xpToNext, mobXP: mobXP, levelDiffMult: levelDiffMult,
         pointsForLevel: pointsForLevel, createProgress: createProgress,
         awardXP: awardXP, gainFromKill: gainFromKill,
+        spendPoint: spendPoint, applyAttributes: applyAttributes,
     };
     root.GameProgression = GameProgression;
     if (typeof module !== 'undefined' && module.exports) module.exports = GameProgression;

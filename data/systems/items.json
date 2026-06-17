@@ -1,0 +1,34 @@
+{
+  "_meta": "Item database (Awakened Calamity). `pocket` matches GameSave.inventory pockets (food/tonics/items/tethers/campKits/materials/gear/keyItems). `use.type` is applied by the SUPPLIES field menu now (stamina/exposure/cure); heal is for battle later. `field`/`battle` flag where an item is actually consumed. `value` = System-Shop buy price (sells ~half). `shop:true` lists it in the System Shop. `icon` = RTP IconSet index. `gear` items equip (slots: weapon/body/hazard) once the equip system lands. Engine-agnostic DATA — port as-is.",
+
+  "ration":        { "name": "Field Ration",   "pocket": "food",      "desc": "Dried trail food. Restores Stamina.",                 "icon": 291, "value": 40,  "stack": true,  "shop": true, "use": { "type": "stamina", "amount": 30 } },
+  "cooked_meal":   { "name": "Cooked Meal",     "pocket": "food",      "desc": "A hot meal. Restores plenty of Stamina.",             "icon": 290, "value": 90,  "stack": true,  "use": { "type": "stamina", "amount": 60 } },
+  "wild_berries":  { "name": "Wild Berries",    "pocket": "food",      "desc": "Foraged berries. A little Stamina.",                  "icon": 289, "value": 10,  "stack": true,  "use": { "type": "stamina", "amount": 12 } },
+  "jerky":         { "name": "Salt Jerky",      "pocket": "food",      "desc": "Keeps for ages. Restores Stamina.",                   "icon": 292, "value": 55,  "stack": true,  "use": { "type": "stamina", "amount": 40 } },
+
+  "tonic_heat":    { "name": "Coolant Tonic",   "pocket": "tonics",    "desc": "Purges Heat Exposure.",                               "icon": 192, "value": 120, "stack": true,  "shop": true, "use": { "type": "exposure", "amount": 40, "hazard": "heat" } },
+  "tonic_cold":    { "name": "Warming Tonic",   "pocket": "tonics",    "desc": "Purges Cold Exposure.",                               "icon": 193, "value": 120, "stack": true,  "use": { "type": "exposure", "amount": 40, "hazard": "cold" } },
+  "tonic_toxic":   { "name": "Antitoxin",       "pocket": "tonics",    "desc": "Purges Toxic Exposure.",                              "icon": 194, "value": 120, "stack": true,  "use": { "type": "exposure", "amount": 40, "hazard": "toxic" } },
+  "tonic_gloom":   { "name": "Clarity Tonic",   "pocket": "tonics",    "desc": "Purges Gloom Exposure.",                              "icon": 195, "value": 120, "stack": true,  "use": { "type": "exposure", "amount": 40, "hazard": "gloom" } },
+  "tonic_tempest": { "name": "Grounding Tonic", "pocket": "tonics",    "desc": "Purges Tempest Exposure.",                            "icon": 196, "value": 120, "stack": true,  "use": { "type": "exposure", "amount": 40, "hazard": "tempest" } },
+
+  "bandage":       { "name": "Bandage",         "pocket": "items",     "desc": "Field dressing. Minor recovery.",                     "icon": 176, "value": 30,  "stack": true,  "use": { "type": "stamina", "amount": 15 } },
+  "stimulant":     { "name": "Stimulant",       "pocket": "items",     "desc": "A jolt of focus. Restores Stamina.",                  "icon": 177, "value": 80,  "stack": true, "shop": true,  "use": { "type": "stamina", "amount": 50 } },
+  "antidote":      { "name": "Antidote",        "pocket": "items",     "desc": "Cures poisoning.",                                    "icon": 178, "value": 60,  "stack": true, "shop": true,  "use": { "type": "cure", "amount": 1 } },
+  "potion":        { "name": "Potion",          "pocket": "items",     "desc": "Restores HP. Usable in battle.",                      "icon": 176, "value": 50,  "stack": true, "shop": true, "battle": true, "use": { "type": "heal", "amount": 40 } },
+  "hi_potion":     { "name": "Hi-Potion",       "pocket": "items",     "desc": "Restores a lot of HP. Usable in battle.",             "icon": 176, "value": 140, "stack": true, "shop": true, "battle": true, "use": { "type": "heal", "amount": 100 } },
+  "ether":         { "name": "Ether",           "pocket": "items",     "desc": "Restores MP (affinity energy). Usable in battle.",    "icon": 177, "value": 120, "stack": true, "shop": true, "battle": true, "use": { "type": "mp", "amount": 25 } },
+  "elixir":        { "name": "Elixir",          "pocket": "items",     "desc": "Fully restores HP, MP, and Stamina. Usable in battle.","icon": 179, "value": 400, "stack": true, "shop": true, "battle": true, "use": { "type": "restoreAll", "hp": 9999, "mp": 9999, "sp": 9999 } },
+
+  "tether":        { "name": "Tether",          "pocket": "tethers",   "desc": "The System's binding protocol. Spend in battle to Bind a weakened creature.", "icon": 182, "value": 150, "stack": true, "shop": true, "battle": true },
+  "camp_kit":      { "name": "Camp Kit",        "pocket": "campKits",  "desc": "Deploy a temporary Safe Zone in the field to Rest, Cook, Craft, Save.",        "icon": 272, "value": 200, "stack": true, "shop": true, "field": true },
+
+  "hide":          { "name": "Raw Hide",        "pocket": "materials", "desc": "Tanning + leatherworking material.",                  "icon": 300, "value": 20,  "stack": true },
+  "ore_chunk":     { "name": "Ore Chunk",       "pocket": "materials", "desc": "Smelt into ingots.",                                  "icon": 301, "value": 25,  "stack": true },
+  "herb_bundle":   { "name": "Herb Bundle",     "pocket": "materials", "desc": "Alchemy + cooking ingredient.",                       "icon": 302, "value": 15,  "stack": true },
+  "fiber":         { "name": "Plant Fiber",     "pocket": "materials", "desc": "Spun into cloth and cord.",                           "icon": 303, "value": 10,  "stack": true },
+
+  "worn_blade":    { "name": "Worn Blade",      "pocket": "gear",      "desc": "A basic sidearm. +ATK when equipped.",                "icon": 161, "value": 150, "stack": false, "gear": { "slot": "weapon", "atk": 3 } },
+  "hide_vest":     { "name": "Hide Vest",       "pocket": "gear",      "desc": "Light protection. +DEF when equipped.",               "icon": 162, "value": 140, "stack": false, "shop": true, "gear": { "slot": "body", "def": 3 } },
+  "hazard_cloak":  { "name": "Hazard Cloak",    "pocket": "gear",      "desc": "Reduces biome Exposure gain.",                        "icon": 163, "value": 220, "stack": false, "shop": true, "gear": { "slot": "hazard", "exposureResist": 0.2 } }
+}

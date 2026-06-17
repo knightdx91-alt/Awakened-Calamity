@@ -1268,7 +1268,15 @@
   var CMD_TYPES = [
     ['text', '💬 Show Text'], ['choice', '❓ Show Choices'], ['conditional', '◇ Conditional Branch'],
     ['switch', '🔘 Control Switch'], ['selfswitch', '🔲 Control Self-Switch'], ['variable', '🔢 Control Variable'],
-    ['transfer', '◈ Transfer Player'], ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'], ['exit', '⛔ Exit Event']
+    ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
+    ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
+    ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
+    ['system', '🔮 Open System Shop'],
+    ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
+    ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'],
+    ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
+    ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
+    ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
   ];
   function newCmd(type) {
     switch (type) {
@@ -1282,6 +1290,24 @@
       case 'wait': return { type: 'wait', frames: 30 };
       case 'se': return { type: 'se', name: '' };
       case 'script': return { type: 'script', code: '' };
+      case 'move': return { type: 'move', target: 'player', steps: [] };
+      case 'setdir': return { type: 'setdir', target: 'player', dir: 'down' };
+      case 'setgfx': return { type: 'setgfx', target: 'this', graphic: null };
+      case 'spawn': return { type: 'spawn', kind: 'npc', x: 0, y: 0, graphic: null, dir: 'down', text: '', enemies: [] };
+      case 'money': return { type: 'money', op: '+', amount: 100 };
+      case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
+      case 'battle': return { type: 'battle', enemies: [] };
+      case 'system': return { type: 'system' };
+      case 'grantclass': return { type: 'grantclass', classId: '', unlockOnly: false };
+      case 'grantspec': return { type: 'grantspec', specId: '' };
+      case 'grantskill': return { type: 'grantskill', skill: '' };
+      case 'quest': return { type: 'quest', op: 'start', id: '', stage: 0 };
+      case 'heal': return { type: 'heal', what: 'all', amount: null };
+      case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
+      case 'shake': return { type: 'shake', power: 5, frames: 30 };
+      case 'label': return { type: 'label', label: '' };
+      case 'jump': return { type: 'jump', label: '' };
+      case 'comment': return { type: 'comment', text: '' };
       case 'exit': return { type: 'exit' };
     }
     return { type: type };
@@ -1406,10 +1432,14 @@
       if (!cmd.cond) cmd.cond = { kind: 'switch', id: '1', value: true };
       var cr = el('div', 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;');
       cr.innerHTML = lbl('If') +
-        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option></select>' +
+        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option></select>' +
         '<span class="cParams"></span>';
       cr.querySelector('.cKind').value = cmd.cond.kind;
-      cr.querySelector('.cKind').addEventListener('change', function () { cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true }; renderEventPanel(); });
+      cr.querySelector('.cKind').addEventListener('change', function () {
+        if (this.value === 'quest') cmd.cond = { kind: 'quest', id: '', check: 'active', stage: 0 };
+        else cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true };
+        renderEventPanel();
+      });
       var cp = cr.querySelector('.cParams');
       if (cmd.cond.kind === 'switch') {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:42px;"> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
@@ -1419,6 +1449,17 @@
         cp.innerHTML = '<select class="kL"><option>A</option><option>B</option><option>C</option><option>D</option></select> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
         cp.querySelector('.kL').value = cmd.cond.letter || 'A'; cp.querySelector('.kL').addEventListener('change', function () { cmd.cond.letter = this.value; });
         cp.querySelector('.kV').value = cmd.cond.value === false ? 'false' : 'true'; cp.querySelector('.kV').addEventListener('change', function () { cmd.cond.value = this.value === 'true'; });
+      } else if (cmd.cond.kind === 'quest') {
+        cp.innerHTML = '<select class="kQid" style="max-width:120px"><option value="">— quest —</option></select> is ' +
+          '<select class="kQc"><option value="active">Active</option><option value="done">Done</option><option value="failed">Failed</option><option value="notstarted">Not started</option><option value="stage">At stage ≥</option></select> ' +
+          '<input type="number" class="kQs" value="' + (cmd.cond.stage | 0) + '" style="width:42px;display:none;">';
+        var kqid = cp.querySelector('.kQid'), kqc = cp.querySelector('.kQc'), kqs = cp.querySelector('.kQs');
+        loadQuestList().then(function (list) { list.forEach(function (q) { var o = el('option', null, q.name); o.value = q.id; kqid.appendChild(o); }); if (cmd.cond.id) kqid.value = cmd.cond.id; });
+        kqid.addEventListener('change', function () { cmd.cond.id = this.value; });
+        kqc.value = cmd.cond.check || 'active';
+        kqs.style.display = (cmd.cond.check === 'stage') ? '' : 'none';
+        kqc.addEventListener('change', function () { cmd.cond.check = this.value; kqs.style.display = this.value === 'stage' ? '' : 'none'; });
+        kqs.addEventListener('change', function () { cmd.cond.stage = parseInt(this.value, 10) || 0; });
       } else {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:36px;"> <select class="kOp"><option>==</option><option>&gt;=</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
         cp.querySelector('.kId').addEventListener('change', function () { cmd.cond.id = this.value; });
@@ -1444,6 +1485,196 @@
       var addOpt = el('button', 'font-size:11px;', '+ choice');
       addOpt.addEventListener('click', function () { cmd.options.push({ label: 'Option', then: [] }); renderEventPanel(); });
       body.appendChild(addOpt);
+    } else if (cmd.type === 'move' || cmd.type === 'setdir') {
+      var tr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      tr.innerHTML = lbl('Target') +
+        '<select class="cTgt"><option value="player">Player</option><option value="this">This event</option></select>' +
+        lbl('or Ev#') + '<input type="number" class="cTgtId" style="width:46px;" title="event id (overrides)">';
+      var tgtSel = tr.querySelector('.cTgt'), tgtId = tr.querySelector('.cTgtId');
+      if (typeof cmd.target === 'number') tgtId.value = cmd.target; else tgtSel.value = cmd.target || 'player';
+      tgtSel.addEventListener('change', function () { cmd.target = this.value; tgtId.value = ''; });
+      tgtId.addEventListener('change', function () { cmd.target = this.value === '' ? tgtSel.value : (parseInt(this.value, 10) | 0); });
+      body.appendChild(tr);
+      if (cmd.type === 'setdir') {
+        var dr = el('div', 'display:flex;gap:5px;align-items:center;margin-top:4px;');
+        dr.innerHTML = lbl('Face') + '<select class="cDir"><option>down</option><option>left</option><option>right</option><option>up</option></select>';
+        dr.querySelector('.cDir').value = cmd.dir || 'down';
+        dr.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
+        body.appendChild(dr);
+      } else {
+        var mr = el('div', 'margin-top:4px;');
+        mr.innerHTML = lbl('Steps') +
+          '<input type="text" class="cSteps" style="width:100%;box-sizing:border-box;" placeholder="up,up,left,wait,down">';
+        var stIn = mr.querySelector('.cSteps');
+        stIn.value = (cmd.steps || []).join(',');
+        stIn.addEventListener('change', function () {
+          cmd.steps = this.value.split(',').map(function (s) { return s.trim().toLowerCase(); })
+            .filter(function (s) { return ['up', 'down', 'left', 'right', 'wait'].indexOf(s) >= 0; });
+          this.value = cmd.steps.join(',');
+        });
+        mr.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'tokens: up · down · left · right · wait'));
+        body.appendChild(mr);
+      }
+    } else if (cmd.type === 'setgfx') {
+      var gtr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      gtr.innerHTML = lbl('Target') +
+        '<select class="cTgt"><option value="this">This event</option><option value="player">Player</option></select>' +
+        lbl('or Ev#') + '<input type="number" class="cTgtId" style="width:46px;">';
+      var gtSel = gtr.querySelector('.cTgt'), gtId = gtr.querySelector('.cTgtId');
+      if (typeof cmd.target === 'number') gtId.value = cmd.target; else gtSel.value = cmd.target || 'this';
+      gtSel.addEventListener('change', function () { cmd.target = this.value; gtId.value = ''; });
+      gtId.addEventListener('change', function () { cmd.target = this.value === '' ? gtSel.value : (parseInt(this.value, 10) | 0); });
+      body.appendChild(gtr);
+      var gr2 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
+      gr2.innerHTML = '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr2.querySelector('.cGfxPick').addEventListener('click', function () {
+        openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
+      });
+      body.appendChild(gr2);
+    } else if (cmd.type === 'spawn') {
+      var kr = el('div', 'display:flex;gap:5px;flex-wrap:wrap;align-items:center;');
+      kr.innerHTML = lbl('Kind') +
+        '<select class="cKind"><option value="npc">NPC</option><option value="monster">Monster</option></select>' +
+        lbl('X') + '<input type="number" class="cX" value="' + (cmd.x | 0) + '" style="width:48px;">' +
+        lbl('Y') + '<input type="number" class="cY" value="' + (cmd.y | 0) + '" style="width:48px;">' +
+        lbl('Face') + '<select class="cDir"><option>down</option><option>left</option><option>right</option><option>up</option></select>';
+      kr.querySelector('.cKind').value = cmd.kind || 'npc';
+      kr.querySelector('.cKind').addEventListener('change', function () { cmd.kind = this.value; renderEventPanel(); });
+      kr.querySelector('.cX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+      kr.querySelector('.cY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+      kr.querySelector('.cDir').value = cmd.dir || 'down';
+      kr.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
+      body.appendChild(kr);
+      var gr3 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
+      gr3.innerHTML = lbl('Graphic') + '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr3.querySelector('.cGfxPick').addEventListener('click', function () {
+        openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
+      });
+      body.appendChild(gr3);
+      if ((cmd.kind || 'npc') === 'monster') {
+        var sr = el('div', 'margin-top:4px;');
+        sr.innerHTML = lbl('Enemies') + '<input type="text" class="cEn" style="width:100%;box-sizing:border-box;" placeholder="emberling:2, thornwolf:3">';
+        var sEn = sr.querySelector('.cEn');
+        sEn.value = (cmd.enemies || []).map(function (en) { return en.key + ':' + (en.level || 2); }).join(', ');
+        sEn.addEventListener('change', function () {
+          cmd.enemies = this.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) {
+            var p = s.split(':'); return { key: p[0].trim(), level: parseInt(p[1], 10) || 2 };
+          });
+          this.value = cmd.enemies.map(function (en) { return en.key + ':' + en.level; }).join(', ');
+        });
+        body.appendChild(sr);
+      } else {
+        var tr2 = el('div', 'margin-top:4px;');
+        tr2.innerHTML = lbl('Says') + '<input type="text" class="cTxt" value="' + (cmd.text || '').replace(/"/g, '&quot;') + '" style="width:100%;box-sizing:border-box;" placeholder="optional dialogue">';
+        tr2.querySelector('.cTxt').addEventListener('change', function () { cmd.text = this.value; });
+        body.appendChild(tr2);
+      }
+    } else if (cmd.type === 'money') {
+      body.innerHTML = '<div class="row">' + lbl('Money') +
+        '<select class="cOp"><option value="+">+ gain</option><option value="-">− lose</option><option value="=">= set</option></select>' +
+        '<input type="number" class="cAmt" value="' + (cmd.amount | 0) + '" style="width:80px;"></div>';
+      body.querySelector('.cOp').value = cmd.op || '+';
+      body.querySelector('.cOp').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'item') {
+      body.innerHTML = '<div class="row">' + lbl('Pocket') +
+        '<select class="cPk"><option>items</option><option>campKits</option><option>food</option><option>tethers</option><option>tonics</option><option>materials</option><option>gear</option><option>keyItems</option></select></div>' +
+        '<div class="row">' + lbl('Item id') + '<input type="text" class="cIid" value="' + (cmd.id || '') + '" style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('') +
+        '<select class="cOp"><option value="+">+ give</option><option value="-">− take</option></select>' +
+        lbl('Qty') + '<input type="number" class="cQty" value="' + ((cmd.qty | 0) || 1) + '" style="width:56px;"></div>';
+      body.querySelector('.cPk').value = cmd.pocket || 'items';
+      body.querySelector('.cPk').addEventListener('change', function () { cmd.pocket = this.value; });
+      body.querySelector('.cIid').addEventListener('change', function () { cmd.id = this.value.trim(); });
+      body.querySelector('.cOp').value = cmd.op || '+';
+      body.querySelector('.cOp').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cQty').addEventListener('change', function () { cmd.qty = parseInt(this.value, 10) || 1; });
+    } else if (cmd.type === 'battle') {
+      var br = el('div');
+      br.innerHTML = lbl('Enemies') +
+        '<input type="text" class="cEn" style="width:100%;box-sizing:border-box;" placeholder="emberling:2, thornwolf:3">';
+      var enIn = br.querySelector('.cEn');
+      enIn.value = (cmd.enemies || []).map(function (e) { return e.key + ':' + (e.level || 2); }).join(', ');
+      enIn.addEventListener('change', function () {
+        cmd.enemies = this.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) {
+          var p = s.split(':'); return { key: p[0].trim(), level: parseInt(p[1], 10) || 2 };
+        });
+        this.value = cmd.enemies.map(function (e) { return e.key + ':' + e.level; }).join(', ');
+      });
+      br.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'key:level — blank = random test pack'));
+      body.appendChild(br);
+    } else if (cmd.type === 'grantclass') {
+      var gc = el('div');
+      gc.innerHTML = '<div class="row">' + lbl('Class') + '<select class="cCls" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+        '<div class="row"><label class="lbl" style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="cUnlock"> unlock only (don\'t switch to it)</label></div>';
+      var clsSel = gc.querySelector('.cCls');
+      loadClassList().then(function (list) {
+        list.forEach(function (c2) { var o = el('option', null, c2.name + ' (' + (c2.tier || '?') + ')'); o.value = c2.id; clsSel.appendChild(o); });
+        if (cmd.classId) clsSel.value = cmd.classId;
+      });
+      clsSel.addEventListener('change', function () { cmd.classId = this.value; });
+      var unl = gc.querySelector('.cUnlock'); unl.checked = !!cmd.unlockOnly;
+      unl.addEventListener('change', function () { cmd.unlockOnly = this.checked; });
+      body.appendChild(gc);
+    } else if (cmd.type === 'grantspec') {
+      body.innerHTML = '<div class="row">' + lbl('Spec id') + '<input type="text" class="cSp" value="' + (cmd.specId || '') + '" style="flex:1;min-width:0;" placeholder="e.g. two_handed"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">must be a specialization of the player\'s current class</div>';
+      body.querySelector('.cSp').addEventListener('change', function () { cmd.specId = this.value.trim(); });
+    } else if (cmd.type === 'grantskill') {
+      var gk = el('div');
+      gk.innerHTML = '<div class="row">' + lbl('Skill') + '<select class="cSk" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>';
+      var skSel = gk.querySelector('.cSk');
+      loadSkillList().then(function (list) {
+        list.forEach(function (s2) { var o = el('option', null, s2.name); o.value = s2.id; skSel.appendChild(o); });
+        if (cmd.skill) skSel.value = cmd.skill;
+      });
+      skSel.addEventListener('change', function () { cmd.skill = this.value; });
+      body.appendChild(gk);
+    } else if (cmd.type === 'quest') {
+      var qd = el('div');
+      qd.innerHTML = '<div class="row">' + lbl('Op') +
+        '<select class="cQop"><option value="start">Start</option><option value="advance">Advance</option><option value="complete">Complete</option><option value="fail">Fail</option><option value="stage">Set Stage</option></select>' +
+        lbl('Quest') + '<select class="cQid" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+        '<div class="row cQstageRow" style="display:none;">' + lbl('Stage #') + '<input type="number" class="cQstage" value="' + (cmd.stage | 0) + '" style="width:54px;"></div>';
+      var qop = qd.querySelector('.cQop'), qid = qd.querySelector('.cQid'), qstageRow = qd.querySelector('.cQstageRow');
+      qop.value = cmd.op || 'start';
+      qop.addEventListener('change', function () { cmd.op = this.value; qstageRow.style.display = this.value === 'stage' ? '' : 'none'; });
+      qstageRow.style.display = (cmd.op === 'stage') ? '' : 'none';
+      loadQuestList().then(function (list) { list.forEach(function (q) { var o = el('option', null, q.name); o.value = q.id; qid.appendChild(o); }); if (cmd.id) qid.value = cmd.id; });
+      qid.addEventListener('change', function () { cmd.id = this.value; });
+      qd.querySelector('.cQstage').addEventListener('change', function () { cmd.stage = parseInt(this.value, 10) || 0; });
+      body.appendChild(qd);
+    } else if (cmd.type === 'heal') {
+      body.innerHTML = '<div class="row">' + lbl('Restore') +
+        '<select class="cWhat"><option value="all">All (HP·MP·SP)</option><option value="hp">HP</option><option value="mp">MP</option><option value="sp">Stamina</option></select>' +
+        lbl('Amount %') + '<input type="number" class="cAmt" min="0" max="100" value="' + (cmd.amount == null ? '' : cmd.amount) + '" placeholder="full" style="width:60px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">blank = full restore</div>';
+      body.querySelector('.cWhat').value = cmd.what || 'all';
+      body.querySelector('.cWhat').addEventListener('change', function () { cmd.what = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
+    } else if (cmd.type === 'fade') {
+      body.innerHTML = '<div class="row">' + lbl('Fade') +
+        '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +
+        '<div class="row">' + lbl('Color') + '<input type="color" class="cCol" value="' + (cmd.color || '#000000') + '">' +
+        lbl('Frames') + '<input type="number" class="cF" value="' + ((cmd.frames | 0) || 30) + '" style="width:56px;"></div>';
+      body.querySelector('.cMode').value = cmd.mode || 'out';
+      body.querySelector('.cMode').addEventListener('change', function () { cmd.mode = this.value; });
+      body.querySelector('.cCol').addEventListener('change', function () { cmd.color = this.value; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'shake') {
+      body.innerHTML = '<div class="row">' + lbl('Power') + '<input type="number" class="cP" value="' + ((cmd.power | 0) || 5) + '" style="width:56px;">' +
+        lbl('Frames') + '<input type="number" class="cF" value="' + ((cmd.frames | 0) || 30) + '" style="width:56px;"></div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.power = parseInt(this.value, 10) || 5; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'label' || cmd.type === 'jump') {
+      body.innerHTML = '<div class="row">' + lbl(cmd.type === 'label' ? 'Name' : 'Jump to') +
+        '<input type="text" class="cL" value="' + (cmd.label || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cL').addEventListener('change', function () { cmd.label = this.value.trim(); });
+    } else if (cmd.type === 'comment') {
+      var ca = el('textarea'); ca.rows = 2; ca.style.cssText = 'width:100%;box-sizing:border-box;color:#2b8a2b;';
+      ca.value = cmd.text || ''; ca.placeholder = 'author note (not shown in game)';
+      ca.addEventListener('change', function () { cmd.text = this.value; });
+      body.appendChild(ca);
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
@@ -2761,6 +2992,25 @@
       .then(function (d) { _faceSheets = d.sheets || []; return _faceSheets; })
       .catch(function () { return (_faceSheets = []); });
   }
+  var _classList = null, _skillList = null, _questList = null;
+  function loadQuestList() {
+    if (_questList) return Promise.resolve(_questList);
+    return fetch('data/systems/quests.json').then(function (r) { return r.json(); })
+      .then(function (j) { _questList = Object.keys(j).filter(function (k) { return k !== '_meta' && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k }; }); return _questList; })
+      .catch(function () { return (_questList = []); });
+  }
+  function loadClassList() {
+    if (_classList) return Promise.resolve(_classList);
+    return fetch('data/systems/classes.json').then(function (r) { return r.json(); })
+      .then(function (j) { _classList = Object.keys(j).filter(function (k) { return k !== '_meta' && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k, tier: j[k].tier }; }); return _classList; })
+      .catch(function () { return (_classList = []); });
+  }
+  function loadSkillList() {
+    if (_skillList) return Promise.resolve(_skillList);
+    return fetch('data/systems/skills.json').then(function (r) { return r.json(); })
+      .then(function (j) { _skillList = Object.keys(j).filter(function (k) { return k !== '_meta' && k.indexOf('_comment') !== 0 && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k }; }); return _skillList; })
+      .catch(function () { return (_skillList = []); });
+  }
   function loadSpriteIndex() {
     if (_spriteIndex) return Promise.resolve(_spriteIndex);
     // Merge every available sprite set (RTP first, then XP) so the picker shows
@@ -2824,10 +3074,14 @@
     });
     if (!list.length) grid.innerHTML = '<div class="hint">No sprites in this category.</div>';
   }
-  var _spriteTarget = 'player';
+  var _spriteTarget = 'player', _spriteApply = null;
+  // Open the sprite picker and hand the chosen graphic to a callback (used by
+  // event commands like Change Graphic / Spawn that store their own graphic).
+  function openSpriteModalForCmd(cb) { _spriteApply = cb; openSpriteModal('cmd'); }
   function openSpriteModal(target) {
     _spriteTarget = target || 'player';
-    $('setPlayerBtn').textContent = _spriteTarget === 'event' ? '◆ Use for Event' : '★ Set as Player';
+    $('setPlayerBtn').textContent = _spriteTarget === 'event' ? '◆ Use for Event'
+                                   : _spriteTarget === 'cmd' ? '◆ Use Graphic' : '★ Set as Player';
     $('spriteModal').style.display = 'flex';
     loadSpriteIndex().then(function (d) {
       var sel = $('spriteCat');
@@ -2912,6 +3166,12 @@
     if (!_selectedSprite) return;
     var e = _selectedSprite;
     var g = { sprite: e.id, file: e.file, frame_w: e.frame_w, frame_h: e.frame_h, cols: e.cols, rows: e.rows, single: e.single };
+    if (_spriteTarget === 'cmd' && _spriteApply) {
+      var apply = _spriteApply; _spriteApply = null;
+      $('spriteModal').style.display = 'none';
+      apply(g);
+      return;
+    }
     if (_spriteTarget === 'event' && state.selectedEvent) {
       pushUndo();
       state.selectedEvent.graphic = g;

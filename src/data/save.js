@@ -5,7 +5,7 @@
 
     const SAVE_KEY = 'ac_save_v1';
     const SETTINGS_KEY = 'ac_settings_v1';
-    const SAVE_VERSION = 1;
+    const SAVE_VERSION = 2;
 
     // --- Default creature (bonded/wild) ---
     function DEFAULT_CREATURE() {
@@ -61,8 +61,20 @@
                 sprite: 'brendan', // 'brendan' | 'may'
                 playtimeSeconds: 0,
                 money: 3000,
-                battlePoints: 0
+                battlePoints: 0,
+                // Class system (set during the Awakening). Defaults keep old
+                // saves shaped so they load under newer code.
+                affinity: null,
+                appearance: null,
+                designation: '',    // System catalog tag (random at creation)
+                class: null,        // { id, level, xp, spec }
+                skills: [],         // learned skill ids
+                ownedClasses: []    // classes you can switch to for free
             },
+
+            // Unified progression (XP/level/attributes). createProgress() seeds it
+            // at creation; left null here so a fresh slot starts blank.
+            progress: null,
 
 
             // Party — donor combat roster (null = empty). AC uses bonds[].
@@ -75,7 +87,10 @@
             bonds: [],
 
             // Survival meters (DESIGN.md §7) — Surveillance is the spine mechanic.
-            survival: { surveillance: 0, stamina: 100, exposure: 0 },
+            // hp/mana/stamina (0–100%) are the PERSISTENT vitals carried between
+            // battles; recover only via items/healing skills (in battle) or a
+            // healer / System crystal (out of battle). No passive regen.
+            survival: { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 },
 
             // PC Boxes — 20 boxes × 30 slots
             pcBoxes: Array.from({ length: 20 }, (_, i) => DEFAULT_BOX('Box ' + (i + 1))),
@@ -155,11 +170,9 @@
                 // Each: { id, owned, purchaseDate, lastRentCollected, damageEvents: [] }
             },
 
-            // Quests
-            quests: {
-                active: [],    // { id, stage, startedDate }
-                completed: []  // { id, completedDate }
-            },
+            // Quest progress — keyed by quest id: { <id>: { status, stage } }.
+            // Driven by GameQuests + the `quest` event command; read by the Journal.
+            quests: {},
 
             // Dynamic Deliveries
             deliveries: {
@@ -233,19 +246,113 @@
         }
     }
 
-    // --- Helper: write full save file ---
-    function _writeFile(slots) {
-        try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(slots));
-        } catch (e) {
-            console.error('[GameSave] Failed to write save file:', e);
-        }
+    // --- IndexedDB backup store -------------------------------------------
+    // Saves live primarily in localStorage (synchronous, simple). We ALSO
+    // mirror them into IndexedDB so the two back each other up: if localStorage
+    // is cleared but IndexedDB survives (or vice-versa), boot restores from
+    // whichever still has data. IndexedDB writes are async and best-effort.
+    var _IDB_DB = 'ac_saves', _IDB_STORE = 'kv', _idbPromise = null;
+    function _idbOpen() {
+        if (_idbPromise) return _idbPromise;
+        _idbPromise = new Promise(function (resolve) {
+            try {
+                if (typeof indexedDB === 'undefined') { resolve(null); return; }
+                var req = indexedDB.open(_IDB_DB, 1);
+                req.onupgradeneeded = function () {
+                    var db = req.result;
+                    if (!db.objectStoreNames.contains(_IDB_STORE)) db.createObjectStore(_IDB_STORE);
+                };
+                req.onsuccess = function () { resolve(req.result); };
+                req.onerror = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+        return _idbPromise;
+    }
+    function _idbSet(key, value) {
+        return _idbOpen().then(function (db) {
+            if (!db) return;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).put(value, key);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { resolve(); };
+                } catch (e) { resolve(); }
+            });
+        });
+    }
+    function _idbDel(key) {
+        return _idbOpen().then(function (db) {
+            if (!db) return;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).delete(key);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { resolve(); };
+                } catch (e) { resolve(); }
+            });
+        });
+    }
+    function _idbGet(key) {
+        return _idbOpen().then(function (db) {
+            if (!db) return null;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = db.transaction(_IDB_STORE, 'readonly');
+                    var rq = tx.objectStore(_IDB_STORE).get(key);
+                    rq.onsuccess = function () { resolve(rq.result != null ? rq.result : null); };
+                    rq.onerror = function () { resolve(null); };
+                } catch (e) { resolve(null); }
+            });
+        });
     }
 
-    // --- Migration stub ---
+    // --- Helper: write full save file (localStorage + IndexedDB mirror) ----
+    function _writeFile(slots) {
+        var json = JSON.stringify(slots);
+        var wroteLS = false;
+        try { localStorage.setItem(SAVE_KEY, json); wroteLS = true; }
+        catch (e) { console.warn('[GameSave] localStorage write failed; relying on IndexedDB:', e); }
+        _idbSet(SAVE_KEY, json); // best-effort async mirror (also the fallback when LS is blocked)
+        return wroteLS;
+    }
+
+    // --- Migration ---------------------------------------------------------
+    // Two layers: (1) explicit version steps for structural changes, then
+    // (2) _ensureShape — a deep backfill that adds any field present in the
+    // current DEFAULT_SLOT_DATA but missing from the old save (never overwrites
+    // existing values). This makes additive schema changes (new menus, systems,
+    // fields) load old saves safely without a version bump every time.
+    function _clone(v) { return (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v; }
+    function _ensureShape(target, defaults) {
+        if (!target || typeof target !== 'object') return defaults;
+        for (var k in defaults) {
+            if (!(k in target) || target[k] === undefined) {
+                target[k] = _clone(defaults[k]);
+            } else if (defaults[k] && typeof defaults[k] === 'object' && !Array.isArray(defaults[k]) &&
+                       target[k] && typeof target[k] === 'object' && !Array.isArray(target[k])) {
+                _ensureShape(target[k], defaults[k]);   // recurse into plain objects
+            }
+        }
+        return target;
+    }
     function migrate(data) {
         if (!data) return data;
-        // Future: if (data.saveVersion < 2) { ... }
+        var v = data.saveVersion || 1;
+        // ---- explicit structural steps ----
+        if (v < 2) {
+            // v1 → v2: class-system fields (additive, handled by the backfill
+            // below) + convert the legacy quests shape {active:[],completed:[]}
+            // to the new id-keyed map used by GameQuests.
+            if (data.quests && (Array.isArray(data.quests.active) || Array.isArray(data.quests.completed))) {
+                data.quests = {};
+            }
+            v = 2;
+        }
+        // ---- additive backfill against the current default shape ----
+        _ensureShape(data, DEFAULT_SLOT_DATA());
+        data.saveVersion = SAVE_VERSION;
         return data;
     }
 
@@ -340,6 +447,45 @@
                 this.currentSlot = -1;
                 this.state = null;
             }
+        },
+
+        /**
+         * Reconcile localStorage with the IndexedDB backup at boot. If
+         * localStorage has no save but IndexedDB does, hydrate localStorage
+         * from it (and vice-versa). Async; call once before reading slots.
+         */
+        initStorage() {
+            return Promise.resolve().then(function () {
+                var lsRaw = null;
+                try { lsRaw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+                return _idbGet(SAVE_KEY).then(function (idbRaw) {
+                    // localStorage missing but IndexedDB has it → restore LS.
+                    if ((!lsRaw || lsRaw === 'null') && idbRaw) {
+                        try { localStorage.setItem(SAVE_KEY, idbRaw); } catch (e) {}
+                        return;
+                    }
+                    // localStorage has it but IndexedDB doesn't → seed the backup.
+                    if (lsRaw && !idbRaw) { _idbSet(SAVE_KEY, lsRaw); }
+                });
+            }).catch(function () {});
+        },
+
+        /**
+         * Erase ALL save data from BOTH stores (localStorage + IndexedDB) and
+         * reset in-memory state. Async (IndexedDB). Settings are NOT touched.
+         */
+        wipeAllSaves() {
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+            this.state = null;
+            this.currentSlot = -1;
+            this._dirty = false;
+            return _idbDel(SAVE_KEY).catch(function () {});
+        },
+
+        /** True if any of the 3 slots holds a save. */
+        hasAnySave() {
+            var slots = _readFile();
+            return slots.some(function (s) { return !!s; });
         },
 
         /** Migration stub — returns data as-is for v1. */

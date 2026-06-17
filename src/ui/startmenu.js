@@ -7,6 +7,7 @@ window.GameStartMenu = (function () {
     // BONDS only appears once you've bonded at least one creature.
     const _ITEM = {
         CAMP:       { id: 'CAMP',       label: 'STATUS'     },
+        JOURNAL:    { id: 'JOURNAL',    label: 'JOURNAL'    },
         BONDS:      { id: 'BONDS',      label: 'BONDS'      },
         SUPPLIES:   { id: 'SUPPLIES',   label: 'SUPPLIES'   },
         AFFINITIES: { id: 'AFFINITIES', label: 'AFFINITIES' },
@@ -22,9 +23,11 @@ window.GameStartMenu = (function () {
     }
     let ITEMS = [];
     function _rebuildItems() {
-        ITEMS = [_ITEM.CAMP];
+        ITEMS = [_ITEM.CAMP, _ITEM.JOURNAL];
         if (_hasBonds()) ITEMS.push(_ITEM.BONDS);   // hidden until first bond
-        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.REACHES, _ITEM.SYSTEM,
+        // SYSTEM is intentionally NOT in the pause menu — the System is only
+        // reachable in town, via the floating crystal hub (opens GameSystemShop).
+        ITEMS.push(_ITEM.SUPPLIES, _ITEM.AFFINITIES, _ITEM.REACHES,
                    _ITEM.SAVE, _ITEM.OPTIONS, _ITEM.EXIT);
     }
     _rebuildItems();
@@ -296,7 +299,7 @@ window.GameStartMenu = (function () {
             return;
         }
 
-        const titles = { camp:'[ STATUS ]', bonds:'[ BONDS ]', supplies:'[ SUPPLIES ]',
+        const titles = { camp:'[ STATUS ]', journal:'[ JOURNAL ]', bonds:'[ BONDS ]', supplies:'[ SUPPLIES ]',
                          affinities:'AFFINITIES', reaches:'THE FOUR REACHES',
                          system:'[ THE SYSTEM ]',
                          save:'Save', options:'Options'
@@ -324,7 +327,9 @@ window.GameStartMenu = (function () {
         const content = document.createElement('div');
         content.className = 'sm-sub-content';
 
+        _subRows = [];   // selectable rows for this page (rebuilt every render)
         if      (page === 'camp')        _buildCamp(content);
+        else if (page === 'journal')     _buildJournal(content);
         else if (page === 'bonds')       _buildBonds(content);
         else if (page === 'supplies')    _buildSupplies(content);
         else if (page === 'affinities')  _buildAffinities(content);
@@ -339,7 +344,7 @@ window.GameStartMenu = (function () {
         subEl.style.display = 'block';
 
         setTimeout(function () {
-            const sel = content.querySelector('.sm-row.selected, .sm-ach-row.selected');
+            const sel = content.querySelector('.sm-row.selected, .sm-ach-row.selected, .sm-selrow.selected');
             if (sel) sel.scrollIntoView({ block: 'nearest' });
         }, 0);
     }
@@ -443,6 +448,28 @@ window.GameStartMenu = (function () {
             'font:8px "Press Start 2P",monospace;' + (opts.css || '');
         parent.appendChild(r); return r;
     }
+    // --- Selectable-row framework for the survival sub-pages -------------------
+    // Register a built row as selectable; highlights it when it's the cursor row
+    // and wires click → select + activate. onSelect runs on A / click.
+    var _subRows = [];
+    var _supPocket = null;   // SUPPLIES drill: null = pocket list, else pocket key
+    function _sel(rowEl, onSelect) {
+        var idx = _subRows.length;
+        _subRows.push({ onSelect: onSelect });
+        rowEl.classList.add('sm-selrow');
+        rowEl.style.cursor = 'pointer';
+        if (idx === _subIdx) {
+            rowEl.classList.add('selected');
+            rowEl.style.outline = '2px solid ' + _FR.blue;
+            rowEl.style.outlineOffset = '-1px';
+        }
+        rowEl.addEventListener('click', function () { _subIdx = idx; _render(); _runSel(); });
+        return rowEl;
+    }
+    function _runSel() {
+        var row = _subRows[_subIdx];
+        if (row && row.onSelect) row.onSelect();
+    }
     function _swatch(color) {
         var s = document.createElement('span');
         s.style.cssText = 'flex:none;width:9px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.4);background:' + color + ';';
@@ -468,6 +495,8 @@ window.GameStartMenu = (function () {
                { surveillance: 0, stamina: 100, exposure: 0 };
     }
     function _subjectId() {
+        var p = window.GameSave && GameSave.state && GameSave.state.player;
+        if (p && p.designation) return p.designation;   // randomly generated at creation
         var raw = (window.GameSave && GameSave.state && GameSave.state.meta)
             ? GameSave.state.meta.subjectId : 0;
         return 'SUBJECT-' + String((raw || 4471)).padStart(4, '0');
@@ -483,15 +512,47 @@ window.GameStartMenu = (function () {
         return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
     }
 
+    // Lazy-load class + progression data so STATUS can show class name, level,
+    // XP-to-next, and skills. Cached; re-renders the camp page once available.
+    var _clsData = null, _progData = null, _skillsData = null, _clsLoading = false;
+    var _pendingEvolve = null;   // two-click confirm for evolving
+    function _ensureClassData() {
+        if (_clsData && _progData && _skillsData) return;
+        if (_clsLoading) return;
+        _clsLoading = true;
+        var b = '?b=' + (window.__BUILD__ || '0');
+        Promise.all([
+            fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+            fetch('data/systems/progression.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
+        ]).then(function (res) {
+            _clsData = res[0] || {}; _progData = res[1] || null; _skillsData = res[2] || {}; _clsLoading = false;
+            if (page === 'camp' || page === 'save') _render();   // refresh with real class data
+        });
+    }
+    function _classDb() { return { classes: _clsData || {}, skills: _skillsData || {} }; }
+    function _prettySkill(id) {
+        return String(id || '').replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+    }
+
     function _buildCamp(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        _ensureClassData();
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var prog = (window.GameSave && GameSave.state && GameSave.state.progress) || null;
+        var clsId = (p.class && p.class.id) || null;
+        var cls = (_clsData && clsId && _clsData[clsId]) || null;
+        var clsName = cls ? cls.name : (clsId ? _prettySkill(clsId) : 'Unclassed');
+        var level = prog ? prog.level : ((p.class && p.class.level) || 1);
+
         var hd = document.createElement('div');
         hd.style.cssText = 'font:9px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:6px;margin-bottom:8px;';
         hd.textContent = _playerName().toUpperCase();
         el.appendChild(hd);
         var info = [
             ['Designation', _subjectId()],
-            ['Class', (window.GameSave && GameSave.state && GameSave.state.klass) || 'Unclassed'],
+            ['Class', clsName + '  Lv' + level],
+            ['Affinity', _prettySkill(p.affinity || '—')],
             ['Credits', 'Cr ' + _credits()],
             ['Time Awake', _playtime()],
             ['Bonds', String(((window.GameSave && GameSave.state && GameSave.state.bonds) || []).length)],
@@ -500,6 +561,88 @@ window.GameStartMenu = (function () {
             var r = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';' });
             r.innerHTML = '<span>' + kv[0] + '</span><span style="color:' + _FR.text + '">' + kv[1] + '</span>';
         });
+
+        // XP-to-next bar (needs progression tuning data).
+        if (prog && _progData && window.GameProgression) {
+            var need = GameProgression.xpToNext(prog.level, prog.tier || 'basic', _progData);
+            var pct = need > 0 ? Math.max(0, Math.min(100, Math.round((prog.xp / need) * 100))) : 0;
+            var xr = document.createElement('div');
+            xr.style.cssText = 'margin-top:6px;';
+            xr.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:7px;color:' + _FR.dim + ';margin-bottom:2px;"><span>XP</span><span>' + prog.xp + ' / ' + need + '</span></div>' +
+                '<div style="height:5px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + _FR.blue + '"></div></div>';
+            el.appendChild(xr);
+            if (prog.attrPoints > 0) {
+                var ap = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';margin-top:4px;' });
+                ap.innerHTML = '<span>Attribute Points</span><span style="color:' + _SYS.warn + '">+' + prog.attrPoints + '</span>';
+            }
+        }
+
+        // Skills the class has granted / the player has learned.
+        var skills = (p.skills && p.skills.length) ? p.skills : (cls && cls.grantsSkills) || [];
+        if (skills.length) {
+            var sk = document.createElement('div');
+            sk.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+            sk.textContent = 'SKILLS';
+            el.appendChild(sk);
+            var sl = document.createElement('div');
+            sl.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;';
+            skills.forEach(function (id) {
+                var chip = document.createElement('span');
+                chip.style.cssText = 'font-size:7px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:4px;padding:3px 5px;color:' + _FR.text + ';';
+                chip.textContent = _prettySkill(id);
+                sl.appendChild(chip);
+            });
+            el.appendChild(sl);
+        }
+
+        // Attributes + allocation (spend banked points).
+        if (prog) {
+            var attrList = (_progData && _progData.attributes) || Object.keys(prog.attributes || {});
+            var eff = (_progData && _progData.attrEffects) || {};
+            if (attrList.length) {
+                var ah = document.createElement('div');
+                ah.style.cssText = 'margin-top:10px;display:flex;justify-content:space-between;align-items:center;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+                ah.innerHTML = '<span>ATTRIBUTES</span>' + (prog.attrPoints > 0 ? '<span style="color:' + _SYS.warn + '">' + prog.attrPoints + ' pts</span>' : '');
+                el.appendChild(ah);
+                attrList.forEach(function (attr) {
+                    var r = _row(el, { css: 'justify-content:space-between;align-items:center;color:' + _FR.dim + ';' });
+                    var hint = '';
+                    if (eff[attr]) {
+                        var parts = [];
+                        for (var st in eff[attr]) { if (st === '_note') continue; parts.push('+' + eff[attr][st] + ' ' + st.toUpperCase()); }
+                        if (parts.length) hint = ' <span style="color:' + _FR.dim + ';font-size:6px;">(' + parts.join(' ') + '/pt)</span>';
+                    }
+                    var left = document.createElement('span');
+                    left.style.cssText = 'flex:1;';
+                    left.innerHTML = _prettySkill(attr) + hint;
+                    var val = document.createElement('span');
+                    val.style.cssText = 'color:' + _FR.text + ';min-width:22px;text-align:right;';
+                    val.textContent = String((prog.attributes && prog.attributes[attr]) || 0);
+                    r.appendChild(left); r.appendChild(val);
+                    if (prog.attrPoints > 0) {
+                        var plus = document.createElement('button');
+                        plus.textContent = '+';
+                        plus.style.cssText = 'margin-left:8px;width:20px;height:18px;font:8px "Press Start 2P";cursor:pointer;background:' + _SYS.cyan + ';color:#02060f;border:none;border-radius:3px;';
+                        plus.addEventListener('click', function () {
+                            if (window.GameProgression && GameProgression.spendPoint(prog, attr, _progData)) {
+                                if (window.GameSave && GameSave.markDirty) GameSave.markDirty();
+                                _render();
+                            }
+                        });
+                        r.appendChild(plus);
+                    }
+                });
+            }
+        }
+
+        // Class growth happens elsewhere: EVOLVE is an automatic System pop-up on
+        // reaching requirements (GameEvolvePopup); SPECIALIZE and CHANGE CLASS are
+        // System Shop services (the SYSTEM panel). STATUS is display-only.
+        if (cls && p.class && p.class.spec) {
+            var sr = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';margin-top:6px;' });
+            sr.innerHTML = '<span>Specialization</span><span style="color:' + _FR.text + '">' + _prettySkill(p.class.spec) + '</span>';
+        }
+
         var sub = document.createElement('div');
         sub.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
         sub.textContent = 'SURVIVAL';
@@ -515,6 +658,54 @@ window.GameStartMenu = (function () {
         box.innerHTML = '<div style="display:flex;justify-content:space-between;font:7px \'Press Start 2P\';color:' + svc + ';margin-bottom:3px;"><span>SURVEILLANCE</span><span>' + Math.round(sv) + '%</span></div>' +
             '<div style="height:5px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + sv + '%;height:100%;background:' + svc + '"></div></div>';
         el.appendChild(box);
+    }
+
+    var _questDb = null, _questLoading = false;
+    function _ensureQuests() {
+        if (_questDb || _questLoading) return;
+        _questLoading = true;
+        fetch('data/systems/quests.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .then(function (j) { _questDb = {}; for (var k in j) if (k !== '_meta') _questDb[k] = j[k]; _questLoading = false; if (page === 'journal') _render(); })
+            .catch(function () { _questDb = {}; _questLoading = false; });
+    }
+    function _buildJournal(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        _ensureQuests();
+        var qs = (window.GameSave && GameSave.state && GameSave.state.quests) || {};
+        var db = _questDb || {};
+        var active = window.GameQuests ? GameQuests.list(qs, db, 'active') : [];
+        var done = window.GameQuests ? GameQuests.list(qs, db, 'done') : [];
+        if (!active.length && !done.length) {
+            var em = document.createElement('div');
+            em.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.dim + ';line-height:1.8;text-align:center;padding-top:20px;';
+            em.innerHTML = 'No active directives.<br><br>The System has nothing<br>for you… yet.';
+            el.appendChild(em); return;
+        }
+        if (active.length) {
+            var ah = document.createElement('div');
+            ah.style.cssText = 'font:7px "Press Start 2P";color:' + _SYS.cyan + ';margin-bottom:6px;';
+            ah.textContent = 'ACTIVE';
+            el.appendChild(ah);
+            active.forEach(function (q) {
+                var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
+                var nm = document.createElement('div'); nm.style.cssText = 'color:' + _FR.text + ';'; nm.textContent = q.name.toUpperCase();
+                var ob = document.createElement('div'); ob.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;'; ob.textContent = '▸ ' + (q.objective || '');
+                r.appendChild(nm); r.appendChild(ob);
+                _sel(r, function () { if (window.GameSystem && GameSystem.notify) GameSystem.notify(q.name + ' — ' + (q.summary || q.objective || ''), 'info'); });
+            });
+        }
+        if (done.length) {
+            var dh = document.createElement('div');
+            dh.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';margin:8px 0 6px;';
+            dh.textContent = 'COMPLETED';
+            el.appendChild(dh);
+            done.forEach(function (q) {
+                var r = _row(el, { css: 'background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;opacity:.6;' });
+                var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + _FR.dim + ';text-decoration:line-through;'; nm.textContent = q.name.toUpperCase();
+                r.appendChild(nm);
+            });
+        }
     }
 
     function _buildBonds(el) {
@@ -535,28 +726,40 @@ window.GameStartMenu = (function () {
             var hp = document.createElement('span'); hp.style.cssText = 'color:' + _FR.dim + ';font-size:7px;';
             hp.textContent = (b.affinity || '—') + '  Lv' + (b.tier || 1);
             r.appendChild(hp);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify)
+                    GameSystem.notify((b.name || ('Bond ' + (i + 1))) + ' — ' + (b.affinity || 'no affinity') + ', Lv' + (b.tier || 1) + '.', 'info');
+            });
         });
     }
 
+    // Pockets: [display, pocketKey, desc, RTP IconSet index, usable?]
+    var _POCKETS = [
+        ['Camp Kits', 'campKits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.', 272, false],
+        ['Food', 'food', 'Cooked & raw — restores Stamina in the field.', 291, true],
+        ['Tethers', 'tethers', "The System's binding protocol. Spend to Bind a weakened creature.", 182, false],
+        ['Tonics', 'tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192, true],
+        ['Items', 'items', 'General consumables.', 176, true],
+        ['Materials', 'materials', 'Scavenge for field crafting & hazard gear.', 300, false],
+        ['Gear', 'gear', 'Affinity-defended equipment vs. biome hazards.', 161, false],
+        ['Key', 'keyItems', 'Story & landmark items.', 242, false],
+    ];
+    function _pocketCount(inv, key) {
+        var p = inv[key]; if (!p) return 0; var n = 0;
+        for (var k in p) n += (p[k] | 0); return n;
+    }
+    function _ensureItems() {
+        if (window.GameItems && !GameItems.ready()) {
+            GameItems.load().then(function () { if (page === 'supplies') _render(); });
+        }
+    }
     function _buildSupplies(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
-        // [name, desc, RTP IconSet index]
-        var pockets = [
-            ['Camp Kits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.', 272],
-            ['Food', 'Cooked & raw — restores Stamina in the field.', 291],
-            ['Tethers', "The System's binding protocol. Spend to Bind a weakened creature.", 182],
-            ['Tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192],
-            ['Materials', 'Scavenge for field crafting & hazard gear.', 300],
-            ['Gear', 'Affinity-defended equipment vs. biome hazards.', 161],
-            ['Key', 'Story & landmark items.', 242],
-        ];
+        _ensureItems();
         var inv = (window.GameSave && GameSave.state && GameSave.state.inventory) || {};
-        var counts = {
-            'Camp Kits': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
-            'Food': 0, 'Tethers': 0, 'Tonics': 0, 'Materials': 0, 'Gear': 0,
-            'Key': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
-        };
-        pockets.forEach(function (p) {
+        if (_supPocket) { _buildPocket(el, inv, _supPocket); return; }
+        // Pocket list — select one to open it.
+        _POCKETS.forEach(function (p) {
             var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
             var top = document.createElement('div');
             top.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
@@ -564,18 +767,78 @@ window.GameStartMenu = (function () {
             left.style.cssText = 'display:flex;align-items:center;gap:6px;';
             var ic = document.createElement('canvas'); ic.width = ic.height = 24;
             ic.style.cssText = 'width:18px;height:18px;flex:none;';
-            (function (cv, idx) {                 // draw the RTP item icon once the sheet loads
-                if (window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); });
-            })(ic, p[2]);
+            (function (cv, idx) { if (window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); }); })(ic, p[3]);
             var nm = document.createElement('span'); nm.textContent = p[0].toUpperCase();
             left.appendChild(ic); left.appendChild(nm);
-            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (counts[p[0]] || 0);
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + _pocketCount(inv, p[1]);
             top.appendChild(left); top.appendChild(cnt);
             var desc = document.createElement('div');
             desc.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
-            desc.textContent = p[1];
+            desc.textContent = p[2];
             r.appendChild(top); r.appendChild(desc);
+            _sel(r, (function (key) { return function () { _supPocket = key; _subIdx = 0; _render(); }; })(p[1]));
         });
+    }
+    function _buildPocket(el, inv, key) {
+        var meta = _POCKETS.filter(function (p) { return p[1] === key; })[0] || ['Pocket', key, '', 176, false];
+        var hd = document.createElement('div');
+        hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';
+        hd.textContent = meta[0].toUpperCase();
+        el.appendChild(hd);
+        var pocket = inv[key] || {};
+        var ids = Object.keys(pocket).filter(function (k) { return (pocket[k] | 0) > 0; });
+        if (!ids.length) {
+            var em = document.createElement('div');
+            em.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.dim + ';text-align:center;padding-top:16px;';
+            em.textContent = 'Empty.';
+            el.appendChild(em); return;
+        }
+        ids.forEach(function (id) {
+            var def = (window.GameItems && GameItems.get(id)) || null;
+            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
+            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+            var ic = document.createElement('canvas'); ic.width = ic.height = 24; ic.style.cssText = 'width:16px;height:16px;flex:none;';
+            (function (cv, idx) { if (idx != null && window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); }); })(ic, def ? def.icon : null);
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
+            nm.textContent = (def ? def.name : _prettySkill(id)).toUpperCase();
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (pocket[id] | 0);
+            top.appendChild(ic); top.appendChild(nm); top.appendChild(cnt);
+            r.appendChild(top);
+            if (def && def.desc) {
+                var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
+                d.textContent = def.desc; r.appendChild(d);
+            }
+            _sel(r, function () { _useItem(key, id); });
+        });
+    }
+    // Use one item from a pocket, applying its database `use` effect.
+    function _useItem(key, id) {
+        var st = window.GameSave && GameSave.state; if (!st) return;
+        var def = window.GameItems && GameItems.get(id);
+        var surv = st.survival || (st.survival = { surveillance: 0, stamina: 100, exposure: 0 });
+        var usable = !!(window.GameItems && GameItems.fieldUsable(id));
+        var msg, nm = def ? def.name : _prettySkill(id);
+        if (usable) {
+            var u = def.use;
+            if (u.type === 'stamina') { surv.stamina = Math.min(100, (surv.stamina || 0) + (u.amount || 0)); msg = nm + ' — Stamina restored.'; }
+            else if (u.type === 'exposure') { surv.exposure = Math.max(0, (surv.exposure || 0) - (u.amount || 0)); msg = nm + ' — Exposure purged.'; }
+            else if (u.type === 'cure') { msg = nm + ' — ailment cured.'; }
+            else { msg = 'Used ' + nm + '.'; }
+            var pk = st.inventory[key]; pk[id] = (pk[id] | 0) - 1; if (pk[id] <= 0) delete pk[id];
+            if (GameSave.markDirty) GameSave.markDirty();
+            if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(surv);
+            if (window.GameAudio) GameAudio.playSE('Heal1');
+            if (_subIdx > 0) _subIdx--;   // keep cursor in range after removal
+        } else {
+            // Non-field items explain where they're actually used.
+            if (def && def.battle) msg = nm + ' is spent in battle.';
+            else if (def && def.field) msg = nm + ' is deployed out in the field, not here.';
+            else if (def && def.gear) msg = nm + ' equips once the gear system lands.';
+            else msg = "Can't use " + nm + ' from here.';
+            if (window.GameAudio) GameAudio.playSE('Buzzer1');
+        }
+        if (window.GameSystem && GameSystem.notify) GameSystem.notify(msg, usable ? 'info' : 'warning');
+        _render();
     }
 
     function _buildAffinities(el) {
@@ -594,6 +857,9 @@ window.GameStartMenu = (function () {
             var role = document.createElement('span'); role.style.cssText = 'flex:1;font-size:6px;color:' + (meta ? '#b8a8c8' : _FR.dim) + ';';
             role.innerHTML = a[2] + '<br><span style="color:' + a[1] + '">' + a[3] + '</span>';
             r.appendChild(role);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify) GameSystem.notify(a[0].toUpperCase() + ' — ' + a[2] + ' / ' + a[3], 'info');
+            });
         });
     }
 
@@ -613,10 +879,18 @@ window.GameStartMenu = (function () {
             var lock = document.createElement('span'); lock.style.cssText = 'font-size:6px;color:' + _FR.dim + ';';
             lock.textContent = 'LOCKED';
             r.appendChild(lock);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify) GameSystem.notify(r0[0].toUpperCase() + ' is not yet unlocked. Reach it on foot first.', 'warning');
+            });
         });
     }
 
+    var _sysSub = null;   // System Shop sub-screen: null | 'specialize' | 'change'
     function _buildSystem(el) {
+        _ensureClassData();
+        // System Shop sub-screens (specialize / change class) get their own page.
+        if (_sysSub === 'specialize') { _sysSpecialize(el); return; }
+        if (_sysSub === 'change')     { _sysChangeClass(el); return; }
         // COLD panel — near-black glass, cyan/danger, interactive services.
         var s = _survival();
         var sv = Math.max(0, Math.min(100, s.surveillance || 0));
@@ -673,9 +947,117 @@ window.GameStartMenu = (function () {
         service('Register Camp', 'Audit-proof your refuge — but flagged.', 10, function (c) {
             raise(c, 'Camp registered. You are protected. You are watched.');
         });
+        service('Specialize Class', 'Focus your current Classification.', 5, function () {
+            _sysSub = 'specialize'; _render();
+        });
+        service('Reclassify', 'Acquire or switch Classification.', 0, function () {
+            _sysSub = 'change'; _render();
+        });
+    }
+
+    // Shared chrome for a System Shop sub-screen: cold header + BACK button.
+    function _sysShell(el, title) {
+        el.style.cssText = 'background:' + _SYS.panel + ';color:' + _SYS.ink + ';padding:11px;overflow:auto;font-family:"Press Start 2P",monospace;';
+        var back = document.createElement('button');
+        back.textContent = '‹ BACK';
+        back.style.cssText = 'font:7px "Press Start 2P";background:none;border:none;color:' + _SYS.dim + ';cursor:pointer;margin-bottom:8px;';
+        back.addEventListener('click', function () { _sysSub = null; _render(); });
+        el.appendChild(back);
+        var h = document.createElement('div');
+        h.style.cssText = 'font:7px "Press Start 2P";letter-spacing:2px;color:' + _SYS.cyan + ';margin-bottom:10px;';
+        h.textContent = title;
+        el.appendChild(h);
+    }
+    function _sysRaise(by, msg) {
+        if (window.GameSave && GameSave.state) {
+            var st = GameSave.state.survival || { surveillance: 0, stamina: 100, exposure: 0 };
+            st.surveillance = Math.min(100, (st.surveillance || 0) + by);
+            GameSave.state.survival = st; GameSave.markDirty();
+            if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(st);
+        }
+        if (msg && window.GameSystem && GameSystem.notify) GameSystem.notify(msg, 'danger');
+    }
+
+    function _sysSpecialize(el) {
+        _sysShell(el, '[ SPECIALIZE ]');
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var clsId = p.class && p.class.id;
+        var db = _classDb();
+        if (!window.GameClasses || !clsId) { el.appendChild(_sysMsg('No Classification on record.')); return; }
+        if (p.class.spec) { el.appendChild(_sysMsg('Focus locked: ' + _prettySkill(p.class.spec) + '. Reclassify to change paths.')); return; }
+        var ctx = GameClasses.ctxFromState(GameSave.state);
+        var specs = GameClasses.specOptions(clsId, ctx, db);
+        if (!specs.length) { el.appendChild(_sysMsg('This Classification offers no specializations.')); return; }
+        el.appendChild(_sysMsg('Choose one focus — permanent. (+5 Surveillance)'));
+        specs.forEach(function (sp) {
+            var b = _sysBtn(el, sp.name + (sp.grantsSkill ? '  +' + _prettySkill(sp.grantsSkill) : ''),
+                sp.eligible ? 'Available' : ('Requires Lv' + sp.unlockAtLevel), sp.eligible);
+            if (sp.eligible) b.addEventListener('click', function () {
+                if (GameClasses.chooseSpec(GameSave.state, clsId, sp.id, db)) {
+                    if (window.GameAudio) GameAudio.playME('Fanfare2');
+                    _sysRaise(5, 'Specialization registered: ' + sp.name + '.');
+                    _sysSub = null; _render();
+                }
+            });
+        });
+    }
+
+    function _sysChangeClass(el) {
+        _sysShell(el, '[ RECLASSIFY ]');
+        var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var db = _classDb();
+        if (!window.GameClasses || !p.class) { el.appendChild(_sysMsg('No Classification on record.')); return; }
+        var owned = p.ownedClasses || (p.ownedClasses = [p.class.id]);
+        var NEW_COST = 500, SURV = 15;
+
+        // Switch among owned classes (free, lateral).
+        el.appendChild(_sysMsg('Switch Classification (owned — free):'));
+        owned.forEach(function (id) {
+            var cl = (_clsData && _clsData[id]);
+            var isCur = id === p.class.id;
+            var b = _sysBtn(el, (cl ? cl.name : _prettySkill(id)) + (isCur ? '  ◄ current' : ''),
+                isCur ? '' : 'Switch (free)', !isCur);
+            if (!isCur) b.addEventListener('click', function () {
+                if (GameClasses.changeClass(GameSave.state, id, db)) {
+                    if (window.GameAudio) GameAudio.playSE('Decision1');
+                    GameSave.markDirty(); _render();
+                }
+            });
+        });
+
+        // Acquire a NEW Basic class (costs credits + Surveillance).
+        el.appendChild(_sysMsg('Acquire new Classification — Cr ' + NEW_COST + ' (+' + SURV + ' Surveillance):'));
+        var credits = _credits();
+        var basics = GameClasses.classesOfTier('basic', db).filter(function (c) { return owned.indexOf(c.id) < 0; });
+        basics.forEach(function (c) {
+            var afford = credits >= NEW_COST;
+            var b = _sysBtn(el, c.name, c.lifestyle + ' · ' + (afford ? 'Cr ' + NEW_COST : 'insufficient Cr'), afford);
+            if (afford) b.addEventListener('click', function () {
+                if (GameSave.state.player) GameSave.state.player.money = Math.max(0, (GameSave.state.player.money || 0) - NEW_COST);
+                if (GameClasses.changeClass(GameSave.state, c.id, db)) {
+                    if (window.GameAudio) GameAudio.playME('Fanfare1');
+                    _sysRaise(SURV, 'Reclassified: ' + c.name + '. The System has re-catalogued you.');
+                    _sysSub = null; _render();
+                }
+            });
+        });
+    }
+
+    function _sysMsg(t) {
+        var d = document.createElement('div');
+        d.style.cssText = 'font:7px "Press Start 2P";color:' + _SYS.dim + ';line-height:1.7;margin:6px 0;';
+        d.textContent = t; return d;
+    }
+    function _sysBtn(el, label, sub, enabled) {
+        var b = document.createElement('button');
+        b.disabled = !enabled;
+        b.style.cssText = 'display:block;width:100%;text-align:left;background:rgba(0,40,55,' + (enabled ? '.55' : '.2') + ');border:1px solid ' + (enabled ? _SYS.cyan : _SYS.dim) + ';border-radius:5px;padding:7px;margin-bottom:5px;color:' + (enabled ? _SYS.ink : _SYS.dim) + ';font:7px "Press Start 2P";cursor:' + (enabled ? 'pointer' : 'not-allowed') + ';';
+        b.innerHTML = '<div style="color:' + (enabled ? _SYS.cyan : _SYS.dim) + '">' + label + '</div>' + (sub ? '<div style="font-size:6px;color:' + _SYS.dim + ';margin-top:3px;">' + sub + '</div>' : '');
+        el.appendChild(b); return b;
     }
 
     function _buildSave(el) {
+        _ensureClassData();   // so the slot summary can show the real class name
         var shell = _makeCanvasShell(el, function(ctx, canvas) {
             _drawSaveCanvas(ctx);
             canvas.addEventListener('click', function(e) {
@@ -703,9 +1085,12 @@ window.GameStartMenu = (function () {
         ctx.fillStyle = _tc.hi;
         ctx.fillText('SAVE', 8*S, 5*S);
 
-        // Info box
-        var bondCount = (window.GameSave && GameSave.state && GameSave.state.bonds)
-            ? GameSave.state.bonds.length : 0;
+        // Info box — basic character summary (Class + Level, not Bonds).
+        var _p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var _prog = (window.GameSave && GameSave.state && GameSave.state.progress) || null;
+        var _clsId = _p.class && _p.class.id;
+        var _clsName = (_clsData && _clsId && _clsData[_clsId] && _clsData[_clsId].name) || (_clsId ? _prettySkill(_clsId) : 'Unclassed');
+        var _lvl = _prog ? _prog.level : ((_p.class && _p.class.level) || 1);
 
         ctx.font = (7*S)+'px "Press Start 2P", monospace';
         ctx.fillStyle = COL_CYAN;
@@ -713,7 +1098,8 @@ window.GameStartMenu = (function () {
 
         var infoRows = [
             ['Subject:', _playerName()],
-            ['Bonds:', String(bondCount)],
+            ['Class:', _clsName],
+            ['Level:', String(_lvl)],
             ['Time:', _playtime()],
         ];
         infoRows.forEach(function(r, i) {
@@ -990,12 +1376,16 @@ window.GameStartMenu = (function () {
         // In battle bag mode, B/back closes entirely and returns to battle
         if (_battleBagCancel) { close(); return; }
         if (_battlePartyCancel) { close(); return; }
+        if (page==='system' && _sysSub) { _sysSub=null; _render(); return; }  // sub-screen → services
+        if (page==='supplies' && _supPocket) { _supPocket=null; _subIdx=0; _render(); return; }  // pocket → pocket list
+        _sysSub=null; _supPocket=null;
         page='main'; _subIdx=0; _render();
     }
 
     function _confirmSelected() {
         if (page!=='main') {
-            if (page==='save') { const a=['save','load']; _doSaveAction(a[_subIdx]||'save'); }
+            if (page==='save') { const a=['save','load']; _doSaveAction(a[_subIdx]||'save'); return; }
+            if (_subRows.length) { _runSel(); }   // activate the selected survival-page row
             return;
         }
         const item=ITEMS[selectedIdx]; if(!item) return;
@@ -1004,11 +1394,12 @@ window.GameStartMenu = (function () {
             case 'SAVE':    _saveDone=false; page='save';         _subIdx=0; _render(); break;
             case 'OPTIONS': page='options';      _subIdx=0; _render(); break;
             case 'CAMP':       page='camp';       _subIdx=0; _render(); break;
+            case 'JOURNAL':    page='journal';    _subIdx=0; _render(); break;
             case 'BONDS':      page='bonds';      _subIdx=0; _render(); break;
-            case 'SUPPLIES':   page='supplies';   _subIdx=0; _render(); break;
+            case 'SUPPLIES':   page='supplies';   _subIdx=0; _supPocket=null; _render(); break;
             case 'AFFINITIES': page='affinities'; _subIdx=0; _render(); break;
             case 'REACHES':    page='reaches';    _subIdx=0; _render(); break;
-            case 'SYSTEM':     page='system';     _subIdx=0; _render(); break;
+            case 'SYSTEM':     page='system';     _subIdx=0; _sysSub=null; _render(); break;
             default: close(); break;
         }
     }
@@ -1059,17 +1450,23 @@ window.GameStartMenu = (function () {
     function moveUp() {
         if (!isOpen) return;
         if (page==='main') { if(selectedIdx>0){selectedIdx--;_render();} return; }
-        const c=_subCount(); if(c>0){_subIdx=(_subIdx-1+c)%c; _render();}
+        const c=_subCount(); if(c>0){_subIdx=(_subIdx-1+c)%c; _render();} else _scrollSub(-1);
     }
     function moveDown() {
         if (!isOpen) return;
         if (page==='main') { if(selectedIdx<ITEMS.length-1){selectedIdx++;_render();} return; }
-        const c=_subCount(); if(c>0){_subIdx=(_subIdx+1)%c; _render();}
+        const c=_subCount(); if(c>0){_subIdx=(_subIdx+1)%c; _render();} else _scrollSub(1);
+    }
+    // Survival sub-pages (camp/supplies/bonds/affinities/reaches/system) have no
+    // discrete item cursor — up/down scroll their content panel instead.
+    function _scrollSub(dir) {
+        var c = subEl && subEl.querySelector('.sm-sub-content');
+        if (c) c.scrollBy({ top: dir * 48, behavior: 'smooth' });
     }
     function _subCount() {
         if (page==='save')    return 2;          // Save / Load
         if (page==='options') return 21;         // 18 EE options + 3 engine extras
-        return 0;                                // survival pages scroll via DOM
+        return _subRows.length;                  // survival pages: selectable rows (0 = scroll)
     }
     function confirm() { if(isOpen) _confirmSelected(); }
     function back()    {

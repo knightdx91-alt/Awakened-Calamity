@@ -160,18 +160,166 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 - ✅ Deployed & verified live on GitHub Pages.
 
 ## Next steps (priority)
-1. **Battle system rewrite** — replace donor `battle.js`/`summary.js`/`battle_assets.*` (the only
-   remaining Pokémon code, unreachable in AC) with **Tempo + Intervention** (`DESIGN.md §1`). This
-   is also the *true* finish of the source purge.
-2. **Wire survival systems to gameplay** — drive the HUD meters (Stamina drains in Wildlands,
-   Exposure from biome hazards, **Surveillance rises** when using System services/REACHES
-   fast-travel); real **SUPPLIES** inventory; **Bind** flow → populates `state.bonds[]`.
-3. **REACHES fast-travel** — actual warp targets (raise Surveillance), unlock landmarks.
-4. **More official-art content** — author zones with the `ac_*` tilesets + overlay (use the
-   map editor Terrain brush + building overlay); add building stamps / overlay painting to editor.
-5. **Re-skin remaining chrome** (dialogue, banners, options, hub) to the FireRed/System tokens.
-6. **Cloud saves → Cloudflare Worker** (remove embedded token from repo; still present in
-   `cloud-saves.js` + `map-editor.js`, reversed).
+1. **THE STORY** (next focus) — opening beat (arrive in **Dawnhearth** → first crystal/System contact
+   → the hook) + main throughline, built with the event-command + map tools (see "Event commands" below).
+2. **Master tier content** — flesh the Master tier from 6 → ~50 (authored as Advanced→Master path-gated
+   evolutions); it's already wired into the creation grid (ringed gold) + the evolve logic. Then GM+.
+3. **Wire survival systems to gameplay** — Stamina drains in Wildlands, Exposure from biome hazards,
+   **Surveillance** already rises from System-shop services; **Bind** flow → `state.bonds[]`.
+4. **Non-combat lifestyle skills** — craft/gather/social skill `effect` hooks exist as DATA but are inert;
+   build the systems that consume them.
+5. **REACHES fast-travel** — actual warp targets (raise Surveillance), unlock landmarks.
+6. **Cloud saves → Cloudflare Worker** (remove embedded token; still in `cloud-saves.js`+`map-editor.js`).
+7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
+   remove when convenient.
+
+## Dawnhearth opening — content/writing pass (2026-06-17)
+Fleshed the opening from a 16-box skeleton to **32 faced text boxes** + a 4-option Mira info choice +
+the cold-open. Added townsfolk (all with RTP face portraits, browser-verified): **Old Bram** (cycle
+foreshadow), **Tessa** (Surveillance/Audit dread), **Pip** (child flavor/nudge), **Lys** (the hook —
+brother Joran taken for going off-grid), **Vanguard Sentry Corwin** (enforcer). Examinable props:
+**Well**, **System Poster**, **Memorial** (cycle hints, faceless). Mira now has personality + an
+[name]/[designation]-aware info choice (System / Dawnhearth / Self). **`docs/DAWNHEARTH.md`** tracks
+street content (built) + the **interiors to BUILD** (Mira's Hearth, Infirmary w/ Sister Wenna, the Inn
+[DawnhearthInn.json exists — wire Door12], Market/off-grid supplier, Joran's locked house, the Ashlab
+OWPS annex [DawnhearthLab.json exists]) with door→building links + contents. Verified in headless
+chromium: faces render, the choice menu shows, zero errors.
+
+## Dawnhearth opening tutorial — SCRIPTED & browser-verified (2026-06-17)
+The `awakening` quest is now a playable opening, authored as map events in `data/maps/awakened/
+Dawnhearth.json` + a cold-open in `_newGame`:
+1. **Cold open** — `_newGame` runs a System intro (`runCmdList`: "Welcome, [designation]…") then nudges
+   toward Mira. (New `_subTokens` substitutes `[name]`/`[designation]` in dialogue text.)
+2. **Mira** (id14 @12,18, face People1) — quest-stage-gated: greets + directs to the crystal
+   (`quest stage 1`); reminds during the hunt; on return **completes the quest**, grants `first_aid`,
+   heals, (quest `reward.money:200` pays once).
+3. **System crystal** (id13) — opens the shop, then advances `stage 1→2` (nested conditional).
+4. **TutorialFiend** (id15 @34,24, Monster1, touch) — `stage 2`: battle an emberling →
+   advance `stage 3` → despawn.
+5. **NoticeBoard** (id16 @24,28) — the hook (Vanguard notice + scratched plea about Joran taken for
+   going off-grid).
+**Verified end-to-end via headless chromium:** Mira→1, crystal/shop→2, monster fight→3, return→done +
+200Cr + First Aid + full heal; zero JS errors. (Engine only fires touch/auto on stepping, so the
+cold-open is triggered from `_newGame`, not an auto tile.)
+
+## No in-battle regen + persistent vitals + healing (2026-06-17)
+- **No passive HP/MP/SP regen in battle** (removed the per-turn regen). Recovery only via items,
+  healing skills, or a healer ally. To avoid soft-locks, every fighter always has a **free basic
+  `strike`** (cost 0; `skillCost` honors an explicit `sk.cost`). AI falls back to `strike` when it
+  can't afford anything; the player FIGHT menu always lists Strike first.
+- **Persistent vitals:** HP/MP/SP carry **between battles** via `state.survival.{hp,mana,stamina}`
+  (the HUD %s). Combat **seeds** the player actor from those % at start (`_seedVitals`) and **writes
+  back** on win/flee (`_persistVitals`); defeat = System "rescue" to 50% HP (TODO real down/penalty).
+  Added `hp`/`mana` to the default `survival` (migration backfills old saves).
+- **Out-of-battle healing:** System Shop **Full Restore** now restores HP/MP/Stamina (+purge Exposure);
+  new **`heal` event command** (engine + editor — what: all/hp/mp/sp, amount% or full) for healer NPCs
+  in town / wild healers / infirmaries.
+- **Enemy display:** reverted — enemies **can** show status tags again; only their **MP/SP bars** stay
+  hidden (player-only). Browser-verified (headless): wounded 40% HP carries into battle, Strike is the
+  free first option, vitals persist after the fight. Suites pass.
+
+## Battle overhaul + MP/SP + items-in-battle + designation (2026-06-17)
+- **Battle menu = FIGHT / ITEM / RUN** (`combatview.js`): the player turn opens a top action menu
+  (▲▼ + A), not a bare skill list. FIGHT → skills (with cost shown, unaffordable greyed) → target;
+  ITEM → battle-usable inventory items → choose **which ally/self** to use on → apply; RUN flees.
+  Existing enemy target-select kept; item target-select added.
+- **MP / Stamina (SP) resource model** (`combat.js`, pure): actors gained `mp/maxMp` + `sp/maxSp`
+  (defaults 30/100, build can override). `skillCost(sk)` — **magical (has affinity) → MP, physical
+  (power>0) → SP**, support → small SP, scaled by tempo weight. `canAfford` gates the player UI; `act()`
+  spends the cost. New `useItem(state,{actorId,targetId,restore})` restores HP/MP/SP to a target and
+  consumes the turn. Player cards now show **HP + MP + SP** bars; enemies show HP.
+- **Recovery items** (`items.json` + `GameItems.battleRestore/battleUsable`): Potion/Hi-Potion (HP),
+  Ether (MP), Elixir (all); Stimulant/food restore SP. Usable in battle (consumed from inventory) with
+  ally/self targeting; buyable in the System Shop.
+- **Random designation:** creation generates a unique System catalog tag `SUBJECT-XXXX`
+  (`player.designation`); `_subjectId()` prefers it (STATUS + System greet). Added to save default.
+- Core suites pass (combat/effects/progression); `useItem`/cost logic node-tested. **Not browser-verified.**
+- **AI bound by MP/SP too:** `enemyAction` now picks the strongest **affordable** skill (falls back to
+  the full loadout only if nothing's affordable). Added **modest per-turn regen** (~MP +6%/+1,
+  SP +5%/+2 on each actor's turn) so neither side stalls while resources still gate spam. Node-tested
+  (low-res AI picks Jab; full-res picks Heavy Strike); suites green.
+
+## Story + quest/dialogue scaffolding (2026-06-17)
+- **`STORY.md`** — canonical story outline (premise, the cycle/buried truth, four acts across the Four
+  Reaches, the four endings tilted by Hidden-Layer usage, the Dawnhearth opening beat, cast seed).
+- **Quest system:** `data/systems/quests.json` (schema: name/giver/summary/stages[{id,text}]/reward;
+  opening quest **`awakening`**) + **`src/systems/quests.js` (`GameQuests`)** pure logic
+  (start/advance/complete/fail/setStage/status/objective/list/check). State = `GameSave.state.quests
+  { <id>:{status,stage} }` (legacy `{active,completed}` shape migrated to `{}` in `migrate` v1→v2;
+  added to DEFAULT). Wired in `game.html`.
+- **Event integration:** new **`quest`** command (op start/advance/complete/fail/stage; applies
+  `reward` on complete) + **`conditional` kind `quest`** (active/done/failed/notstarted/stage≥) in the
+  engine (`runCmd`/`_evalCond`, quest DB preloaded at boot) AND the map editor (command form + cond
+  params, quest dropdown via `loadQuestList`).
+- **Journal screen:** new **JOURNAL** start-menu page (`_buildJournal`) lists ACTIVE quests (name +
+  current objective, selectable → summary) and COMPLETED (struck-through). New Game seeds the
+  `awakening` quest so it's live. Dialogue trees use the existing event commands (text+face / choice /
+  conditional / switches). Node-tested (quest lifecycle, migration) + suites pass. **Not browser-verified.**
+  **Next: script the Dawnhearth opening beat (Mira, crystal, first fight) on this scaffolding.**
+
+## Instant freshness + SAVE-screen fix (2026-06-17)
+- **Network-first service worker** (`sw.js`, was a kill-switch): every same-origin GET fetches from
+  **network first** (beats GitHub Pages' HTML cache → always the latest deploy on reload), cache only
+  as **offline fallback**; `skipWaiting`+`clients.claim` so it controls pages immediately. This is the
+  freshness *guarantee*; the `version.txt` check stays as an advisory reload notice for long sessions
+  (kept as notify, not auto-reload, to avoid any reload-loop before the SW controls the page).
+- **SAVE screen** (`_drawSaveCanvas`) now shows **Class + Level** (+ Subject, Map, Time) instead of
+  **Bonds** (which never belonged there). Loads class data on the save page so the class name resolves.
+
+## Updates & save compatibility (2026-06-17)
+**Save migration (`save.js`):** `SAVE_VERSION` → 2. `migrate()` now does (1) explicit version steps
+then (2) **`_ensureShape`** — a deep backfill that adds any field in the current `DEFAULT_SLOT_DATA`
+missing from an old save (recurses plain objects, never overwrites, leaves arrays alone). So additive
+schema changes (new menus/systems/fields) load old saves safely **without a version bump each time**.
+Verified: a v1 save (no class/skills/progress, partial survival, missing pockets) loads → fields
+backfilled, money/name/meters/items preserved, Sets re-inflated. `DEFAULT_SLOT_DATA` gained
+`player.{affinity,appearance,class,skills,ownedClasses}` + top-level `progress`.
+**Stale-client updates:** deploy writes **`version.txt`** = commit SHA (`pages.yml`). On boot
+`_checkForUpdate()` (main.js) fetches it `no-store` and, if it differs from `window.__BUILD__`, shows a
+non-blocking "A new version is available. Reload to update." notice (skipped locally where `__BUILD__`
+is the placeholder). Saves stay compatible regardless, so it's purely advisory. (Assets already bust
+per-commit via `?v=<SHA>`; `sw.js` is a kill-switch that clears caches + unregisters.)
+
+## Item database (2026-06-17)
+**`data/systems/items.json`** (21 items) + **`src/systems/items.js` (`GameItems`)** access module
+(load/get/all/name/byPocket/shopItems/fieldUsable). Schema: name, pocket (matches inventory pockets),
+desc, icon (RTP IconSet), value, stack, `use{type,amount}` (stamina/exposure/cure applied by the
+field menu; heal later), `field`/`battle` flags, `gear{slot,…}` for the future equip system,
+`shop:true` to list in the System Shop. **SUPPLIES** now shows real names/desc/icons and `_useItem`
+applies the DB effect + consumes; **System Shop SUPPLIES** is sourced from `GameItems.shopItems()`
+(price = `value`). Wired in `game.html`. Validated + suites pass; **not browser-verified.**
+
+## Deeper survival sub-menus (2026-06-17)
+Start-menu sub-pages got a **selectable-row + drill-down** framework (`startmenu.js`): `_subRows`
+registry + `_sel(rowEl,onSelect)` + `_runSel()`; `_subCount` returns the row count so up/down move a
+**cursor** (highlighted, scrolled into view), A/click activates, B backs out one level. Pages with no
+selectable rows still scroll. **SUPPLIES** now drills **pocket list → pocket contents → USE** (Food→
+Stamina, Tonics→Exposure, Items→minor; Camp Kits/Tethers note where they're used; consumes + updates
+HUD). **BONDS/AFFINITIES/REACHES** rows are selectable (A → detail notify; Reaches notes "not yet
+unlocked"). STATUS stays display + the attribute `+` buttons. Notify types fixed to info/warning/danger.
+Syntax-checked + suites pass; **not browser-verified**.
+
+## CURRENT STATE (2026-06-17, post class/system build-out)
+- **Boot flow:** Title (`title.js`, Continue/New Game) → **Awakening** char-creation (`creation.js`:
+  name, appearance from RTP charsets, Affinity, **Class**) → drop into **Dawnhearth**. `?map=` skips
+  the title (editor Play). Saves = **localStorage primary + IndexedDB backup**, each a fallback
+  (`save.js initStorage`).
+- **Classes:** **126 authored** (50 Basic + 53 Advanced + 6 Master + 6 GM + 6 Heroic + 4 Legendary),
+  **191 skills**, all refs resolve (`tools/validate_classes.mjs`). Creation grid shows Basic+Advanced+
+  Master, **tier-ringed/glowing**; Advanced+ shows a **one-time slow-leveling warning**.
+- **Growth loop (all 4 axes):** level (combat XP via `progression.js`) · allocate **attribute points**
+  (STATUS screen) · **specialize** + **change class** (System Shop) · **evolve** (auto **pop-up** at
+  Lv≥10, `evolve.js`). Logic is pure in `src/systems/{progression,classes}.js`.
+- **The System = town hub:** removed from the pause menu; reached via the **floating crystal** in
+  Dawnhearth → **`GameSystemShop`** (`systemshop.js`): SUPPLIES / SERVICES / CLASSES; purchases raise
+  Surveillance. Opened by the **`system`** event command (reusable on any event/NPC).
+- **Audio:** `GameAudio` (`audio.js`) — SE/ME/BGS play; BGM no-ops until pulled.
+- **Event commands (engine `runCmd` + map-editor):** text, choice, conditional, switch, selfswitch,
+  variable, transfer, **move, setdir, setgfx, spawn, money, item, battle, fade, shake, label, jump,
+  comment, se, system, grantclass, grantspec, grantskill**, script, exit.
+- **Combat** reads the player's **class + learned skills + allocated attributes**; `onEnd` hook drives
+  the evolve check. Pure core unchanged (`combat.js`/`rng.js`), tests green.
+- ⚠️ Most UI work this session is **headless/node-verified only — NOT browser-verified** (no Chromium).
 
 ## Session log
 - **2026-06-12 (1)** — Created repo content from scratch: pushed design-doc bundle, imported the
@@ -436,6 +584,142 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     gardens, leafy trees), re-render until good, then commit + register `VerdantTown`.
   - **📋 Agenda:** Bind flow (capture → `bonds[]`); A4 wall + A3 roof + A1 water autotile ports;
     audio (BGM + `GameAudio`); finish the 50×50 town.
+- **2026-06-17 (2)** — **Audio system + character-creation slice.**
+  - **`GameAudio` BUILT** (`src/ui/audio.js`, wired in `game.html` + `GameAudio.init()` in
+    `src/main.js`): SE (one-shot, overlapping) / ME (fanfare, ducks BGM) / BGS (looped ambience) /
+    BGM (looped; **no-op when not pulled** — index `bgm.present:false`). Mixer (per-channel volume +
+    mute) persisted to `localStorage ac_audio`. Plays the imported RTP `data/audio/*`; the event
+    runner's existing `case 'se'` now actually sounds. **Still TODO:** pull BGM (`--bgm`), wire BGS
+    ambience per-biome + BGM per-area, hook UI nav SE into start menu, Animations/Parallaxes/Titles.
+  - **The Awakening — player creation BUILT** (`src/ui/creation.js`): cold-System DOM overlay shown
+    on a fresh game (no `player.name`, and not when `?map=` overrides for editor Play). Pick name +
+    appearance (8 RTP Actor1 chars, live canvas preview) + Affinity (11, tinted chips + blurbs).
+    Confirm → writes `player.{name,appearance,affinity}` to save, **crops the chosen charset
+    character into a single-char 96×128 sheet** (data URL → `ac_player_sprite`), calls new
+    `GameRenderer.reloadPlayer()` so the choice shows in the overworld, plays `Fanfare1` ME.
+    `gameLoop` pauses the world while `GamePlayerCreation.isActive()`. Node-stub + HTTP-200 verified;
+    **not browser-verified** (no headless Chromium this session).
+  - **Event commands — 10 new RPG-Maker-style commands** added to BOTH the engine event runner
+    (`src/main.js runCmd`/`runCmdList`) and the **map editor events tab** (`map-editor.js` CMD_TYPES +
+    `newCmd` + form editors): **Move Route** (player/this/Ev#, step tokens up/down/left/right/wait,
+    wall-aware), **Set Direction**, **Change Money** (+/−/=), **Give/Take Item** (any inventory
+    pocket), **Battle Processing** (enemies `key:level`; awaits combat via new `GameCombatView`
+    `onEnd` callback), **Fade Screen** (out/in + color), **Shake Screen**, **Label** + **Jump to
+    Label** (flow control in `runCmdList`), **Comment** (no-op note). All engine-honored (no stubs).
+    Syntax-checked; core test suites still pass; **not browser-verified**.
+  - **2 more event commands:** **Change Graphic** (`setgfx` — swap a target's charset; player target
+    rewrites `ac_player_sprite` + `reloadPlayer()`) and **Spawn NPC/Monster** (`spawn` — drops a new
+    event at x,y; NPC = action+optional dialogue, Monster = touch→`battle`→auto-`despawn`). Editor
+    forms reuse the charset sprite picker via new `openSpriteModalForCmd`. Internal `despawn` removes
+    the running event.
+  - **Title / New Game / Continue + save fallback + Dawnhearth start:**
+    - **`src/ui/title.js`** (`GameTitle`) — boot title shown unless `?map=` override; **CONTINUE**
+      (only when a save exists, shows name/map/playtime) + **NEW GAME** (confirms overwrite if a save
+      exists). `gameLoop` pauses the world while title/creation active.
+    - **`main.js`**: title drives `_continueGame()` (load first non-empty slot → `_enterMap` saved
+      location) or `_newGame()` (fresh state → the Awakening → **Dawnhearth**, spiral-search a walkable
+      tile near a door, save slot 0). New `_enterMap`/`_findWalkable` helpers.
+    - **Save storage = localStorage PRIMARY + IndexedDB BACKUP, each a fallback** (`save.js`): writes
+      mirror to both; `initStorage()` (awaited at boot) restores localStorage from IndexedDB if LS was
+      cleared (or seeds IDB from LS). Added `hasAnySave()`. Node-harness verified the full
+      save→wipe-LS→restore round-trip; storage logic + all files syntax-checked. **Not browser-verified.**
+  - **Class screen + class wired into play (start of class build-out):**
+    - **Creation now has a CLASS step** (`src/ui/creation.js`): loads `data/systems/classes.json`,
+      shows the **20 Basic classes** as a scrollable grid (lifestyle-tinted), with a detail panel
+      (signature, HP/ATK/DEF/SPD stat bars, starting skills). AWAKEN now requires name + appearance +
+      affinity + **class**. Persists `player.class = {id,level:1,xp:0}` + `player.skills` (the class's
+      `grantsSkills`).
+    - **Combat reads the chosen class** (`src/ui/combatview.js buildPlayer`): player actor's name,
+      affinity, stat profile, and skill loadout now come from `player.class` + `player.skills`
+      (was a hardcoded Smith). Node-stub verified (classes fetched, chips build, no errors).
+    - **Next on classes:** sync `player.class.level` with `progression.js`; attribute-point allocation;
+      specializations/evolutions UI; non-combat lifestyle skill use; the STATUS menu to show class.
+  - **BASE TIER COMPLETE — 50 Basic classes** (was 20 → +30) + **54 new foundation skills** (→166
+    total). New classes span every lifestyle: combat (brawler/lancer/fencer/archer/sentinel/spellblade/
+    monk), tamer (beastmaster/falconer/rider), craft (woodwright/tailor/jeweler/mason/fletcher),
+    support (apothecary/cleric/shaman), survival (ranger/survivalist/hermit), social (performer/
+    emissary), espionage (saboteur/infiltrator), scholar (arcanist/cartographer/seer), gathering
+    (logger/farmer). Each: statProfile + 5 grantsSkills + signature (specializations/evolvesInto left
+    `[]` for the per-tier build order). New skills use the existing schema (combat power/effect ones
+    are engine-honored; craft/gather/social/etc. are data hooks). **Added `tools/validate_classes.mjs`**
+    (every grantsSkill resolves; reports per-tier counts) — 0 errors; combat/effects/progression tests
+    still pass. **Next tier: author the ~50 Advanced classes as the basics' path-gated evolutions.**
+  - **Build-out: leveling made real + STATUS screen.**
+    - **Unified progression with the class** (`combatview.js` + `creation.js`): `state.progress` is now
+      the single source of truth, seeded from the chosen class's tier/level at creation; combat's
+      `_saveProg` mirrors `level`/`xp` back onto `player.class`. So combat XP/level-ups actually advance
+      the character's class.
+    - **STATUS menu rebuilt** (`startmenu.js _buildCamp`): shows real **Class name + Level**, Affinity,
+      an **XP-to-next bar** (via `GameProgression.xpToNext` + lazy-loaded `progression.json`), **Attribute
+      Points** when any are banked, and a **SKILLS** chip list (player's learned/class-granted skills) —
+      plus the existing survival meters. Lazy-loads `classes.json`/`progression.json` and re-renders.
+      (Fixes the old stale `state.klass` read.) Syntax-checked; core tests still pass. **Not browser-verified.**
+    - **Still pending build-out:** attribute-point *allocation* UI (count shown, no spend yet);
+      specializations/evolutions UI; non-combat lifestyle skill use.
+  - **Build-out: attribute-point allocation DONE.** The 8-attribute LitRPG set (PROGRESSION.md §2:
+    STR/AGI/CON/INT/WIS/PER/CHA/LUK) is now spendable. `progression.json` gained **`attrEffects`**
+    (per-point derived-stat bonuses: STR+2 atk, CON+6 hp, AGI+2 speed, WIS+1 def; INT/PER/CHA/LUK
+    reserved for later systems). `progression.js` (pure) gained **`spendPoint`** + **`applyAttributes`**,
+    and `createProgress` now seeds all 8 attributes at 0. **Combat `buildPlayer` applies attribute
+    bonuses** on top of the class base stats, so points actually change battle stats. **STATUS screen**
+    lists the 8 attributes (value + per-point effect hint) with a **`+` button** that spends a banked
+    point and re-renders. Node-tested (seed/spend/apply math, point drain) + core suites pass.
+    **Not browser-verified.** Pending: specializations/evolutions UI; non-combat lifestyle skill use.
+  - **ADVANCED TIER AUTHORED — 53 Advanced classes** (was 3 → +50) + **25 advanced foundation skills**
+    (→191). Completes the **30 evolution targets** the original 20 basics referenced (paladin, reaver,
+    pyromancer, ninja, juggernaut, physician, artificer, … tanner) AND adds **`evolvesInto` to all 30
+    new basics** → 20 more advanced (champion, dragoon, blademaster, sharpshooter, bastion, battlemage,
+    packlord, cavalier, builder, artisan, chemist, priest, spiritualist, huntsman, sage, ambassador,
+    shadow_operative, mage, explorer, steward), converging related basics. **`validate_classes.mjs`:
+    0 errors, 0 evolve-warns** (every basic now resolves its evolution). Now **126 classes / 191
+    skills**; combat/effects/progression suites pass. Tiers: basic 50, advanced 53, master 6,
+    grandmaster 6, heroic 6, legendary 4. **Next: specialize/evolve UI, then Master tier.**
+  - **Specialize / Evolve UI BUILT.** New pure module **`src/systems/classes.js`** (`GameClasses`,
+    portable, no DOM): `evolveOptions` (path-gated — checks level ≥ `EVOLVE_MIN_LEVEL` 10, `requires`
+    skillTags vs learned-skill tags, stat, affinity; default branches always offered), `evolve`
+    (switch class + grant new skills + raise progression Tier), `specOptions`/`chooseSpec` (permanent
+    focus pick, grants its skill). Wired into the **STATUS screen** (`startmenu.js`): a **SPECIALIZE**
+    section (PICK buttons, gated by unlock level; shows chosen focus once set) and an **EVOLVE** section
+    (lists branches with eligibility/reason; eligible ones get a two-click EVOLVE→CONFIRM with a
+    Fanfare). STATUS loader now also fetches `skills.json` (for tag gating). Node-tested
+    (brawler→champion gated by level; warrior specs; tier/skill grants) + combat/progression suites
+    pass. **Not browser-verified.** Next: Master tier content; non-combat lifestyle skill use.
+  - **Class-growth ACCESS reworked to the owner's design (evolve = pop-up; specialize/change = System
+    Shop).** Removed the EVOLVE/SPECIALIZE sections from STATUS (now display-only: shows chosen spec).
+    - **Evolve = automatic pop-up** (`src/ui/evolve.js`, `GameEvolvePopup`): `check()` fires after combat
+      (combatview teardown) and shows a System modal when an evolution becomes eligible (Lv≥10 + path
+      gates). Pick an ascension or NOT YET (deferred per-level via `player.class.evoDeferredAt`; re-offers
+      on next level). `gameLoop` pauses the world while active.
+    - **System Shop services** in the SYSTEM start-menu panel: **Specialize Class** (pick a focus,
+      +5 Surveillance) and **Reclassify** (switch among **owned** classes free; **acquire a new Basic
+      class** for Cr 500 + 15 Surveillance — the only non-reward way to get a new class). Sub-screens
+      with BACK; `_sysSub` state reset on enter/back.
+    - **`GameClasses` gained `changeClass`** (lateral: keep level/xp/skills, set Tier, record
+      `ownedClasses`) + `classesOfTier` (shop catalogue). `ownedClasses` seeded at creation.
+    - Node-tested (changeClass union/owned, catalogue=50) + suites pass. **Not browser-verified.**
+  - **System = town-only hub (floating crystal).** The System is no longer in the pause menu —
+    **removed `SYSTEM` from the start-menu** ITEMS. New standalone **`src/ui/systemshop.js`
+    (`GameSystemShop`)**: a cold full-screen hub with SUPPLIES (buy Tether/Tonic/Camp Kit/Ration for
+    credits), SERVICES (Restore/Fast-Travel/Register Camp), and CLASSES (Specialize · Reclassify =
+    switch owned free / buy a new Basic class Cr500). Every purchase raises Surveillance; pauses the
+    world. Opened by a new **`system` event command** (engine `runCmd` + editor `🔮 Open System Shop`),
+    placed on a **Crystal-graphic event in Dawnhearth (id 13 @28,28)** — the hub. Wired guards + script;
+    suites pass, assets serve 200. **Not browser-verified** (crystal placement @28,28 may need nudging
+    in the editor). Note: startmenu's old `_buildSystem` panel is now unreachable (left as dead code).
+  - **Reward event commands (NPC/quest sources for class/spec/skill).** System-shop access is the
+    existing **`system`** command (reusable on any event/NPC, not just the crystal). Added three reward
+    commands (engine `runCmd` + editor forms, all engine-honored): **`grantclass`** (🎓 — give a
+    Classification; `unlockOnly` adds to `ownedClasses` without switching, else `GameClasses.changeClass`),
+    **`grantspec`** (✦ — set the current class's specialization + grant its skill, bypassing level
+    gate as a reward), **`grantskill`** (📖 — teach a skill id). Engine lazily loads classes/skills
+    (`_loadClassDb`); editor gained `loadClassList`/`loadSkillList` for dropdowns. Node-tested; suites
+    pass. **Not browser-verified.**
+  - **Class-selection screen now shows Advanced classes, ringed by tier.** Creation (`creation.js`)
+    grids classes grouped by tier (`TIERS=['basic','advanced']`, Master+ slot in later) with per-tier
+    section headers. **Advanced and up get a glowing colored ring** (`TIER_RING`: advanced cyan, master
+    gold, grandmaster purple, heroic orange, legendary pale-gold) via a pulsing `pcRing` animation;
+    basic stays un-ringed. Detail panel shows a tier tag. Now 50 basic + 53 advanced selectable.
+    DOM-stub verified. **Not browser-verified.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

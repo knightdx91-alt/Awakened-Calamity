@@ -2087,5 +2087,2075 @@
       "type": "original_system"
     },
     "evolvesInto": []
+  },
+  "brawler": {
+    "name": "Brawler",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 88,
+      "atk": 22,
+      "def": 16,
+      "speed": 62
+    },
+    "grantsSkills": [
+      "jab",
+      "flurry",
+      "palm_strike",
+      "toughness",
+      "guard"
+    ],
+    "signature": "Bare-fisted bruiser; pressure and stamina.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "champion",
+        "default": true
+      }
+    ]
+  },
+  "lancer": {
+    "name": "Lancer",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 86,
+      "atk": 23,
+      "def": 17,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "pierce",
+      "reach_strike",
+      "guard",
+      "sturdy",
+      "jab"
+    ],
+    "signature": "Reach and armor-break with the spear.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "dragoon",
+        "default": true
+      }
+    ]
+  },
+  "fencer": {
+    "name": "Fencer",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 74,
+      "atk": 21,
+      "def": 12,
+      "speed": 72
+    },
+    "grantsSkills": [
+      "lunge",
+      "parry",
+      "evade",
+      "riposte",
+      "light_step"
+    ],
+    "signature": "Finesse duelist; openings over force.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "blademaster",
+        "default": true
+      }
+    ]
+  },
+  "archer": {
+    "name": "Archer",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 72,
+      "atk": 20,
+      "def": 11,
+      "speed": 70
+    },
+    "grantsSkills": [
+      "aimed_shot",
+      "volley",
+      "rapid_draw",
+      "keen_eye",
+      "quick_shot"
+    ],
+    "signature": "Pure marksman; control the range.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "sharpshooter",
+        "default": true
+      }
+    ]
+  },
+  "sentinel": {
+    "name": "Sentinel",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 100,
+      "atk": 16,
+      "def": 24,
+      "speed": 44
+    },
+    "grantsSkills": [
+      "bulwark",
+      "shield_bash",
+      "guard",
+      "toughness",
+      "taunt"
+    ],
+    "signature": "The wall; holds the line for others.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "bastion",
+        "default": true
+      }
+    ]
+  },
+  "spellblade": {
+    "name": "Spellblade",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 80,
+      "atk": 20,
+      "def": 15,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "spell_strike",
+      "arcane_edge",
+      "affinity_focus",
+      "ember_bolt",
+      "evade"
+    ],
+    "signature": "Blade and bolt woven together.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "battlemage",
+        "default": true
+      }
+    ]
+  },
+  "monk": {
+    "name": "Monk",
+    "tier": "basic",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 84,
+      "atk": 20,
+      "def": 16,
+      "speed": 64
+    },
+    "grantsSkills": [
+      "palm_strike",
+      "ki_focus",
+      "meditate",
+      "evade",
+      "flurry"
+    ],
+    "signature": "Discipline of body; strike and self-mend.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "champion",
+        "default": true
+      }
+    ]
+  },
+  "beastmaster": {
+    "name": "Beastmaster",
+    "tier": "basic",
+    "family": "tamer",
+    "lifestyle": "tamer",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 82,
+      "atk": 18,
+      "def": 15,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "command_beast",
+      "feral_bond",
+      "beast_call",
+      "rally_beasts",
+      "pack_sense"
+    ],
+    "signature": "Fights through bonded beasts.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "packlord",
+        "default": true
+      }
+    ]
+  },
+  "falconer": {
+    "name": "Falconer",
+    "tier": "basic",
+    "family": "tamer",
+    "lifestyle": "tamer",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 74,
+      "atk": 18,
+      "def": 12,
+      "speed": 68
+    },
+    "grantsSkills": [
+      "swoop",
+      "scout_flight",
+      "beast_call",
+      "keen_eye",
+      "mark_prey"
+    ],
+    "signature": "Eyes in the sky; harasses from above.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "sharpshooter",
+        "default": true
+      }
+    ]
+  },
+  "rider": {
+    "name": "Rider",
+    "tier": "basic",
+    "family": "tamer",
+    "lifestyle": "tamer",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 88,
+      "atk": 21,
+      "def": 16,
+      "speed": 66
+    },
+    "grantsSkills": [
+      "mount_charge",
+      "trample",
+      "beast_call",
+      "toughness",
+      "jab"
+    ],
+    "signature": "Mounted shock and mobility.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "cavalier",
+        "default": true
+      }
+    ]
+  },
+  "woodwright": {
+    "name": "Woodwright",
+    "tier": "basic",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 80,
+      "atk": 16,
+      "def": 16,
+      "speed": 50
+    },
+    "grantsSkills": [
+      "carve",
+      "build",
+      "repair",
+      "steady_hands",
+      "fell_tree"
+    ],
+    "signature": "Shapes wood into tools, bows, frames.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "builder",
+        "default": true
+      }
+    ]
+  },
+  "tailor": {
+    "name": "Tailor",
+    "tier": "basic",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 72,
+      "atk": 13,
+      "def": 14,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "sew",
+      "weave_cloth",
+      "repair",
+      "steady_hands",
+      "identify"
+    ],
+    "signature": "Cloth, garments, light protection.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "artisan",
+        "default": true
+      }
+    ]
+  },
+  "jeweler": {
+    "name": "Jeweler",
+    "tier": "basic",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 70,
+      "atk": 13,
+      "def": 13,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "set_gem",
+      "enchant_trinket",
+      "appraise",
+      "steady_hands",
+      "identify"
+    ],
+    "signature": "Gems and trinkets that hold power.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "artisan",
+        "default": true
+      }
+    ]
+  },
+  "mason": {
+    "name": "Mason",
+    "tier": "basic",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 92,
+      "atk": 18,
+      "def": 20,
+      "speed": 44
+    },
+    "grantsSkills": [
+      "lay_stone",
+      "build",
+      "repair",
+      "sturdy",
+      "mine"
+    ],
+    "signature": "Stone, walls, lasting structures.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "builder",
+        "default": true
+      }
+    ]
+  },
+  "fletcher": {
+    "name": "Fletcher",
+    "tier": "basic",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 74,
+      "atk": 16,
+      "def": 13,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "fletch",
+      "string_bow",
+      "carve",
+      "repair",
+      "aimed_shot"
+    ],
+    "signature": "Arrows and bows; supplies the ranged.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "sharpshooter",
+        "default": true
+      }
+    ]
+  },
+  "apothecary": {
+    "name": "Apothecary",
+    "tier": "basic",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 74,
+      "atk": 14,
+      "def": 14,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "decoct",
+      "salve",
+      "brew",
+      "first_aid",
+      "identify"
+    ],
+    "signature": "Tonics and salves; field medicine.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "chemist",
+        "default": true
+      }
+    ]
+  },
+  "cleric": {
+    "name": "Cleric",
+    "tier": "basic",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 82,
+      "atk": 16,
+      "def": 18,
+      "speed": 50
+    },
+    "grantsSkills": [
+      "bless",
+      "sanctuary",
+      "mend",
+      "first_aid",
+      "calm_aura"
+    ],
+    "signature": "Faith and protection for the party.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "priest",
+        "default": true
+      }
+    ]
+  },
+  "shaman": {
+    "name": "Shaman",
+    "tier": "basic",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 80,
+      "atk": 17,
+      "def": 16,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "spirit_call",
+      "totem",
+      "affinity_focus",
+      "calm_aura",
+      "mend"
+    ],
+    "signature": "Spirits and totems; buffs and ward.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "spiritualist",
+        "default": true
+      }
+    ]
+  },
+  "ranger": {
+    "name": "Ranger",
+    "tier": "basic",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 84,
+      "atk": 20,
+      "def": 15,
+      "speed": 62
+    },
+    "grantsSkills": [
+      "track",
+      "set_snare",
+      "aimed_shot",
+      "trail_sense",
+      "navigate"
+    ],
+    "signature": "Wilderness hunter-warrior.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "huntsman",
+        "default": true
+      }
+    ]
+  },
+  "survivalist": {
+    "name": "Survivalist",
+    "tier": "basic",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 90,
+      "atk": 18,
+      "def": 18,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "endure",
+      "weather_sense",
+      "forage",
+      "camp_craft",
+      "track"
+    ],
+    "signature": "Endures anything the wild throws.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "huntsman",
+        "default": true
+      }
+    ]
+  },
+  "hermit": {
+    "name": "Hermit",
+    "tier": "basic",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 80,
+      "atk": 16,
+      "def": 16,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "wild_lore",
+      "self_reliance",
+      "forage",
+      "brew",
+      "calm_aura"
+    ],
+    "signature": "Self-sufficient; quiet wisdom.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "sage",
+        "default": true
+      }
+    ]
+  },
+  "performer": {
+    "name": "Performer",
+    "tier": "basic",
+    "family": "social",
+    "lifestyle": "social",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 72,
+      "atk": 14,
+      "def": 12,
+      "speed": 64
+    },
+    "grantsSkills": [
+      "perform",
+      "inspire",
+      "persuade",
+      "network",
+      "calm_aura"
+    ],
+    "signature": "Sways crowds; lifts allies.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "ambassador",
+        "default": true
+      }
+    ]
+  },
+  "emissary": {
+    "name": "Emissary",
+    "tier": "basic",
+    "family": "social",
+    "lifestyle": "social",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 74,
+      "atk": 14,
+      "def": 14,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "rally_crowd",
+      "parley",
+      "persuade",
+      "broker_peace",
+      "network"
+    ],
+    "signature": "Speaks for groups; brokers peace.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "ambassador",
+        "default": true
+      }
+    ]
+  },
+  "saboteur": {
+    "name": "Saboteur",
+    "tier": "basic",
+    "family": "rogue",
+    "lifestyle": "espionage",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 76,
+      "atk": 19,
+      "def": 13,
+      "speed": 66
+    },
+    "grantsSkills": [
+      "sabotage",
+      "plant_charge",
+      "sneak",
+      "set_snare",
+      "pick_lock"
+    ],
+    "signature": "Traps, charges, dirty work.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "shadow_operative",
+        "default": true
+      }
+    ]
+  },
+  "infiltrator": {
+    "name": "Infiltrator",
+    "tier": "basic",
+    "family": "rogue",
+    "lifestyle": "espionage",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 74,
+      "atk": 18,
+      "def": 12,
+      "speed": 70
+    },
+    "grantsSkills": [
+      "infiltrate",
+      "disguise",
+      "sneak",
+      "backstab",
+      "pick_lock"
+    ],
+    "signature": "Gets in unseen; strikes the unaware.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "shadow_operative",
+        "default": true
+      }
+    ]
+  },
+  "arcanist": {
+    "name": "Arcanist",
+    "tier": "basic",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 70,
+      "atk": 18,
+      "def": 12,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "research",
+      "arcane_theory",
+      "affinity_focus",
+      "ember_bolt",
+      "mana_well"
+    ],
+    "signature": "Studies and wields raw affinity.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "mage",
+        "default": true
+      }
+    ]
+  },
+  "cartographer": {
+    "name": "Cartographer",
+    "tier": "basic",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 72,
+      "atk": 14,
+      "def": 13,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "navigate",
+      "research",
+      "trail_sense",
+      "appraise",
+      "identify"
+    ],
+    "signature": "Maps the Reaches; knows the way.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "explorer",
+        "default": true
+      }
+    ]
+  },
+  "seer": {
+    "name": "Seer",
+    "tier": "basic",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 70,
+      "atk": 15,
+      "def": 13,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "star_read",
+      "foresee",
+      "affinity_focus",
+      "calm_aura",
+      "identify"
+    ],
+    "signature": "Reads omens; senses what comes.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "sage",
+        "default": true
+      }
+    ]
+  },
+  "logger": {
+    "name": "Logger",
+    "tier": "basic",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 90,
+      "atk": 19,
+      "def": 16,
+      "speed": 50
+    },
+    "grantsSkills": [
+      "chop_wood",
+      "fell_tree",
+      "gather_herb",
+      "sturdy",
+      "carve"
+    ],
+    "signature": "Timber and heavy gathering.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "steward",
+        "default": true
+      }
+    ]
+  },
+  "farmer": {
+    "name": "Farmer",
+    "tier": "basic",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 86,
+      "atk": 16,
+      "def": 16,
+      "speed": 48
+    },
+    "grantsSkills": [
+      "harvest",
+      "cultivate",
+      "forage",
+      "cook",
+      "preserve"
+    ],
+    "signature": "Grows and puts up food.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": [
+      {
+        "class": "steward",
+        "default": true
+      }
+    ]
+  },
+  "paladin": {
+    "name": "Paladin",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 120,
+      "atk": 26,
+      "def": 28,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "smite",
+      "lay_on_hands",
+      "oath_guard",
+      "guard",
+      "bulwark"
+    ],
+    "signature": "Holy front-liner; protects and mends.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "reaver": {
+    "name": "Reaver",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 110,
+      "atk": 34,
+      "def": 16,
+      "speed": 64
+    },
+    "grantsSkills": [
+      "rampage",
+      "bloodlust",
+      "cleave",
+      "heavy_strike",
+      "toughness"
+    ],
+    "signature": "All offense; trades defense for slaughter.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "skirmisher": {
+    "name": "Skirmisher",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 84,
+      "atk": 26,
+      "def": 14,
+      "speed": 80
+    },
+    "grantsSkills": [
+      "quick_shot",
+      "aimed_shot",
+      "evade",
+      "light_step",
+      "pin_shot"
+    ],
+    "signature": "Hit-and-run ranged harasser.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "pyromancer": {
+    "name": "Pyromancer",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 82,
+      "atk": 30,
+      "def": 14,
+      "speed": 62
+    },
+    "grantsSkills": [
+      "fireball",
+      "immolate",
+      "ember_bolt",
+      "affinity_focus",
+      "overcharge"
+    ],
+    "signature": "Burns the field with fire affinity.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "soulbinder": {
+    "name": "Soulbinder",
+    "tier": "advanced",
+    "family": "tamer",
+    "lifestyle": "tamer",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 92,
+      "atk": 22,
+      "def": 18,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "soul_tether",
+      "bind_focus",
+      "beast_call",
+      "rally_beasts",
+      "ward"
+    ],
+    "signature": "Master of binding and bonds.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "toxicologist": {
+    "name": "Toxicologist",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "toxin",
+    "statProfile": {
+      "hp": 84,
+      "atk": 22,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "venom_brew",
+      "coat_blade",
+      "brew",
+      "panacea",
+      "identify"
+    ],
+    "signature": "Poisons and the cures for them.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "physician": {
+    "name": "Physician",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 88,
+      "atk": 16,
+      "def": 20,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "diagnose",
+      "triage",
+      "panacea",
+      "first_aid",
+      "stabilize"
+    ],
+    "signature": "Master healer; saves the dying.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "field_medic": {
+    "name": "Field Medic",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "combat",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 92,
+      "atk": 20,
+      "def": 18,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "field_dressing",
+      "triage",
+      "mend",
+      "guard",
+      "jab"
+    ],
+    "signature": "Heals under fire on the front.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "pathfinder": {
+    "name": "Pathfinder",
+    "tier": "advanced",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 90,
+      "atk": 22,
+      "def": 16,
+      "speed": 66
+    },
+    "grantsSkills": [
+      "blaze_trail",
+      "navigate",
+      "track",
+      "trail_sense",
+      "set_snare"
+    ],
+    "signature": "Never lost; opens the wild.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "broker": {
+    "name": "Broker",
+    "tier": "advanced",
+    "family": "social",
+    "lifestyle": "social",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 76,
+      "atk": 16,
+      "def": 14,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "arbitrage",
+      "bulk_deal",
+      "haggle",
+      "appraise",
+      "network"
+    ],
+    "signature": "Turns deals into empires.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "envoy": {
+    "name": "Envoy",
+    "tier": "advanced",
+    "family": "social",
+    "lifestyle": "social",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 78,
+      "atk": 16,
+      "def": 16,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "treaty",
+      "parley",
+      "broker_peace",
+      "persuade",
+      "network"
+    ],
+    "signature": "Speaks nations into peace.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "ninja": {
+    "name": "Ninja",
+    "tier": "advanced",
+    "family": "rogue",
+    "lifestyle": "espionage",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 82,
+      "atk": 28,
+      "def": 14,
+      "speed": 82
+    },
+    "grantsSkills": [
+      "shadowstep",
+      "assassinate",
+      "backstab",
+      "sneak",
+      "garrote"
+    ],
+    "signature": "Unseen killer.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "juggernaut": {
+    "name": "Juggernaut",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 130,
+      "atk": 24,
+      "def": 30,
+      "speed": 40
+    },
+    "grantsSkills": [
+      "fortify",
+      "bulwark",
+      "ground_slam",
+      "taunt",
+      "toughness"
+    ],
+    "signature": "Immovable; absorbs armies.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "chef": {
+    "name": "Chef",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 80,
+      "atk": 16,
+      "def": 16,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "gourmet",
+      "banquet",
+      "cook",
+      "preserve",
+      "steady_hands"
+    ],
+    "signature": "Food that empowers parties.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "provisioner": {
+    "name": "Provisioner",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 84,
+      "atk": 16,
+      "def": 18,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "preserve",
+      "banquet",
+      "bulk_deal",
+      "camp_craft",
+      "repair"
+    ],
+    "signature": "Keeps an army fed and supplied.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "artificer": {
+    "name": "Artificer",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 78,
+      "atk": 20,
+      "def": 16,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "imbue",
+      "tinker",
+      "operate",
+      "inscribe",
+      "repair"
+    ],
+    "signature": "Imbues devices with affinity.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "mechanist": {
+    "name": "Mechanist",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 84,
+      "atk": 22,
+      "def": 18,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "deploy_turret",
+      "operate",
+      "tinker",
+      "charge_bomb",
+      "repair"
+    ],
+    "signature": "Machines and turrets.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "cipher": {
+    "name": "Cipher",
+    "tier": "advanced",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 72,
+      "atk": 20,
+      "def": 12,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "decrypt",
+      "break_seal",
+      "research",
+      "identify",
+      "appraise_relic"
+    ],
+    "signature": "Breaks any code or seal.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "archivist": {
+    "name": "Archivist",
+    "tier": "advanced",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 74,
+      "atk": 16,
+      "def": 14,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "catalog",
+      "research",
+      "identify",
+      "appraise_relic",
+      "calm_aura"
+    ],
+    "signature": "Keeper of all knowledge.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "beastslayer": {
+    "name": "Beastslayer",
+    "tier": "advanced",
+    "family": "survival",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 96,
+      "atk": 28,
+      "def": 18,
+      "speed": 64
+    },
+    "grantsSkills": [
+      "monster_lore",
+      "mark_prey",
+      "aimed_shot",
+      "heavy_strike",
+      "track"
+    ],
+    "signature": "Hunts the great beasts.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "stalker": {
+    "name": "Stalker",
+    "tier": "advanced",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 84,
+      "atk": 24,
+      "def": 14,
+      "speed": 72
+    },
+    "grantsSkills": [
+      "mark_prey",
+      "sneak",
+      "backstab",
+      "track",
+      "set_snare"
+    ],
+    "signature": "Tracks and ambushes prey.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "peacekeeper": {
+    "name": "Peacekeeper",
+    "tier": "advanced",
+    "family": "social",
+    "lifestyle": "support",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 88,
+      "atk": 18,
+      "def": 20,
+      "speed": 54
+    },
+    "grantsSkills": [
+      "broker_peace",
+      "parley",
+      "calm_aura",
+      "rally_aura",
+      "ward"
+    ],
+    "signature": "Ends conflicts; shields the weak.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "conductor": {
+    "name": "Conductor",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 80,
+      "atk": 18,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "crescendo",
+      "battle_hymn",
+      "rally_aura",
+      "guardian_chord",
+      "calm_aura"
+    ],
+    "signature": "Orchestrates the party tempo.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "warchanter": {
+    "name": "Warchanter",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 88,
+      "atk": 22,
+      "def": 18,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "battle_hymn",
+      "rouse",
+      "rally_aura",
+      "guardian_chord",
+      "jab"
+    ],
+    "signature": "Sings allies into fury.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "prospector": {
+    "name": "Prospector",
+    "tier": "advanced",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 88,
+      "atk": 18,
+      "def": 18,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "vein_sense",
+      "mine",
+      "appraise",
+      "rare_find",
+      "identify"
+    ],
+    "signature": "Finds the richest veins.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "excavator": {
+    "name": "Excavator",
+    "tier": "advanced",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 100,
+      "atk": 22,
+      "def": 20,
+      "speed": 46
+    },
+    "grantsSkills": [
+      "excavate",
+      "mine",
+      "ground_slam",
+      "sturdy",
+      "shore_up"
+    ],
+    "signature": "Digs out dungeons and ore.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "angler": {
+    "name": "Angler",
+    "tier": "advanced",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 82,
+      "atk": 16,
+      "def": 16,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "big_haul",
+      "fish",
+      "steady_keel",
+      "preserve",
+      "rare_find"
+    ],
+    "signature": "Lands the legendary catch.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "mariner": {
+    "name": "Mariner",
+    "tier": "advanced",
+    "family": "gatherer",
+    "lifestyle": "survival",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 88,
+      "atk": 20,
+      "def": 18,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "chart_course",
+      "steady_keel",
+      "navigate",
+      "fish",
+      "shore_up"
+    ],
+    "signature": "Commands the sea routes.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "outfitter": {
+    "name": "Outfitter",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 82,
+      "atk": 18,
+      "def": 20,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "fit_gear",
+      "work_leather",
+      "stitch",
+      "repair",
+      "appraise"
+    ],
+    "signature": "Kits out the whole party.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "tanner": {
+    "name": "Tanner",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 80,
+      "atk": 16,
+      "def": 16,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "tan",
+      "skin",
+      "work_leather",
+      "stitch",
+      "preserve"
+    ],
+    "signature": "Turns hides into fine leather.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "champion": {
+    "name": "Champion",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 104,
+      "atk": 28,
+      "def": 20,
+      "speed": 66
+    },
+    "grantsSkills": [
+      "flurry",
+      "palm_strike",
+      "rampage",
+      "toughness",
+      "guard"
+    ],
+    "signature": "Peerless martial fighter.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "dragoon": {
+    "name": "Dragoon",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 100,
+      "atk": 28,
+      "def": 20,
+      "speed": 64
+    },
+    "grantsSkills": [
+      "pierce",
+      "lunge",
+      "reach_strike",
+      "mount_charge",
+      "guard"
+    ],
+    "signature": "Spear-master; reach and leap.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "blademaster": {
+    "name": "Blademaster",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 88,
+      "atk": 28,
+      "def": 16,
+      "speed": 78
+    },
+    "grantsSkills": [
+      "lunge",
+      "parry",
+      "riposte",
+      "evade",
+      "assassinate"
+    ],
+    "signature": "Flawless blade; openings into kills.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "sharpshooter": {
+    "name": "Sharpshooter",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 84,
+      "atk": 28,
+      "def": 14,
+      "speed": 76
+    },
+    "grantsSkills": [
+      "aimed_shot",
+      "volley",
+      "rapid_draw",
+      "mark_prey",
+      "keen_eye"
+    ],
+    "signature": "Death at any range.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "bastion": {
+    "name": "Bastion",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 124,
+      "atk": 20,
+      "def": 30,
+      "speed": 46
+    },
+    "grantsSkills": [
+      "fortify",
+      "bulwark",
+      "shield_bash",
+      "taunt",
+      "guard"
+    ],
+    "signature": "The unbreakable wall.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "battlemage": {
+    "name": "Battlemage",
+    "tier": "advanced",
+    "family": "combat",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 90,
+      "atk": 28,
+      "def": 18,
+      "speed": 62
+    },
+    "grantsSkills": [
+      "spell_strike",
+      "fireball",
+      "arcane_edge",
+      "affinity_focus",
+      "overcharge"
+    ],
+    "signature": "Blade and storm as one.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "packlord": {
+    "name": "Packlord",
+    "tier": "advanced",
+    "family": "tamer",
+    "lifestyle": "tamer",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 96,
+      "atk": 22,
+      "def": 18,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "command_beast",
+      "soul_tether",
+      "rally_beasts",
+      "beast_call",
+      "feral_bond"
+    ],
+    "signature": "Leads a pack into war.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "cavalier": {
+    "name": "Cavalier",
+    "tier": "advanced",
+    "family": "tamer",
+    "lifestyle": "combat",
+    "affinityLean": "ember",
+    "statProfile": {
+      "hp": 102,
+      "atk": 26,
+      "def": 20,
+      "speed": 70
+    },
+    "grantsSkills": [
+      "mount_charge",
+      "trample",
+      "lunge",
+      "toughness",
+      "rally_aura"
+    ],
+    "signature": "Mounted shock-lord.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "builder": {
+    "name": "Builder",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "stone",
+    "statProfile": {
+      "hp": 92,
+      "atk": 20,
+      "def": 22,
+      "speed": 50
+    },
+    "grantsSkills": [
+      "build",
+      "lay_stone",
+      "carve",
+      "repair",
+      "shore_up"
+    ],
+    "signature": "Raises walls and works.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "artisan": {
+    "name": "Artisan",
+    "tier": "advanced",
+    "family": "crafter",
+    "lifestyle": "craft",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 78,
+      "atk": 16,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "enchant_trinket",
+      "set_gem",
+      "sew",
+      "steady_hands",
+      "identify"
+    ],
+    "signature": "Master of fine goods.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "chemist": {
+    "name": "Chemist",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 82,
+      "atk": 18,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "venom_brew",
+      "decoct",
+      "salve",
+      "panacea",
+      "brew"
+    ],
+    "signature": "Tonics, toxins, and cures.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "priest": {
+    "name": "Priest",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 92,
+      "atk": 18,
+      "def": 20,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "smite",
+      "lay_on_hands",
+      "bless",
+      "sanctuary",
+      "mend"
+    ],
+    "signature": "Faith made power.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "spiritualist": {
+    "name": "Spiritualist",
+    "tier": "advanced",
+    "family": "support",
+    "lifestyle": "support",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 88,
+      "atk": 20,
+      "def": 18,
+      "speed": 56
+    },
+    "grantsSkills": [
+      "spirit_call",
+      "totem",
+      "soul_tether",
+      "calm_aura",
+      "ward"
+    ],
+    "signature": "Channels spirits and wards.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "huntsman": {
+    "name": "Huntsman",
+    "tier": "advanced",
+    "family": "survival",
+    "lifestyle": "survival",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 96,
+      "atk": 24,
+      "def": 18,
+      "speed": 66
+    },
+    "grantsSkills": [
+      "monster_lore",
+      "track",
+      "aimed_shot",
+      "set_snare",
+      "endure"
+    ],
+    "signature": "Wilderness master-hunter.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "sage": {
+    "name": "Sage",
+    "tier": "advanced",
+    "family": "scholar",
+    "lifestyle": "scholar",
+    "affinityLean": "lumen",
+    "statProfile": {
+      "hp": 78,
+      "atk": 18,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "foresee",
+      "star_read",
+      "research",
+      "calm_aura",
+      "meditate"
+    ],
+    "signature": "Quiet, far-seeing wisdom.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "ambassador": {
+    "name": "Ambassador",
+    "tier": "advanced",
+    "family": "social",
+    "lifestyle": "social",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 80,
+      "atk": 16,
+      "def": 16,
+      "speed": 58
+    },
+    "grantsSkills": [
+      "treaty",
+      "rally_crowd",
+      "parley",
+      "persuade",
+      "inspire"
+    ],
+    "signature": "Voice of nations and crowds.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "shadow_operative": {
+    "name": "Shadow Operative",
+    "tier": "advanced",
+    "family": "rogue",
+    "lifestyle": "espionage",
+    "affinityLean": "umbral",
+    "statProfile": {
+      "hp": 84,
+      "atk": 26,
+      "def": 14,
+      "speed": 80
+    },
+    "grantsSkills": [
+      "shadowstep",
+      "sabotage",
+      "plant_charge",
+      "sneak",
+      "disguise"
+    ],
+    "signature": "Infiltration and sabotage.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "mage": {
+    "name": "Mage",
+    "tier": "advanced",
+    "family": "scholar",
+    "lifestyle": "combat",
+    "affinityLean": "storm",
+    "statProfile": {
+      "hp": 80,
+      "atk": 30,
+      "def": 12,
+      "speed": 60
+    },
+    "grantsSkills": [
+      "fireball",
+      "immolate",
+      "ember_bolt",
+      "affinity_focus",
+      "mana_well"
+    ],
+    "signature": "Pure wielder of affinity.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "explorer": {
+    "name": "Explorer",
+    "tier": "advanced",
+    "family": "scholar",
+    "lifestyle": "survival",
+    "affinityLean": "tide",
+    "statProfile": {
+      "hp": 84,
+      "atk": 18,
+      "def": 16,
+      "speed": 62
+    },
+    "grantsSkills": [
+      "blaze_trail",
+      "navigate",
+      "chart_course",
+      "research",
+      "trail_sense"
+    ],
+    "signature": "Charts the unknown Reaches.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
+  },
+  "steward": {
+    "name": "Steward",
+    "tier": "advanced",
+    "family": "gatherer",
+    "lifestyle": "gathering",
+    "affinityLean": "verdant",
+    "statProfile": {
+      "hp": 90,
+      "atk": 18,
+      "def": 18,
+      "speed": 52
+    },
+    "grantsSkills": [
+      "harvest",
+      "cultivate",
+      "chop_wood",
+      "preserve",
+      "gourmet"
+    ],
+    "signature": "Feeds and provisions a settlement.",
+    "maxLevel": null,
+    "specializations": [],
+    "evolvesInto": []
   }
 }

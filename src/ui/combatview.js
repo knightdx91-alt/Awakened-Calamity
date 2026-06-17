@@ -7,10 +7,13 @@
     'use strict';
 
     var db = null, state = null, active = false;
-    var mode = 'idle';                  // 'beat' | 'ticking' | 'menu' | 'target' | 'over'
+    var _onEnd = null;   // optional callback fired when combat tears down
+    var mode = 'idle';                  // 'beat'|'ticking'|'action'|'menu'|'item'|'target'|'over'
     var awaitingClose = false, pendingActorId = null;
     var menuSkills = [], cursor = 0;
     var chosenSkill = null, targetList = [], targetIdx = 0;
+    var ACTIONS = ['FIGHT', 'ITEM', 'RUN'], actionCursor = 0;
+    var itemList = [], itemCursor = 0, chosenItem = null, targetMode = 'skill';
     var els = {}, cards = {};
     var logQueue = [], currentMsg = '';
     var rafId = 0, lastTs = 0, acc = 0, waitUntil = 0, seedCounter = 1;
@@ -50,21 +53,52 @@
     // ---- persistent progression ------------------------------------------
     function _loadProg() {
         var s = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
-        if (s) { s.progress = s.progress || root.GameProgression.createProgress('basic', 1); return s.progress; }
+        if (s) {
+            if (!s.progress) {
+                // Seed progression from the player's chosen class (tier + level).
+                var cls = s.player && s.player.class;
+                var tier = (cls && db && db.classes && db.classes[cls.id] && db.classes[cls.id].tier) || 'basic';
+                s.progress = root.GameProgression.createProgress(tier, (cls && cls.level) || 1);
+                if (cls && cls.xp) s.progress.xp = cls.xp;
+            }
+            return s.progress;
+        }
         _localProg = _localProg || root.GameProgression.createProgress('basic', 1);
         return _localProg;
     }
     function _saveProg() {
         var s = (root.GameSave && root.GameSave.state) ? root.GameSave.state : null;
-        if (s) { s.progress = prog; if (root.GameSave.markDirty) root.GameSave.markDirty(); } else { _localProg = prog; }
+        if (s) {
+            s.progress = prog;
+            // Mirror level/xp back onto player.class so the STATUS screen + class
+            // logic share one source of truth.
+            if (s.player && s.player.class) { s.player.class.level = prog.level; s.player.class.xp = prog.xp; }
+            if (root.GameSave.markDirty) root.GameSave.markDirty();
+        } else { _localProg = prog; }
     }
 
     // ---- actors -----------------------------------------------------------
     function buildPlayer() {
-        var smith = (db.classes && db.classes.smith) || { statProfile: { hp: 80, atk: 16, def: 18, speed: 46 }, affinityLean: 'stone' };
-        return { id: 'p1', side: 'player', name: 'Smith', affinity: smith.affinityLean || 'stone',
-            stats: Object.assign({}, smith.statProfile),
-            loadout: ['jab', 'heavy_strike', 'cleave', 'guard', 'mend', 'pin_shot', 'coat_blade', 'unmake', 'riposte'] };
+        var ps = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var clsId = (ps.class && ps.class.id) || 'smith';
+        var cls = (db.classes && (db.classes[clsId] || db.classes.smith)) ||
+                  { name: 'Survivor', statProfile: { hp: 80, atk: 16, def: 18, speed: 46 }, affinityLean: 'stone', grantsSkills: ['jab'] };
+        // Loadout = the skills the player has learned, else the class's granted set.
+        var loadout = (ps.skills && ps.skills.length) ? ps.skills.slice() : (cls.grantsSkills || ['jab']).slice();
+        if (!loadout.length) loadout = ['jab'];
+        // Base class stats + allocated attribute bonuses.
+        var stats = Object.assign({}, cls.statProfile);
+        var pr = (root.GameSave && root.GameSave.state && root.GameSave.state.progress) || null;
+        if (pr && root.GameProgression && root.GameProgression.applyAttributes) {
+            stats = root.GameProgression.applyAttributes(stats, pr.attributes, db.progression);
+        }
+        return {
+            id: 'p1', side: 'player',
+            name: ps.name || cls.name || 'Survivor',
+            affinity: ps.affinity || cls.affinityLean || 'stone',
+            stats: stats,
+            loadout: loadout
+        };
     }
     // Bonded creatures fight at your side. Bond shape: { key, nickname?, level? }
     // (key = creature id in creatures.json). Up to 3 active. AI-controlled.
@@ -112,6 +146,8 @@
     function start(opts) {
         if (active) return;
         opts = opts || {}; active = true;
+        if (root.GameItems) GameItems.load();   // so the battle ITEM menu resolves names/effects
+        _onEnd = (typeof opts.onEnd === 'function') ? opts.onEnd : null;
         if (opts.battleback) _battleback = opts.battleback;
         _playerSprite = _buildPlayerSprite();
         loadDB().then(function () {
@@ -119,6 +155,7 @@
             var actors = [buildPlayer()].concat(buildAllies(opts)).concat(buildEnemies(opts));
             var seed = (Date.now() ^ (seedCounter++ * 0x9e3779b1)) >>> 0;
             state = root.GameCombat.createBattle(db, actors, seed);
+            _seedVitals();   // carry persistent HP/MP/SP into the battle (no full-heal each fight)
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; chosenSkill = null; logQueue = [];
             cards = {};
             currentMsg = (actors.length > 2 ? actors.length - 1 + ' foes close in!' : 'A wild ' + state.actors.e1.name + ' interrupts your work!');
@@ -146,7 +183,7 @@
                 if (interv) { mode = 'beat'; waitUntil = ts + 850; break; }
                 if (id) {
                     var a = state.actors[id];
-                    if (a.side === 'player' && !a.ai) { pendingActorId = id; _openMenu(a); mode = 'menu'; }
+                    if (a.side === 'player' && !a.ai) { pendingActorId = id; _openMenu(a); mode = 'action'; actionCursor = 0; }
                     else { _autoTurn(id, ts); }
                     break;
                 }
@@ -195,7 +232,12 @@
     function consumeInput(jp) {
         if (!active) return;
         if (awaitingClose) { if (jp.a || jp.b || jp.start) _teardown(); return; }
-        if (mode === 'menu') {
+        if (mode === 'action') {
+            if (jp.up)   { actionCursor = (actionCursor - 1 + ACTIONS.length) % ACTIONS.length; _render(); }
+            if (jp.down) { actionCursor = (actionCursor + 1) % ACTIONS.length; _render(); }
+            if (jp.a)    _chooseAction();
+            if (jp.b)    _flee();
+        } else if (mode === 'menu') {
             var COLS = 2, n = menuSkills.length;
             if (jp.left)  { if (cursor % COLS > 0) cursor -= 1; }
             if (jp.right) { if (cursor % COLS < COLS - 1 && cursor + 1 < n) cursor += 1; }
@@ -203,21 +245,41 @@
             if (jp.down)  { if (cursor + COLS < n) cursor += COLS; }
             if (jp.left || jp.right || jp.up || jp.down) _render();
             if (jp.a) _selectSkill();
-            if (jp.b) _flee();
+            if (jp.b) { mode = 'action'; _render(); }
+        } else if (mode === 'item') {
+            if (jp.up)   { if (itemList.length) itemCursor = (itemCursor - 1 + itemList.length) % itemList.length; _render(); }
+            if (jp.down) { if (itemList.length) itemCursor = (itemCursor + 1) % itemList.length; _render(); }
+            if (jp.a)    _selectItem();
+            if (jp.b)    { mode = 'action'; _render(); }
         } else if (mode === 'target') {
             if (jp.left)  { targetIdx = (targetIdx - 1 + targetList.length) % targetList.length; _render(); }
             if (jp.right) { targetIdx = (targetIdx + 1) % targetList.length; _render(); }
-            if (jp.a) _resolve(chosenSkill, targetList[targetIdx]);
-            if (jp.b) { mode = 'menu'; _render(); }
+            if (jp.a) { if (targetMode === 'item') _resolveItem(chosenItem, targetList[targetIdx]); else _resolve(chosenSkill, targetList[targetIdx]); }
+            if (jp.b) { mode = (targetMode === 'item') ? 'item' : 'menu'; _render(); }
         }
+    }
+
+    function _chooseAction() {
+        var act = ACTIONS[actionCursor];
+        if (act === 'FIGHT') { mode = 'menu'; cursor = 0; _render(); }
+        else if (act === 'ITEM') {
+            itemList = _battleItems(); itemCursor = 0;
+            if (!itemList.length) { currentMsg = 'No usable items.'; if (root.GameAudio) GameAudio.playSE('Buzzer1'); _render(); }
+            else { mode = 'item'; _render(); }
+        } else { _flee(); }
     }
 
     function _selectSkill() {
         var skillId = menuSkills[cursor], sk = db.skills[skillId], eff = sk.effect || {};
+        var actor = state.actors[pendingActorId];
+        if (root.GameCombat.canAfford && !root.GameCombat.canAfford(actor, sk)) {
+            currentMsg = 'Not enough ' + (sk.affinity ? 'MP' : 'Stamina') + '.';
+            if (root.GameAudio) GameAudio.playSE('Buzzer1'); _render(); return;
+        }
         var needsTarget = (sk.power > 0 || ['slow', 'markTarget', 'sunder', 'applyToxin'].indexOf(eff.type) >= 0) && eff.type !== 'aoe';
         var foes = _alive('enemy');
         if (needsTarget && foes.length > 1) {
-            chosenSkill = skillId; targetList = foes.map(function (a) { return a.id; }); targetIdx = 0;
+            chosenSkill = skillId; targetMode = 'skill'; targetList = foes.map(function (a) { return a.id; }); targetIdx = 0;
             mode = 'target'; _render();
         } else {
             _resolve(skillId, needsTarget || eff.type === 'aoe' ? (foes[0] ? foes[0].id : null) : null);
@@ -230,9 +292,76 @@
         pendingActorId = null; chosenSkill = null; _closeMenu();
         mode = 'beat'; waitUntil = _now() + 520;
     }
-    function _flee() { currentMsg = 'You slip away from the fight.'; awaitingClose = true; mode = 'over'; _closeMenu(); }
+
+    // Items usable in battle, from the player's inventory.
+    function _battleItems() {
+        var inv = (root.GameSave && root.GameSave.state && root.GameSave.state.inventory) || {};
+        if (!root.GameItems) return [];
+        var out = [];
+        for (var pk in inv) {
+            var pocket = inv[pk]; if (!pocket) continue;
+            for (var id in pocket) {
+                if ((pocket[id] | 0) > 0 && GameItems.battleUsable(id)) out.push({ id: id, qty: pocket[id] | 0, name: GameItems.name(id) });
+            }
+        }
+        return out;
+    }
+    function _selectItem() {
+        var it = itemList[itemCursor]; if (!it) return;
+        chosenItem = it.id; targetMode = 'item';
+        var allies = _alive('player');   // recovery items target your side (incl. summons)
+        if (allies.length > 1) { targetList = allies.map(function (a) { return a.id; }); targetIdx = 0; mode = 'target'; _render(); }
+        else { _resolveItem(it.id, allies[0] ? allies[0].id : pendingActorId); }
+    }
+    function _resolveItem(itemId, targetId) {
+        var restore = root.GameItems && GameItems.battleRestore(itemId);
+        if (!restore) { mode = 'action'; _render(); return; }
+        // Consume one from inventory.
+        var inv = root.GameSave && root.GameSave.state && root.GameSave.state.inventory;
+        var def = GameItems.get(itemId), pk = (def && def.pocket) || 'items';
+        if (inv && inv[pk] && inv[pk][itemId]) { inv[pk][itemId] -= 1; if (inv[pk][itemId] <= 0) delete inv[pk][itemId]; if (root.GameSave.markDirty) GameSave.markDirty(); }
+        var before = state.log.length;
+        root.GameCombat.useItem(state, { actorId: pendingActorId, targetId: targetId, restore: restore });
+        var tname = state.actors[targetId] ? state.actors[targetId].name : 'ally';
+        currentMsg = 'Used ' + GameItems.name(itemId) + ' on ' + tname + '.';
+        _flush(before);
+        if (root.GameAudio) GameAudio.playSE('Heal1');
+        pendingActorId = null; chosenItem = null; _closeMenu();
+        mode = 'beat'; waitUntil = _now() + 520;
+    }
+    function _flee() { _persistVitals(); currentMsg = 'You slip away from the fight.'; awaitingClose = true; mode = 'over'; _closeMenu(); }
+
+    // ---- persistent vitals (HP/MP/SP carry between fights via state.survival %) --
+    function _surv() {
+        var s = root.GameSave && root.GameSave.state;
+        if (!s) return null;
+        s.survival = s.survival || { surveillance: 0, stamina: 100, exposure: 0 };
+        if (s.survival.hp == null) s.survival.hp = 100;
+        if (s.survival.mana == null) s.survival.mana = 100;
+        return s.survival;
+    }
+    function _seedVitals() {
+        var sv = _surv(), a = state && state.actors.p1; if (!sv || !a) return;
+        a.hp = Math.max(1, Math.round(a.maxHp * (sv.hp || 100) / 100));
+        a.mp = Math.round(a.maxMp * (sv.mana != null ? sv.mana : 100) / 100);
+        a.sp = Math.round(a.maxSp * (sv.stamina != null ? sv.stamina : 100) / 100);
+    }
+    function _persistVitals() {
+        var sv = _surv(), a = state && state.actors.p1; if (!sv || !a) return;
+        if (state.winner === 'enemy') {
+            // System "rescue" on defeat — back on your feet, but watched (TODO: real down/respawn + penalty).
+            sv.hp = 50; if (sv.mana < 30) sv.mana = 30; if (sv.stamina < 30) sv.stamina = 30;
+        } else {
+            sv.hp = Math.max(0, Math.round(a.hp / a.maxHp * 100));
+            sv.mana = Math.max(0, Math.round(a.mp / a.maxMp * 100));
+            sv.stamina = Math.max(0, Math.round(a.sp / a.maxSp * 100));
+        }
+        if (root.GameSave.markDirty) GameSave.markDirty();
+        if (root.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv);
+    }
 
     function _finish() {
+        _persistVitals();
         var msg;
         if (state.winner === 'player') {
             var totalXp = 0, lvlEvents = [];
@@ -262,7 +391,7 @@
             '<div class="cv-field">' +
             '  <div class="cv-row cv-enemies" id="cv-enemies"></div>' +
             '  <div class="cv-row cv-players" id="cv-players"></div>' +
-            '</div><div class="cv-msg" id="cv-msg"></div><div class="cv-menu" id="cv-menu"></div>';
+            '</div><div class="cv-bottom"><div class="cv-msg" id="cv-msg"></div><div class="cv-menu" id="cv-menu"></div></div>';
         host.appendChild(r);
         els.root = r;
         els.enemies = r.querySelector('#cv-enemies'); els.players = r.querySelector('#cv-players');
@@ -296,22 +425,30 @@
         var c = document.createElement('div');
         c.className = 'cv-card cv-' + a.side + (a.summon ? ' cv-summon' : '');
         // Sprite stands on the battleback; a small translucent strip holds name + bars.
+        // Player-side actors show MP + SP (resource) bars; enemies show only HP.
+        var resBars = (a.side === 'player')
+            ? '<div class="cv-bar cv-mp"><span></span></div><div class="cv-bar cv-sp"><span></span></div>'
+            : '';
         c.innerHTML = '<div class="cv-tgt">▼</div>' +
             '<div class="cv-sprite">' + _sprite(a) + '</div>' +
             '<div class="cv-info"><div class="cv-name"></div>' +
             '<div class="cv-bar cv-hp"><span></span></div>' +
+            resBars +
             '<div class="cv-bar cv-tempo"><span></span></div>' +
             '<div class="cv-status"></div></div>';
         return c;
     }
     function _openMenu(a) {
-        menuSkills = a.loadout.filter(function (id) {
+        var skills = a.loadout.filter(function (id) {
             var s = db.skills[id]; if (!s) return false;
             return s.power > 0 || (s.effect && ['heal', 'defUp', 'slow', 'markTarget', 'sunder', 'applyToxin', 'taunt', 'partyBuff', 'summon'].indexOf(s.effect.type) >= 0);
         });
+        // Always offer the free basic Strike (no resource regen means you must
+        // always be able to act even when out of MP/Stamina).
+        menuSkills = (skills.indexOf('strike') < 0 && db.skills.strike) ? ['strike'].concat(skills) : skills;
         cursor = 0;
     }
-    function _closeMenu() { menuSkills = []; }
+    function _closeMenu() { menuSkills = []; itemList = []; chosenItem = null; }
 
     function _statusTags(a) {
         var t = [];
@@ -336,7 +473,13 @@
             : (a.id === 'p1' && prog ? ' Lv' + prog.level : (allyMeta[a.id] ? ' Lv' + allyMeta[a.id].level : ''));
         c.querySelector('.cv-name').textContent = a.name + lvl;
         _setBar(c, 'cv-hp', a.hp / a.maxHp, 'hp-fill' + (a.hp / a.maxHp < 0.3 ? ' low' : ''));
+        if (a.side === 'player') {
+            _setBar(c, 'cv-mp', a.maxMp ? a.mp / a.maxMp : 0, 'mp-fill');
+            _setBar(c, 'cv-sp', a.maxSp ? a.sp / a.maxSp : 0, 'sp-fill');
+        }
         _setBar(c, 'cv-tempo', _tempoDisp(a), 'tempo-fill' + (a.tempo >= max ? ' ready' : ''));
+        // Enemies may show status tags (DEF↑/SLOW/…); only their MP/SP bars are
+        // hidden (player-only, handled in _card).
         c.querySelector('.cv-status').textContent = _statusTags(a);
         c.classList.toggle('dead', a.hp <= 0);
         var targeting = (mode === 'target' && targetList[targetIdx] === a.id);
@@ -348,16 +491,40 @@
         state.order.forEach(function (id) { _updateCard(state.actors[id]); });
         els.iv.style.width = Math.min(1, (state._ivTempo || 0) / state.tuning.tempoMax) * 100 + '%';
         els.surv.textContent = 'Surveillance ' + state.surveillance;
-        els.msg.textContent = (mode === 'target') ? 'Choose target  ◄ ►   (B: back)' : currentMsg;
-        if (mode === 'menu' && menuSkills.length) {
+        els.msg.textContent =
+            (mode === 'target') ? (targetMode === 'item' ? 'Use on who?  ◄ ►   (B: back)' : 'Choose target  ◄ ►   (B: back)')
+            : (mode === 'item') ? 'Choose item  ▲ ▼   (B: back)'
+            : (mode === 'action') ? 'Your move.'
+            : currentMsg;
+
+        var actor = state.actors[pendingActorId];
+        if (mode === 'action') {
             els.menu.style.display = 'grid';
-            els.menu.innerHTML = menuSkills.map(function (id, i) {
-                var s = db.skills[id];
-                return '<div class="cv-opt' + (i === cursor ? ' sel' : '') + '">' + (i === cursor ? '▶ ' : '') + s.name + (s.tempoCost ? ' <em>' + s.tempoCost + '</em>' : '') + '</div>';
+            els.menu.classList.add('cv-menu-1col');
+            els.menu.innerHTML = ACTIONS.map(function (lbl, i) {
+                return '<div class="cv-opt' + (i === actionCursor ? ' sel' : '') + '">' + (i === actionCursor ? '▶ ' : '') + lbl + '</div>';
             }).join('');
-            var selOpt = els.menu.querySelector('.cv-opt.sel');   // keep the highlighted option visible when scrolling
+        } else if (mode === 'menu' && menuSkills.length) {
+            els.menu.style.display = 'grid';
+            els.menu.classList.remove('cv-menu-1col');
+            els.menu.innerHTML = menuSkills.map(function (id, i) {
+                var s = db.skills[id], cost = root.GameCombat.skillCost(s);
+                var costStr = cost.mp ? (cost.mp + ' MP') : cost.sp ? (cost.sp + ' SP') : '';
+                var afford = !actor || root.GameCombat.canAfford(actor, s);
+                return '<div class="cv-opt' + (i === cursor ? ' sel' : '') + (afford ? '' : ' cv-opt-dis') + '">' +
+                    (i === cursor ? '▶ ' : '') + s.name + (costStr ? ' <em>' + costStr + '</em>' : '') + '</div>';
+            }).join('');
+            var selOpt = els.menu.querySelector('.cv-opt.sel');
             if (selOpt) selOpt.scrollIntoView({ block: 'nearest' });
-        } else { els.menu.style.display = 'none'; els.menu.innerHTML = ''; }
+        } else if (mode === 'item') {
+            els.menu.style.display = 'grid';
+            els.menu.classList.add('cv-menu-1col');
+            els.menu.innerHTML = itemList.length ? itemList.map(function (it, i) {
+                return '<div class="cv-opt' + (i === itemCursor ? ' sel' : '') + '">' + (i === itemCursor ? '▶ ' : '') + it.name + ' <em>×' + it.qty + '</em></div>';
+            }).join('') : '<div class="cv-opt cv-opt-dis">No usable items</div>';
+            var selI = els.menu.querySelector('.cv-opt.sel');
+            if (selI) selI.scrollIntoView({ block: 'nearest' });
+        } else { els.menu.style.display = 'none'; els.menu.classList.remove('cv-menu-1col'); els.menu.innerHTML = ''; }
     }
 
     function _teardown() {
@@ -365,6 +532,11 @@
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
         if (els.root && els.root.parentNode) els.root.parentNode.removeChild(els.root);
         els = {}; cards = {}; state = null;
+        // Notify any awaiter (e.g. an event 'battle' command) that combat is over.
+        var cb = _onEnd; _onEnd = null;
+        if (cb) try { cb(); } catch (e) {}
+        // Combat may have leveled the player past an evolution threshold.
+        if (root.GameEvolvePopup) try { root.GameEvolvePopup.check(); } catch (e) {}
     }
 
     function _injectCSS() {
@@ -387,6 +559,8 @@
         '.cv-bar{height:6px;background:#1a1a24;border:1px solid #000;border-radius:3px;margin:2px 0;overflow:hidden;}' +
         '.cv-bar span{display:block;height:100%;width:100%;}' +
         '.hp-fill{background:linear-gradient(#7bd66a,#3da13a);transition:width 140ms ease;} .hp-fill.low{background:linear-gradient(#e06a4a,#b03020);transition:width 140ms ease;}' +
+        '.mp-fill{background:linear-gradient(#6ab0e0,#2a6ab0);transition:width 140ms ease;} .sp-fill{background:linear-gradient(#e0d06a,#b0902a);transition:width 140ms ease;}' +
+        '.cv-mp,.cv-sp{height:4px;}' +
         '.tempo-fill{background:linear-gradient(#e8c46a,#b88a2a);} .tempo-fill.ready{background:linear-gradient(#ffe9a0,#e8b94a);box-shadow:0 0 4px #ffd96a;}' +
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:9px;margin-top:1px;}' +
         '.cv-sprite{font-size:26px;text-align:center;min-height:30px;}' +
@@ -396,9 +570,14 @@
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;flex:0 0 auto;}' +
         '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{flex:1 1 auto;max-width:240px;margin:0;border-color:#0a3038;}' +
         '.cv-surv{font-size:8px;color:#80d0e8;flex:0 0 auto;}' +
-        '.cv-msg{min-height:28px;padding:5px 10px;font-size:11px;background:#060610;border-top:1px solid #18b8c8;box-shadow:inset 0 1px 0 #002830;display:flex;align-items:center;}' +
-        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:#0a1830;border-top:1px solid #18b8c8;max-height:40%;overflow-y:auto;align-content:start;}' +
+        // Bottom UI (message + menu) overlays the lower field so it always has
+        // room on the cramped GBA screen instead of being squeezed by flex.
+        '.cv-bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;}' +
+        '.cv-msg{min-height:22px;padding:5px 10px;font-size:11px;background:rgba(6,6,16,.92);border-top:1px solid #18b8c8;box-shadow:inset 0 1px 0 #002830;display:flex;align-items:center;}' +
+        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:rgba(10,24,48,.96);border-top:1px solid #18b8c8;max-height:120px;overflow-y:auto;align-content:start;}' +
+        '.cv-menu.cv-menu-1col{grid-template-columns:1fr;}' +
         '.cv-opt{font-size:11px;padding:3px 6px;color:#c8d8e8;border-radius:2px;}' +
+        '.cv-opt-dis{opacity:.4;}' +
         '.cv-opt.sel{background:rgba(24,184,200,0.18);color:#fff;}' +
         '.cv-opt em{float:right;font-style:normal;color:#8aa0b4;font-size:9px;}';
         var st = document.createElement('style'); st.id = 'cv-style'; st.textContent = css; document.head.appendChild(st);

@@ -36,8 +36,13 @@ for gitdir in "$WORKSPACE"/*/.git; do
 
   if git -C "$repo" checkout main --quiet 2>/dev/null \
      || git -C "$repo" checkout -b main --quiet origin/main 2>/dev/null; then
-    git -C "$repo" pull --ff-only origin main --quiet 2>/dev/null || true
-    switched+=("$name -> main")
+    # Reconcile with the remote: the working tree is clean (checked above), so
+    # hard-reset main to origin/main. Unlike `pull --ff-only`, this also
+    # recovers from a diverged or unrelated local history by adopting the remote.
+    if git -C "$repo" rev-parse --verify origin/main >/dev/null 2>&1; then
+      git -C "$repo" reset --hard origin/main --quiet 2>/dev/null || true
+    fi
+    switched+=("$name -> main (reset to origin/main)")
   else
     switched+=("$name: could not switch to main")
   fi
