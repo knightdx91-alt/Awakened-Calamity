@@ -62,7 +62,7 @@
         return list.map(function (spec, i) {
             var c = db.creatures[spec.key] || db.creatures.emberling;
             var id = 'e' + (i + 1);
-            enemyMeta[id] = { key: spec.key, level: spec.level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, name: c.name };
+            enemyMeta[id] = { key: spec.key, level: spec.level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, name: c.name, battler: c.battler || null };
             return { id: id, side: 'enemy', name: c.name, affinity: c.affinity, stats: Object.assign({}, c.stats), loadout: (c.loadout || ['jab']).slice() };
         });
     }
@@ -226,7 +226,13 @@
         els.iv = r.querySelector('#cv-system .cv-iv span'); els.surv = r.querySelector('#cv-surv');
         els.msg = r.querySelector('#cv-msg'); els.menu = r.querySelector('#cv-menu');
     }
-    function _sprite(a) { return a.side === 'enemy' ? '👹' : (a.summon ? '⚙' : '🛠'); }
+    function _sprite(a) {
+        // Enemy with an imported battler image -> show the art; else emoji fallback.
+        if (a.side === 'enemy' && enemyMeta[a.id] && enemyMeta[a.id].battler) {
+            return '<img class="cv-battler" src="data/battlers/' + enemyMeta[a.id].battler + '" alt="">';
+        }
+        return a.side === 'enemy' ? '👹' : (a.summon ? '⚙' : '🛠');
+    }
     function _card(a) {
         var c = document.createElement('div');
         c.className = 'cv-card cv-' + a.side + (a.summon ? ' cv-summon' : '');
@@ -314,7 +320,8 @@
         '.hp-fill{background:linear-gradient(#7bd66a,#3da13a);transition:width 140ms ease;} .hp-fill.low{background:linear-gradient(#e06a4a,#b03020);transition:width 140ms ease;}' +
         '.tempo-fill{background:linear-gradient(#e8c46a,#b88a2a);} .tempo-fill.ready{background:linear-gradient(#ffe9a0,#e8b94a);box-shadow:0 0 4px #ffd96a;}' +
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:9px;margin-top:1px;}' +
-        '.cv-sprite{font-size:26px;text-align:center;}' +
+        '.cv-sprite{font-size:26px;text-align:center;min-height:30px;}' +
+        '.cv-battler{max-width:100%;max-height:54px;image-rendering:auto;vertical-align:middle;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));}' +
         '.cv-system{align-self:center;text-align:center;width:36%;padding:3px 6px;background:rgba(2,12,18,0.7);border:1px solid #002830;box-shadow:0 0 0 1px #18b8c8;border-radius:3px;}' +
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;}' +
         '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{border-color:#0a3038;}' +

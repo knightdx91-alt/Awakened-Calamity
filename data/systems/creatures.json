@@ -1,5 +1,49 @@
 {
-  "emberling": { "name": "Emberling", "affinity": "ember",   "xpYield": 1.0, "stats": { "hp": 62, "atk": 22, "def": 14, "speed": 62 }, "loadout": ["jab","ember_bolt"] },
-  "thornwolf": { "name": "Thornwolf", "affinity": "verdant", "xpYield": 1.3, "stats": { "hp": 78, "atk": 26, "def": 17, "speed": 70 }, "loadout": ["jab","heavy_strike"] },
-  "dummy":     { "name": "Hollow Husk", "affinity": null, "xpYield": 0.6, "stats": { "hp": 34, "atk": 4, "def": 6, "speed": 30 }, "loadout": ["jab"] }
+  "emberling": {
+    "name": "Emberling",
+    "affinity": "ember",
+    "xpYield": 1.0,
+    "stats": {
+      "hp": 62,
+      "atk": 22,
+      "def": 14,
+      "speed": 62
+    },
+    "loadout": [
+      "jab",
+      "ember_bolt"
+    ],
+    "battler": "rtp/Firespirit.png"
+  },
+  "thornwolf": {
+    "name": "Thornwolf",
+    "affinity": "verdant",
+    "xpYield": 1.3,
+    "stats": {
+      "hp": 78,
+      "atk": 26,
+      "def": 17,
+      "speed": 70
+    },
+    "loadout": [
+      "jab",
+      "heavy_strike"
+    ],
+    "battler": "rtp/Werewolf.png"
+  },
+  "dummy": {
+    "name": "Hollow Husk",
+    "affinity": null,
+    "xpYield": 0.6,
+    "stats": {
+      "hp": 34,
+      "atk": 4,
+      "def": 6,
+      "speed": 30
+    },
+    "loadout": [
+      "jab"
+    ],
+    "battler": "rtp/Puppet.png"
+  }
 }
