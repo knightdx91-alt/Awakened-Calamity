@@ -24,11 +24,11 @@
         if (ov && ov.file && ov.frame_w) return { src: 'data/sprites/' + ov.file, cols: ov.cols, rows: ov.rows, fw: ov.frame_w, fh: ov.frame_h, char: 0 };
         return { src: 'data/sprites/rtp/Actor1.png', cols: 12, rows: 8, fw: 32, fh: 32, char: 0 };
     }
-    // A scaled, cropped DOWN-facing standing frame of a charset (div + bg-position).
-    function _charSpriteHTML(sp, hpx) {
+    // A scaled, cropped standing frame of a charset. dir: 0=down 1=left 2=right 3=up.
+    function _charSpriteHTML(sp, hpx, dir) {
         var perRow = Math.max(1, (sp.cols / 3) | 0), ch = sp.char || 0;
         var cc = ch % perRow, cr = (ch / perRow) | 0;
-        var fx = (cc * 3 + 1) * sp.fw, fy = (cr * 4) * sp.fh;     // middle col = stand, row 0 = down
+        var fx = (cc * 3 + 1) * sp.fw, fy = (cr * 4 + (dir || 0)) * sp.fh;   // middle col = stand
         var S = hpx / sp.fh, sw = sp.cols * sp.fw, sh = sp.rows * sp.fh;
         return '<div class="cv-charsprite" style="width:' + (sp.fw * S) + 'px;height:' + (sp.fh * S) + 'px;' +
             "background-image:url('" + sp.src + "');background-size:" + (sw * S) + 'px ' + (sh * S) + 'px;' +
@@ -260,7 +260,7 @@
         if (a.side === 'enemy' && enemyMeta[a.id] && enemyMeta[a.id].battler)
             return '<img class="cv-battler" src="data/battlers/' + enemyMeta[a.id].battler + '" alt="">';
         if (a.side === 'player' && !a.summon)
-            return _charSpriteHTML(_playerSprite || (_playerSprite = _buildPlayerSprite()), 58);
+            return _charSpriteHTML(_playerSprite || (_playerSprite = _buildPlayerSprite()), 58, 1);  // face left, toward foes
         return a.side === 'enemy' ? '👹' : (a.summon ? '⚙' : '🛠');
     }
     function _card(a) {
@@ -339,8 +339,9 @@
         if (document.getElementById('cv-style')) return;
         var css =
         '#combat-view{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;font-family:"Courier New",monospace;color:#e6eef6;background:radial-gradient(circle at 50% 35%,#2a2330,#0b0a12 80%);}' +
-        '.cv-field{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:4px;}' +
-        '.cv-row{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}' +
+        // Side-view (FF-style): enemies left, SYSTEM centre, hero(es) right.
+        '.cv-field{position:relative;flex:1;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:6px 8px;}' +
+        '.cv-row{display:flex;flex-direction:column;gap:8px;justify-content:center;flex-wrap:wrap;max-height:100%;}' +
         '.cv-enemies{align-items:flex-start;} .cv-players{align-items:flex-end;}' +
         '.cv-card{position:relative;flex:0 1 auto;min-width:20%;max-width:40%;display:flex;flex-direction:column;align-items:center;padding:0 2px;background:transparent;}' +
         '.cv-card.dead{opacity:0.32;filter:grayscale(1);}' +
@@ -358,7 +359,7 @@
         '.cv-status{font-size:8px;letter-spacing:1px;color:#9ab0c4;min-height:9px;margin-top:1px;}' +
         '.cv-sprite{font-size:26px;text-align:center;min-height:30px;}' +
         '.cv-battler{max-width:100%;max-height:66px;image-rendering:auto;vertical-align:bottom;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.6));}' +
-        '.cv-system{align-self:center;text-align:center;width:36%;padding:3px 6px;background:rgba(2,12,18,0.7);border:1px solid #002830;box-shadow:0 0 0 1px #18b8c8;border-radius:3px;}' +
+        '.cv-system{align-self:center;flex:0 0 auto;text-align:center;width:26%;min-width:96px;padding:3px 6px;background:rgba(2,12,18,0.7);border:1px solid #002830;box-shadow:0 0 0 1px #18b8c8;border-radius:3px;}' +
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;}' +
         '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{border-color:#0a3038;}' +
         '.cv-surv{font-size:8px;color:#80d0e8;margin-top:1px;}' +
