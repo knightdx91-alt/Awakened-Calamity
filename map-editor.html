@@ -208,6 +208,7 @@
     <!-- File -->
     <div class="tgrp">
       <button id="newBtn" class="tb" title="New map">📄</button>
+      <button id="genBtn" class="tb" title="Generate a map (town / route / forest / dungeon / interior)">🎲</button>
       <button id="importBtn" class="tb" title="Open / Import…">📂</button>
       <button id="exportBtn" class="tb" title="Export (save layout+map)">💾</button>
     </div>
@@ -356,6 +357,39 @@
     <button id="mEvent" class="modebtn" data-mode2="event">Event</button>
   </div>
 
+  <!-- Generate map dialog -->
+  <div id="genModal" class="ed-modal" style="display:none;">
+    <div class="ed-box">
+      <div class="ed-head"><strong>🎲 Generate Map</strong><button id="genClose">✕</button></div>
+      <div class="ed-body">
+        <div class="row"><label class="lbl">Type</label>
+          <select id="genArch" style="flex:1;min-width:0;">
+            <option value="town">Town</option>
+            <option value="route">Route</option>
+            <option value="forest">Forest</option>
+            <option value="dungeon">Dungeon</option>
+            <option value="interior">Interior</option>
+          </select></div>
+        <div class="row"><label class="lbl">Name</label><input type="text" id="genName" value="NewMap" style="flex:1;min-width:0;"></div>
+        <div class="row"><label class="lbl">Width</label><input type="number" id="genW" value="50" min="12" max="200">
+          <label class="lbl">Height</label><input type="number" id="genH" value="50" min="12" max="200"></div>
+        <div class="row"><label class="lbl">Seed</label><input type="number" id="genSeed" value="" placeholder="(random)" style="flex:1;min-width:0;">
+          <button id="genReseed" title="New random seed">🎲</button></div>
+        <div class="row" id="genTownOpts"><label class="lbl">Town</label>
+          <label style="font-size:12px;"><input type="checkbox" id="genKeep" checked> Keep/castle</label>
+          <label style="font-size:12px;"><input type="checkbox" id="genPond" checked> Pond</label>
+          <label class="lbl">Houses</label><input type="number" id="genHouses" value="12" min="0" max="12" style="width:54px;"></label>
+        </div>
+        <div class="row" id="genTier" style="display:none;"><label class="lbl">Tier</label><input type="number" id="genTierIn" value="1" min="1" max="4"></div>
+        <div class="row" style="font-size:11px;opacity:.7;">Generates onto the canvas — tweak, then ☁ Save to Repo.</div>
+      </div>
+      <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--line2);">
+        <button id="genGo" style="background:#2b6a3a;color:#fff;border-color:#3a8a4f;">Generate</button>
+        <button id="genCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Map Properties dialog (right-click a map in the list, or Tools menu) -->
   <div id="mapPropsModal" class="ed-modal" style="display:none;">
     <div class="ed-box">
@@ -459,6 +493,7 @@
     </div>
   </div>
 
+<script src="map-editor-gen.js?v=__CACHE_BUST__"></script>
 <script src="map-editor.js?v=__CACHE_BUST__"></script>
 </body>
 </html>

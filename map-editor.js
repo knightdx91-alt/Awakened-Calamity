@@ -1703,6 +1703,46 @@
     e.target.value = '';
   });
 
+  // ── Generate map (in-browser MapGen → applyLayout) ──
+  (function () {
+    var modal = $('genModal');
+    if (!modal) return;
+    function syncOpts() {
+      var a = $('genArch').value;
+      $('genTownOpts').style.display = (a === 'town') ? '' : 'none';
+      $('genTier').style.display = (a === 'dungeon') ? '' : 'none';
+      var sz = (window.MapGen && MapGen.DEFAULT_SIZE[a]) || [50, 50];
+      $('genW').value = sz[0]; $('genH').value = sz[1];
+    }
+    function open() { $('genName').value = $('mapName') ? ($('mapName').value || 'NewMap') : 'NewMap'; syncOpts(); modal.style.display = 'flex'; }
+    function close() { modal.style.display = 'none'; }
+    $('genBtn').addEventListener('click', open);
+    $('genClose').addEventListener('click', close);
+    $('genCancel').addEventListener('click', close);
+    $('genArch').addEventListener('change', syncOpts);
+    $('genReseed').addEventListener('click', function () { $('genSeed').value = (Math.random() * 1e9) | 0; });
+    $('genGo').addEventListener('click', function () {
+      if (!window.MapGen) { alert('Generator script not loaded.'); return; }
+      var arch = $('genArch').value;
+      var name = ($('genName').value || 'NewMap').trim().replace(/\s+/g, '');
+      var seedStr = $('genSeed').value;
+      var opt = {
+        archetype: arch, name: name,
+        region: $('mapRegion') ? $('mapRegion').value : 'awakened',
+        w: parseInt($('genW').value, 10) || 50, h: parseInt($('genH').value, 10) || 50,
+        seed: seedStr !== '' ? (parseInt(seedStr, 10) || 0) : undefined,
+        keep: $('genKeep').checked, pond: $('genPond').checked,
+        houses: parseInt($('genHouses').value, 10), tier: parseInt($('genTierIn').value, 10) || 1,
+      };
+      var go = $('genGo'); go.disabled = true; go.textContent = 'Generating…';
+      Promise.resolve().then(function () { return MapGen.generate(opt); })
+        .then(function (res) { try { pushUndo(); } catch (_) {} return applyLayout(res.layout, res.map); })
+        .then(function () { close(); try { toast('Generated ' + name); } catch (_) {} })
+        .catch(function (err) { alert('Generate failed: ' + ((err && err.message) || err)); })
+        .then(function () { go.disabled = false; go.textContent = 'Generate'; });
+    });
+  })();
+
   // ── Toolbar wiring ──
   function setActiveLayer(key) {
     state.active = key;
