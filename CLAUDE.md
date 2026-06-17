@@ -383,6 +383,59 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     - **Remaining for "all 21 w/ autotiles":** other A2 sheets (inside/dungeon floors) reuse the same
       baker; **A1** (animated water/waterfall), **A3** (2×2 roof tops), **A4** (2×3 wall top+side) each
       need their own block-structure handling. Pipeline proven; extension is mechanical per type.
+- **2026-06-17** — **Ludus mini-game, RPG Maker VX Ace RTP import + wiring, editor & combat overhaul.**
+  - **Ludus** (the *Codex Alera* war-game) built standalone (`ludus.html` + `ludus/*.js`): pure
+    rules engine (11×11 ground + 5×5 sky board over the centre — fixed the fan draft's impossible
+    11→5 mapping), AI bot (easy/medium/hard alpha-beta), canvas renderer, **Firebase Realtime DB
+    online 2-player** (owner pasted live `ludus-alera` config), screen-flow (opponent select =
+    book characters/Canim/Vord, side choice, settings), styled **Rules** modal. Hub card added.
+    High Lord furycraft restored. `LUDUS.md` documents canon-vs-designed.
+  - **RPG Maker VX Ace RTP** (194 MB installer) couldn't be fetched (Cloudflare IP-block on
+    pcgamingwiki, even headless) → pulled the **same RTP from the Internet Archive**
+    (`rpgvxace-rtp_202606`), `innoextract`-ed it → **780 files** on branch **`vx-ace-rtp`**
+    (`assets-source/vx-ace-rtp/`). ⚠️ EULA-gated prototype assets. **Catalog:** `docs/RTP_CATALOG.md`
+    (every category, the RM menu that uses it, engine mapping; notes NO scripts / NO generator parts).
+  - **Owner decision — purge license/EULA files:** deleted every `*.LICENSE.txt`/`LICENSE_FLAG`/
+    EULA/font-license across ALL branches (kept only `.claude/skills/cad-agent/LICENSE`). Owner
+    accepts the legal status is unchanged; prototype "everything together / leave it clean".
+  - **RTP import + wiring to main** (importers `tools/import_vx_ace_*.py`, `build_vx_ace_autotiles.py`):
+    - **Tilesets** (22 sheets → `data/tilesets/rtp_*`, raw 32px grids). **Real A2 ground autotiles
+      baked** via a correct port of RM's A2 template (per-corner quarter map behind MV/MZ
+      `FLOOR_AUTOTILE_TABLE`) → `rtp_{outside,inside,dungeon}_ground` (grass/dirt/road/cobble blend
+      seamlessly; inside/dungeon floors + dungeon hole too). `_rm_sets.json` = RTP Outside/Inside/
+      Dungeon/World sets. **Old packs (pf_*/xp_*/ac_*) removed from main → `graphics-backup` branch.**
+    - **Character sprites** (48 → `data/sprites/rtp/`) merged into the editor sprite picker.
+    - **IconSet** (624 @24px → `data/icons/`) + `src/ui/icons.js` (`GameIcons`); **wired into the
+      SUPPLIES menu** (real item icons).
+    - **Faces** (12 → `data/faces/`) + **dialogue portraits** (`GameDialogue.show(…,{face})`,
+      event 'text' `c.face`, editor text-command face picker).
+    - **Battlers** (74 → `data/battlers/`) **wired into combat**.
+    - **Batch-imported** Battlebacks(108)/Animations(93)/Parallaxes(15)/Titles(29)/System(5) →
+      `data/{battlebacks,animations,parallaxes,titles,system}/` (~88 MB). **Audio PARKED**
+      (SE/ME/BGS imported ~7 MB; **BGM 78 MB indexed but NOT copied** — `--bgm` to pull; no
+      `GameAudio` yet). **A1 water + A3/A4 wall/roof autotile bakes still TODO.**
+  - **Map editor fixes:** **publishes map saves to `main`** (was the `maps` branch — now the game
+    can load authored maps; deploy-on-save). Player-start honored (`?x=&y=` + saved start; editor
+    Play passes them). Repo save "doesn't match" fixed (no-store GET + sha-conflict retry). Visible
+    **Multi-tile palette toggle** (single tile by default). **Event layer + all mode buttons toggle
+    off** (toolbar + side-panel + **menu** items). **Map Properties Save button**. **Large palettes
+    scroll** (`touch-action:pan-x pan-y`).
+  - **Combat view overhaul** (`src/ui/combatview.js`): **RTP battleback** backdrop; **real sprites
+    not blocks** (player charset + enemy battlers/charsets, de-boxed); **side-view FF layout**
+    (enemies left / hero right, facing inward); **bonded creatures wired into the battle party**
+    (`buildAllies` from `GameSave.state.bonds` `{key,nickname?,level?}` — AI allies w/ sprite+Lv);
+    summons get art; charset-enemy option (creature `charset`); **SYSTEM surveillance meter moved to
+    a top bar**; **skill menu scrolls** (overflow + scrollIntoView).
+  - **DESIGN.md** scrubbed of all Pokémon references (original-IP framing).
+  - **IN PROGRESS (not committed):** a **50×50 RTP town** generator (`tools/build_rtp_town.py`) —
+    researched 10+ RM town-mapping sources; v1 builds a town (central cobble plaza + well, dirt
+    paths, ~14 colour-roof houses w/ door events, tree borders) on autotiled ground + a packed
+    `town_props` overlay sheet (engine = 1 tileset/layer). Identified correct B-sheet tile indices
+    (window 112, door 98, well 147, lamp 176, tree 189, crate 220, fence 165, stall 246, flowers/
+    crops). **NEXT: rewrite with corrected tiles + polish** (2-tile walls, lamps along paths,
+    gardens, leafy trees), re-render until good, then commit + register `VerdantTown`.
+  - **📋 Agenda:** Bind flow (capture → `bonds[]`); A4 wall + A3 roof + A1 water autotile ports;
+    audio (BGM + `GameAudio`); finish the 50×50 town.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
