@@ -129,8 +129,8 @@ window.GameSystemShop = (function () {
 
     // ---- SERVICES ----
     function _renderServices(host) {
-        _buyBtn(host, 'Emergency Restore', 'Full Stamina, purge Exposure. (+8 Surv)', true, function () {
-            var s = _st(); if (s) { var st = s.survival || {}; st.stamina = 100; st.exposure = Math.max(0, (st.exposure || 0) - 40); s.survival = st; }
+        _buyBtn(host, 'Full Restore', 'Restore HP, MP, Stamina; purge Exposure. (+8 Surv)', true, function () {
+            var s = _st(); if (s) { var st = s.survival || {}; st.hp = 100; st.mana = 100; st.stamina = 100; st.exposure = Math.max(0, (st.exposure || 0) - 40); s.survival = st; if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(st); }
             _raise(8, 'Restore applied. Surveillance noted.'); if (window.GameAudio) GameAudio.playSE('Heal1'); _render();
         });
         _buyBtn(host, 'Fast-Travel', 'Jump to an unlocked landmark. (+6 Surv)', true, function () {

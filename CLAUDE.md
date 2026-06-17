@@ -173,6 +173,22 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## No in-battle regen + persistent vitals + healing (2026-06-17)
+- **No passive HP/MP/SP regen in battle** (removed the per-turn regen). Recovery only via items,
+  healing skills, or a healer ally. To avoid soft-locks, every fighter always has a **free basic
+  `strike`** (cost 0; `skillCost` honors an explicit `sk.cost`). AI falls back to `strike` when it
+  can't afford anything; the player FIGHT menu always lists Strike first.
+- **Persistent vitals:** HP/MP/SP carry **between battles** via `state.survival.{hp,mana,stamina}`
+  (the HUD %s). Combat **seeds** the player actor from those % at start (`_seedVitals`) and **writes
+  back** on win/flee (`_persistVitals`); defeat = System "rescue" to 50% HP (TODO real down/penalty).
+  Added `hp`/`mana` to the default `survival` (migration backfills old saves).
+- **Out-of-battle healing:** System Shop **Full Restore** now restores HP/MP/Stamina (+purge Exposure);
+  new **`heal` event command** (engine + editor — what: all/hp/mp/sp, amount% or full) for healer NPCs
+  in town / wild healers / infirmaries.
+- **Enemy display:** reverted — enemies **can** show status tags again; only their **MP/SP bars** stay
+  hidden (player-only). Browser-verified (headless): wounded 40% HP carries into battle, Strike is the
+  free first option, vitals persist after the fight. Suites pass.
+
 ## Battle overhaul + MP/SP + items-in-battle + designation (2026-06-17)
 - **Battle menu = FIGHT / ITEM / RUN** (`combatview.js`): the player turn opens a top action menu
   (▲▼ + A), not a bare skill list. FIGHT → skills (with cost shown, unaffordable greyed) → target;

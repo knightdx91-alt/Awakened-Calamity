@@ -1263,7 +1263,7 @@
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
-    ['quest', '⚑ Quest'],
+    ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
@@ -1292,6 +1292,7 @@
       case 'grantspec': return { type: 'grantspec', specId: '' };
       case 'grantskill': return { type: 'grantskill', skill: '' };
       case 'quest': return { type: 'quest', op: 'start', id: '', stage: 0 };
+      case 'heal': return { type: 'heal', what: 'all', amount: null };
       case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
       case 'shake': return { type: 'shake', power: 5, frames: 30 };
       case 'label': return { type: 'label', label: '' };
@@ -1633,6 +1634,14 @@
       qid.addEventListener('change', function () { cmd.id = this.value; });
       qd.querySelector('.cQstage').addEventListener('change', function () { cmd.stage = parseInt(this.value, 10) || 0; });
       body.appendChild(qd);
+    } else if (cmd.type === 'heal') {
+      body.innerHTML = '<div class="row">' + lbl('Restore') +
+        '<select class="cWhat"><option value="all">All (HP·MP·SP)</option><option value="hp">HP</option><option value="mp">MP</option><option value="sp">Stamina</option></select>' +
+        lbl('Amount %') + '<input type="number" class="cAmt" min="0" max="100" value="' + (cmd.amount == null ? '' : cmd.amount) + '" placeholder="full" style="width:60px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">blank = full restore</div>';
+      body.querySelector('.cWhat').value = cmd.what || 'all';
+      body.querySelector('.cWhat').addEventListener('change', function () { cmd.what = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
     } else if (cmd.type === 'fade') {
       body.innerHTML = '<div class="row">' + lbl('Fade') +
         '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +

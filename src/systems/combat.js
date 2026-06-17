@@ -102,6 +102,7 @@
     // tempo weight so heavier skills cost more.
     function skillCost(sk) {
         if (!sk) return { mp: 0, sp: 0 };
+        if (sk.cost) return { mp: sk.cost.mp || 0, sp: sk.cost.sp || 0 };   // explicit (e.g. free Strike)
         const amt = Math.max(4, Math.round((sk.tempoCost || 300) / 40));
         if (sk.affinity) return { mp: amt, sp: 0 };
         if ((sk.power || 0) > 0) return { mp: 0, sp: amt };
@@ -248,10 +249,9 @@
         if (a.markTurns > 0 && --a.markTurns === 0) a.markMult = 0;
         if (a.sunderTurns > 0 && --a.sunderTurns === 0) a.sundered = 0;
         if (a.taunting > 0) a.taunting--;
-        // Modest resource regen each turn so neither side stalls — you still
-        // can't spam your priciest skills, but pools recover over a fight.
-        if (a.maxMp) a.mp = Math.min(a.maxMp, (a.mp || 0) + Math.round(a.maxMp * 0.06) + 1);
-        if (a.maxSp) a.sp = Math.min(a.maxSp, (a.sp || 0) + Math.round(a.maxSp * 0.05) + 2);
+        // NO passive HP/MP/SP regen in battle (by design): recover only via
+        // items, healing skills, or a healer ally. A free basic 'strike' (cost 0)
+        // keeps a drained fighter from soft-locking.
     }
 
     // ---- intervention: the System as a third will -------------------------
@@ -281,10 +281,11 @@
         // fall back to the full loadout if nothing is affordable this turn.
         const loadout = a.loadout.map(id => ({ id: id, sk: db.skills[id] })).filter(x => x.sk);
         const affordable = loadout.filter(x => canAfford(a, x.sk));
-        const pool = affordable.length ? affordable : loadout;
-        const atks = pool.filter(x => x.sk.power > 0);
-        const chosen = atks.length ? atks.reduce((b, x) => x.sk.power > b.sk.power ? x : b) : pool[0];
-        return { actorId, skillId: chosen ? chosen.id : a.loadout[0], targetId: target ? target.id : null };
+        // Nothing affordable → fall back to the free basic Strike (no resource regen).
+        if (!affordable.length) return { actorId, skillId: (db.skills.strike ? 'strike' : a.loadout[0]), targetId: target ? target.id : null };
+        const atks = affordable.filter(x => x.sk.power > 0);
+        const chosen = atks.length ? atks.reduce((b, x) => x.sk.power > b.sk.power ? x : b) : affordable[0];
+        return { actorId, skillId: chosen.id, targetId: target ? target.id : null };
     }
 
     // ---- use an item in battle -------------------------------------------

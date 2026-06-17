@@ -155,6 +155,7 @@
             var actors = [buildPlayer()].concat(buildAllies(opts)).concat(buildEnemies(opts));
             var seed = (Date.now() ^ (seedCounter++ * 0x9e3779b1)) >>> 0;
             state = root.GameCombat.createBattle(db, actors, seed);
+            _seedVitals();   // carry persistent HP/MP/SP into the battle (no full-heal each fight)
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; chosenSkill = null; logQueue = [];
             cards = {};
             currentMsg = (actors.length > 2 ? actors.length - 1 + ' foes close in!' : 'A wild ' + state.actors.e1.name + ' interrupts your work!');
@@ -328,9 +329,39 @@
         pendingActorId = null; chosenItem = null; _closeMenu();
         mode = 'beat'; waitUntil = _now() + 520;
     }
-    function _flee() { currentMsg = 'You slip away from the fight.'; awaitingClose = true; mode = 'over'; _closeMenu(); }
+    function _flee() { _persistVitals(); currentMsg = 'You slip away from the fight.'; awaitingClose = true; mode = 'over'; _closeMenu(); }
+
+    // ---- persistent vitals (HP/MP/SP carry between fights via state.survival %) --
+    function _surv() {
+        var s = root.GameSave && root.GameSave.state;
+        if (!s) return null;
+        s.survival = s.survival || { surveillance: 0, stamina: 100, exposure: 0 };
+        if (s.survival.hp == null) s.survival.hp = 100;
+        if (s.survival.mana == null) s.survival.mana = 100;
+        return s.survival;
+    }
+    function _seedVitals() {
+        var sv = _surv(), a = state && state.actors.p1; if (!sv || !a) return;
+        a.hp = Math.max(1, Math.round(a.maxHp * (sv.hp || 100) / 100));
+        a.mp = Math.round(a.maxMp * (sv.mana != null ? sv.mana : 100) / 100);
+        a.sp = Math.round(a.maxSp * (sv.stamina != null ? sv.stamina : 100) / 100);
+    }
+    function _persistVitals() {
+        var sv = _surv(), a = state && state.actors.p1; if (!sv || !a) return;
+        if (state.winner === 'enemy') {
+            // System "rescue" on defeat — back on your feet, but watched (TODO: real down/respawn + penalty).
+            sv.hp = 50; if (sv.mana < 30) sv.mana = 30; if (sv.stamina < 30) sv.stamina = 30;
+        } else {
+            sv.hp = Math.max(0, Math.round(a.hp / a.maxHp * 100));
+            sv.mana = Math.max(0, Math.round(a.mp / a.maxMp * 100));
+            sv.stamina = Math.max(0, Math.round(a.sp / a.maxSp * 100));
+        }
+        if (root.GameSave.markDirty) GameSave.markDirty();
+        if (root.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv);
+    }
 
     function _finish() {
+        _persistVitals();
         var msg;
         if (state.winner === 'player') {
             var totalXp = 0, lvlEvents = [];
@@ -408,10 +439,13 @@
         return c;
     }
     function _openMenu(a) {
-        menuSkills = a.loadout.filter(function (id) {
+        var skills = a.loadout.filter(function (id) {
             var s = db.skills[id]; if (!s) return false;
             return s.power > 0 || (s.effect && ['heal', 'defUp', 'slow', 'markTarget', 'sunder', 'applyToxin', 'taunt', 'partyBuff', 'summon'].indexOf(s.effect.type) >= 0);
         });
+        // Always offer the free basic Strike (no resource regen means you must
+        // always be able to act even when out of MP/Stamina).
+        menuSkills = (skills.indexOf('strike') < 0 && db.skills.strike) ? ['strike'].concat(skills) : skills;
         cursor = 0;
     }
     function _closeMenu() { menuSkills = []; itemList = []; chosenItem = null; }
@@ -444,9 +478,9 @@
             _setBar(c, 'cv-sp', a.maxSp ? a.sp / a.maxSp : 0, 'sp-fill');
         }
         _setBar(c, 'cv-tempo', _tempoDisp(a), 'tempo-fill' + (a.tempo >= max ? ' ready' : ''));
-        // Enemies reveal only HP + turn meter — hide their status tags (and their
-        // MP/SP bars are already player-only).
-        c.querySelector('.cv-status').textContent = (a.side === 'player') ? _statusTags(a) : '';
+        // Enemies may show status tags (DEF↑/SLOW/…); only their MP/SP bars are
+        // hidden (player-only, handled in _card).
+        c.querySelector('.cv-status').textContent = _statusTags(a);
         c.classList.toggle('dead', a.hp <= 0);
         var targeting = (mode === 'target' && targetList[targetIdx] === a.id);
         c.classList.toggle('targeted', targeting);

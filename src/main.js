@@ -594,6 +594,23 @@
                 }
                 break;
             }
+            case 'heal': {
+                // Healer NPC / town infirmary / wild healer: restore persistent
+                // vitals (HP/MP/SP %). c.amount (0–100) or full when omitted.
+                var sth = window.GameSave && GameSave.state;
+                if (sth) {
+                    var sv = sth.survival || (sth.survival = { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 });
+                    var amt = (c.amount != null) ? Math.max(0, Math.min(100, c.amount | 0)) : 100;
+                    var set = function (k) { sv[k] = (c.amount != null) ? Math.min(100, (sv[k] || 0) + amt) : 100; };
+                    if (c.what === 'hp' || !c.what || c.what === 'all') set('hp');
+                    if (c.what === 'mp' || !c.what || c.what === 'all') set('mana');
+                    if (c.what === 'sp' || !c.what || c.what === 'all') set('stamina');
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv);
+                    if (window.GameAudio) GameAudio.playSE('Heal1');
+                }
+                break;
+            }
             case 'grantskill': {
                 var st2 = window.GameSave && GameSave.state;
                 if (st2 && st2.player && c.skill) {

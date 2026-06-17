@@ -87,7 +87,10 @@
             bonds: [],
 
             // Survival meters (DESIGN.md §7) — Surveillance is the spine mechanic.
-            survival: { surveillance: 0, stamina: 100, exposure: 0 },
+            // hp/mana/stamina (0–100%) are the PERSISTENT vitals carried between
+            // battles; recover only via items/healing skills (in battle) or a
+            // healer / System crystal (out of battle). No passive regen.
+            survival: { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 },
 
             // PC Boxes — 20 boxes × 30 slots
             pcBoxes: Array.from({ length: 20 }, (_, i) => DEFAULT_BOX('Box ' + (i + 1))),
