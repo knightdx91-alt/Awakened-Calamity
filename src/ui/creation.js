@@ -114,7 +114,7 @@ window.GamePlayerCreation = (function () {
 
     // Tiers shown on the selection screen, in order. Master+ slot in here as
     // their content lands; the ring/glow logic below keys off the tier name.
-    var TIERS = ['basic', 'advanced'];
+    var TIERS = ['basic', 'advanced', 'master'];
     var TIER_LABEL = { basic: 'BASIC', advanced: 'ADVANCED', master: 'MASTER', grandmaster: 'GRANDMASTER', heroic: 'HEROIC', legendary: 'LEGENDARY' };
     // Ring colour per tier (basic = no glow). Advanced and up glow.
     var TIER_RING = { basic: null, advanced: '#00ccff', master: '#f8d000', grandmaster: '#c050f0', heroic: '#ff7030', legendary: '#ffe070' };
@@ -136,6 +136,45 @@ window.GamePlayerCreation = (function () {
                 _buildClassChips();
             })
             .catch(function () {});
+    }
+
+    function _selectClass(id) {
+        _classId = id;
+        if (window.GameAudio) GameAudio.playSE('Cursor1');
+        _refresh();
+    }
+    function _tierWarned() {
+        try { return localStorage.getItem('ac_hitier_warned') === '1'; } catch (e) { return false; }
+    }
+    function _setTierWarned() {
+        try { localStorage.setItem('ac_hitier_warned', '1'); } catch (e) {}
+    }
+    // One-time modal explaining the high-tier trade-off (early power, slow climb).
+    function _showTierWarning(cl, onAccept) {
+        var ring = TIER_RING[cl.tier] || '#00ccff';
+        var tierName = TIER_LABEL[cl.tier] || (cl.tier || '').toUpperCase();
+        var m = document.createElement('div');
+        m.className = 'pc-warn';
+        m.innerHTML =
+            '<div class="pc-warn-box" style="border-color:' + ring + ';box-shadow:0 0 20px ' + ring + '66">' +
+                '<div class="pc-warn-h" style="color:' + ring + '">SYSTEM ADVISORY</div>' +
+                '<div class="pc-warn-body">Beginning as a <b style="color:' + ring + '">' + tierName + '</b> Classification grants power far beyond a fresh initiate — but the System extracts a steeper price for every advance. Your levels will come <b>much more slowly</b>.<br><br>You are trading a swift early game for a long, hard climb. This warning is shown only once.</div>' +
+                '<div class="pc-warn-btns">' +
+                    '<button class="pc-warn-yes">ACCEPT THE COST</button>' +
+                    '<button class="pc-warn-no">CHOOSE ANOTHER</button>' +
+                '</div>' +
+            '</div>';
+        _root.appendChild(m);
+        m.querySelector('.pc-warn-yes').addEventListener('click', function () {
+            _setTierWarned();
+            if (window.GameAudio) GameAudio.playSE('Decision1');
+            m.remove();
+            onAccept();
+        });
+        m.querySelector('.pc-warn-no').addEventListener('click', function () {
+            if (window.GameAudio) GameAudio.playSE('Cancel1');
+            m.remove();
+        });
     }
 
     function _buildClassChips() {
@@ -164,9 +203,13 @@ window.GamePlayerCreation = (function () {
             b.innerHTML = '<span class="pc-class-name">' + (cl.name || id) + '</span>' +
                 '<span class="pc-class-life">' + (cl.lifestyle || '') + '</span>';
             b.addEventListener('click', function () {
-                _classId = id;
-                if (window.GameAudio) GameAudio.playSE('Cursor1');
-                _refresh();
+                // Picking an Advanced+ class at creation trades fast leveling for
+                // early power — warn once (ever), then remember the choice.
+                if (cl.tier !== 'basic' && !_tierWarned()) {
+                    _showTierWarning(cl, function () { _selectClass(id); });
+                    return;
+                }
+                _selectClass(id);
             });
             wrap.appendChild(b);
         });
@@ -390,6 +433,16 @@ window.GamePlayerCreation = (function () {
         '@keyframes pcRing{0%,100%{box-shadow:0 0 4px var(--ring),0 0 4px var(--ring) inset;}50%{box-shadow:0 0 10px var(--ring),0 0 7px var(--ring) inset;}}' +
         '#pc-root .pc-class-tierhd{grid-column:1/-1;font-size:9px;letter-spacing:2px;margin:6px 0 1px;padding-bottom:2px;border-bottom:1px solid #1a2230;}' +
         '#pc-root .pc-class-tiertag{font-size:8px;letter-spacing:1px;border:1px solid;border-radius:3px;padding:1px 4px;vertical-align:middle;}' +
+        '#pc-root .pc-warn{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(2,6,15,.8);}' +
+        '#pc-root .pc-warn-box{width:min(86%,360px);background:#02060f;border:1px solid #00ccff;border-radius:8px;padding:16px 18px;}' +
+        '#pc-root .pc-warn-h{font-size:13px;letter-spacing:3px;text-align:center;margin-bottom:10px;}' +
+        '#pc-root .pc-warn-body{font-size:11px;color:#9fb0c0;line-height:1.6;}' +
+        '#pc-root .pc-warn-body b{color:#e0eaf2;}' +
+        '#pc-root .pc-warn-btns{display:flex;flex-direction:column;gap:8px;margin-top:14px;}' +
+        '#pc-root .pc-warn-yes{background:#11131f;border:1px solid #f8d000;color:#f8e880;font-family:monospace;font-size:12px;letter-spacing:2px;padding:9px;border-radius:5px;cursor:pointer;}' +
+        '#pc-root .pc-warn-yes:hover{background:#f8d000;color:#02060f;}' +
+        '#pc-root .pc-warn-no{background:#11131f;border:1px solid #4a5a6d;color:#9fb0c0;font-family:monospace;font-size:12px;letter-spacing:2px;padding:9px;border-radius:5px;cursor:pointer;}' +
+        '#pc-root .pc-warn-no:hover{border-color:#9fb0c0;}' +
         '#pc-root .pc-class-name{font-size:12px;color:#e0eaf2;}' +
         '#pc-root .pc-class-chip.sel .pc-class-name{color:var(--tint);font-weight:bold;}' +
         '#pc-root .pc-class-life{font-size:9px;letter-spacing:1px;color:var(--tint);opacity:.8;text-transform:uppercase;}' +
