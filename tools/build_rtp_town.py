@@ -152,18 +152,37 @@ def build_props_sheet():
             cache[n] = Image.open(os.path.join(TS, n + ".png")).convert("RGBA")
         return cache[n]
     a3 = sheet("rtp_outside_a3")
+    def b_tile(sn, idx):
+        s = sheet(sn); cols = s.width // T
+        return s.crop(((idx % cols) * T, (idx // cols) * T,
+                       (idx % cols) * T + T, (idx // cols) * T + T))
     # build the full tile list: 9-slice roofs + walls first, then raw PACK items
     tiles = []   # list of (name, Image)
+    roof_slices = {}; wall_slices = {}
     for col, blk in ROOF_BLOCKS.items():
-        for s, im in nineslice(a3, a3_block(*blk)).items():
+        sl = nineslice(a3, a3_block(*blk)); roof_slices[col] = sl
+        for s, im in sl.items():
             tiles.append((f"roof_{col}_{s}", im))
     for mat, blk in WALL_BLOCKS.items():
-        for s, im in nineslice(a3, a3_block(*blk)).items():
+        sl = nineslice(a3, a3_block(*blk)); wall_slices[mat] = sl
+        for s, im in sl.items():
             tiles.append((f"wall_{mat}_{s}", im))
+    # ── composites: transparent B-details pre-pasted onto the wall/roof tile they
+    # sit on (the engine has ONE overlay layer, so a bare window/door/chimney would
+    # otherwise reveal the grass base — the "green tiles in buildings" bug). ──
+    window = b_tile("rtp_outside_b", 54)
+    door   = b_tile("rtp_outside_b", 116)
+    chimney = b_tile("rtp_outside_b", 128)
+    def over(base, top):
+        c = base.copy(); c.alpha_composite(top); return c
+    for mat, sl in wall_slices.items():
+        tiles.append((f"wall_{mat}_door",     over(sl["b"], door)))
+        tiles.append((f"wall_{mat}_window",   over(sl["b"], window)))
+        tiles.append((f"wall_{mat}_window_t", over(sl["t"], window)))
+    for col, sl in roof_slices.items():
+        tiles.append((f"roof_{col}_chimney",  over(sl["t"], chimney)))
     for (sn, idx, name) in PACK:
-        s = sheet(sn); cols = s.width // T
-        tiles.append((name, s.crop(((idx % cols) * T, (idx // cols) * T,
-                                    (idx % cols) * T + T, (idx // cols) * T + T))))
+        tiles.append((name, b_tile(sn, idx)))
     PR = 16
     n = len(tiles); rows = (n + PR - 1) // PR
     out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
@@ -261,22 +280,23 @@ def house(wx, wy, ww, wh, roof, wall, wall_h=2):
     _grid9(f"roof_{roof}", rx0, ry0, rw, rh)
     # ---- walls: full 9-slice (clean fill + edges + corners) ----
     _grid9(f"wall_{wall}", wx, wy, ww, wh)
-    # door + windows on the FRONT (bottom) wall row, over the wall tiles
+    # door + windows on the FRONT (bottom) wall row — composited onto the wall
+    # tile (single overlay layer), so no grass shows through.
     fy = wy + wh - 1
     dxr = ww // 2
     door_x = wx + dxr
-    setp(door_x, fy, "door"); events.append({"x": door_x, "y": fy})
+    setp(door_x, fy, f"wall_{wall}_door"); events.append({"x": door_x, "y": fy})
     for wxi in (dxr - 1, dxr + 1):
         if 0 < wxi < ww - 1 and wxi != dxr:
-            setp(wx + wxi, fy, "window")
+            setp(wx + wxi, fy, f"wall_{wall}_window")
     # upper-row windows for taller walls (skip the very corners)
     if wh >= 2:
         for wxi in range(1, ww - 1, 2):
             if wxi != dxr:
-                setp(wx + wxi, wy, "window")
-    # chimney sits on the roof ridge
+                setp(wx + wxi, wy, f"wall_{wall}_window_t")
+    # chimney sits on the roof ridge (composited onto the roof tile)
     if ww >= 3:
-        setp(wx + ww - 1, ry0, "chimney")
+        setp(wx + ww - 1, ry0, f"roof_{roof}_chimney")
     return door_x, fy + 1
 
 # placed houses: (wx,wy,ww,wh,roof,wall, garden?)
@@ -321,7 +341,7 @@ def keep(x0, y0, w, h):
     house(kx, ky + 2, kw, 2, "sage", "stone", wall_h=2)
     # gate (arched door) centred on the front wall + banners flanking
     gx = x0 + w // 2
-    setp(gx, y0, "door2"); events.append({"x": gx, "y": y0})
+    setp(gx, y0, "wall_stone_door"); events.append({"x": gx, "y": y0})
     setp(gx - 1, y0 - 1, "banner_red"); setp(gx + 1, y0 - 1, "banner_blue")
     # courtyard cobble + a path down to the avenue
     for yy in range(y0 + 1, y0 + h):
