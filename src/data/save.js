@@ -166,11 +166,9 @@
                 // Each: { id, owned, purchaseDate, lastRentCollected, damageEvents: [] }
             },
 
-            // Quests
-            quests: {
-                active: [],    // { id, stage, startedDate }
-                completed: []  // { id, completedDate }
-            },
+            // Quest progress — keyed by quest id: { <id>: { status, stage } }.
+            // Driven by GameQuests + the `quest` event command; read by the Journal.
+            quests: {},
 
             // Dynamic Deliveries
             deliveries: {
@@ -340,8 +338,12 @@
         var v = data.saveVersion || 1;
         // ---- explicit structural steps ----
         if (v < 2) {
-            // v1 → v2: class system fields. (All additive — handled by the
-            // shape backfill below; placeholder kept for future real transforms.)
+            // v1 → v2: class-system fields (additive, handled by the backfill
+            // below) + convert the legacy quests shape {active:[],completed:[]}
+            // to the new id-keyed map used by GameQuests.
+            if (data.quests && (Array.isArray(data.quests.active) || Array.isArray(data.quests.completed))) {
+                data.quests = {};
+            }
             v = 2;
         }
         // ---- additive backfill against the current default shape ----

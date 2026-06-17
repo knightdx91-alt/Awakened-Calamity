@@ -173,6 +173,24 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Story + quest/dialogue scaffolding (2026-06-17)
+- **`STORY.md`** — canonical story outline (premise, the cycle/buried truth, four acts across the Four
+  Reaches, the four endings tilted by Hidden-Layer usage, the Dawnhearth opening beat, cast seed).
+- **Quest system:** `data/systems/quests.json` (schema: name/giver/summary/stages[{id,text}]/reward;
+  opening quest **`awakening`**) + **`src/systems/quests.js` (`GameQuests`)** pure logic
+  (start/advance/complete/fail/setStage/status/objective/list/check). State = `GameSave.state.quests
+  { <id>:{status,stage} }` (legacy `{active,completed}` shape migrated to `{}` in `migrate` v1→v2;
+  added to DEFAULT). Wired in `game.html`.
+- **Event integration:** new **`quest`** command (op start/advance/complete/fail/stage; applies
+  `reward` on complete) + **`conditional` kind `quest`** (active/done/failed/notstarted/stage≥) in the
+  engine (`runCmd`/`_evalCond`, quest DB preloaded at boot) AND the map editor (command form + cond
+  params, quest dropdown via `loadQuestList`).
+- **Journal screen:** new **JOURNAL** start-menu page (`_buildJournal`) lists ACTIVE quests (name +
+  current objective, selectable → summary) and COMPLETED (struck-through). New Game seeds the
+  `awakening` quest so it's live. Dialogue trees use the existing event commands (text+face / choice /
+  conditional / switches). Node-tested (quest lifecycle, migration) + suites pass. **Not browser-verified.**
+  **Next: script the Dawnhearth opening beat (Mira, crystal, first fight) on this scaffolding.**
+
 ## Instant freshness + SAVE-screen fix (2026-06-17)
 - **Network-first service worker** (`sw.js`, was a kill-switch): every same-origin GET fetches from
   **network first** (beats GitHub Pages' HTML cache → always the latest deploy on reload), cache only

@@ -257,6 +257,8 @@
             if (window.GameSave && GameSave.state) {
                 GameSave.state.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
                 if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Dawnhearth';
+                // Kick off the opening quest (scripted beats advance it).
+                if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
                 GameSave.save(0, GameSave.state);
             }
             console.log('[Main] New game → Dawnhearth at', w.x, w.y);
@@ -296,6 +298,17 @@
         return _classDbPromise;
     }
 
+    var _questDbCache = null, _questDbPromise = null;
+    function _loadQuestDb() {
+        if (_questDbCache) return Promise.resolve(_questDbCache);
+        if (_questDbPromise) return _questDbPromise;
+        _questDbPromise = fetch('data/systems/quests.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .then(function (j) { _questDbCache = {}; for (var k in j) if (k !== '_meta') _questDbCache[k] = j[k]; return _questDbCache; })
+            .catch(function () { return (_questDbCache = {}); });
+        return _questDbPromise;
+    }
+
     // ── Event command interpreter (RPG-Maker-style scripting) ──
     var _eventRunning = false;
     var ES = window.GameEventState;
@@ -319,7 +332,12 @@
         });
     }
     function _evalCond(cond, ctx) {
-        if (!cond || !ES) return true;
+        if (!cond) return true;
+        if (cond.kind === 'quest') {
+            var qs = (window.GameSave && GameSave.state && GameSave.state.quests) || {};
+            return window.GameQuests ? GameQuests.check(qs, _questDbCache || {}, cond.id, cond.check || 'active', cond.stage) : false;
+        }
+        if (!ES) return true;
         if (cond.kind === 'switch') return ES.getSwitch(cond.id) === (cond.value !== false);
         if (cond.kind === 'selfswitch') return ES.getSelf(ctx.mapName, ctx.evId, cond.letter || 'A') === (cond.value !== false);
         if (cond.kind === 'variable') {
@@ -547,6 +565,32 @@
                         if (st1.player.skills.indexOf(sp1.grantsSkill) < 0) st1.player.skills.push(sp1.grantsSkill);
                     }
                     if (window.GameSave) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'quest': {
+                var stq = window.GameSave && GameSave.state;
+                if (stq && window.GameQuests && c.id) {
+                    stq.quests = stq.quests || {};
+                    var qdb = (await _loadQuestDb()) || {};
+                    var op = c.op || 'start';
+                    if (op === 'start') GameQuests.start(stq.quests, c.id);
+                    else if (op === 'advance') GameQuests.advance(stq.quests, qdb, c.id);
+                    else if (op === 'complete') GameQuests.complete(stq.quests, qdb, c.id);
+                    else if (op === 'fail') GameQuests.fail(stq.quests, c.id);
+                    else if (op === 'stage') GameQuests.setStage(stq.quests, qdb, c.id, (c.stage != null ? c.stage : 0));
+                    // Apply rewards when a quest completes.
+                    if (op === 'complete' && qdb[c.id] && qdb[c.id].reward) {
+                        var rw = qdb[c.id].reward, p = stq.player;
+                        if (p && rw.money) p.money = (p.money || 0) + (rw.money | 0);
+                        if (p && rw.skill) { p.skills = p.skills || []; if (p.skills.indexOf(rw.skill) < 0) p.skills.push(rw.skill); }
+                        if (rw.item) { stq.inventory = stq.inventory || {}; var def = window.GameItems && GameItems.get(rw.item); var pk = (def && def.pocket) || 'items'; stq.inventory[pk] = stq.inventory[pk] || {}; stq.inventory[pk][rw.item] = (stq.inventory[pk][rw.item] || 0) + 1; }
+                    }
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameSystem && GameSystem.notify) {
+                        var qn = (qdb[c.id] && qdb[c.id].name) || c.id;
+                        GameSystem.notify(op === 'complete' ? ('Quest complete: ' + qn) : ('Quest updated: ' + qn), 'info');
+                    }
                 }
                 break;
             }
@@ -830,6 +874,7 @@
             GameControls.init();
             GameHUD.init(GameMap, player);
             if (window.GameAudio) GameAudio.init();
+            _loadQuestDb();   // preload so quest conditionals resolve
 
             if (window.GameDialogue) GameDialogue.init();
 

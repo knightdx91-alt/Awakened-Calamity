@@ -1263,6 +1263,7 @@
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
+    ['quest', '⚑ Quest'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
@@ -1290,6 +1291,7 @@
       case 'grantclass': return { type: 'grantclass', classId: '', unlockOnly: false };
       case 'grantspec': return { type: 'grantspec', specId: '' };
       case 'grantskill': return { type: 'grantskill', skill: '' };
+      case 'quest': return { type: 'quest', op: 'start', id: '', stage: 0 };
       case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
       case 'shake': return { type: 'shake', power: 5, frames: 30 };
       case 'label': return { type: 'label', label: '' };
@@ -1419,10 +1421,14 @@
       if (!cmd.cond) cmd.cond = { kind: 'switch', id: '1', value: true };
       var cr = el('div', 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;');
       cr.innerHTML = lbl('If') +
-        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option></select>' +
+        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option></select>' +
         '<span class="cParams"></span>';
       cr.querySelector('.cKind').value = cmd.cond.kind;
-      cr.querySelector('.cKind').addEventListener('change', function () { cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true }; renderEventPanel(); });
+      cr.querySelector('.cKind').addEventListener('change', function () {
+        if (this.value === 'quest') cmd.cond = { kind: 'quest', id: '', check: 'active', stage: 0 };
+        else cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true };
+        renderEventPanel();
+      });
       var cp = cr.querySelector('.cParams');
       if (cmd.cond.kind === 'switch') {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:42px;"> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
@@ -1432,6 +1438,17 @@
         cp.innerHTML = '<select class="kL"><option>A</option><option>B</option><option>C</option><option>D</option></select> is <select class="kV"><option value="true">ON</option><option value="false">OFF</option></select>';
         cp.querySelector('.kL').value = cmd.cond.letter || 'A'; cp.querySelector('.kL').addEventListener('change', function () { cmd.cond.letter = this.value; });
         cp.querySelector('.kV').value = cmd.cond.value === false ? 'false' : 'true'; cp.querySelector('.kV').addEventListener('change', function () { cmd.cond.value = this.value === 'true'; });
+      } else if (cmd.cond.kind === 'quest') {
+        cp.innerHTML = '<select class="kQid" style="max-width:120px"><option value="">— quest —</option></select> is ' +
+          '<select class="kQc"><option value="active">Active</option><option value="done">Done</option><option value="failed">Failed</option><option value="notstarted">Not started</option><option value="stage">At stage ≥</option></select> ' +
+          '<input type="number" class="kQs" value="' + (cmd.cond.stage | 0) + '" style="width:42px;display:none;">';
+        var kqid = cp.querySelector('.kQid'), kqc = cp.querySelector('.kQc'), kqs = cp.querySelector('.kQs');
+        loadQuestList().then(function (list) { list.forEach(function (q) { var o = el('option', null, q.name); o.value = q.id; kqid.appendChild(o); }); if (cmd.cond.id) kqid.value = cmd.cond.id; });
+        kqid.addEventListener('change', function () { cmd.cond.id = this.value; });
+        kqc.value = cmd.cond.check || 'active';
+        kqs.style.display = (cmd.cond.check === 'stage') ? '' : 'none';
+        kqc.addEventListener('change', function () { cmd.cond.check = this.value; kqs.style.display = this.value === 'stage' ? '' : 'none'; });
+        kqs.addEventListener('change', function () { cmd.cond.stage = parseInt(this.value, 10) || 0; });
       } else {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:36px;"> <select class="kOp"><option>==</option><option>&gt;=</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
         cp.querySelector('.kId').addEventListener('change', function () { cmd.cond.id = this.value; });
@@ -1602,6 +1619,20 @@
       });
       skSel.addEventListener('change', function () { cmd.skill = this.value; });
       body.appendChild(gk);
+    } else if (cmd.type === 'quest') {
+      var qd = el('div');
+      qd.innerHTML = '<div class="row">' + lbl('Op') +
+        '<select class="cQop"><option value="start">Start</option><option value="advance">Advance</option><option value="complete">Complete</option><option value="fail">Fail</option><option value="stage">Set Stage</option></select>' +
+        lbl('Quest') + '<select class="cQid" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+        '<div class="row cQstageRow" style="display:none;">' + lbl('Stage #') + '<input type="number" class="cQstage" value="' + (cmd.stage | 0) + '" style="width:54px;"></div>';
+      var qop = qd.querySelector('.cQop'), qid = qd.querySelector('.cQid'), qstageRow = qd.querySelector('.cQstageRow');
+      qop.value = cmd.op || 'start';
+      qop.addEventListener('change', function () { cmd.op = this.value; qstageRow.style.display = this.value === 'stage' ? '' : 'none'; });
+      qstageRow.style.display = (cmd.op === 'stage') ? '' : 'none';
+      loadQuestList().then(function (list) { list.forEach(function (q) { var o = el('option', null, q.name); o.value = q.id; qid.appendChild(o); }); if (cmd.id) qid.value = cmd.id; });
+      qid.addEventListener('change', function () { cmd.id = this.value; });
+      qd.querySelector('.cQstage').addEventListener('change', function () { cmd.stage = parseInt(this.value, 10) || 0; });
+      body.appendChild(qd);
     } else if (cmd.type === 'fade') {
       body.innerHTML = '<div class="row">' + lbl('Fade') +
         '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +
@@ -2942,7 +2973,13 @@
       .then(function (d) { _faceSheets = d.sheets || []; return _faceSheets; })
       .catch(function () { return (_faceSheets = []); });
   }
-  var _classList = null, _skillList = null;
+  var _classList = null, _skillList = null, _questList = null;
+  function loadQuestList() {
+    if (_questList) return Promise.resolve(_questList);
+    return fetch('data/systems/quests.json').then(function (r) { return r.json(); })
+      .then(function (j) { _questList = Object.keys(j).filter(function (k) { return k !== '_meta' && j[k]; }).map(function (k) { return { id: k, name: j[k].name || k }; }); return _questList; })
+      .catch(function () { return (_questList = []); });
+  }
   function loadClassList() {
     if (_classList) return Promise.resolve(_classList);
     return fetch('data/systems/classes.json').then(function (r) { return r.json(); })

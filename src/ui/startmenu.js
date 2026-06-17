@@ -7,6 +7,7 @@ window.GameStartMenu = (function () {
     // BONDS only appears once you've bonded at least one creature.
     const _ITEM = {
         CAMP:       { id: 'CAMP',       label: 'STATUS'     },
+        JOURNAL:    { id: 'JOURNAL',    label: 'JOURNAL'    },
         BONDS:      { id: 'BONDS',      label: 'BONDS'      },
         SUPPLIES:   { id: 'SUPPLIES',   label: 'SUPPLIES'   },
         AFFINITIES: { id: 'AFFINITIES', label: 'AFFINITIES' },
@@ -22,7 +23,7 @@ window.GameStartMenu = (function () {
     }
     let ITEMS = [];
     function _rebuildItems() {
-        ITEMS = [_ITEM.CAMP];
+        ITEMS = [_ITEM.CAMP, _ITEM.JOURNAL];
         if (_hasBonds()) ITEMS.push(_ITEM.BONDS);   // hidden until first bond
         // SYSTEM is intentionally NOT in the pause menu — the System is only
         // reachable in town, via the floating crystal hub (opens GameSystemShop).
@@ -298,7 +299,7 @@ window.GameStartMenu = (function () {
             return;
         }
 
-        const titles = { camp:'[ STATUS ]', bonds:'[ BONDS ]', supplies:'[ SUPPLIES ]',
+        const titles = { camp:'[ STATUS ]', journal:'[ JOURNAL ]', bonds:'[ BONDS ]', supplies:'[ SUPPLIES ]',
                          affinities:'AFFINITIES', reaches:'THE FOUR REACHES',
                          system:'[ THE SYSTEM ]',
                          save:'Save', options:'Options'
@@ -328,6 +329,7 @@ window.GameStartMenu = (function () {
 
         _subRows = [];   // selectable rows for this page (rebuilt every render)
         if      (page === 'camp')        _buildCamp(content);
+        else if (page === 'journal')     _buildJournal(content);
         else if (page === 'bonds')       _buildBonds(content);
         else if (page === 'supplies')    _buildSupplies(content);
         else if (page === 'affinities')  _buildAffinities(content);
@@ -654,6 +656,54 @@ window.GameStartMenu = (function () {
         box.innerHTML = '<div style="display:flex;justify-content:space-between;font:7px \'Press Start 2P\';color:' + svc + ';margin-bottom:3px;"><span>SURVEILLANCE</span><span>' + Math.round(sv) + '%</span></div>' +
             '<div style="height:5px;background:#000;border-radius:3px;overflow:hidden;"><div style="width:' + sv + '%;height:100%;background:' + svc + '"></div></div>';
         el.appendChild(box);
+    }
+
+    var _questDb = null, _questLoading = false;
+    function _ensureQuests() {
+        if (_questDb || _questLoading) return;
+        _questLoading = true;
+        fetch('data/systems/quests.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .then(function (j) { _questDb = {}; for (var k in j) if (k !== '_meta') _questDb[k] = j[k]; _questLoading = false; if (page === 'journal') _render(); })
+            .catch(function () { _questDb = {}; _questLoading = false; });
+    }
+    function _buildJournal(el) {
+        el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        _ensureQuests();
+        var qs = (window.GameSave && GameSave.state && GameSave.state.quests) || {};
+        var db = _questDb || {};
+        var active = window.GameQuests ? GameQuests.list(qs, db, 'active') : [];
+        var done = window.GameQuests ? GameQuests.list(qs, db, 'done') : [];
+        if (!active.length && !done.length) {
+            var em = document.createElement('div');
+            em.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.dim + ';line-height:1.8;text-align:center;padding-top:20px;';
+            em.innerHTML = 'No active directives.<br><br>The System has nothing<br>for you… yet.';
+            el.appendChild(em); return;
+        }
+        if (active.length) {
+            var ah = document.createElement('div');
+            ah.style.cssText = 'font:7px "Press Start 2P";color:' + _SYS.cyan + ';margin-bottom:6px;';
+            ah.textContent = 'ACTIVE';
+            el.appendChild(ah);
+            active.forEach(function (q) {
+                var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
+                var nm = document.createElement('div'); nm.style.cssText = 'color:' + _FR.text + ';'; nm.textContent = q.name.toUpperCase();
+                var ob = document.createElement('div'); ob.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;'; ob.textContent = '▸ ' + (q.objective || '');
+                r.appendChild(nm); r.appendChild(ob);
+                _sel(r, function () { if (window.GameSystem && GameSystem.notify) GameSystem.notify(q.name + ' — ' + (q.summary || q.objective || ''), 'info'); });
+            });
+        }
+        if (done.length) {
+            var dh = document.createElement('div');
+            dh.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';margin:8px 0 6px;';
+            dh.textContent = 'COMPLETED';
+            el.appendChild(dh);
+            done.forEach(function (q) {
+                var r = _row(el, { css: 'background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;opacity:.6;' });
+                var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + _FR.dim + ';text-decoration:line-through;'; nm.textContent = q.name.toUpperCase();
+                r.appendChild(nm);
+            });
+        }
     }
 
     function _buildBonds(el) {
@@ -1342,6 +1392,7 @@ window.GameStartMenu = (function () {
             case 'SAVE':    _saveDone=false; page='save';         _subIdx=0; _render(); break;
             case 'OPTIONS': page='options';      _subIdx=0; _render(); break;
             case 'CAMP':       page='camp';       _subIdx=0; _render(); break;
+            case 'JOURNAL':    page='journal';    _subIdx=0; _render(); break;
             case 'BONDS':      page='bonds';      _subIdx=0; _render(); break;
             case 'SUPPLIES':   page='supplies';   _subIdx=0; _supPocket=null; _render(); break;
             case 'AFFINITIES': page='affinities'; _subIdx=0; _render(); break;
