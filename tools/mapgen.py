@@ -77,6 +77,16 @@ def _register(tid):
     if tid not in idx:
         json.dump(sorted(set(idx) | {tid}), open(ip, "w"))
 
+def _door_tile():
+    """The closed wood door = frame 0 of the Door1 charset (data/sprites/rtp/Door1.png),
+    so the static door backing matches the in-game Door1 event sprite. Falls back to a
+    framed Outside_B window tile if the charset is missing."""
+    p = os.path.join(ROOT, "data", "sprites", "rtp", "Door1.png")
+    if os.path.exists(p):
+        return Image.open(p).convert("RGBA").crop((0, 0, T, T))
+    s = _sheet("rtp_outside_b"); cols = s.width // T
+    return s.crop(((67 % cols) * T, (67 // cols) * T, (67 % cols) * T + T, (67 // cols) * T + T))
+
 def build_outside_base(force=False):
     """Combined OUTSIDE base = rtp_outside_ground + A1 water. Returns (n, LUT)."""
     GJ = json.load(open(os.path.join(TS, "rtp_outside_ground.json")))
@@ -127,7 +137,12 @@ def build_outside_props(force=False):
     for mat, blk in WALL_BLOCKS.items():
         sl = nineslice(a3, a3_block(*blk)); wall_slices[mat] = sl
         for s, im in sl.items(): tiles.append((f"wall_{mat}_{s}", im))
-    window = b_tile("rtp_outside_b", 54); door = b_tile("rtp_outside_b", 116)
+    # Real framed wood window (Outside_B 67) — 54 was a BLANK tile, which made
+    # the old "windows" render as stacked wall-edge slices (grey rungs).
+    window = b_tile("rtp_outside_b", 67)
+    # Door backing = the actual closed wood door (Door1 charset frame 0), so the
+    # static tile matches the in-game Door1 event sprite instead of a black recess.
+    door = _door_tile()
     chimney = b_tile("rtp_outside_b", 128)
     def over(base, top):
         c = base.copy(); c.alpha_composite(top); return c
@@ -279,24 +294,27 @@ class MapBuilder:
         door_x = wx + dxr
         self.setp(door_x, fy, f"wall_{wall}_door")
         self.events.append({"x": door_x, "y": fy})
-        # Window columns: symmetric, flanking the door, never on the corner or
-        # door columns. Each column gets a window on EVERY wall row (edge-correct
-        # variant) so multi-row walls read as a real facade — no floating boxes.
-        win_cols = [c for c in (dxr - 2, dxr + 2, dxr - 1, dxr + 1)
-                    if 0 < c < ww - 1 and c != dxr]
-        if ww <= 4:
-            win_cols = [c for c in (dxr - 1, dxr + 1) if 0 < c < ww - 1 and c != dxr][:1]
+        # Window columns: a SYMMETRIC pair flanking the door (wider houses get a
+        # second pair), never on a corner or the door column.
+        pair = []
+        for off in (2, 3):                       # symmetric offsets from the door
+            l, r = dxr - off, dxr + off
+            if 0 < l < ww - 1 and 0 < r < ww - 1:
+                pair += [l, r]
+                if ww < 8:
+                    break
+        win_cols = pair if pair else [c for c in (dxr - 1, dxr + 1) if 0 < c < ww - 1][:1]
+        # ONE window per column (not a stack on every row, which read as rungs):
+        # put it on the UPPER wall row (under the eave) for a 2-row wall, leaving
+        # the front row clear for the door. For a 1-row wall, on that row.
         seen = set()
+        win_row = wy if wh >= 2 else fy          # upper row for tall walls
+        win_variant = "window_t" if wh >= 2 else "window"
         for c in win_cols:
-            if c in seen:
+            if c in seen or (win_row == fy and c == dxr):
                 continue
             seen.add(c)
-            for j in range(wh):
-                yy = wy + j
-                if yy == fy and c == dxr:
-                    continue
-                variant = "window_t" if j == 0 else ("window" if yy == fy else "window_f")
-                self.setp(wx + c, yy, f"wall_{wall}_{variant}")
+            self.setp(wx + c, win_row, f"wall_{wall}_{win_variant}")
         if ww >= 4:                              # chimney on the ridge, off the corner
             self.setu(wx + ww - 2, wy - rh, f"roof_{roof}_chimney")
         return door_x, fy + 1
@@ -408,8 +426,12 @@ class MapBuilder:
         os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
         json.dump(mapobj, open(os.path.join(ROOT, "data", "maps", region, name + ".json"), "w"))
         ipath = os.path.join(ROOT, "data", "maps", region + "_index.json")
-        idx = json.load(open(ipath)) if os.path.exists(ipath) else {}
-        idx[mid] = name; idx[name] = name
+        idx = json.load(open(ipath)) if os.path.exists(ipath) else []
+        if isinstance(idx, list):                 # current registry format = flat list
+            for k in (mid, name):
+                if k not in idx: idx.append(k)
+        else:                                     # legacy dict format
+            idx[mid] = name; idx[name] = name
         json.dump(idx, open(ipath, "w"))
         return mid
 

@@ -151,8 +151,12 @@ class IndoorBuilder:
         os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
         json.dump(mapobj, open(os.path.join(ROOT, "data", "maps", region, name + ".json"), "w"))
         ipath = os.path.join(ROOT, "data", "maps", region + "_index.json")
-        idx = json.load(open(ipath)) if os.path.exists(ipath) else {}
-        idx[mid] = name; idx[name] = name
+        idx = json.load(open(ipath)) if os.path.exists(ipath) else []
+        if isinstance(idx, list):                 # current registry format = flat list
+            for k in (mid, name):
+                if k not in idx: idx.append(k)
+        else:                                     # legacy dict format
+            idx[mid] = name; idx[name] = name
         json.dump(idx, open(ipath, "w"))
         return mid
 

@@ -210,6 +210,17 @@ Do these as **appended** props (never renumber existing `town_props` gids — ol
 and the rung windows immediately (biggest visible win). Then (3) eave depth, (4) palette, then
 (5) footprint variety.
 
+### Progress
+- ✅ **(1)+(2) DONE** (`tools/mapgen.py`, 2026-06-17): window source → Outside_B **67** (real
+  framed window; was the blank tile 54), door backing → the **Door1 closed-door** graphic
+  (matches the in-game event sprite; was the dark recess 116), and windows now placed **once per
+  column** as a symmetric pair on the upper wall row (was stacked every row = rungs). `town_props`
+  pixels regenerated with stable gids, so existing maps pick up the real door/window too. Verified
+  via isolated-house + full-town renders. Also fixed the registry write (list-format index).
+- ⏳ TODO: (3) eave depth/shadow, (4) per-town palette, (5) L/3×3/landmark footprints, and the
+  **interior back-wall FACE** so walking up shows a wall with height in front of you (the
+  `rtp_*_wallface` bake → `mapgen_indoor.py`).
+
 ---
 
 ## Sources
