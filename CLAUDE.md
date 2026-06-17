@@ -7,14 +7,20 @@ Done so far (`tools/mapgen.py` + `tools/mapgen_indoor.py`, RM-convention researc
 same-width house roofs (no side overhang), curated roofs, fixed the `!Door1`→`Door1` sprite
 path (doors render again), windows in clean columns, continuous routes/forest trails, a compact
 walled castle (keep), and interior furniture arranged against the walls. **Still TODO:**
-- **Finish the autotile bakes** (carried over): A1 water/waterfall, A3 roof tops, A4 wall
-  top+side for the RTP pack (and the A2 ground variants noted elsewhere). This is the prerequisite
-  for the interior-wall fix below.
+- ✅ **Autotile bakes DONE** (`tools/build_vx_ace_walls.py`, 2026-06-17): A3 roof-tops + A4 wall-tops
+  baked as RM WALL-shape (2x2-block, orthogonal-only) `wang8_lut` autotiles → `rtp_outside_roof`
+  (16 roof colours), `rtp_<scene>_wall` (24 wall-top terrains ea.); A4 wall-SIDE faces baked as a
+  structural cap/body/base × L/M/R sheet → `rtp_<scene>_wallface` (`.json` `slots` map). All wired
+  into `_rm_sets.json` (A3/A4 tabs = baked, raw kept as A3raw/A4raw, new A4face tab). Blob-render +
+  LUT-validity verified. **A1 water already baked**; **A1 "waterfall" found to NOT exist in the RTP
+  A1 sheets** (rightmost A1 columns are extra sea/ice water *variants*, not a vertical waterfall) —
+  nothing to bake; could optionally add those water variants as fills later.
 - **Interior wall LOOK — walls should "come up" like real RM interiors.** Right now interior/dungeon
   walls render as a flat bordered band (top-down A4 wall-top 9-slice). Owner wants the proper
   **side-view wall FACE with visible height** — you can see the wall rise (the lower wall lip with
-  shading), the standard RM look. Needs porting the **A4 wall-SIDE autotile** (wall-top cap row +
-  2-tile-tall wall face below) into the indoor prop sheet + builder, not just the single wall block.
+  shading), the standard RM look. **Art is now ready** (`rtp_<scene>_wallface` slots); remaining work
+  is to consume it in the **indoor prop sheet + builder** (stack cap row + repeating body face below
+  a wall-top), not just the single wall block.
 - **Room construction in interiors AND dungeons** — rework how rooms are **sectioned off by walls**
   (proper interior walls dividing rooms/hallways, doorways between them) and **how items are placed**
   within rooms (purposeful, against walls, room-function-driven — not scattered).
