@@ -1,0 +1,476 @@
+#!/usr/bin/env python3
+"""mapgen — reusable map generator for Awakened Calamity.
+
+A small library the CLI (tools/gen_map.py) and the world-data driver use to
+procedurally build playable maps from RTP art. Archetypes so far (outside
+palette): town, route, forest. Dungeon/interior live in mapgen_indoor.py.
+
+Design follows researched RPG-Maker mapping technique: houses = A3 roof/wall
+9-slices (ridge+eave roofs, clean walls, details composited on so no grass shows
+through a single overlay layer); winding-but-not-curvy paths with overgrown
+patches; trees dense + varied + never in lines; clearings, ponds, walking space.
+
+Engine constraint = 1 base tileset + 1 overlay per map. The OUTSIDE palette uses
+a combined base `vt_ground` (rtp grass/dirt/road/cobble + A1 water) and one
+overlay sheet `town_props` (A3 roof/wall 9-slices + composites, C towers/banners,
+B details + nature). Both are built on demand and cached on disk.
+"""
+import json, os, random
+from PIL import Image
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TS = os.path.join(ROOT, "data", "tilesets")
+T = 32
+
+# ───────────────────────── A3 9-slice plumbing ─────────────────────────
+def a3_block(bc, br):
+    c, r = bc * 2, br * 2
+    return [r * 16 + c, r * 16 + c + 1, (r + 1) * 16 + c, (r + 1) * 16 + c + 1]
+
+ROOF_BLOCKS = {"orange": (0, 0), "brown": (1, 0), "green": (2, 0), "blue": (3, 0),
+               "red": (4, 0), "gold": (5, 0), "sage": (6, 0)}
+WALL_BLOCKS = {"stone": (0, 1), "brick": (1, 1), "block": (2, 1),
+               "plank": (0, 2), "log": (1, 2), "thatch": (2, 2), "white": (5, 2)}
+
+# 9-slice quarter spec: each output tile = [TL,TR,BL,BR] quarters as
+# (block_tile 0=A 1=B 2=C 3=D, qx, qy). Interior = edge-free fill.
+NINE = {
+    "tl": [(0, 0, 0), (1, 0, 0), (2, 0, 0), (3, 0, 0)],
+    "t":  [(0, 1, 0), (1, 0, 0), (2, 1, 0), (3, 0, 0)],
+    "tr": [(0, 1, 0), (1, 1, 0), (2, 1, 0), (3, 1, 0)],
+    "l":  [(0, 0, 1), (1, 0, 1), (2, 0, 0), (3, 0, 0)],
+    "f":  [(0, 1, 1), (1, 0, 1), (2, 1, 0), (3, 0, 0)],
+    "r":  [(0, 1, 1), (1, 1, 1), (2, 1, 0), (3, 1, 0)],
+    "bl": [(0, 0, 1), (1, 0, 1), (2, 0, 1), (3, 0, 1)],
+    "b":  [(0, 1, 1), (1, 0, 1), (2, 1, 1), (3, 0, 1)],
+    "br": [(0, 1, 1), (1, 1, 1), (2, 1, 1), (3, 1, 1)],
+}
+
+def nineslice(sheet, block_idx):
+    cols = sheet.width // T
+    def tile(i):
+        return sheet.crop(((i % cols) * T, (i // cols) * T, (i % cols) * T + T, (i // cols) * T + T))
+    blk = [tile(i) for i in block_idx]
+    dst = [(0, 0), (16, 0), (0, 16), (16, 16)]
+    out = {}
+    for name, picks in NINE.items():
+        im = Image.new("RGBA", (T, T), (0, 0, 0, 0))
+        for (ti, qx, qy), (dx, dy) in zip(picks, dst):
+            im.paste(blk[ti].crop((qx * 16, qy * 16, qx * 16 + 16, qy * 16 + 16)), (dx, dy))
+        out[name] = im
+    return out
+
+# ───────────────────────── shared asset builders ─────────────────────────
+_sheet_cache = {}
+def _sheet(n):
+    if n not in _sheet_cache:
+        _sheet_cache[n] = Image.open(os.path.join(TS, n + ".png")).convert("RGBA")
+    return _sheet_cache[n]
+
+def _register(tid):
+    ip = os.path.join(TS, "_index.json"); idx = json.load(open(ip))
+    if tid not in idx:
+        json.dump(sorted(set(idx) | {tid}), open(ip, "w"))
+
+def build_outside_base(force=False):
+    """Combined OUTSIDE base = rtp_outside_ground + A1 water. Returns (n, LUT)."""
+    GJ = json.load(open(os.path.join(TS, "rtp_outside_ground.json")))
+    GCFG = json.load(open(os.path.join(TS, "rtp_outside_ground.autotile.json")))
+    WCFG = json.load(open(os.path.join(TS, "rtp_outside_water.autotile.json")))
+    GCOUNT = GJ["total_metatiles"]; WCOUNT = WCFG["terrains"]["water"]["count"]
+    n = GCOUNT + WCOUNT
+    LUT = {"dirt": GCFG["terrains"]["dirt"]["lut"],
+           "cobble": GCFG["terrains"]["cobble"]["lut"],
+           "road": GCFG["terrains"]["road"]["lut"],
+           "water": [GCOUNT + (v - 1) for v in WCFG["terrains"]["water"]["lut"]]}
+    if not force and os.path.exists(os.path.join(TS, "vt_ground.png")):
+        return n, LUT
+    g = _sheet("rtp_outside_ground"); w = _sheet("rtp_outside_water")
+    PR = 16; rows = (n + PR - 1) // PR
+    sheet = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
+    def blit(src, idx, dst):
+        sc = src.width // T
+        sheet.paste(src.crop(((idx % sc) * T, (idx // sc) * T, (idx % sc) * T + T, (idx // sc) * T + T)),
+                    ((dst % PR) * T, (dst // PR) * T))
+    for i in range(GCOUNT): blit(g, i, i)
+    for k in range(WCOUNT): blit(w, 1 + k, GCOUNT + k)
+    sheet.save(os.path.join(TS, "vt_ground.png"))
+    json.dump({"total_metatiles": n, "primary_count": n, "secondary_count": 0,
+               "tile": T, "metatiles_per_row": PR,
+               "source": "rtp_outside_ground + rtp A1 water (combined outside base)",
+               "behaviors": GJ["behaviors"] + [16] * WCOUNT,
+               "collisions": GJ["collisions"] + [1] * WCOUNT},
+              open(os.path.join(TS, "vt_ground.json"), "w"))
+    _register("vt_ground")
+    return n, LUT
+
+def build_outside_props(force=False):
+    """OUTSIDE overlay sheet `town_props`. Returns (gid, n)."""
+    out_png = os.path.join(TS, "town_props.png")
+    gid_path = os.path.join(TS, "town_props.gid.json")
+    if not force and os.path.exists(out_png) and os.path.exists(gid_path):
+        return json.load(open(gid_path)), json.load(open(os.path.join(TS, "town_props.json")))["total_metatiles"]
+    a3 = _sheet("rtp_outside_a3")
+    def b_tile(sn, idx):
+        s = _sheet(sn); cols = s.width // T
+        return s.crop(((idx % cols) * T, (idx // cols) * T, (idx % cols) * T + T, (idx // cols) * T + T))
+    tiles = []
+    roof_slices, wall_slices = {}, {}
+    for col, blk in ROOF_BLOCKS.items():
+        sl = nineslice(a3, a3_block(*blk)); roof_slices[col] = sl
+        for s, im in sl.items(): tiles.append((f"roof_{col}_{s}", im))
+    for mat, blk in WALL_BLOCKS.items():
+        sl = nineslice(a3, a3_block(*blk)); wall_slices[mat] = sl
+        for s, im in sl.items(): tiles.append((f"wall_{mat}_{s}", im))
+    window = b_tile("rtp_outside_b", 54); door = b_tile("rtp_outside_b", 116)
+    chimney = b_tile("rtp_outside_b", 128)
+    def over(base, top):
+        c = base.copy(); c.alpha_composite(top); return c
+    for mat, sl in wall_slices.items():
+        tiles.append((f"wall_{mat}_door", over(sl["b"], door)))
+        tiles.append((f"wall_{mat}_window", over(sl["b"], window)))
+        tiles.append((f"wall_{mat}_window_t", over(sl["t"], window)))
+    for col, sl in roof_slices.items():
+        tiles.append((f"roof_{col}_chimney", over(sl["t"], chimney)))
+    PACK = [
+        ("rtp_outside_c", 71, "tower_top"), ("rtp_outside_c", 87, "tower_mid"),
+        ("rtp_outside_c", 103, "tower_door"), ("rtp_outside_c", 119, "tower_base"),
+        ("rtp_outside_c", 32, "banner_red"), ("rtp_outside_c", 33, "banner_blue"),
+        ("rtp_outside_b", 147, "well"), ("rtp_outside_b", 149, "barrel"),
+        ("rtp_outside_b", 145, "sign_h"), ("rtp_outside_b", 146, "sign_v"),
+        ("rtp_outside_b", 226, "crate"), ("rtp_outside_b", 161, "barrel_open"),
+        ("rtp_outside_b", 148, "steps"), ("rtp_outside_b", 144, "oven"),
+        ("rtp_outside_b", 224, "tree_tl"), ("rtp_outside_b", 225, "tree_tr"),
+        ("rtp_outside_b", 240, "tree_bl"), ("rtp_outside_b", 241, "tree_br"),
+        ("rtp_outside_b", 181, "pine"), ("rtp_outside_b", 198, "tree_round"),
+        ("rtp_outside_b", 177, "bush"), ("rtp_outside_b", 166, "bush2"),
+        ("rtp_outside_b", 176, "flower_w"), ("rtp_outside_b", 179, "flower_r"),
+        ("rtp_outside_b", 192, "flower_p"), ("rtp_outside_b", 195, "flower_y"),
+        ("rtp_outside_b", 210, "grass_tuft"), ("rtp_outside_b", 209, "firewood"),
+        ("rtp_outside_b", 163, "boulder"), ("rtp_outside_b", 164, "rock"),
+        ("rtp_outside_b", 150, "grave"), ("rtp_outside_b", 154, "deadtree"),
+    ]
+    for (sn, idx, name) in PACK:
+        tiles.append((name, b_tile(sn, idx)))
+    PR = 16; n = len(tiles); rows = (n + PR - 1) // PR
+    out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0))
+    gid = {}
+    for i, (name, im) in enumerate(tiles):
+        out.paste(im, ((i % PR) * T, (i // PR) * T)); gid[name] = i
+    out.save(out_png)
+    json.dump({"total_metatiles": n, "primary_count": n, "secondary_count": 0, "tile": T,
+               "metatiles_per_row": PR, "source": "RTP A3/C/B packed (outside overlay)",
+               "behaviors": [0] * n, "collisions": [0] * n},
+              open(os.path.join(TS, "town_props.json"), "w"))
+    json.dump(gid, open(gid_path, "w"))
+    _register("town_props")
+    return gid, n
+
+
+# ───────────────────────── the builder ─────────────────────────
+class MapBuilder:
+    def __init__(self, w, h, seed=0, palette="outside"):
+        self.W, self.H = w, h
+        self.rng = random.Random(seed)
+        self.base_n, self.LUT = build_outside_base()
+        self.gid, self.props_n = build_outside_props()
+        self.base_name, self.props_name = "vt_ground", "town_props"
+        self.terr = [["grass"] * w for _ in range(h)]
+        self.over = [-1] * (w * h)
+        self.coll = [0] * (w * h)
+        self.events = []
+        # terrain priority for autotile baking (low->high)
+        self.PRI = {"grass": 0, "dirt": 1, "cobble": 2, "road": 2, "water": 3}
+
+    # ---- primitives ----
+    def inb(self, x, y): return 0 <= x < self.W and 0 <= y < self.H
+    def setp(self, x, y, name, block=True):
+        if self.inb(x, y):
+            self.over[y * self.W + x] = self.gid[name]
+            if block: self.coll[y * self.W + x] = 1
+    def blkc(self, x, y):
+        if self.inb(x, y): self.coll[y * self.W + x] = 1
+    def setterr(self, x, y, t):
+        if self.inb(x, y) and self.terr[y][x] != "water":
+            self.terr[y][x] = t
+    def empty(self, x, y):
+        return self.inb(x, y) and self.over[y * self.W + x] == -1 and not self.coll[y * self.W + x]
+
+    def rect_terr(self, x0, y0, x1, y1, t):
+        for y in range(min(y0, y1), max(y0, y1) + 1):
+            for x in range(min(x0, x1), max(x0, x1) + 1):
+                self.setterr(x, y, t)
+
+    def pond(self, cx, cy, rx, ry, t="water"):
+        for y in range(self.H):
+            for x in range(self.W):
+                d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
+                if d <= 1.0 + self.rng.uniform(-0.18, 0.22):
+                    if self.inb(x, y):
+                        self.terr[y][x] = t
+                        if t == "water": self.coll[y * self.W + x] = 1
+
+    def path(self, x0, y0, x1, y1, t="dirt", width=1, wander=0.5, overgrow=0.0):
+        """Winding path from A->B. `width` tiles thick (perpendicular to travel);
+        `wander` = side-step chance; `overgrow` = chance to skip a tile (leave it as
+        grass, an overgrown trail)."""
+        horiz = abs(x1 - x0) >= abs(y1 - y0)
+        x, y = x0, y0
+        guard = 0
+        while (x, y) != (x1, y1) and guard < (self.W + self.H) * 4:
+            guard += 1
+            self._brush(x, y, t, width, horiz, overgrow)
+            stepx = x != x1 and (y == y1 or self.rng.random() < 0.5)
+            if stepx:
+                x += 1 if x1 > x else -1
+            elif y != y1:
+                y += 1 if y1 > y else -1
+            if self.rng.random() < wander:
+                if horiz:
+                    self._brush(x, max(0, min(self.H - 1, y + self.rng.choice([-1, 1]))), t, width, horiz, overgrow)
+                else:
+                    self._brush(max(0, min(self.W - 1, x + self.rng.choice([-1, 1]))), y, t, width, horiz, overgrow)
+        self._brush(x1, y1, t, width, horiz, overgrow)
+
+    def _brush(self, x, y, t, width, horiz, overgrow):
+        for w in range(width):
+            ax, ay = (x, y + w) if horiz else (x + w, y)
+            if self.rng.random() >= overgrow:
+                self.setterr(ax, ay, t)
+
+    # ---- buildings ----
+    def _grid9(self, prefix, x0, y0, w, h):
+        for j in range(h):
+            for i in range(w):
+                vy = "t" if j == 0 else ("b" if j == h - 1 else "")
+                vx = "l" if i == 0 else ("r" if i == w - 1 else "")
+                self.setp(x0 + i, y0 + j, f"{prefix}_{(vy + vx) or 'f'}")
+
+    def house(self, wx, wy, ww, wh, roof, wall):
+        """wx,wy = top-left of WALL face. Roof scales with size (ridge+body+eave),
+        1-tile overhang. Door + windows composited. Returns (door_x, path_y)."""
+        rh = 3 if (ww >= 6 or wh >= 3) else 2          # taller roof on big houses
+        self._grid9(f"roof_{roof}", wx - 1, wy - rh, ww + 2, rh)
+        self._grid9(f"wall_{wall}", wx, wy, ww, wh)
+        fy = wy + wh - 1
+        dxr = ww // 2
+        door_x = wx + dxr
+        self.setp(door_x, fy, f"wall_{wall}_door")
+        self.events.append({"x": door_x, "y": fy})
+        for wxi in (dxr - 1, dxr + 1):
+            if 0 < wxi < ww - 1 and wxi != dxr:
+                self.setp(wx + wxi, fy, f"wall_{wall}_window")
+        if wh >= 2:
+            for wxi in range(1, ww - 1, 2):
+                if wxi != dxr:
+                    self.setp(wx + wxi, wy, f"wall_{wall}_window_t")
+        if ww >= 3:
+            self.setp(wx + ww - 1, wy - rh, f"roof_{roof}_chimney")
+        return door_x, fy + 1
+
+    def tower(self, x, y0):
+        """2-wide crenellated corner tower, 4 tall (top of base at row y0)."""
+        for dx in (0, 1):
+            for k, nm in enumerate(["tower_top", "tower_mid", "tower_door", "tower_base"]):
+                self.setp(x + dx, y0 - 3 + k, nm)
+
+    def keep(self, x0, y0, w, h):
+        # 2-wide corner towers
+        for (tx, ty) in [(x0, y0), (x0 + w - 2, y0), (x0, y0 + h - 1), (x0 + w - 2, y0 + h - 1)]:
+            self.tower(tx, ty)
+        # stone curtain walls between the towers (2 tall)
+        self._grid9("wall_stone", x0 + 2, y0 - 1, w - 4, 2)
+        # inner keep building
+        kx, ky, kw = x0 + 2, y0 + 1, w - 4
+        if kw >= 3:
+            self.house(kx, ky + 2, kw, 2, "sage", "stone")
+        # gate + banners
+        gx = x0 + w // 2
+        self.setp(gx, y0, "wall_stone_door"); self.events.append({"x": gx, "y": y0})
+        self.setp(gx - 2, y0 - 1, "banner_red"); self.setp(gx + 1, y0 - 1, "banner_blue")
+        # courtyard cobble
+        for yy in range(y0 + 1, y0 + h):
+            for xx in range(x0 + 2, x0 + w - 2):
+                if self.over[yy * self.W + xx] == -1: self.setterr(xx, yy, "cobble")
+        return gx
+
+    # ---- nature ----
+    def tree2(self, x, y):
+        if not (self.inb(x, y) and self.inb(x + 1, y + 1)): return False
+        for ox, oy in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+            if self.over[(y + oy) * self.W + (x + ox)] != -1 or self.terr[y + oy][x + ox] != "grass":
+                return False
+        self.setp(x, y, "tree_tl", False); self.setp(x + 1, y, "tree_tr", False)
+        self.setp(x, y + 1, "tree_bl"); self.setp(x + 1, y + 1, "tree_br")
+        return True
+
+    def scatter(self, name, n, block=True, on=("grass",)):
+        placed = tries = 0
+        while placed < n and tries < n * 60:
+            tries += 1
+            x, y = self.rng.randint(1, self.W - 2), self.rng.randint(1, self.H - 2)
+            if self.over[y * self.W + x] != -1 or self.coll[y * self.W + x]: continue
+            if self.terr[y][x] not in on: continue
+            self.setp(x, y, name, block); placed += 1
+
+    def scatter_any(self, names, n, block=True, on=("grass",)):
+        for _ in range(n):
+            self.scatter(self.rng.choice(names), 1, block, on)
+
+    # ---- finalize ----
+    def bake(self):
+        DIRS = [(0, -1, 1), (1, -1, 2), (1, 0, 4), (1, 1, 8), (0, 1, 16),
+                (-1, 1, 32), (-1, 0, 64), (-1, -1, 128)]
+        meta = [0] * (self.W * self.H); flat = [""] * (self.W * self.H)
+        for y in range(self.H):
+            for x in range(self.W):
+                t = self.terr[y][x]; i = y * self.W + x
+                flat[i] = "" if t == "grass" else t
+                if t == "grass":
+                    meta[i] = 0; continue
+                m = 0
+                for dx, dy, b in DIRS:
+                    nx, ny = x + dx, y + dy
+                    nt = self.terr[ny][nx] if self.inb(nx, ny) else "grass"
+                    if nt == t or self.PRI.get(nt, 0) > self.PRI[t]: m |= b
+                meta[i] = self.LUT[t][m]
+        return meta, flat
+
+    def write(self, name, region="awakened", map_type="MAP_TYPE_TOWN",
+              music="MUS_NONE", weather="WEATHER_NONE", door_text="The door is locked."):
+        meta, flat = self.bake()
+        lid = "LAYOUT_" + name.upper()
+        mid = "MAP_" + name.upper()
+        layout = {"id": lid, "width": self.W, "height": self.H,
+                  "tileset": self.base_name,
+                  "tileset_group": [{"name": self.base_name, "offset": 0, "count": self.base_n}],
+                  "metatiles": meta, "collision": self.coll, "terrain": flat,
+                  "overlay_tileset": self.props_name, "overlay": self.over, "tileSize": T}
+        os.makedirs(os.path.join(ROOT, "data", "layouts", region), exist_ok=True)
+        json.dump(layout, open(os.path.join(ROOT, "data", "layouts", region, lid + ".json"), "w"))
+        mapobj = {"id": mid, "name": name, "region": region, "parent": "", "layout": lid,
+                  "music": music, "weather": weather, "map_type": map_type,
+                  "allow_running": True, "show_map_name": True, "connections": [],
+                  "npcs": [], "warps": [], "triggers": [], "signs": [],
+                  "events": [{"id": i + 1, "name": "Door%d" % (i + 1), "x": e["x"], "y": e["y"],
+                              "graphic": {"sprite": "Door1", "file": "rtp/!Door1.png", "frame_w": 32,
+                                          "frame_h": 32, "cols": 3, "rows": 4, "single": True},
+                              "dir": "down", "trigger": "action", "through": False,
+                              "commands": [{"type": "text", "text": door_text}]}
+                             for i, e in enumerate(self.events)]}
+        os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
+        json.dump(mapobj, open(os.path.join(ROOT, "data", "maps", region, name + ".json"), "w"))
+        ipath = os.path.join(ROOT, "data", "maps", region + "_index.json")
+        idx = json.load(open(ipath)) if os.path.exists(ipath) else {}
+        idx[mid] = name; idx[name] = name
+        json.dump(idx, open(ipath, "w"))
+        return mid
+
+
+# ───────────────────────── archetypes (outside) ─────────────────────────
+ROOFS = list(ROOF_BLOCKS); WALLS = list(WALL_BLOCKS)
+FLOWERS = ["flower_w", "flower_r", "flower_p", "flower_y"]
+
+def _tree_border(b, density=0.55, ring=2):
+    for x in range(1, b.W - 2, 2):
+        for y in list(range(0, ring)) + list(range(b.H - ring - 1, b.H - 1)):
+            if b.rng.random() < density: b.tree2(x, y)
+    for y in range(1, b.H - 2, 2):
+        for x in list(range(0, ring)) + list(range(b.W - ring - 1, b.W - 1)):
+            if b.rng.random() < density: b.tree2(x, y)
+
+def _nature_pass(b, trees, bushes, flowers, tufts, rocks):
+    for _ in range(trees): b.tree2(b.rng.randint(2, b.W - 3), b.rng.randint(2, b.H - 3))
+    b.scatter("pine", trees // 3); b.scatter("tree_round", trees // 3)
+    b.scatter("bush", bushes, False); b.scatter("bush2", bushes // 2, False)
+    for f in FLOWERS: b.scatter(f, flowers, False)
+    b.scatter("grass_tuft", tufts, False)
+    b.scatter("boulder", rocks); b.scatter("rock", rocks, False)
+    b.scatter("firewood", max(2, rocks // 2))
+
+def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True, pond=True):
+    b = MapBuilder(w, h, seed)
+    if pond:
+        b.pond(int(w * 0.84), int(h * 0.84), 5.2, 4.2)
+    # plaza + crossing avenues
+    cx, cy = w // 2, h // 2
+    b.rect_terr(cx - 5, cy - 5, cx + 4, cy + 4, "cobble")
+    for ax in (cx, cx + 1):
+        for y in range(8, h): b.setterr(ax, y, "cobble")
+    for ay in (cy, cy + 1):
+        for x in range(0, w): b.setterr(x, ay, "cobble")
+    # keep (top centre)
+    if keep:
+        b.keep(cx - 7, 8, 14, 6)
+    # houses ringed around the plaza, doors out, paths to the avenue
+    spots = []
+    band = [(6, 16), (13, 15), (w - 17, 15), (w - 10, 17), (6, 30), (13, 33),
+            (6, h - 10), (14, h - 8), (w - 18, h - 10), (w - 9, h - 8),
+            (w - 17, 31), (cx + 1, cy - 8)]
+    for i in range(min(houses, len(band))):
+        wx, wy = band[i]
+        ww, wh = b.rng.choice([(4, 2), (5, 2), (4, 2), (6, 3)])
+        rf, wl = b.rng.choice(ROOFS), b.rng.choice(WALLS)
+        if not b.inb(wx + ww + 1, wy + wh + 1): continue
+        dx, dy = b.house(wx, wy, ww, wh, rf, wl)
+        b.path(dx, dy, dx, cy if abs(dy - cy) < 14 else dy, "dirt", 1, 0.3)
+        b.path(dx, min(dy + 2, h - 1), cx, cy, "dirt", 1, 0.35)
+        if b.rng.random() < 0.5:
+            for fx in range(wx - 1, wx + ww + 1):
+                if b.empty(fx, dy + 1) and b.terr[dy + 1][fx] == "grass":
+                    if b.rng.random() < 0.5: b.setp(fx, dy + 1, b.rng.choice(FLOWERS), False)
+    # plaza well + market
+    b.setp(cx, cy, "well")
+    for (dx, dy, obj) in [(-3, -2, "barrel"), (-3, -1, "barrel_open"), (3, -2, "crate"),
+                          (3, -1, "crate"), (-2, 3, "sign_h"), (2, 3, "sign_v"), (0, -3, "oven")]:
+        b.setp(cx + dx, cy + dy, obj)
+    _tree_border(b, 0.6)
+    _nature_pass(b, trees=22, bushes=24, flowers=8, tufts=30, rocks=8)
+    return b.write(name, region, "MAP_TYPE_TOWN")
+
+def gen_route(name, w=64, h=30, seed=5, region="awakened", vertical=False):
+    b = MapBuilder(w, h, seed)
+    if vertical:
+        b.path(w // 2, 0, w // 2, h - 1, "dirt", 2, 0.55, 0.04)
+    else:
+        b.path(0, h // 2, w - 1, h // 2, "dirt", 2, 0.55, 0.04)
+    # a pond off to one side
+    if b.rng.random() < 0.7:
+        b.pond(int(w * 0.7), int(h * 0.78), 4.0, 3.0)
+    # dense tree edges line the corridor (not in straight lines)
+    _tree_border(b, 0.7, ring=3)
+    _nature_pass(b, trees=28, bushes=20, flowers=10, tufts=34, rocks=10)
+    # signposts at the ends + a rest camp
+    b.setp(2, h // 2 - 1, "sign_v", False) if not vertical else b.setp(w // 2 + 2, 2, "sign_v", False)
+    cx2, cy2 = int(w * 0.4), int(h * 0.35)
+    if b.empty(cx2, cy2):
+        for o, dx in [("barrel", 0), ("crate", 1), ("firewood", -1)]:
+            b.setp(cx2 + dx, cy2, o)
+    return b.write(name, region, "MAP_TYPE_ROUTE")
+
+def gen_forest(name, w=50, h=50, seed=9, region="awakened"):
+    b = MapBuilder(w, h, seed)
+    # winding, overgrown trail crossing the map (both axes) — leaves walking space
+    b.path(0, int(h * 0.4), w - 1, int(h * 0.6), "dirt", 2, 0.6, 0.18)
+    b.path(int(w * 0.55), 0, int(w * 0.45), h - 1, "dirt", 1, 0.6, 0.22)
+    # a stream/pond
+    b.pond(int(w * 0.25), int(h * 0.7), 4.5, 3.2)
+    # clearings (open grass pockets with flowers) — break up the density
+    for (gx, gy) in [(int(w * 0.7), int(h * 0.3)), (int(w * 0.35), int(h * 0.45))]:
+        for f in FLOWERS:
+            for _ in range(4):
+                b.setp(gx + b.rng.randint(-2, 2), gy + b.rng.randint(-2, 2), f, False)
+    # VERY dense, varied trees, never linear, avoiding trail cells
+    for _ in range(140):
+        x, y = b.rng.randint(1, b.W - 3), b.rng.randint(1, b.H - 3)
+        if b.terr[y][x] != "grass": continue
+        r = b.rng.random()
+        if r < 0.6: b.tree2(x, y)
+        elif r < 0.8: b.scatter("pine", 1)
+        else: b.scatter("tree_round", 1)
+    b.scatter("bush", 40, False); b.scatter("bush2", 24, False)
+    for f in FLOWERS: b.scatter(f, 7, False)
+    b.scatter("grass_tuft", 44, False)
+    b.scatter("boulder", 12); b.scatter("rock", 10, False)
+    b.scatter("firewood", 4); b.scatter("deadtree", 6)
+    return b.write(name, region, "MAP_TYPE_FOREST")
