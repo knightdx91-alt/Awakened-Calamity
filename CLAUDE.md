@@ -173,6 +173,20 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Updates & save compatibility (2026-06-17)
+**Save migration (`save.js`):** `SAVE_VERSION` → 2. `migrate()` now does (1) explicit version steps
+then (2) **`_ensureShape`** — a deep backfill that adds any field in the current `DEFAULT_SLOT_DATA`
+missing from an old save (recurses plain objects, never overwrites, leaves arrays alone). So additive
+schema changes (new menus/systems/fields) load old saves safely **without a version bump each time**.
+Verified: a v1 save (no class/skills/progress, partial survival, missing pockets) loads → fields
+backfilled, money/name/meters/items preserved, Sets re-inflated. `DEFAULT_SLOT_DATA` gained
+`player.{affinity,appearance,class,skills,ownedClasses}` + top-level `progress`.
+**Stale-client updates:** deploy writes **`version.txt`** = commit SHA (`pages.yml`). On boot
+`_checkForUpdate()` (main.js) fetches it `no-store` and, if it differs from `window.__BUILD__`, shows a
+non-blocking "A new version is available. Reload to update." notice (skipped locally where `__BUILD__`
+is the placeholder). Saves stay compatible regardless, so it's purely advisory. (Assets already bust
+per-commit via `?v=<SHA>`; `sw.js` is a kill-switch that clears caches + unregisters.)
+
 ## Item database (2026-06-17)
 **`data/systems/items.json`** (21 items) + **`src/systems/items.js` (`GameItems`)** access module
 (load/get/all/name/byPocket/shopItems/fieldUsable). Schema: name, pocket (matches inventory pockets),

@@ -23,6 +23,8 @@ jobs:
           grep -rl '__CACHE_BUST__' --include='*.html' . | while read -r f; do
             sed -i "s/__CACHE_BUST__/${GITHUB_SHA}/g" "$f"
           done
+      - name: Stamp deployed version (for the in-game update check)
+        run: printf '%s' "${GITHUB_SHA}" > version.txt
       - name: Exclude EULA/raw source packs from the public deploy
         run: |
           # Raw, EULA-gated asset packs live in the repo for dev but must NOT be

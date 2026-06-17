@@ -5,7 +5,7 @@
 
     const SAVE_KEY = 'ac_save_v1';
     const SETTINGS_KEY = 'ac_settings_v1';
-    const SAVE_VERSION = 1;
+    const SAVE_VERSION = 2;
 
     // --- Default creature (bonded/wild) ---
     function DEFAULT_CREATURE() {
@@ -61,8 +61,19 @@
                 sprite: 'brendan', // 'brendan' | 'may'
                 playtimeSeconds: 0,
                 money: 3000,
-                battlePoints: 0
+                battlePoints: 0,
+                // Class system (set during the Awakening). Defaults keep old
+                // saves shaped so they load under newer code.
+                affinity: null,
+                appearance: null,
+                class: null,        // { id, level, xp, spec }
+                skills: [],         // learned skill ids
+                ownedClasses: []    // classes you can switch to for free
             },
+
+            // Unified progression (XP/level/attributes). createProgress() seeds it
+            // at creation; left null here so a fresh slot starts blank.
+            progress: null,
 
 
             // Party — donor combat roster (null = empty). AC uses bonds[].
@@ -305,10 +316,37 @@
         return wroteLS;
     }
 
-    // --- Migration stub ---
+    // --- Migration ---------------------------------------------------------
+    // Two layers: (1) explicit version steps for structural changes, then
+    // (2) _ensureShape — a deep backfill that adds any field present in the
+    // current DEFAULT_SLOT_DATA but missing from the old save (never overwrites
+    // existing values). This makes additive schema changes (new menus, systems,
+    // fields) load old saves safely without a version bump every time.
+    function _clone(v) { return (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v; }
+    function _ensureShape(target, defaults) {
+        if (!target || typeof target !== 'object') return defaults;
+        for (var k in defaults) {
+            if (!(k in target) || target[k] === undefined) {
+                target[k] = _clone(defaults[k]);
+            } else if (defaults[k] && typeof defaults[k] === 'object' && !Array.isArray(defaults[k]) &&
+                       target[k] && typeof target[k] === 'object' && !Array.isArray(target[k])) {
+                _ensureShape(target[k], defaults[k]);   // recurse into plain objects
+            }
+        }
+        return target;
+    }
     function migrate(data) {
         if (!data) return data;
-        // Future: if (data.saveVersion < 2) { ... }
+        var v = data.saveVersion || 1;
+        // ---- explicit structural steps ----
+        if (v < 2) {
+            // v1 → v2: class system fields. (All additive — handled by the
+            // shape backfill below; placeholder kept for future real transforms.)
+            v = 2;
+        }
+        // ---- additive backfill against the current default shape ----
+        _ensureShape(data, DEFAULT_SLOT_DATA());
+        data.saveVersion = SAVE_VERSION;
         return data;
     }
 

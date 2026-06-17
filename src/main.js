@@ -265,6 +265,24 @@
         else finish();
     }
 
+    // Compare the running build to the deployed version.txt; if a newer build is
+    // live, the client copy is stale → nudge a reload. Saves stay compatible
+    // regardless (see GameSave.migrate), so this is purely advisory.
+    function _checkForUpdate() {
+        var build = window.__BUILD__;
+        if (!build || build === '__CACHE_BUST__') return;   // local/dev, not deployed
+        fetch('version.txt?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (latest) {
+                if (!latest) return;
+                latest = latest.trim();
+                if (latest && latest !== build && window.GameSystem && GameSystem.notify) {
+                    GameSystem.notify('A new version is available. Reload to update.', 'warning');
+                }
+            })
+            .catch(function () {});
+    }
+
     // Lazy class/skill DB for reward commands (grantclass/grantspec/grantskill).
     var _classDbCache = null, _classDbPromise = null;
     function _loadClassDb() {
@@ -884,6 +902,7 @@
             GameRenderer.setScene(GameMap, GameCamera, player);
             GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
             console.log('[Main] Game started. Map:', GameMap.current && GameMap.current.name);
+            _checkForUpdate();
 
             // Title screen → New Game (Awakening → Dawnhearth) / Continue.
             // Skipped when an explicit ?map= override is used (editor Play / testing).
