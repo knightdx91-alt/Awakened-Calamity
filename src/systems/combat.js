@@ -53,11 +53,15 @@
             }
             // utility skills are out-of-battle; not added to the battle loadout
         }
+        // Resource pools: MP fuels magical (affinity) skills, SP (stamina) fuels
+        // physical ones. Defaults if the build doesn't specify.
+        const maxMp = (d.stats.mp != null) ? d.stats.mp : 30;
+        const maxSp = (d.stats.sp != null) ? d.stats.sp : 100;
         return {
             id: d.id, side: d.side, name: d.name, affinity: d.affinity || null, ai: !!d.ai,
             battler: d.battler || null, charset: d.charset || null,   // presentation: sprite art travels with the actor
             atk: d.stats.atk, def: d.stats.def, speed: d.stats.speed,
-            hp: maxHp, maxHp, tempo: 0, hasActed: false,
+            hp: maxHp, maxHp, mp: maxMp, maxMp, sp: maxSp, maxSp, tempo: 0, hasActed: false,
             defBonus, evadeChance, critChance, counterChance,
             // timed statuses (all decrement on this actor's own turn)
             defBuff: 0, defBuffTurns: 0, atkBuff: 0, atkBuffTurns: 0,
@@ -92,6 +96,22 @@
         return null;
     }
 
+    // ---- resource costs ---------------------------------------------------
+    // A skill's cost: magical (has affinity) draws MP, physical (deals damage)
+    // draws SP/stamina, support/utility a little SP. Scales with the skill's
+    // tempo weight so heavier skills cost more.
+    function skillCost(sk) {
+        if (!sk) return { mp: 0, sp: 0 };
+        const amt = Math.max(4, Math.round((sk.tempoCost || 300) / 40));
+        if (sk.affinity) return { mp: amt, sp: 0 };
+        if ((sk.power || 0) > 0) return { mp: 0, sp: amt };
+        return { mp: 0, sp: Math.max(3, Math.round(amt * 0.5)) };
+    }
+    function canAfford(a, sk) {
+        const c = skillCost(sk);
+        return (a.mp || 0) >= c.mp && (a.sp || 0) >= c.sp;
+    }
+
     // ---- resolve an action -----------------------------------------------
     // action = { actorId, skillId, targetId }. Mutates+returns state.
     function act(state, db, action) {
@@ -100,6 +120,9 @@
         if (!a || a.hp <= 0 || !sk) return state;
         _startTurn(state, a);                 // DoT + decrement this actor's timers
         if (a.hp <= 0) { a.tempo -= sk.tempoCost; return state; }
+        const cost = skillCost(sk);           // spend MP/SP (UI gates affordability)
+        a.mp = Math.max(0, (a.mp || 0) - cost.mp);
+        a.sp = Math.max(0, (a.sp || 0) - cost.sp);
         const eff = sk.effect || {};
 
         if (eff.type === 'heal') {
@@ -256,7 +279,22 @@
         return { actorId, skillId, targetId: target ? target.id : null };
     }
 
-    const GameCombat = { createBattle, step, advanceToReady, act, enemyAction };
+    // ---- use an item in battle -------------------------------------------
+    // action = { actorId, targetId, restore:{hp,mp,sp} }. Restores the target's
+    // pools and consumes the actor's turn (resets tempo). Mutates+returns state.
+    function useItem(state, action) {
+        const a = state.actors[action.actorId];
+        if (!a) return state;
+        const t = state.actors[action.targetId] || a;
+        const r = action.restore || {};
+        if (r.hp) { t.hp = Math.min(t.maxHp, t.hp + r.hp); log(state, 'heal', { actor: a.id, target: t.id, amount: r.hp, hp: t.hp, item: true }); }
+        if (r.mp) { t.mp = Math.min(t.maxMp, (t.mp || 0) + r.mp); log(state, 'restore', { actor: a.id, target: t.id, mp: r.mp }); }
+        if (r.sp) { t.sp = Math.min(t.maxSp, (t.sp || 0) + r.sp); log(state, 'restore', { actor: a.id, target: t.id, sp: r.sp }); }
+        a.tempo = 0;   // using an item spends the turn
+        return state;
+    }
+
+    const GameCombat = { createBattle, step, advanceToReady, act, enemyAction, skillCost, canAfford, useItem };
     root.GameCombat = GameCombat;
     if (typeof module !== 'undefined' && module.exports) module.exports = GameCombat;
 })(typeof window !== 'undefined' ? window : globalThis);

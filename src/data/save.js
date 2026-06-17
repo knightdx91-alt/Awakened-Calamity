@@ -66,6 +66,7 @@
                 // saves shaped so they load under newer code.
                 affinity: null,
                 appearance: null,
+                designation: '',    // System catalog tag (random at creation)
                 class: null,        // { id, level, xp, spec }
                 skills: [],         // learned skill ids
                 ownedClasses: []    // classes you can switch to for free

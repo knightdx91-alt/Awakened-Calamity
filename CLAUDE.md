@@ -173,6 +173,23 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Battle overhaul + MP/SP + items-in-battle + designation (2026-06-17)
+- **Battle menu = FIGHT / ITEM / RUN** (`combatview.js`): the player turn opens a top action menu
+  (▲▼ + A), not a bare skill list. FIGHT → skills (with cost shown, unaffordable greyed) → target;
+  ITEM → battle-usable inventory items → choose **which ally/self** to use on → apply; RUN flees.
+  Existing enemy target-select kept; item target-select added.
+- **MP / Stamina (SP) resource model** (`combat.js`, pure): actors gained `mp/maxMp` + `sp/maxSp`
+  (defaults 30/100, build can override). `skillCost(sk)` — **magical (has affinity) → MP, physical
+  (power>0) → SP**, support → small SP, scaled by tempo weight. `canAfford` gates the player UI; `act()`
+  spends the cost. New `useItem(state,{actorId,targetId,restore})` restores HP/MP/SP to a target and
+  consumes the turn. Player cards now show **HP + MP + SP** bars; enemies show HP.
+- **Recovery items** (`items.json` + `GameItems.battleRestore/battleUsable`): Potion/Hi-Potion (HP),
+  Ether (MP), Elixir (all); Stimulant/food restore SP. Usable in battle (consumed from inventory) with
+  ally/self targeting; buyable in the System Shop.
+- **Random designation:** creation generates a unique System catalog tag `SUBJECT-XXXX`
+  (`player.designation`); `_subjectId()` prefers it (STATUS + System greet). Added to save default.
+- Core suites pass (combat/effects/progression); `useItem`/cost logic node-tested. **Not browser-verified.**
+
 ## Story + quest/dialogue scaffolding (2026-06-17)
 - **`STORY.md`** — canonical story outline (premise, the cycle/buried truth, four acts across the Four
   Reaches, the four endings tilted by Hidden-Layer usage, the Dawnhearth opening beat, cast seed).

@@ -495,6 +495,8 @@ window.GameStartMenu = (function () {
                { surveillance: 0, stamina: 100, exposure: 0 };
     }
     function _subjectId() {
+        var p = window.GameSave && GameSave.state && GameSave.state.player;
+        if (p && p.designation) return p.designation;   // randomly generated at creation
         var raw = (window.GameSave && GameSave.state && GameSave.state.meta)
             ? GameSave.state.meta.subjectId : 0;
         return 'SUBJECT-' + String((raw || 4471)).padStart(4, '0');

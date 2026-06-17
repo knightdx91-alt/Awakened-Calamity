@@ -39,11 +39,25 @@
         var it = get(id); if (!it || !it.use) return false;
         return it.use.type === 'stamina' || it.use.type === 'exposure' || it.use.type === 'cure';
     }
+    // Is this item usable in battle, and what does it restore? Returns
+    // { hp, mp, sp } (0s if none) or null if not battle-usable.
+    function battleRestore(id) {
+        var it = get(id); if (!it || !it.use) return null;
+        var u = it.use, r = { hp: 0, mp: 0, sp: 0 };
+        if (u.type === 'heal') r.hp = u.amount || 0;
+        else if (u.type === 'mp') r.mp = u.amount || 0;
+        else if (u.type === 'sp' || u.type === 'stamina') r.sp = u.amount || 0;
+        else if (u.type === 'restoreAll') { r.hp = u.hp || 9999; r.mp = u.mp || 9999; r.sp = u.sp || 9999; }
+        else return null;
+        return r;
+    }
+    function battleUsable(id) { return !!battleRestore(id); }
     function _pretty(id) { return String(id || '').replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); }); }
 
     root.GameItems = {
         load: load, ready: ready, get: get, all: all, name: name,
-        byPocket: byPocket, shopItems: shopItems, fieldUsable: fieldUsable
+        byPocket: byPocket, shopItems: shopItems, fieldUsable: fieldUsable,
+        battleUsable: battleUsable, battleRestore: battleRestore
     };
     if (typeof module !== 'undefined' && module.exports) module.exports = root.GameItems;
 })(typeof window !== 'undefined' ? window : globalThis);

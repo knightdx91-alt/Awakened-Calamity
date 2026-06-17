@@ -48,6 +48,14 @@ window.GamePlayerCreation = (function () {
 
     function isActive() { return _active; }
 
+    // A randomly-generated, System-assigned designation (catalog tag), e.g.
+    // "SUBJECT-7K3Q". Ambiguous chars (0/O/1/I) omitted for legibility.
+    function _genDesignation() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = '';
+        for (var i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+        return 'SUBJECT-' + s;
+    }
+
     // ----- the System voice intro lines -----
     var INTRO = [
         'SYSTEM ONLINE.',
@@ -337,6 +345,7 @@ window.GamePlayerCreation = (function () {
                 var cl = _classes && _classId && _classes[_classId];
                 p.class = { id: _classId, level: 1, xp: 0 };
                 p.ownedClasses = [_classId];
+                p.designation = _genDesignation();   // the System's unique catalog tag
                 p.skills = (cl && cl.grantsSkills ? cl.grantsSkills.slice() : []);
                 // Seed the canonical progression state from the chosen class tier.
                 if (window.GameProgression) {
