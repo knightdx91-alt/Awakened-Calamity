@@ -2,6 +2,27 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ⏳ PENDING (next session) — MAP GENERATOR follow-ups
+Done so far (`tools/mapgen.py` + `tools/mapgen_indoor.py`, RM-convention research): flush
+same-width house roofs (no side overhang), curated roofs, fixed the `!Door1`→`Door1` sprite
+path (doors render again), windows in clean columns, continuous routes/forest trails, a compact
+walled castle (keep), and interior furniture arranged against the walls. **Still TODO:**
+- **Finish the autotile bakes** (carried over): A1 water/waterfall, A3 roof tops, A4 wall
+  top+side for the RTP pack (and the A2 ground variants noted elsewhere). This is the prerequisite
+  for the interior-wall fix below.
+- **Interior wall LOOK — walls should "come up" like real RM interiors.** Right now interior/dungeon
+  walls render as a flat bordered band (top-down A4 wall-top 9-slice). Owner wants the proper
+  **side-view wall FACE with visible height** — you can see the wall rise (the lower wall lip with
+  shading), the standard RM look. Needs porting the **A4 wall-SIDE autotile** (wall-top cap row +
+  2-tile-tall wall face below) into the indoor prop sheet + builder, not just the single wall block.
+- **Room construction in interiors AND dungeons** — rework how rooms are **sectioned off by walls**
+  (proper interior walls dividing rooms/hallways, doorways between them) and **how items are placed**
+  within rooms (purposeful, against walls, room-function-driven — not scattered).
+- **Furniture orientation** — beds and some other furniture come in **vertical AND horizontal**
+  variants; the generator should pick/place the correct orientation per spot (e.g. bed along a side
+  wall = horizontal, against the back wall = vertical). Add the horizontal tiles + orientation logic.
+
+
 > **2026-06-15 — Art switch: Pixel Fantasy → "XP-for-MV".** Owner decision: drop Pixel Fantasy,
 > use the **"XP graphics reformatted for MV"** pack (RPG Maker XP RTP, LadyBaskerville) everywhere
 > incl. the editor. Raw pack lives at `assets-source/xp-for-mv/` (59 tileset sheets 768×768@48px +
