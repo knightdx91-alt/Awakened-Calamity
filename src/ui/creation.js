@@ -210,11 +210,13 @@ window.GamePlayerCreation = (function () {
         if (det) {
             var cl = _classes && _classId && _classes[_classId];
             if (cl) {
+                // Note: the class `signature` is intentionally NOT shown here —
+                // several signatures name evolution targets (e.g. "foundation for
+                // Paladin/Reaver"), which would spoil the hidden evolution paths.
                 det.innerHTML =
                     '<div class="pc-class-title">' + (cl.name || _classId) +
                         ' <span class="pc-class-sub">' + (cl.lifestyle || '') + ' · ' + (cl.affinityLean || '') + '</span></div>' +
-                    '<div class="pc-class-sig">' + (cl.signature || '') + '</div>' +
-                    '<div class="pc-class-stats">' + _statBars(cl.statProfile) + '</div>' +
+                    '<div class="pc-class-stats" style="margin-top:6px">' + _statBars(cl.statProfile) + '</div>' +
                     '<div class="pc-class-skills"><b>Starting skills:</b> ' + ((cl.grantsSkills || []).join(', ') || '—') + '</div>';
             } else {
                 det.innerHTML = '<div class="pc-class-sub">Choose a starting Class — your lifestyle, stats, and first skills. (You can grow, specialize, or change it later.)</div>';
