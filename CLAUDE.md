@@ -526,6 +526,16 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     0 errors, 0 evolve-warns** (every basic now resolves its evolution). Now **126 classes / 191
     skills**; combat/effects/progression suites pass. Tiers: basic 50, advanced 53, master 6,
     grandmaster 6, heroic 6, legendary 4. **Next: specialize/evolve UI, then Master tier.**
+  - **Specialize / Evolve UI BUILT.** New pure module **`src/systems/classes.js`** (`GameClasses`,
+    portable, no DOM): `evolveOptions` (path-gated — checks level ≥ `EVOLVE_MIN_LEVEL` 10, `requires`
+    skillTags vs learned-skill tags, stat, affinity; default branches always offered), `evolve`
+    (switch class + grant new skills + raise progression Tier), `specOptions`/`chooseSpec` (permanent
+    focus pick, grants its skill). Wired into the **STATUS screen** (`startmenu.js`): a **SPECIALIZE**
+    section (PICK buttons, gated by unlock level; shows chosen focus once set) and an **EVOLVE** section
+    (lists branches with eligibility/reason; eligible ones get a two-click EVOLVE→CONFIRM with a
+    Fanfare). STATUS loader now also fetches `skills.json` (for tag gating). Node-tested
+    (brawler→champion gated by level; warrior specs; tier/skill grants) + combat/progression suites
+    pass. **Not browser-verified.** Next: Master tier content; non-combat lifestyle skill use.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

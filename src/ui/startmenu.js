@@ -485,20 +485,23 @@ window.GameStartMenu = (function () {
 
     // Lazy-load class + progression data so STATUS can show class name, level,
     // XP-to-next, and skills. Cached; re-renders the camp page once available.
-    var _clsData = null, _progData = null, _clsLoading = false;
+    var _clsData = null, _progData = null, _skillsData = null, _clsLoading = false;
+    var _pendingEvolve = null;   // two-click confirm for evolving
     function _ensureClassData() {
-        if (_clsData && _progData) return;
+        if (_clsData && _progData && _skillsData) return;
         if (_clsLoading) return;
         _clsLoading = true;
         var b = '?b=' + (window.__BUILD__ || '0');
         Promise.all([
             fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
-            fetch('data/systems/progression.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+            fetch('data/systems/progression.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
         ]).then(function (res) {
-            _clsData = res[0] || {}; _progData = res[1] || null; _clsLoading = false;
+            _clsData = res[0] || {}; _progData = res[1] || null; _skillsData = res[2] || {}; _clsLoading = false;
             if (page === 'camp') _render();   // refresh STATUS with real data
         });
     }
+    function _classDb() { return { classes: _clsData || {}, skills: _skillsData || {} }; }
     function _prettySkill(id) {
         return String(id || '').replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); });
     }
@@ -598,6 +601,77 @@ window.GameStartMenu = (function () {
                             }
                         });
                         r.appendChild(plus);
+                    }
+                });
+            }
+        }
+
+        // Specialize + Evolve (class growth) — needs class data + GameClasses.
+        if (cls && window.GameClasses && GameSave && GameSave.state) {
+            var ctx = GameClasses.ctxFromState(GameSave.state);
+            var db = _classDb();
+
+            // SPECIALIZE — pick a focus (permanent) once unlocked.
+            var specs = GameClasses.specOptions(clsId, ctx, db);
+            var chosenSpec = p.class && p.class.spec;
+            if (specs.length) {
+                var sph = document.createElement('div');
+                sph.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+                sph.textContent = 'SPECIALIZE';
+                el.appendChild(sph);
+                if (chosenSpec) {
+                    var cur = specs.filter(function (s) { return s.id === chosenSpec; })[0];
+                    var cr = _row(el, { css: 'justify-content:space-between;color:' + _FR.dim + ';' });
+                    cr.innerHTML = '<span>Focus</span><span style="color:' + _FR.text + '">' + (cur ? cur.name : _prettySkill(chosenSpec)) + '</span>';
+                } else {
+                    specs.forEach(function (sp) {
+                        var r = _row(el, { css: 'justify-content:space-between;align-items:center;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
+                        var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
+                        nm.innerHTML = sp.name + (sp.grantsSkill ? ' <span style="font-size:6px;color:' + _FR.dim + '">(' + _prettySkill(sp.grantsSkill) + ')</span>' : '');
+                        r.appendChild(nm);
+                        var btn = document.createElement('button');
+                        btn.textContent = sp.eligible ? 'PICK' : ('Lv' + sp.unlockAtLevel);
+                        btn.disabled = !sp.eligible;
+                        btn.style.cssText = 'font:7px "Press Start 2P";padding:4px 6px;border-radius:3px;border:none;cursor:' + (sp.eligible ? 'pointer' : 'not-allowed') + ';background:' + (sp.eligible ? _FR.blue : _FR.border) + ';color:#fff;';
+                        if (sp.eligible) btn.addEventListener('click', function () {
+                            if (GameClasses.chooseSpec(GameSave.state, clsId, sp.id, db)) {
+                                if (window.GameAudio) GameAudio.playSE('Decision1');
+                                if (GameSave.markDirty) GameSave.markDirty();
+                                _render();
+                            }
+                        });
+                        r.appendChild(btn);
+                    });
+                }
+            }
+
+            // EVOLVE — advance up a Tier along a declared branch.
+            var evos = GameClasses.evolveOptions(clsId, ctx, db);
+            if (evos.length) {
+                var eh = document.createElement('div');
+                eh.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _SYS.cyan + ';';
+                eh.textContent = 'EVOLVE';
+                el.appendChild(eh);
+                evos.forEach(function (ev) {
+                    var pending = (_pendingEvolve === ev.id);
+                    var r = _row(el, { css: 'justify-content:space-between;align-items:center;background:' + _FR.body + ';border:1px solid ' + (ev.eligible ? _SYS.cyan : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
+                    var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (ev.eligible ? _FR.text : _FR.dim) + ';';
+                    nm.innerHTML = '→ ' + ev.name + (ev.eligible ? '' : ' <span style="font-size:6px;color:' + _FR.dim + '">(' + ev.reason + ')</span>');
+                    r.appendChild(nm);
+                    if (ev.eligible) {
+                        var btn = document.createElement('button');
+                        btn.textContent = pending ? 'CONFIRM?' : 'EVOLVE';
+                        btn.style.cssText = 'font:7px "Press Start 2P";padding:4px 6px;border-radius:3px;border:none;cursor:pointer;background:' + (pending ? _SYS.warn : _SYS.cyan) + ';color:#02060f;';
+                        btn.addEventListener('click', function () {
+                            if (!pending) { _pendingEvolve = ev.id; _render(); return; }
+                            _pendingEvolve = null;
+                            if (GameClasses.evolve(GameSave.state, clsId, ev.id, db)) {
+                                if (window.GameAudio) GameAudio.playME('Fanfare1');
+                                if (GameSave.markDirty) GameSave.markDirty();
+                                _render();
+                            }
+                        });
+                        r.appendChild(btn);
                     }
                 });
             }
