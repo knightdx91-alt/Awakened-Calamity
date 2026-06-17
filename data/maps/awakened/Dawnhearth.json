@@ -516,7 +516,7 @@
          "else": [
           {
            "type": "text",
-           "text": "Easy, now. You just Awakened \u2014 the System pulled you up, same as everyone in Dawnhearth.",
+           "text": "Easy, now. You just Awakened \u2014 the System pulled you up out of the dark, same as everyone in Dawnhearth.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -524,7 +524,7 @@
           },
           {
            "type": "text",
-           "text": "It'll offer you the world. Take what you need\u2026 but it watches every favor it does you.",
+           "text": "You'll feel it humming at the edge of your thoughts. It names you, ranks you, hands you power. That's [designation] to the System now \u2014 but I'll call you [name].",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -532,7 +532,23 @@
           },
           {
            "type": "text",
-           "text": "Go on \u2014 touch the crystal in the plaza, let it 'welcome' you. Then we'll talk.",
+           "text": "Move with the arrows or the pad; press A to speak to folk and to examine things. Your menu holds your Status, Supplies, and the meters that keep you alive out there.",
+           "face": {
+            "sheet": "People1",
+            "index": 0
+           }
+          },
+          {
+           "type": "text",
+           "text": "The System will offer you the world. Take what you need\u2026 but every favor it does you, it watches a little closer. Keep an eye on your Surveillance.",
+           "face": {
+            "sheet": "People1",
+            "index": 0
+           }
+          },
+          {
+           "type": "text",
+           "text": "Go on \u2014 touch the crystal in the plaza and let it 'welcome' you properly. Then come back and we'll talk.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -656,6 +672,211 @@
     {
      "type": "text",
      "text": "Scratched underneath, in a shaking hand: \u201cThey took Joran for going off-grid. He only wanted to be left alone.\u201d"
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "name": "Tessa",
+   "x": 20,
+   "y": 26,
+   "graphic": {
+    "sprite": "Tessa",
+    "file": "rtp/Tessa.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "You just Awakened, didn't you? I can always tell \u2014 you still trust it.",
+     "face": {
+      "sheet": "People3",
+      "index": 0
+     }
+    },
+    {
+     "type": "text",
+     "text": "The System will offer you everything. Healing, classes, safe passage. And every time you take a favor, the Surveillance gauge climbs.",
+     "face": {
+      "sheet": "People3",
+      "index": 0
+     }
+    },
+    {
+     "type": "text",
+     "text": "Watch that meter in your menu, [name]. When the System knows you too well\u2026 it starts deciding things for you.",
+     "face": {
+      "sheet": "People3",
+      "index": 0
+     }
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "name": "OldBram",
+   "x": 32,
+   "y": 30,
+   "graphic": {
+    "sprite": "OldBram",
+    "file": "rtp/OldBram.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "Heh. Another one, pulled up bright and shining. The System does love a fresh Awakened.",
+     "face": {
+      "sheet": "People2",
+      "index": 2
+     }
+    },
+    {
+     "type": "text",
+     "text": "I've lived a long time, child. Long enough to feel like I've watched this all happen before. The crystals. The eager new Subjects.",
+     "face": {
+      "sheet": "People2",
+      "index": 2
+     }
+    },
+    {
+     "type": "text",
+     "text": "Nobody else remembers. That's the part that keeps an old man up at night.",
+     "face": {
+      "sheet": "People2",
+      "index": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "name": "Lys",
+   "x": 22,
+   "y": 29,
+   "graphic": {
+    "sprite": "Lys",
+    "file": "rtp/Lys.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "conditional",
+     "cond": {
+      "kind": "quest",
+      "id": "awakening",
+      "check": "stage",
+      "stage": 1
+     },
+     "then": [
+      {
+       "type": "text",
+       "text": "So the crystal 'welcomed' you too. It's kind, at first. It was kind to my brother Joran, before.",
+       "face": {
+        "sheet": "People1",
+        "index": 1
+       }
+      },
+      {
+       "type": "text",
+       "text": "He stopped taking its favors. Started living off-grid, untethered. The Vanguard came for him in the night.",
+       "face": {
+        "sheet": "People1",
+        "index": 1
+       }
+      },
+      {
+       "type": "text",
+       "text": "They say the Untethered forfeit the System's protection. They don't say where the taken ones go. Please \u2014 read the board by the plaza.",
+       "face": {
+        "sheet": "People1",
+        "index": 1
+       }
+      }
+     ],
+     "else": [
+      {
+       "type": "text",
+       "text": "You're new. Be careful who you trust here \u2014 and what you owe.",
+       "face": {
+        "sheet": "People1",
+        "index": 1
+       }
+      },
+      {
+       "type": "text",
+       "text": "My brother Joran trusted too little, in the end. Go on, talk to the crystal. Then we'll see what kind of Awakened you are.",
+       "face": {
+        "sheet": "People1",
+        "index": 1
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "name": "Corwin",
+   "x": 30,
+   "y": 27,
+   "graphic": {
+    "sprite": "Corwin",
+    "file": "rtp/Corwin.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "Vanguard Sentry Corwin. Stay tethered, Subject, and we'll have no trouble.",
+     "face": {
+      "sheet": "People4",
+      "index": 2
+     }
+    },
+    {
+     "type": "text",
+     "text": "The System protects those who let it. The Untethered \u2014 those who refuse its aid \u2014 are a danger to Dawnhearth and to themselves.",
+     "face": {
+      "sheet": "People4",
+      "index": 2
+     }
+    },
+    {
+     "type": "text",
+     "text": "Report anyone living off-grid. It's for their own good. \u2026That's the line, anyway.",
+     "face": {
+      "sheet": "People4",
+      "index": 2
+     }
     }
    ]
   }
