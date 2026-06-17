@@ -696,8 +696,14 @@ window.GameStartMenu = (function () {
         var p = inv[key]; if (!p) return 0; var n = 0;
         for (var k in p) n += (p[k] | 0); return n;
     }
+    function _ensureItems() {
+        if (window.GameItems && !GameItems.ready()) {
+            GameItems.load().then(function () { if (page === 'supplies') _render(); });
+        }
+    }
     function _buildSupplies(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
+        _ensureItems();
         var inv = (window.GameSave && GameSave.state && GameSave.state.inventory) || {};
         if (_supPocket) { _buildPocket(el, inv, _supPocket); return; }
         // Pocket list — select one to open it.
@@ -736,32 +742,49 @@ window.GameStartMenu = (function () {
             el.appendChild(em); return;
         }
         ids.forEach(function (id) {
-            var r = _row(el, { css: 'justify-content:space-between;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
+            var def = (window.GameItems && GameItems.get(id)) || null;
+            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
+            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+            var ic = document.createElement('canvas'); ic.width = ic.height = 24; ic.style.cssText = 'width:16px;height:16px;flex:none;';
+            (function (cv, idx) { if (idx != null && window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); }); })(ic, def ? def.icon : null);
             var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
-            nm.textContent = _prettySkill(id);
+            nm.textContent = (def ? def.name : _prettySkill(id)).toUpperCase();
             var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (pocket[id] | 0);
-            r.appendChild(nm); r.appendChild(cnt);
-            _sel(r, function () { _useItem(key, id, meta[4]); });
+            top.appendChild(ic); top.appendChild(nm); top.appendChild(cnt);
+            r.appendChild(top);
+            if (def && def.desc) {
+                var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
+                d.textContent = def.desc; r.appendChild(d);
+            }
+            _sel(r, function () { _useItem(key, id); });
         });
     }
-    // Use one item from a pocket. Food → Stamina, Tonics → Exposure; others note.
-    function _useItem(key, id, usable) {
+    // Use one item from a pocket, applying its database `use` effect.
+    function _useItem(key, id) {
         var st = window.GameSave && GameSave.state; if (!st) return;
+        var def = window.GameItems && GameItems.get(id);
         var surv = st.survival || (st.survival = { surveillance: 0, stamina: 100, exposure: 0 });
-        var msg;
-        if (key === 'food') { surv.stamina = Math.min(100, (surv.stamina || 0) + 30); msg = 'Stamina restored.'; }
-        else if (key === 'tonics') { surv.exposure = Math.max(0, (surv.exposure || 0) - 40); msg = 'Exposure purged.'; }
-        else if (key === 'items') { surv.stamina = Math.min(100, (surv.stamina || 0) + 15); msg = 'Used ' + _prettySkill(id) + '.'; }
-        else if (key === 'campKits') { msg = 'Deploy a Camp Kit out in the field, not here.'; }
-        else if (key === 'tethers') { msg = 'Tethers are spent in battle to Bind a weakened creature.'; }
-        else { msg = "Can't use that from here."; }
-        if (usable) {   // consume one
+        var usable = !!(window.GameItems && GameItems.fieldUsable(id));
+        var msg, nm = def ? def.name : _prettySkill(id);
+        if (usable) {
+            var u = def.use;
+            if (u.type === 'stamina') { surv.stamina = Math.min(100, (surv.stamina || 0) + (u.amount || 0)); msg = nm + ' — Stamina restored.'; }
+            else if (u.type === 'exposure') { surv.exposure = Math.max(0, (surv.exposure || 0) - (u.amount || 0)); msg = nm + ' — Exposure purged.'; }
+            else if (u.type === 'cure') { msg = nm + ' — ailment cured.'; }
+            else { msg = 'Used ' + nm + '.'; }
             var pk = st.inventory[key]; pk[id] = (pk[id] | 0) - 1; if (pk[id] <= 0) delete pk[id];
             if (GameSave.markDirty) GameSave.markDirty();
             if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(surv);
             if (window.GameAudio) GameAudio.playSE('Heal1');
             if (_subIdx > 0) _subIdx--;   // keep cursor in range after removal
-        } else if (window.GameAudio) { GameAudio.playSE('Buzzer1'); }
+        } else {
+            // Non-field items explain where they're actually used.
+            if (def && def.battle) msg = nm + ' is spent in battle.';
+            else if (def && def.field) msg = nm + ' is deployed out in the field, not here.';
+            else if (def && def.gear) msg = nm + ' equips once the gear system lands.';
+            else msg = "Can't use " + nm + ' from here.';
+            if (window.GameAudio) GameAudio.playSE('Buzzer1');
+        }
         if (window.GameSystem && GameSystem.notify) GameSystem.notify(msg, usable ? 'info' : 'warning');
         _render();
     }

@@ -173,6 +173,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Item database (2026-06-17)
+**`data/systems/items.json`** (21 items) + **`src/systems/items.js` (`GameItems`)** access module
+(load/get/all/name/byPocket/shopItems/fieldUsable). Schema: name, pocket (matches inventory pockets),
+desc, icon (RTP IconSet), value, stack, `use{type,amount}` (stamina/exposure/cure applied by the
+field menu; heal later), `field`/`battle` flags, `gear{slot,…}` for the future equip system,
+`shop:true` to list in the System Shop. **SUPPLIES** now shows real names/desc/icons and `_useItem`
+applies the DB effect + consumes; **System Shop SUPPLIES** is sourced from `GameItems.shopItems()`
+(price = `value`). Wired in `game.html`. Validated + suites pass; **not browser-verified.**
+
 ## Deeper survival sub-menus (2026-06-17)
 Start-menu sub-pages got a **selectable-row + drill-down** framework (`startmenu.js`): `_subRows`
 registry + `_sel(rowEl,onSelect)` + `_runSel()`; `_subCount` returns the row count so up/down move a

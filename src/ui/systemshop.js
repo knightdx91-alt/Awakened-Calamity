@@ -20,7 +20,8 @@ window.GameSystemShop = (function () {
         var b = '?b=' + (window.__BUILD__ || '0');
         Promise.all([
             fetch('data/systems/classes.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
-            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
+            fetch('data/systems/skills.json' + b, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+            (window.GameItems ? GameItems.load() : Promise.resolve({}))
         ]).then(function (res) { _db = { classes: res[0] || {}, skills: res[1] || {} }; _loading = false; cb(); });
     }
 
@@ -109,22 +110,18 @@ window.GameSystemShop = (function () {
         _navBtn(host, 'CLASSES', 'Specialize · Reclassify', 'classes');
     }
 
-    // ---- SUPPLIES ----
-    var GOODS = [
-        { id: 'tether', pocket: 'tethers', name: 'Tether', cost: 150, surv: 2, desc: 'Bind a weakened creature.' },
-        { id: 'tonic', pocket: 'tonics', name: 'Tonic', cost: 120, surv: 1, desc: 'Purge one Exposure type.' },
-        { id: 'camp_kit', pocket: 'campKits', name: 'Camp Kit', cost: 200, surv: 2, desc: 'Drop a temporary Safe Zone.' },
-        { id: 'ration', pocket: 'food', name: 'Field Ration', cost: 40, surv: 1, desc: 'Restores Stamina in the field.' }
-    ];
+    // ---- SUPPLIES (sourced from the item database) ----
     function _renderSupplies(host) {
         var credits = _credits();
-        GOODS.forEach(function (g) {
-            var afford = credits >= g.cost;
-            _buyBtn(host, g.name + '  — Cr ' + g.cost, g.desc + ' (+' + g.surv + ' Surv)', afford, function () {
+        var goods = (window.GameItems && GameItems.shopItems && GameItems.shopItems()) || [];
+        if (!goods.length) { host.appendChild(_msg('No stock available.')); return; }
+        goods.forEach(function (g) {
+            var cost = g.value || 0, surv = Math.max(1, Math.round(cost / 80)), afford = credits >= cost;
+            _buyBtn(host, g.name + '  — Cr ' + cost, (g.desc || '') + ' (+' + surv + ' Surv)', afford, function () {
                 var s = _st(); if (!s) return;
                 s.inventory = s.inventory || {}; s.inventory[g.pocket] = s.inventory[g.pocket] || {};
                 s.inventory[g.pocket][g.id] = (s.inventory[g.pocket][g.id] || 0) + 1;
-                _spend(g.cost); _raise(g.surv, g.name + ' acquired.');
+                _spend(cost); _raise(surv, g.name + ' acquired.');
                 if (window.GameAudio) GameAudio.playSE('Coin'); _render();
             });
         });
