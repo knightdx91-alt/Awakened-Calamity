@@ -229,7 +229,7 @@
       <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (Ground)">1</button>
       <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (Overlay)">2</button>
       <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (Upper) — coming soon">3</button>
-      <button id="eventModeBtn" class="tb" title="Event layer — coming soon">◆</button>
+      <button id="eventModeBtn" class="tb" title="Event layer (click again to turn off)">◆</button>
     </div>
     <div class="tsep"></div>
     <!-- Draw tools -->
@@ -312,6 +312,7 @@
         </div>
         <div id="paletteHead">
           <button id="autoToggle" title="Switch autotiles ⇄ raw tiles">🌱 Auto</button>
+          <button id="multiTileBtn" title="Pick more than one tile: when ON, drag a rectangle across the palette to grab a block">▦ 1×1</button>
           <label class="lbl">Jump</label><input type="number" id="paletteJump" min="0" style="width:48px">
           <span class="lbl" id="paletteCount"></span>
         </div>

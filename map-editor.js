@@ -1720,11 +1720,17 @@
     if ($('shadowRow')) $('shadowRow').style.display = inS ? '' : 'none';
     if ($('eventHint')) $('eventHint').style.display = inE ? '' : 'none';
     if ($('modeBar')) $('modeBar').style.display = (inR || inS || inE) ? 'flex' : 'none';
+    if ($('eventModeBtn')) $('eventModeBtn').classList.toggle('active', inE);
     drawMap();
   }
   Object.keys(MODE_BTNS).forEach(function (id) {
     var e = $(id); if (!e) return;
-    e.addEventListener('click', function () { setModeBtn(MODE_BTNS[id]); syncModeUI(); });
+    e.addEventListener('click', function () {
+      // clicking the already-active mode (other than Map) toggles back to Map
+      var target = MODE_BTNS[id];
+      setModeBtn((state.mode === target && target !== 'map') ? 'map' : target);
+      syncModeUI();
+    });
   });
   var rn = $('regionNum');
   if (rn) rn.addEventListener('change', function () {
@@ -1734,7 +1740,30 @@
   });
   syncModeUI();
 
-  $('eventModeBtn').addEventListener('click', function () { setModeBtn('event'); syncModeUI(); });
+  // Multi-tile palette toggle (visible button above the palette). OFF = one tile
+  // per pick; ON = drag a rectangle across the palette to grab a block (like the
+  // rectangle tool, but for the source tiles).
+  function syncMultiTileBtn() {
+    var b = $('multiTileBtn'); if (!b) return;
+    b.classList.toggle('active', state.multiTile);
+    b.textContent = state.multiTile ? '▦ Multi' : '▦ 1×1';
+  }
+  if ($('multiTileBtn')) $('multiTileBtn').addEventListener('click', function () {
+    state.multiTile = !state.multiTile;
+    if (!state.multiTile && state.stamp && state.stamp.ids && state.stamp.ids.length > 1) {
+      state.stamp = { ids: [state.stamp.ids[0]], w: 1, h: 1 };   // collapse back to a single tile
+    }
+    syncMultiTileBtn();
+    toast(state.multiTile ? 'Multi-tile ON — drag across the palette to grab a block'
+                          : 'Multi-tile OFF — one tile at a time');
+  });
+  syncMultiTileBtn();
+
+  // Event-layer button TOGGLES: click again (or while already in event mode) to
+  // return to Map/tile mode, so it doesn't get stuck on.
+  $('eventModeBtn').addEventListener('click', function () {
+    setModeBtn(state.mode === 'event' ? 'map' : 'event'); syncModeUI();
+  });
   $('undoBtn').addEventListener('click', doUndo);
   $('redoBtn').addEventListener('click', doRedo);
   // Keyboard: Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) for undo/redo.
