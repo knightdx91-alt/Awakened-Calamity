@@ -18,11 +18,13 @@ from mapgen import T, TS, ROOT, _sheet, _register, nineslice
 SCENE = {
     "dungeon": {"ground": "rtp_dungeon_ground", "a4": "rtp_dungeon_a4",
                 "wall_block": (1, 0), "b": "rtp_dungeon_b",
+                "wallface": ("rtp_dungeon_wallface", "wall_1_5"),  # grey stone side-view face
                 "props": {"pillar": 128, "crystal": 100, "crystal2": 102, "rockpile": 108,
                           "barrel": 236, "crate": 220, "bones": 232, "grave": 71,
                           "stairs": 4, "goldpile": 110}},
     "interior": {"ground": "rtp_inside_ground", "a4": "rtp_inside_a4",
                  "wall_block": (0, 0), "b": "rtp_inside_b",
+                 "wallface": ("rtp_inside_wallface", "wall_1_3"),  # plaster + baseboard face
                  "props": {"bed": 144, "bed2": 160, "table": 177, "chair": 124,
                            "shelf": 99, "cabinet": 154, "barrel": 156, "pot": 170,
                            "fireplace": 36, "throne": 123, "crate": 208, "rug": 90,
@@ -46,6 +48,17 @@ def build_indoor_props(scene, force=False):
     bc = b.width // T
     for name, idx in cfg["props"].items():
         tiles.append((name, b.crop(((idx % bc) * T, (idx // bc) * T, (idx % bc) * T + T, (idx // bc) * T + T))))
+    # Side-view wall FACE (cap/body/base x L/M/R) for north-facing walls, so walking
+    # UP shows a wall with visible height in front of you (the RM interior look).
+    # Appended LAST → existing indoor-prop gids stay stable.
+    if "wallface" in cfg:
+        wf_name, wf_mat = cfg["wallface"]
+        wf = _sheet(wf_name); wpr = json.load(open(os.path.join(TS, wf_name + ".json")))["metatiles_per_row"]
+        slots = json.load(open(os.path.join(TS, wf_name + ".json")))["slots"][wf_mat]
+        def wf_tile(i): return wf.crop(((i % wpr) * T, (i // wpr) * T, (i % wpr) * T + T, (i // wpr) * T + T))
+        for row in ("cap", "body", "base"):
+            for col, i in zip("lmr", slots[row]):
+                tiles.append((f"face_{row}_{col}", wf_tile(i)))
     PR = 16; n = len(tiles); rows = (n + PR - 1) // PR
     out = Image.new("RGBA", (PR * T, rows * T), (0, 0, 0, 0)); gid = {}
     for i, (name, im) in enumerate(tiles):
@@ -120,6 +133,36 @@ class IndoorBuilder:
                     self.over[i] = self.gid["wall_" + self._wall_slice(x, y)]
                     self.coll[i] = 1
 
+    def render_north_faces(self):
+        """Overlay the side-view wall FACE on every north-facing wall (a wall cell
+        directly above a floor cell). Walking UP toward it, the player sees the wall
+        rise: base (meets floor) -> body -> cap (top). L/M/R picked by horizontal
+        continuity. Requires the face_* tiles in the prop sheet."""
+        if "face_base_m" not in self.gid:
+            return
+        def wall(x, y): return self.inb(x, y) and not self.walk[y * self.W + x]
+        def floor(x, y): return self.inb(x, y) and self.walk[y * self.W + x]
+        def edge(x, y): return floor(x, y) and wall(x, y - 1)   # north wall above floor (x,y)
+        for y in range(self.H):
+            for x in range(self.W):
+                if not edge(x, y):
+                    continue
+                col = "l" if not edge(x - 1, y) else ("r" if not edge(x + 1, y) else "m")
+                # base meets the floor; body + cap stack upward over wall cells
+                rows = [("base", y - 1), ("body", y - 2), ("cap", y - 3)]
+                for ri, (part, yy) in enumerate(rows):
+                    if not wall(x, yy):
+                        # ran out of wall: cap the highest available wall cell instead
+                        if ri > 0 and wall(x, yy + 1):
+                            self.over[(yy + 1) * self.W + x] = self.gid[f"face_cap_{col}"]
+                        break
+                    name = part
+                    # if there is no wall above the planned cap, make this the cap
+                    if part == "body" and not wall(x, yy - 1):
+                        name = "cap"
+                    self.over[yy * self.W + x] = self.gid[f"face_{name}_{col}"]
+                    self.coll[yy * self.W + x] = 1
+
     def scatter_in_rooms(self, name, n, block=True):
         placed = tries = 0
         while placed < n and tries < n * 80:
@@ -182,6 +225,7 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
         ax, ay = rooms[i - 1][:2]; bx, by = rooms[i][:2]
         b.carve_corridor(ax, ay, bx, by, width=rng.choice([1, 2]))
     b.finalize_walls()
+    b.render_north_faces()
     # entrance (first room) + Alpha lair (last room)
     ex, ey = rooms[0][:2]
     b.setp(ex, ey, "stairs", block=False)
@@ -217,6 +261,7 @@ def gen_interior(name, w=26, h=18, seed=2, region="awakened", tier=1, hazard="")
         for y in range(top, h - 2):
             b.walk[y * b.W + mx] = (y == h - 4)
     b.finalize_walls()
+    b.render_north_faces()
     # exit at the bottom-centre (back outside)
     exx = w // 2
     b.setp(exx, h - 3, "stairs", block=False)

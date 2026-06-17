@@ -217,9 +217,16 @@ and the rung windows immediately (biggest visible win). Then (3) eave depth, (4)
   column** as a symmetric pair on the upper wall row (was stacked every row = rungs). `town_props`
   pixels regenerated with stable gids, so existing maps pick up the real door/window too. Verified
   via isolated-house + full-town renders. Also fixed the registry write (list-format index).
-- ⏳ TODO: (3) eave depth/shadow, (4) per-town palette, (5) L/3×3/landmark footprints, and the
-  **interior back-wall FACE** so walking up shows a wall with height in front of you (the
-  `rtp_*_wallface` bake → `mapgen_indoor.py`).
+- ✅ **Interior/dungeon back-wall FACE DONE** (`tools/mapgen_indoor.py`, 2026-06-17): every
+  north-facing wall (a wall cell directly above a floor cell) now renders the side-view
+  **face** — base (meets floor) → body → cap (top) — so walking UP you see the wall rise with
+  visible height. Uses the baked `rtp_inside_wallface` (plaster+baseboard `wall_1_3`) for
+  interiors and `rtp_dungeon_wallface` (grey stone `wall_1_5`) for dungeons; face tiles appended
+  to the indoor prop sheets with stable gids. `render_north_faces()` picks L/M/R by horizontal
+  continuity. Verified via zoomed interior + dungeon renders.
+- ⏳ TODO: (3) eave depth/shadow on houses, (4) per-town palette, (5) L/3×3/landmark footprints;
+  interior **side/bottom** walls still use the flat 9-slice (match them to the face material),
+  and **room sectioning + furniture-by-function** (the bigger interior rework) is still pending.
 
 ---
 
