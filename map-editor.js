@@ -556,10 +556,14 @@
              cy: Math.max(0, Math.floor(p.y / (DT * PAL_SCALE))) };
   }
   paletteCanvas.addEventListener('pointerdown', function (e) {
-    e.preventDefault();
-    try { paletteCanvas.setPointerCapture(e.pointerId); } catch (_) {}
     palDrag = palCellFromEvent(e);
     setStampFromPalette(palDrag.cx, palDrag.cy, palDrag.cx, palDrag.cy);
+    // Only capture the gesture for drag-select (mouse, or touch with multi-tile ON);
+    // otherwise leave it so a touch drag scrolls the palette (large sheets overflow).
+    if (e.pointerType === 'mouse' || state.multiTile) {
+      e.preventDefault();
+      try { paletteCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+    } else { palDrag = null; }
   });
   paletteCanvas.addEventListener('pointermove', function (e) {
     if (!palDrag) return;
@@ -2695,6 +2699,10 @@
   function openMapProps() { $('mapPropsModal').style.display = 'flex'; }
   function closeMapProps() { $('mapPropsModal').style.display = 'none'; }
   $('mapPropsClose').addEventListener('click', closeMapProps);
+  if ($('mapPropsDone')) $('mapPropsDone').addEventListener('click', closeMapProps);
+  if ($('mapPropsSaveRepo')) $('mapPropsSaveRepo').addEventListener('click', function () {
+    closeMapProps(); saveToRepo();   // properties are live fields; persist the map to the repo
+  });
   $('mapPropsModal').addEventListener('click', function (e) { if (e.target === $('mapPropsModal')) closeMapProps(); });
   $('eventEditorClose').addEventListener('click', closeEventEditor);
   $('eventEditorModal').addEventListener('click', function (e) { if (e.target === $('eventEditorModal')) closeEventEditor(); });
