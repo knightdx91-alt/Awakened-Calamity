@@ -1,15 +1,13 @@
 # LitRPG Survival Game — Design Notes
 
-> Working design doc for the **Pokémon System Awakening**-derived project: a GBA-style,
-> 2D top-down LitRPG **survival** sandbox built on this repo's existing metatile engine.
-> Companion to the Drive doc *Pokemon_System_Awakening_Expansion_v2*. This file captures
+> Working design doc for **Awakened Calamity**: a GBA-style, 2D top-down LitRPG
+> **survival** sandbox built on this repo's existing metatile engine. This file captures
 > the brainstorming decisions so they survive between sessions.
 >
 > **Status:** brainstorming / pre-implementation. Nothing here is built yet.
-> **Legal note:** mechanics are not copyrightable, but creature designs, names, the
-> Poké Ball, trademarked terms ("Pokémon", "Gym", "Pokédex"), art, and trade dress are.
-> This design deliberately diverges in expression. Not legal advice — get a real IP
-> opinion before any public release.
+> **Legal note:** this is an original work — its world, creatures, names, classes, and
+> art are our own. Keep it that way: don't import third-party creature designs, names,
+> or trade dress. Not legal advice — get a real IP opinion before any public release.
 
 ---
 
@@ -79,7 +77,7 @@ neutral**. Unlocks **after the tutorial** (both helpful and hostile).
 - *Audit ambush* — a System Construct joins the **enemy** side mid-battle if Surveillance is high.
 - *UI sabotage (bosses)* — move names scramble, the Tempo bar lies, "Emergency Restore" does
   nothing. The interface you trust becomes the boss mechanic.
-- *Affinity lockout* — "This action violates Trainer Code 7", greys a move out for a few turns.
+- *Affinity lockout* — "This action violates System Directive 7", greys a move out for a few turns.
 
 Three wills in every fight: **you, the enemy, and the watching System.**
 
@@ -96,7 +94,7 @@ Three wills in every fight: **you, the enemy, and the watching System.**
 
 ## 2. Affinities
 
-Own wheel (not the 18 Pokémon types). **9 affinities + 2 meta-types.**
+Our own affinity wheel. **9 affinities + 2 meta-types.**
 
 1. Ember · 2. Tide · 3. Verdant · 4. Storm · 5. Stone · 6. Frost · 7. Toxin · 8. Umbral · 9. Lumen
 
@@ -182,7 +180,7 @@ you fight it**, and **before you land the kill you may attempt the Bond.** If th
 it becomes your bonded creature; if it refuses (or you've no Bind ability), the fight is just a fight.
 So your party is literally *the monsters you chose to spare and tame*, not pre-set catchables.
 
-No Poké Balls. You **Bind** a weakened creature via the System's protocol.
+No capture tools. You **Bind** a weakened creature via the System's protocol.
 - **The ability to Bind is GATED — not universal** (`CRAFTING.md §5`). Only **capture-capable classes**
   (the Tamer/Binder lineage) can Bind innately; **everyone else must purchase the Bind capability from
   the System Shop**. Without it, a Tether does nothing. (The System sells you the right to a party.)
