@@ -1289,12 +1289,18 @@ window.GameStartMenu = (function () {
     function moveUp() {
         if (!isOpen) return;
         if (page==='main') { if(selectedIdx>0){selectedIdx--;_render();} return; }
-        const c=_subCount(); if(c>0){_subIdx=(_subIdx-1+c)%c; _render();}
+        const c=_subCount(); if(c>0){_subIdx=(_subIdx-1+c)%c; _render();} else _scrollSub(-1);
     }
     function moveDown() {
         if (!isOpen) return;
         if (page==='main') { if(selectedIdx<ITEMS.length-1){selectedIdx++;_render();} return; }
-        const c=_subCount(); if(c>0){_subIdx=(_subIdx+1)%c; _render();}
+        const c=_subCount(); if(c>0){_subIdx=(_subIdx+1)%c; _render();} else _scrollSub(1);
+    }
+    // Survival sub-pages (camp/supplies/bonds/affinities/reaches/system) have no
+    // discrete item cursor — up/down scroll their content panel instead.
+    function _scrollSub(dir) {
+        var c = subEl && subEl.querySelector('.sm-sub-content');
+        if (c) c.scrollBy({ top: dir * 48, behavior: 'smooth' });
     }
     function _subCount() {
         if (page==='save')    return 2;          // Save / Load
