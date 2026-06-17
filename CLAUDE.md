@@ -173,6 +173,16 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
    remove when convenient.
 
+## Deeper survival sub-menus (2026-06-17)
+Start-menu sub-pages got a **selectable-row + drill-down** framework (`startmenu.js`): `_subRows`
+registry + `_sel(rowEl,onSelect)` + `_runSel()`; `_subCount` returns the row count so up/down move a
+**cursor** (highlighted, scrolled into view), A/click activates, B backs out one level. Pages with no
+selectable rows still scroll. **SUPPLIES** now drills **pocket list → pocket contents → USE** (Food→
+Stamina, Tonics→Exposure, Items→minor; Camp Kits/Tethers note where they're used; consumes + updates
+HUD). **BONDS/AFFINITIES/REACHES** rows are selectable (A → detail notify; Reaches notes "not yet
+unlocked"). STATUS stays display + the attribute `+` buttons. Notify types fixed to info/warning/danger.
+Syntax-checked + suites pass; **not browser-verified**.
+
 ## CURRENT STATE (2026-06-17, post class/system build-out)
 - **Boot flow:** Title (`title.js`, Continue/New Game) → **Awakening** char-creation (`creation.js`:
   name, appearance from RTP charsets, Affinity, **Class**) → drop into **Dawnhearth**. `?map=` skips

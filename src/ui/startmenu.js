@@ -326,6 +326,7 @@ window.GameStartMenu = (function () {
         const content = document.createElement('div');
         content.className = 'sm-sub-content';
 
+        _subRows = [];   // selectable rows for this page (rebuilt every render)
         if      (page === 'camp')        _buildCamp(content);
         else if (page === 'bonds')       _buildBonds(content);
         else if (page === 'supplies')    _buildSupplies(content);
@@ -341,7 +342,7 @@ window.GameStartMenu = (function () {
         subEl.style.display = 'block';
 
         setTimeout(function () {
-            const sel = content.querySelector('.sm-row.selected, .sm-ach-row.selected');
+            const sel = content.querySelector('.sm-row.selected, .sm-ach-row.selected, .sm-selrow.selected');
             if (sel) sel.scrollIntoView({ block: 'nearest' });
         }, 0);
     }
@@ -444,6 +445,28 @@ window.GameStartMenu = (function () {
         r.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 7px;' +
             'font:8px "Press Start 2P",monospace;' + (opts.css || '');
         parent.appendChild(r); return r;
+    }
+    // --- Selectable-row framework for the survival sub-pages -------------------
+    // Register a built row as selectable; highlights it when it's the cursor row
+    // and wires click → select + activate. onSelect runs on A / click.
+    var _subRows = [];
+    var _supPocket = null;   // SUPPLIES drill: null = pocket list, else pocket key
+    function _sel(rowEl, onSelect) {
+        var idx = _subRows.length;
+        _subRows.push({ onSelect: onSelect });
+        rowEl.classList.add('sm-selrow');
+        rowEl.style.cursor = 'pointer';
+        if (idx === _subIdx) {
+            rowEl.classList.add('selected');
+            rowEl.style.outline = '2px solid ' + _FR.blue;
+            rowEl.style.outlineOffset = '-1px';
+        }
+        rowEl.addEventListener('click', function () { _subIdx = idx; _render(); _runSel(); });
+        return rowEl;
+    }
+    function _runSel() {
+        var row = _subRows[_subIdx];
+        if (row && row.onSelect) row.onSelect();
     }
     function _swatch(color) {
         var s = document.createElement('span');
@@ -651,28 +674,34 @@ window.GameStartMenu = (function () {
             var hp = document.createElement('span'); hp.style.cssText = 'color:' + _FR.dim + ';font-size:7px;';
             hp.textContent = (b.affinity || '—') + '  Lv' + (b.tier || 1);
             r.appendChild(hp);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify)
+                    GameSystem.notify((b.name || ('Bond ' + (i + 1))) + ' — ' + (b.affinity || 'no affinity') + ', Lv' + (b.tier || 1) + '.', 'info');
+            });
         });
     }
 
+    // Pockets: [display, pocketKey, desc, RTP IconSet index, usable?]
+    var _POCKETS = [
+        ['Camp Kits', 'campKits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.', 272, false],
+        ['Food', 'food', 'Cooked & raw — restores Stamina in the field.', 291, true],
+        ['Tethers', 'tethers', "The System's binding protocol. Spend to Bind a weakened creature.", 182, false],
+        ['Tonics', 'tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192, true],
+        ['Items', 'items', 'General consumables.', 176, true],
+        ['Materials', 'materials', 'Scavenge for field crafting & hazard gear.', 300, false],
+        ['Gear', 'gear', 'Affinity-defended equipment vs. biome hazards.', 161, false],
+        ['Key', 'keyItems', 'Story & landmark items.', 242, false],
+    ];
+    function _pocketCount(inv, key) {
+        var p = inv[key]; if (!p) return 0; var n = 0;
+        for (var k in p) n += (p[k] | 0); return n;
+    }
     function _buildSupplies(el) {
         el.style.cssText = 'background:' + _FR.bodyLt + ';color:' + _FR.text + ';padding:10px;overflow:auto;';
-        // [name, desc, RTP IconSet index]
-        var pockets = [
-            ['Camp Kits', 'Drop a temporary Safe Zone to Rest, Cook, Craft, Save.', 272],
-            ['Food', 'Cooked & raw — restores Stamina in the field.', 291],
-            ['Tethers', "The System's binding protocol. Spend to Bind a weakened creature.", 182],
-            ['Tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192],
-            ['Materials', 'Scavenge for field crafting & hazard gear.', 300],
-            ['Gear', 'Affinity-defended equipment vs. biome hazards.', 161],
-            ['Key', 'Story & landmark items.', 242],
-        ];
         var inv = (window.GameSave && GameSave.state && GameSave.state.inventory) || {};
-        var counts = {
-            'Camp Kits': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
-            'Food': 0, 'Tethers': 0, 'Tonics': 0, 'Materials': 0, 'Gear': 0,
-            'Key': (inv.keyItems && Object.keys(inv.keyItems).length) || 0,
-        };
-        pockets.forEach(function (p) {
+        if (_supPocket) { _buildPocket(el, inv, _supPocket); return; }
+        // Pocket list — select one to open it.
+        _POCKETS.forEach(function (p) {
             var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:3px;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:5px;' });
             var top = document.createElement('div');
             top.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
@@ -680,18 +709,61 @@ window.GameStartMenu = (function () {
             left.style.cssText = 'display:flex;align-items:center;gap:6px;';
             var ic = document.createElement('canvas'); ic.width = ic.height = 24;
             ic.style.cssText = 'width:18px;height:18px;flex:none;';
-            (function (cv, idx) {                 // draw the RTP item icon once the sheet loads
-                if (window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); });
-            })(ic, p[2]);
+            (function (cv, idx) { if (window.GameIcons) GameIcons.load().then(function () { GameIcons.draw(cv.getContext('2d'), idx, 0, 0, 24); }); })(ic, p[3]);
             var nm = document.createElement('span'); nm.textContent = p[0].toUpperCase();
             left.appendChild(ic); left.appendChild(nm);
-            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (counts[p[0]] || 0);
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + _pocketCount(inv, p[1]);
             top.appendChild(left); top.appendChild(cnt);
             var desc = document.createElement('div');
             desc.style.cssText = 'font-size:6px;color:' + _FR.dim + ';line-height:1.5;';
-            desc.textContent = p[1];
+            desc.textContent = p[2];
             r.appendChild(top); r.appendChild(desc);
+            _sel(r, (function (key) { return function () { _supPocket = key; _subIdx = 0; _render(); }; })(p[1]));
         });
+    }
+    function _buildPocket(el, inv, key) {
+        var meta = _POCKETS.filter(function (p) { return p[1] === key; })[0] || ['Pocket', key, '', 176, false];
+        var hd = document.createElement('div');
+        hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';
+        hd.textContent = meta[0].toUpperCase();
+        el.appendChild(hd);
+        var pocket = inv[key] || {};
+        var ids = Object.keys(pocket).filter(function (k) { return (pocket[k] | 0) > 0; });
+        if (!ids.length) {
+            var em = document.createElement('div');
+            em.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.dim + ';text-align:center;padding-top:16px;';
+            em.textContent = 'Empty.';
+            el.appendChild(em); return;
+        }
+        ids.forEach(function (id) {
+            var r = _row(el, { css: 'justify-content:space-between;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;margin-bottom:4px;' });
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;';
+            nm.textContent = _prettySkill(id);
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (pocket[id] | 0);
+            r.appendChild(nm); r.appendChild(cnt);
+            _sel(r, function () { _useItem(key, id, meta[4]); });
+        });
+    }
+    // Use one item from a pocket. Food → Stamina, Tonics → Exposure; others note.
+    function _useItem(key, id, usable) {
+        var st = window.GameSave && GameSave.state; if (!st) return;
+        var surv = st.survival || (st.survival = { surveillance: 0, stamina: 100, exposure: 0 });
+        var msg;
+        if (key === 'food') { surv.stamina = Math.min(100, (surv.stamina || 0) + 30); msg = 'Stamina restored.'; }
+        else if (key === 'tonics') { surv.exposure = Math.max(0, (surv.exposure || 0) - 40); msg = 'Exposure purged.'; }
+        else if (key === 'items') { surv.stamina = Math.min(100, (surv.stamina || 0) + 15); msg = 'Used ' + _prettySkill(id) + '.'; }
+        else if (key === 'campKits') { msg = 'Deploy a Camp Kit out in the field, not here.'; }
+        else if (key === 'tethers') { msg = 'Tethers are spent in battle to Bind a weakened creature.'; }
+        else { msg = "Can't use that from here."; }
+        if (usable) {   // consume one
+            var pk = st.inventory[key]; pk[id] = (pk[id] | 0) - 1; if (pk[id] <= 0) delete pk[id];
+            if (GameSave.markDirty) GameSave.markDirty();
+            if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(surv);
+            if (window.GameAudio) GameAudio.playSE('Heal1');
+            if (_subIdx > 0) _subIdx--;   // keep cursor in range after removal
+        } else if (window.GameAudio) { GameAudio.playSE('Buzzer1'); }
+        if (window.GameSystem && GameSystem.notify) GameSystem.notify(msg, usable ? 'info' : 'warning');
+        _render();
     }
 
     function _buildAffinities(el) {
@@ -710,6 +782,9 @@ window.GameStartMenu = (function () {
             var role = document.createElement('span'); role.style.cssText = 'flex:1;font-size:6px;color:' + (meta ? '#b8a8c8' : _FR.dim) + ';';
             role.innerHTML = a[2] + '<br><span style="color:' + a[1] + '">' + a[3] + '</span>';
             r.appendChild(role);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify) GameSystem.notify(a[0].toUpperCase() + ' — ' + a[2] + ' / ' + a[3], 'info');
+            });
         });
     }
 
@@ -729,6 +804,9 @@ window.GameStartMenu = (function () {
             var lock = document.createElement('span'); lock.style.cssText = 'font-size:6px;color:' + _FR.dim + ';';
             lock.textContent = 'LOCKED';
             r.appendChild(lock);
+            _sel(r, function () {
+                if (window.GameSystem && GameSystem.notify) GameSystem.notify(r0[0].toUpperCase() + ' is not yet unlocked. Reach it on foot first.', 'warning');
+            });
         });
     }
 
@@ -1219,13 +1297,15 @@ window.GameStartMenu = (function () {
         if (_battleBagCancel) { close(); return; }
         if (_battlePartyCancel) { close(); return; }
         if (page==='system' && _sysSub) { _sysSub=null; _render(); return; }  // sub-screen → services
-        _sysSub=null;
+        if (page==='supplies' && _supPocket) { _supPocket=null; _subIdx=0; _render(); return; }  // pocket → pocket list
+        _sysSub=null; _supPocket=null;
         page='main'; _subIdx=0; _render();
     }
 
     function _confirmSelected() {
         if (page!=='main') {
-            if (page==='save') { const a=['save','load']; _doSaveAction(a[_subIdx]||'save'); }
+            if (page==='save') { const a=['save','load']; _doSaveAction(a[_subIdx]||'save'); return; }
+            if (_subRows.length) { _runSel(); }   // activate the selected survival-page row
             return;
         }
         const item=ITEMS[selectedIdx]; if(!item) return;
@@ -1235,7 +1315,7 @@ window.GameStartMenu = (function () {
             case 'OPTIONS': page='options';      _subIdx=0; _render(); break;
             case 'CAMP':       page='camp';       _subIdx=0; _render(); break;
             case 'BONDS':      page='bonds';      _subIdx=0; _render(); break;
-            case 'SUPPLIES':   page='supplies';   _subIdx=0; _render(); break;
+            case 'SUPPLIES':   page='supplies';   _subIdx=0; _supPocket=null; _render(); break;
             case 'AFFINITIES': page='affinities'; _subIdx=0; _render(); break;
             case 'REACHES':    page='reaches';    _subIdx=0; _render(); break;
             case 'SYSTEM':     page='system';     _subIdx=0; _sysSub=null; _render(); break;
@@ -1305,7 +1385,7 @@ window.GameStartMenu = (function () {
     function _subCount() {
         if (page==='save')    return 2;          // Save / Load
         if (page==='options') return 21;         // 18 EE options + 3 engine extras
-        return 0;                                // survival pages scroll via DOM
+        return _subRows.length;                  // survival pages: selectable rows (0 = scroll)
     }
     function confirm() { if(isOpen) _confirmSelected(); }
     function back()    {
