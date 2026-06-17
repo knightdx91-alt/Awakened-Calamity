@@ -146,6 +146,7 @@
     function start(opts) {
         if (active) return;
         opts = opts || {}; active = true;
+        if (root.GameItems) GameItems.load();   // so the battle ITEM menu resolves names/effects
         _onEnd = (typeof opts.onEnd === 'function') ? opts.onEnd : null;
         if (opts.battleback) _battleback = opts.battleback;
         _playerSprite = _buildPlayerSprite();
@@ -359,7 +360,7 @@
             '<div class="cv-field">' +
             '  <div class="cv-row cv-enemies" id="cv-enemies"></div>' +
             '  <div class="cv-row cv-players" id="cv-players"></div>' +
-            '</div><div class="cv-msg" id="cv-msg"></div><div class="cv-menu" id="cv-menu"></div>';
+            '</div><div class="cv-bottom"><div class="cv-msg" id="cv-msg"></div><div class="cv-menu" id="cv-menu"></div></div>';
         host.appendChild(r);
         els.root = r;
         els.enemies = r.querySelector('#cv-enemies'); els.players = r.querySelector('#cv-players');
@@ -443,7 +444,9 @@
             _setBar(c, 'cv-sp', a.maxSp ? a.sp / a.maxSp : 0, 'sp-fill');
         }
         _setBar(c, 'cv-tempo', _tempoDisp(a), 'tempo-fill' + (a.tempo >= max ? ' ready' : ''));
-        c.querySelector('.cv-status').textContent = _statusTags(a);
+        // Enemies reveal only HP + turn meter — hide their status tags (and their
+        // MP/SP bars are already player-only).
+        c.querySelector('.cv-status').textContent = (a.side === 'player') ? _statusTags(a) : '';
         c.classList.toggle('dead', a.hp <= 0);
         var targeting = (mode === 'target' && targetList[targetIdx] === a.id);
         c.classList.toggle('targeted', targeting);
@@ -533,8 +536,11 @@
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;flex:0 0 auto;}' +
         '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{flex:1 1 auto;max-width:240px;margin:0;border-color:#0a3038;}' +
         '.cv-surv{font-size:8px;color:#80d0e8;flex:0 0 auto;}' +
-        '.cv-msg{min-height:28px;padding:5px 10px;font-size:11px;background:#060610;border-top:1px solid #18b8c8;box-shadow:inset 0 1px 0 #002830;display:flex;align-items:center;}' +
-        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:#0a1830;border-top:1px solid #18b8c8;max-height:40%;overflow-y:auto;align-content:start;}' +
+        // Bottom UI (message + menu) overlays the lower field so it always has
+        // room on the cramped GBA screen instead of being squeezed by flex.
+        '.cv-bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;}' +
+        '.cv-msg{min-height:22px;padding:5px 10px;font-size:11px;background:rgba(6,6,16,.92);border-top:1px solid #18b8c8;box-shadow:inset 0 1px 0 #002830;display:flex;align-items:center;}' +
+        '.cv-menu{display:none;grid-template-columns:1fr 1fr;gap:2px;padding:5px 10px;background:rgba(10,24,48,.96);border-top:1px solid #18b8c8;max-height:120px;overflow-y:auto;align-content:start;}' +
         '.cv-menu.cv-menu-1col{grid-template-columns:1fr;}' +
         '.cv-opt{font-size:11px;padding:3px 6px;color:#c8d8e8;border-radius:2px;}' +
         '.cv-opt-dis{opacity:.4;}' +

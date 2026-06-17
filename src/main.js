@@ -874,6 +874,7 @@
             GameControls.init();
             GameHUD.init(GameMap, player);
             if (window.GameAudio) GameAudio.init();
+            if (window.GameItems) GameItems.load();   // preload item DB (battle/menus)
             _loadQuestDb();   // preload so quest conditionals resolve
 
             if (window.GameDialogue) GameDialogue.init();
