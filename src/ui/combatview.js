@@ -14,7 +14,7 @@
     var els = {}, cards = {};
     var logQueue = [], currentMsg = '';
     var rafId = 0, lastTs = 0, acc = 0, waitUntil = 0, seedCounter = 1;
-    var prog = null, enemyMeta = {}, _localProg = null;
+    var prog = null, enemyMeta = {}, allyMeta = {}, _localProg = null;
     var _battleback = 'Grassland';   // RTP battleback id (floor+wall layer share the name)
     var _playerSprite = null;        // player charset for the battle sprite
 
@@ -66,6 +66,28 @@
             stats: Object.assign({}, smith.statProfile),
             loadout: ['jab', 'heavy_strike', 'cleave', 'guard', 'mend', 'pin_shot', 'coat_blade', 'unmake', 'riposte'] };
     }
+    // Bonded creatures fight at your side. Bond shape: { key, nickname?, level? }
+    // (key = creature id in creatures.json). Up to 3 active. AI-controlled.
+    function buildAllies(opts) {
+        var bonds = opts.allies || (window.GameSave && GameSave.state && GameSave.state.bonds) || [];
+        allyMeta = {};
+        if (!Array.isArray(bonds)) return [];
+        var out = [];
+        bonds.slice(0, 3).forEach(function (bd, i) {
+            var key = bd.key || bd.species, c = db.creatures[key];
+            if (!c) return;
+            var lv = bd.level || bd.tier || 2, s = c.stats, f = 1 + 0.10 * (lv - 1);
+            allyMeta['a' + (i + 1)] = { level: lv };
+            out.push({
+                id: 'a' + (i + 1), side: 'player', ai: true, ally: true,
+                name: bd.nickname || c.name, affinity: c.affinity,
+                battler: c.battler || null, charset: c.charset || null,
+                stats: { hp: Math.round(s.hp * f), atk: Math.round(s.atk * f), def: Math.round(s.def * f), speed: Math.round(s.speed * f) },
+                loadout: (c.loadout || ['jab']).slice()
+            });
+        });
+        return out;
+    }
     function buildEnemies(opts) {
         // opts.enemies = [{key, level}] OR single opts.enemy/opts.level. Default one.
         var list = opts.enemies;
@@ -94,7 +116,7 @@
         _playerSprite = _buildPlayerSprite();
         loadDB().then(function () {
             prog = _loadProg();
-            var actors = [buildPlayer()].concat(buildEnemies(opts));
+            var actors = [buildPlayer()].concat(buildAllies(opts)).concat(buildEnemies(opts));
             var seed = (Date.now() ^ (seedCounter++ * 0x9e3779b1)) >>> 0;
             state = root.GameCombat.createBattle(db, actors, seed);
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; chosenSkill = null; logQueue = [];
@@ -310,7 +332,8 @@
     function _updateCard(a) {
         var c = cards[a.id];
         if (!c) { c = cards[a.id] = _card(a); (a.side === 'enemy' ? els.enemies : els.players).appendChild(c); }
-        var max = state.tuning.tempoMax, lvl = a.side === 'enemy' ? (enemyMeta[a.id] ? ' Lv' + enemyMeta[a.id].level : '') : (a.id === 'p1' && prog ? ' Lv' + prog.level : '');
+        var max = state.tuning.tempoMax, lvl = enemyMeta[a.id] ? ' Lv' + enemyMeta[a.id].level
+            : (a.id === 'p1' && prog ? ' Lv' + prog.level : (allyMeta[a.id] ? ' Lv' + allyMeta[a.id].level : ''));
         c.querySelector('.cv-name').textContent = a.name + lvl;
         _setBar(c, 'cv-hp', a.hp / a.maxHp, 'hp-fill' + (a.hp / a.maxHp < 0.3 ? ' low' : ''));
         _setBar(c, 'cv-tempo', _tempoDisp(a), 'tempo-fill' + (a.tempo >= max ? ' ready' : ''));
