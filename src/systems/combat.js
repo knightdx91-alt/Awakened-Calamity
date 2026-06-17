@@ -248,6 +248,10 @@
         if (a.markTurns > 0 && --a.markTurns === 0) a.markMult = 0;
         if (a.sunderTurns > 0 && --a.sunderTurns === 0) a.sundered = 0;
         if (a.taunting > 0) a.taunting--;
+        // Modest resource regen each turn so neither side stalls — you still
+        // can't spam your priciest skills, but pools recover over a fight.
+        if (a.maxMp) a.mp = Math.min(a.maxMp, (a.mp || 0) + Math.round(a.maxMp * 0.06) + 1);
+        if (a.maxSp) a.sp = Math.min(a.maxSp, (a.sp || 0) + Math.round(a.maxSp * 0.05) + 2);
     }
 
     // ---- intervention: the System as a third will -------------------------
@@ -273,10 +277,14 @@
         // Taunt forces targeting: if any foe is taunting, it must be the target.
         const taunter = foes.find(f => f.taunting > 0);
         const target = taunter || (foes.length ? RNG.pick(state.rng, foes) : null);
-        const atks = a.loadout.map(id => db.skills[id]).filter(s => s && s.power > 0);
-        const sk = atks.length ? atks.reduce((b, s) => s.power > b.power ? s : b) : db.skills[a.loadout[0]];
-        const skillId = a.loadout.find(id => db.skills[id] === sk) || a.loadout[0];
-        return { actorId, skillId, targetId: target ? target.id : null };
+        // AI is bound by the same MP/SP rules: prefer skills it can afford; only
+        // fall back to the full loadout if nothing is affordable this turn.
+        const loadout = a.loadout.map(id => ({ id: id, sk: db.skills[id] })).filter(x => x.sk);
+        const affordable = loadout.filter(x => canAfford(a, x.sk));
+        const pool = affordable.length ? affordable : loadout;
+        const atks = pool.filter(x => x.sk.power > 0);
+        const chosen = atks.length ? atks.reduce((b, x) => x.sk.power > b.sk.power ? x : b) : pool[0];
+        return { actorId, skillId: chosen ? chosen.id : a.loadout[0], targetId: target ? target.id : null };
     }
 
     // ---- use an item in battle -------------------------------------------

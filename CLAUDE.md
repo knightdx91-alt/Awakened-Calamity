@@ -189,6 +189,10 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 - **Random designation:** creation generates a unique System catalog tag `SUBJECT-XXXX`
   (`player.designation`); `_subjectId()` prefers it (STATUS + System greet). Added to save default.
 - Core suites pass (combat/effects/progression); `useItem`/cost logic node-tested. **Not browser-verified.**
+- **AI bound by MP/SP too:** `enemyAction` now picks the strongest **affordable** skill (falls back to
+  the full loadout only if nothing's affordable). Added **modest per-turn regen** (~MP +6%/+1,
+  SP +5%/+2 on each actor's turn) so neither side stalls while resources still gate spam. Node-tested
+  (low-res AI picks Jab; full-res picks Heavy Strike); suites green.
 
 ## Story + quest/dialogue scaffolding (2026-06-17)
 - **`STORY.md`** — canonical story outline (premise, the cycle/buried truth, four acts across the Four
