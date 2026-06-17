@@ -15,6 +15,7 @@
     var logQueue = [], currentMsg = '';
     var rafId = 0, lastTs = 0, acc = 0, waitUntil = 0, seedCounter = 1;
     var prog = null, enemyMeta = {}, _localProg = null;
+    var _battleback = 'Grassland';   // RTP battleback id (floor+wall layer share the name)
 
     var BUILD = (root.__BUILD__ || 'dev');
     var MS_PER_STEP = 45;
@@ -71,6 +72,7 @@
     function start(opts) {
         if (active) return;
         opts = opts || {}; active = true;
+        if (opts.battleback) _battleback = opts.battleback;
         loadDB().then(function () {
             prog = _loadProg();
             var actors = [buildPlayer()].concat(buildEnemies(opts));
@@ -225,6 +227,14 @@
         els.enemies = r.querySelector('#cv-enemies'); els.players = r.querySelector('#cv-players');
         els.iv = r.querySelector('#cv-system .cv-iv span'); els.surv = r.querySelector('#cv-surv');
         els.msg = r.querySelector('#cv-msg'); els.menu = r.querySelector('#cv-menu');
+        // RTP battleback: wall layer as the backdrop (cover) + floor layer tiled
+        // along the bottom — the classic RM battle scene composite.
+        var field = r.querySelector('.cv-field'), bb = _battleback;
+        field.style.backgroundColor = '#0a0e14';
+        field.style.backgroundImage = "url('data/battlebacks/2/" + bb + ".png'), url('data/battlebacks/1/" + bb + ".png')";
+        field.style.backgroundRepeat = 'no-repeat, repeat-x';
+        field.style.backgroundSize = 'cover, auto 42%';
+        field.style.backgroundPosition = 'center top, center bottom';
     }
     function _sprite(a) {
         // Enemy with an imported battler image -> show the art; else emoji fallback.
