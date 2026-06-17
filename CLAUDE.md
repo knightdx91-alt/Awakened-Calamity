@@ -517,6 +517,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
     lists the 8 attributes (value + per-point effect hint) with a **`+` button** that spends a banked
     point and re-renders. Node-tested (seed/spend/apply math, point drain) + core suites pass.
     **Not browser-verified.** Pending: specializations/evolutions UI; non-combat lifestyle skill use.
+  - **ADVANCED TIER AUTHORED — 53 Advanced classes** (was 3 → +50) + **25 advanced foundation skills**
+    (→191). Completes the **30 evolution targets** the original 20 basics referenced (paladin, reaver,
+    pyromancer, ninja, juggernaut, physician, artificer, … tanner) AND adds **`evolvesInto` to all 30
+    new basics** → 20 more advanced (champion, dragoon, blademaster, sharpshooter, bastion, battlemage,
+    packlord, cavalier, builder, artisan, chemist, priest, spiritualist, huntsman, sage, ambassador,
+    shadow_operative, mage, explorer, steward), converging related basics. **`validate_classes.mjs`:
+    0 errors, 0 evolve-warns** (every basic now resolves its evolution). Now **126 classes / 191
+    skills**; combat/effects/progression suites pass. Tiers: basic 50, advanced 53, master 6,
+    grandmaster 6, heroic 6, legendary 4. **Next: specialize/evolve UI, then Master tier.**
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported
