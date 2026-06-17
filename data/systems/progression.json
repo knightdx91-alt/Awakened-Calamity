@@ -17,6 +17,14 @@
 
   "attributes": ["strength", "agility", "constitution", "intelligence", "wisdom", "perception", "charisma", "luck"],
 
+  "attrEffects": {
+    "_note": "Per-point bonus each attribute adds to derived COMBAT stats (PROGRESSION.md §2). strength/constitution/agility/wisdom map to the four base combat stats today; intelligence/perception/charisma/luck govern systems built later (affinity power, crafting, social, drops) and carry no base-stat bonus yet.",
+    "strength":     { "atk": 2 },
+    "constitution": { "hp": 6 },
+    "agility":      { "speed": 2 },
+    "wisdom":       { "def": 1 }
+  },
+
   "pointsPerLevel": {
     "_note": "PROGRESSION.md §2: points = base + (Tier rank above Basic). Basic 3 … Legendary 8.",
     "base": 3, "perTierAboveBasic": 1,

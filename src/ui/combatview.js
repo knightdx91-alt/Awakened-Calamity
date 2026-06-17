@@ -84,11 +84,17 @@
         // Loadout = the skills the player has learned, else the class's granted set.
         var loadout = (ps.skills && ps.skills.length) ? ps.skills.slice() : (cls.grantsSkills || ['jab']).slice();
         if (!loadout.length) loadout = ['jab'];
+        // Base class stats + allocated attribute bonuses.
+        var stats = Object.assign({}, cls.statProfile);
+        var pr = (root.GameSave && root.GameSave.state && root.GameSave.state.progress) || null;
+        if (pr && root.GameProgression && root.GameProgression.applyAttributes) {
+            stats = root.GameProgression.applyAttributes(stats, pr.attributes, db.progression);
+        }
         return {
             id: 'p1', side: 'player',
             name: ps.name || cls.name || 'Survivor',
             affinity: ps.affinity || cls.affinityLean || 'stone',
-            stats: Object.assign({}, cls.statProfile),
+            stats: stats,
             loadout: loadout
         };
     }

@@ -508,6 +508,15 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
       (Fixes the old stale `state.klass` read.) Syntax-checked; core tests still pass. **Not browser-verified.**
     - **Still pending build-out:** attribute-point *allocation* UI (count shown, no spend yet);
       specializations/evolutions UI; non-combat lifestyle skill use.
+  - **Build-out: attribute-point allocation DONE.** The 8-attribute LitRPG set (PROGRESSION.md §2:
+    STR/AGI/CON/INT/WIS/PER/CHA/LUK) is now spendable. `progression.json` gained **`attrEffects`**
+    (per-point derived-stat bonuses: STR+2 atk, CON+6 hp, AGI+2 speed, WIS+1 def; INT/PER/CHA/LUK
+    reserved for later systems). `progression.js` (pure) gained **`spendPoint`** + **`applyAttributes`**,
+    and `createProgress` now seeds all 8 attributes at 0. **Combat `buildPlayer` applies attribute
+    bonuses** on top of the class base stats, so points actually change battle stats. **STATUS screen**
+    lists the 8 attributes (value + per-point effect hint) with a **`+` button** that spends a banked
+    point and re-renders. Node-tested (seed/spend/apply math, point drain) + core suites pass.
+    **Not browser-verified.** Pending: specializations/evolutions UI; non-combat lifestyle skill use.
 
 ## ⏳ PENDING (next session) — RESUME Pixel Fantasy autotile bakes
 **Owner asked to resume this next session so it isn't forgotten.** Pass 1 (all 20 sheets imported

@@ -563,6 +563,46 @@ window.GameStartMenu = (function () {
             el.appendChild(sl);
         }
 
+        // Attributes + allocation (spend banked points).
+        if (prog) {
+            var attrList = (_progData && _progData.attributes) || Object.keys(prog.attributes || {});
+            var eff = (_progData && _progData.attrEffects) || {};
+            if (attrList.length) {
+                var ah = document.createElement('div');
+                ah.style.cssText = 'margin-top:10px;display:flex;justify-content:space-between;align-items:center;font:7px "Press Start 2P";color:' + _FR.dim + ';';
+                ah.innerHTML = '<span>ATTRIBUTES</span>' + (prog.attrPoints > 0 ? '<span style="color:' + _SYS.warn + '">' + prog.attrPoints + ' pts</span>' : '');
+                el.appendChild(ah);
+                attrList.forEach(function (attr) {
+                    var r = _row(el, { css: 'justify-content:space-between;align-items:center;color:' + _FR.dim + ';' });
+                    var hint = '';
+                    if (eff[attr]) {
+                        var parts = [];
+                        for (var st in eff[attr]) { if (st === '_note') continue; parts.push('+' + eff[attr][st] + ' ' + st.toUpperCase()); }
+                        if (parts.length) hint = ' <span style="color:' + _FR.dim + ';font-size:6px;">(' + parts.join(' ') + '/pt)</span>';
+                    }
+                    var left = document.createElement('span');
+                    left.style.cssText = 'flex:1;';
+                    left.innerHTML = _prettySkill(attr) + hint;
+                    var val = document.createElement('span');
+                    val.style.cssText = 'color:' + _FR.text + ';min-width:22px;text-align:right;';
+                    val.textContent = String((prog.attributes && prog.attributes[attr]) || 0);
+                    r.appendChild(left); r.appendChild(val);
+                    if (prog.attrPoints > 0) {
+                        var plus = document.createElement('button');
+                        plus.textContent = '+';
+                        plus.style.cssText = 'margin-left:8px;width:20px;height:18px;font:8px "Press Start 2P";cursor:pointer;background:' + _SYS.cyan + ';color:#02060f;border:none;border-radius:3px;';
+                        plus.addEventListener('click', function () {
+                            if (window.GameProgression && GameProgression.spendPoint(prog, attr, _progData)) {
+                                if (window.GameSave && GameSave.markDirty) GameSave.markDirty();
+                                _render();
+                            }
+                        });
+                        r.appendChild(plus);
+                    }
+                });
+            }
+        }
+
         var sub = document.createElement('div');
         sub.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _FR.dim + ';';
         sub.textContent = 'SURVIVAL';
