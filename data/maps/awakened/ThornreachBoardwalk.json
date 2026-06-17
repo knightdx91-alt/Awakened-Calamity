@@ -1,0 +1,1 @@
+{"id": "MAP_THORNREACHBOARDWALK", "name": "ThornreachBoardwalk", "region": "awakened", "parent": "", "layout": "LAYOUT_THORNREACHBOARDWALK", "music": "MUS_NONE", "weather": "WEATHER_NONE", "map_type": "MAP_TYPE_ROUTE", "allow_running": true, "show_map_name": true, "connections": [], "npcs": [], "warps": [], "triggers": [], "signs": [], "events": []}
