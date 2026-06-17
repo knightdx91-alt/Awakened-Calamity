@@ -160,18 +160,40 @@ sits in the repo; rotate the token when that lands. Don't treat it as safe.
 - ✅ Deployed & verified live on GitHub Pages.
 
 ## Next steps (priority)
-1. **Battle system rewrite** — replace donor `battle.js`/`summary.js`/`battle_assets.*` (the only
-   remaining Pokémon code, unreachable in AC) with **Tempo + Intervention** (`DESIGN.md §1`). This
-   is also the *true* finish of the source purge.
-2. **Wire survival systems to gameplay** — drive the HUD meters (Stamina drains in Wildlands,
-   Exposure from biome hazards, **Surveillance rises** when using System services/REACHES
-   fast-travel); real **SUPPLIES** inventory; **Bind** flow → populates `state.bonds[]`.
-3. **REACHES fast-travel** — actual warp targets (raise Surveillance), unlock landmarks.
-4. **More official-art content** — author zones with the `ac_*` tilesets + overlay (use the
-   map editor Terrain brush + building overlay); add building stamps / overlay painting to editor.
-5. **Re-skin remaining chrome** (dialogue, banners, options, hub) to the FireRed/System tokens.
-6. **Cloud saves → Cloudflare Worker** (remove embedded token from repo; still present in
-   `cloud-saves.js` + `map-editor.js`, reversed).
+1. **THE STORY** (next focus) — opening beat (arrive in **Dawnhearth** → first crystal/System contact
+   → the hook) + main throughline, built with the event-command + map tools (see "Event commands" below).
+2. **Master tier content** — flesh the Master tier from 6 → ~50 (authored as Advanced→Master path-gated
+   evolutions); it's already wired into the creation grid (ringed gold) + the evolve logic. Then GM+.
+3. **Wire survival systems to gameplay** — Stamina drains in Wildlands, Exposure from biome hazards,
+   **Surveillance** already rises from System-shop services; **Bind** flow → `state.bonds[]`.
+4. **Non-combat lifestyle skills** — craft/gather/social skill `effect` hooks exist as DATA but are inert;
+   build the systems that consume them.
+5. **REACHES fast-travel** — actual warp targets (raise Surveillance), unlock landmarks.
+6. **Cloud saves → Cloudflare Worker** (remove embedded token; still in `cloud-saves.js`+`map-editor.js`).
+7. **Cleanup** — startmenu's old `_buildSystem` panel is dead code (System is now the town crystal hub);
+   remove when convenient.
+
+## CURRENT STATE (2026-06-17, post class/system build-out)
+- **Boot flow:** Title (`title.js`, Continue/New Game) → **Awakening** char-creation (`creation.js`:
+  name, appearance from RTP charsets, Affinity, **Class**) → drop into **Dawnhearth**. `?map=` skips
+  the title (editor Play). Saves = **localStorage primary + IndexedDB backup**, each a fallback
+  (`save.js initStorage`).
+- **Classes:** **126 authored** (50 Basic + 53 Advanced + 6 Master + 6 GM + 6 Heroic + 4 Legendary),
+  **191 skills**, all refs resolve (`tools/validate_classes.mjs`). Creation grid shows Basic+Advanced+
+  Master, **tier-ringed/glowing**; Advanced+ shows a **one-time slow-leveling warning**.
+- **Growth loop (all 4 axes):** level (combat XP via `progression.js`) · allocate **attribute points**
+  (STATUS screen) · **specialize** + **change class** (System Shop) · **evolve** (auto **pop-up** at
+  Lv≥10, `evolve.js`). Logic is pure in `src/systems/{progression,classes}.js`.
+- **The System = town hub:** removed from the pause menu; reached via the **floating crystal** in
+  Dawnhearth → **`GameSystemShop`** (`systemshop.js`): SUPPLIES / SERVICES / CLASSES; purchases raise
+  Surveillance. Opened by the **`system`** event command (reusable on any event/NPC).
+- **Audio:** `GameAudio` (`audio.js`) — SE/ME/BGS play; BGM no-ops until pulled.
+- **Event commands (engine `runCmd` + map-editor):** text, choice, conditional, switch, selfswitch,
+  variable, transfer, **move, setdir, setgfx, spawn, money, item, battle, fade, shake, label, jump,
+  comment, se, system, grantclass, grantspec, grantskill**, script, exit.
+- **Combat** reads the player's **class + learned skills + allocated attributes**; `onEnd` hook drives
+  the evolve check. Pure core unchanged (`combat.js`/`rng.js`), tests green.
+- ⚠️ Most UI work this session is **headless/node-verified only — NOT browser-verified** (no Chromium).
 
 ## Session log
 - **2026-06-12 (1)** — Created repo content from scratch: pushed design-doc bundle, imported the
