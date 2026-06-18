@@ -334,15 +334,16 @@
                 if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
                 GameSave.save(0, GameSave.state);
             }
-            // Cold open: a fresh game starts with clean event state, then flips the
-            // `sys_intro` switch — the AUTORUN common event `awakening_intro` plays the
-            // System's first words (fully editable in data/systems/common_events.json
-            // or the editor, no longer hardcoded here).
-            if (window.GameEventState) { GameEventState.reset(); GameEventState.setSwitch('sys_intro', true); }
+            // A fresh game starts with clean event state, then flips `do_creation` —
+            // the AUTORUN common event `character_creation` runs the event-driven
+            // Awakening (name / affinity / appearance / class, RPG-Maker style), and
+            // ends by flipping `sys_intro` (the cold-open). Both are fully editable in
+            // data/systems/common_events.json. (To use the polished DOM screen instead,
+            // make `character_creation` a single `{ "type": "creation" }` command.)
+            if (window.GameEventState) { GameEventState.reset(); GameEventState.setSwitch('do_creation', true); }
             console.log('[Main] New game → Dawnhearth at', w.x, w.y);
         };
-        if (window.GamePlayerCreation) GamePlayerCreation.start(finish);
-        else finish();
+        finish();
     }
 
     // Compare the running build to the deployed version.txt; if a newer build is
@@ -572,6 +573,46 @@
             inner.appendChild(lbl); inner.appendChild(inp); inner.appendChild(ok); box.appendChild(inner); document.body.appendChild(box);
             inp.focus(); inp.select();
         });
+    }
+
+    // ── Appearance: crop one character (3×4 frames) out of an Actor charset (4×2
+    // characters) into a standalone player sprite — the same crop the creation
+    // screen does, exposed for the event-driven creation flow. ──
+    function _setAppearance(sheet, charIdx) {
+        return new Promise(function (res) {
+            var f = 32, img = new Image();
+            img.onload = function () {
+                var cv = document.createElement('canvas'); cv.width = f * 3; cv.height = f * 4;
+                var cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
+                var blockCol = (charIdx % 4) * 3, blockRow = Math.floor(charIdx / 4) * 4;
+                cx.drawImage(img, blockCol * f, blockRow * f, f * 3, f * 4, 0, 0, f * 3, f * 4);
+                var url; try { url = cv.toDataURL('image/png'); } catch (e) { url = null; }
+                if (url) { try { localStorage.setItem('ac_player_sprite', JSON.stringify({ dataUrl: url, frame_w: f, frame_h: f, cols: 3, rows: 4 })); } catch (e) {} }
+                if (GameSave.state && GameSave.state.player) GameSave.state.player.appearance = { sheet: sheet, char: charIdx };
+                if (window.GameRenderer && GameRenderer.reloadPlayer) GameRenderer.reloadPlayer();
+                res();
+            };
+            img.onerror = function () { res(); };
+            img.src = 'data/sprites/' + sheet + '?b=' + (window.__BUILD__ || '0');
+        });
+    }
+    // Finalize an event-driven creation: set the class fresh (this class's skills
+    // only), a System designation, and seed progression — the coordinated writes the
+    // creation screen's Confirm does. Name/appearance/affinity are set by their own
+    // commands earlier in the flow.
+    async function _finalizeCreation(classId) {
+        var st = GameSave.state; if (!st || !st.player) return;
+        var db = await _loadClassDb();
+        var cl = db && db.classes && db.classes[classId];
+        var p = st.player;
+        p.class = { id: classId, level: 1, xp: 0 };
+        p.skills = (cl && cl.grantsSkills) ? cl.grantsSkills.slice() : [];
+        p.ownedClasses = [classId];
+        if (!p.designation) { var ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = ''; for (var i = 0; i < 4; i++) s += ch[Math.floor(Math.random() * ch.length)]; p.designation = 'SUBJECT-' + s; }
+        if (window.GameProgression) st.progress = GameProgression.createProgress((cl && cl.tier) || 'basic', 1);
+        if (st.meta) st.meta.playerName = p.name;
+        if (GameSave.markDirty) GameSave.markDirty();
+        try { GameSave.save(GameSave.currentSlot != null ? GameSave.currentSlot : 0, st); } catch (e) {}
     }
 
     // ── Common Events: reusable command lists called by id (data/systems/common_events.json). ──
@@ -1229,13 +1270,18 @@
                 break;
             }
             case 'creation': {
-                // Launch the Awakening character-creation screen from an event (its
+                // Launch the polished Awakening creation SCREEN from an event (its
                 // affinities/classes are data; this controls WHEN it runs).
                 if (window.GamePlayerCreation && GamePlayerCreation.start && !GamePlayerCreation.isActive()) {
                     await new Promise(function (res) { GamePlayerCreation.start(function () { res(); }); });
                 }
                 break;
             }
+            // Event-driven creation building blocks (RPG-Maker style: Name Input +
+            // Show Choices). Used by the `character_creation` common event.
+            case 'affinity': if (GameSave.state && GameSave.state.player) { GameSave.state.player.affinity = c.value || c.affinity || 'untethered'; if (GameSave.markDirty) GameSave.markDirty(); } break;
+            case 'appearance': await _setAppearance(c.sheet || 'rtp/Actor1.png', c.char | 0); break;
+            case 'finalize_creation': await _finalizeCreation(c.classId || c.class || 'warrior'); break;
             case 'timer': {
                 if (c.op === 'stop') { _timer.running = false; }
                 else { _timer.running = true; _timer.remain = Math.max(0, (c.seconds | 0)); _timer.endAt = performance.now() + _timer.remain * 1000; }

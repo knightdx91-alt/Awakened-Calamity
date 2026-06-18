@@ -1282,7 +1282,8 @@
     // flow control
     ['loop', '🔁 Loop'], ['break_loop', '⏹️ Break Loop'], ['input_number', '🔢 Input Number'],
     ['common_event', '📑 Common Event'], ['timer', '⏱️ Control Timer'],
-    ['name_input', '⌨️ Name Input'], ['creation', '🧬 Character Creation'],
+    ['name_input', '⌨️ Name Input'], ['creation', '🧬 Creation Screen'],
+    ['affinity', '🜂 Set Affinity'], ['appearance', '🧍 Set Appearance'], ['finalize_creation', '✅ Finalize Creation'],
     // audio
     ['bgm', '🎵 Play/Stop BGM'], ['bgs', '🌊 Play/Stop BGS'], ['me', '🎺 Play ME'], ['stop_se', '🔇 Stop SE'],
     // screen / camera
@@ -1328,6 +1329,9 @@
       case 'common_event': return { type: 'common_event', id: '' };
       case 'name_input': return { type: 'name_input', prompt: 'Enter your name', maxLength: 12 };
       case 'creation': return { type: 'creation' };
+      case 'affinity': return { type: 'affinity', value: 'untethered' };
+      case 'appearance': return { type: 'appearance', sheet: 'rtp/Actor1.png', char: 0 };
+      case 'finalize_creation': return { type: 'finalize_creation', classId: 'warrior' };
       case 'timer': return { type: 'timer', op: 'start', seconds: 60 };
       case 'bgm': return { type: 'bgm', op: 'play', name: '' };
       case 'bgs': return { type: 'bgs', op: 'play', name: '' };
@@ -1725,6 +1729,16 @@
       body.querySelector('.cM').addEventListener('change', function () { cmd.maxLength = parseInt(this.value, 10) || 12; });
     } else if (cmd.type === 'creation') {
       body.appendChild(el('div', 'font-size:9px;color:#888;', 'Launches the Awakening creation screen (name / appearance / affinity / class). Affinities + classes are data.'));
+    } else if (cmd.type === 'affinity') {
+      body.innerHTML = '<div class="row">' + lbl('Affinity') + '<input type="text" class="cV" value="' + (cmd.value || '') + '" style="flex:1;min-width:0;" placeholder="ember / tide / stone / untethered…"></div>';
+      body.querySelector('.cV').addEventListener('change', function () { cmd.value = this.value.trim(); });
+    } else if (cmd.type === 'appearance') {
+      body.innerHTML = '<div class="row">' + lbl('Sheet') + '<input type="text" class="cS" value="' + (cmd.sheet || 'rtp/Actor1.png') + '" style="width:130px;">' + lbl('Char') + '<input type="number" class="cC" min="0" max="7" value="' + (cmd.char | 0) + '" style="width:46px;"></div>';
+      body.querySelector('.cS').addEventListener('change', function () { cmd.sheet = this.value.trim(); });
+      body.querySelector('.cC').addEventListener('change', function () { cmd.char = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'finalize_creation') {
+      body.innerHTML = '<div class="row">' + lbl('Class id') + '<input type="text" class="cI" value="' + (cmd.classId || '') + '" style="flex:1;min-width:0;" placeholder="warrior / rogue / cleric…"></div>';
+      body.querySelector('.cI').addEventListener('change', function () { cmd.classId = this.value.trim(); });
     } else if (cmd.type === 'timer') {
       body.innerHTML = '<div class="row">' + lbl('Op') + '<select class="cO"><option value="start">Start</option><option value="stop">Stop</option></select>' +
         lbl('Seconds') + '<input type="number" class="cS" value="' + (cmd.seconds || 60) + '" style="width:60px;"></div>';

@@ -2,6 +2,18 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Character creation is now an EVENT flow (RPG-Maker style)
+New game now runs the **autorun common event `character_creation`** (switch `do_creation`, set by
+`_newGame` instead of launching the DOM screen): Name Input → Show Choices (Affinity / Appearance /
+Class) → flips `do_creation` off + `sys_intro` on (cold-open). Fully editable in
+`common_events.json`. Backed by 4 commands: `name_input` (→player.name), `affinity` (→player.affinity),
+`appearance` (crops one Actor-charset char into the player sprite, same crop the screen did),
+`finalize_creation` (sets class fresh +skills, generates the SUBJECT designation, seeds
+GameProgression). The polished DOM `GamePlayerCreation` screen is kept and still launchable via the
+`creation` command (swap `character_creation` to a single `{type:'creation'}` to use it). Editor
+forms added for all 4. Browser-verified a full new-game run: name/affinity/appearance/class/skills/
+designation/progress all set, switches hand off to the cold-open; 0 errors.
+
 ## ✅ DONE 2026-06-18 — Run-feedback eventified + name_input/creation commands + [v:] tokens
 Finished moving the LAST hardcoded narrative out of `_endRun`: the per-run return text +
 fragments tally + ending verdict are now **editable common events** (`run_return_cleared/

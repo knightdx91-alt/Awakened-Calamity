@@ -39,11 +39,19 @@ events (the engine sets result variables, the words are data):
 - `ending_verdict_true` / `_good` / `_submit` — shown on a clear, picked by lifetime
   Surveillance; use `[v:life_surv]`.
 
-## Character creation as events
-The creation screen is launchable from an event with the **`creation`** command (its
-affinities + classes are already data in `affinities.json` / `classes.json`). For a fully
-hand-rolled flow you can also use **`name_input`** (RPG Maker's Name Input Processing) +
-`choice` + `grantclass` + `setgfx`. `_newGame` calls the polished screen by default.
+## Character creation IS an event now (RPG-Maker style)
+A new game runs the **autorun common event `character_creation`** (switch `do_creation`,
+set by `_newGame`) — a Name Input + Show Choices flow you can fully edit:
+`name_input` → `choice` Affinity (`affinity` cmd) → `choice` Appearance (`appearance` cmd) →
+`choice` Class (`finalize_creation` cmd) → it flips `do_creation` off + `sys_intro` on (cold-open).
+Edit the questions/options in `common_events.json` → `character_creation`.
+- **`name_input`** — RPG Maker Name Input Processing → `player.name`.
+- **`affinity {value}`** — sets `player.affinity` (ids in `affinities.json`).
+- **`appearance {sheet,char}`** — crops one Actor-charset character into the player sprite.
+- **`finalize_creation {classId}`** — sets the class fresh (+skills), a System designation, and
+  seeds progression (the coordinated writes the old screen's Confirm did).
+- Prefer the polished DOM screen instead? Make `character_creation` a single
+  `{ "type": "creation" }` command (it launches `GamePlayerCreation`).
 
 ## What the engine still controls (logic, not content)
 - `_newGame` (`src/main.js`): fresh state, seeds the `awakening` quest, flips `sys_intro`.

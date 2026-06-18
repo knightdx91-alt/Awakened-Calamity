@@ -16,6 +16,44 @@
       { "type": "text", "text": "SYSTEM: …logged." }
     ]
   },
+  "character_creation": {
+    "name": "The Awakening — event-driven creation (autorun on new game)",
+    "trigger": "autorun",
+    "switch": "do_creation",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: Unclassified entity detected. Stand by for classification, Subject." },
+      { "type": "name_input", "prompt": "Designate yourself. What name do you answer to?", "maxLength": 12 },
+      { "type": "text", "text": "SYSTEM: Reading your resonance, [name]. Declare your Affinity." },
+      { "type": "choice", "prompt": "Your Affinity?", "options": [
+        { "label": "Ember (heat, ruin)", "then": [ { "type": "affinity", "value": "ember" } ] },
+        { "label": "Tide (water, pressure)", "then": [ { "type": "affinity", "value": "tide" } ] },
+        { "label": "Storm (charge, speed)", "then": [ { "type": "affinity", "value": "storm" } ] },
+        { "label": "Stone (mass, endurance)", "then": [ { "type": "affinity", "value": "stone" } ] },
+        { "label": "Umbral (shadow, the unseen)", "then": [ { "type": "affinity", "value": "umbral" } ] },
+        { "label": "Untethered (no alignment)", "then": [ { "type": "affinity", "value": "untethered" } ] }
+      ] },
+      { "type": "text", "text": "SYSTEM: Rendering your form." },
+      { "type": "choice", "prompt": "Your appearance?", "options": [
+        { "label": "Look I", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 0 } ] },
+        { "label": "Look II", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 1 } ] },
+        { "label": "Look III", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 4 } ] },
+        { "label": "Look IV", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 5 } ] }
+      ] },
+      { "type": "text", "text": "SYSTEM: Assigning your Classification. This defines your kit, [name]." },
+      { "type": "choice", "prompt": "Your starting Class?", "options": [
+        { "label": "Warrior (sturdy melee)", "then": [ { "type": "finalize_creation", "classId": "warrior" } ] },
+        { "label": "Rogue (stealth strikes)", "then": [ { "type": "finalize_creation", "classId": "rogue" } ] },
+        { "label": "Scout (fast, ranged)", "then": [ { "type": "finalize_creation", "classId": "scout" } ] },
+        { "label": "Spellblade (magic-melee)", "then": [ { "type": "finalize_creation", "classId": "spellblade" } ] },
+        { "label": "Cleric (support/heal)", "then": [ { "type": "finalize_creation", "classId": "cleric" } ] },
+        { "label": "Vanguard (tank)", "then": [ { "type": "finalize_creation", "classId": "vanguard" } ] }
+      ] },
+      { "type": "se", "name": "Decision2" },
+      { "type": "text", "text": "SYSTEM: Classification complete, [designation]. Welcome to Dawnhearth." },
+      { "type": "switch", "id": "do_creation", "value": false },
+      { "type": "switch", "id": "sys_intro", "value": true }
+    ]
+  },
   "awakening_intro": {
     "name": "Opening — System cold-open (autorun on new game)",
     "trigger": "autorun",
