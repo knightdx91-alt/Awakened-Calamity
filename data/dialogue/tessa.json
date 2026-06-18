@@ -1,0 +1,19 @@
+{
+  "id": "tessa", "name": "Tessa",
+  "face": { "sheet": "People3", "index": 0 },
+  "persona": "Anxious Dawnhearth resident fixated on Surveillance and the Audit. Talks fast, glances over her shoulder. A living tutorial for the dread of being watched.",
+  "lines": [
+    { "id": "intro", "priority": 20, "once": true, "when": { "surveillance": "<40" },
+      "text": [
+        "You just Awakened, didn't you? I can always tell — you still trust it.",
+        "Watch that Surveillance gauge in your menu. When the System knows you too well… it starts deciding things for you." ] },
+    { "id": "rising", "priority": 25, "when": { "surveillance": ">=40" },
+      "text": [ "Your number's climbing. I can feel it standing next to you. Stop taking its favors — please, while you still want to." ] },
+    { "id": "high", "priority": 30, "when": { "surveillance": ">=75" },
+      "text": [
+        "Don't— don't stand so close to me. They Audit the ones near the high numbers.",
+        "You used to flinch when it spoke. You don't anymore. That's how it starts." ] },
+    { "id": "idle", "priority": 0, "when": {},
+      "text": [ "Keep your head down. Keep your number low." ] }
+  ]
+}

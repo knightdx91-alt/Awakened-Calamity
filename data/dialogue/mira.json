@@ -1,0 +1,24 @@
+{
+  "id": "mira", "name": "Mira",
+  "face": { "sheet": "People1", "index": 0 },
+  "persona": "Weary, kind herbalist of Dawnhearth who quietly distrusts the System. Speaks plainly and protectively; never preachy. Knows more about the cycle than she lets on.",
+  "lines": [
+    { "id": "greet_awaken", "priority": 30, "once": true, "when": { "quest": { "awakening": "<1" } },
+      "text": [
+        "Easy, now. You just Awakened — the System pulled you up out of the dark, same as everyone in Dawnhearth.",
+        "It'll offer you the world. Take what you need… but every favor it does you, it watches a little closer.",
+        "Go on — touch the crystal in the plaza, let it 'welcome' you. Then we'll talk." ] },
+    { "id": "nudge_crystal", "priority": 20, "when": { "quest": { "awakening": 1 } },
+      "text": [ "The crystal's right there in the plaza. It only takes a moment — and it always takes something." ] },
+    { "id": "nudge_fight", "priority": 20, "when": { "quest": { "awakening": 2 } },
+      "text": [ "That thing's still prowling the east field. Put it down, then come back to me." ] },
+    { "id": "surveil_warn", "priority": 25, "when": { "quest": { "awakening": "done" }, "surveillance": ">=60" },
+      "text": [
+        "You've been leaning on the System a lot, haven't you. I can see it — the way you hold yourself now.",
+        "Be careful. The more it helps, the harder it gets to remember you ever did anything alone." ] },
+    { "id": "done_low", "priority": 10, "when": { "quest": { "awakening": "done" }, "surveillance": "<60" },
+      "text": [ "You're finding your feet, and you're still yourself. That's rarer than it sounds." ] },
+    { "id": "idle", "priority": 0, "when": {},
+      "text": [ "Stay sharp out there. The System always is." ] }
+  ]
+}
