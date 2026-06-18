@@ -31,6 +31,18 @@ window.GameEventState = (function () {
         getSelf:    function (map, evId, letter) { return !!state.selfSwitches[selfKey(map, evId, letter)]; },
         setSelf:    function (map, evId, letter, v) { state.selfSwitches[selfKey(map, evId, letter)] = !!v; save(); },
         all:        function () { return state; },
+        // Wipe every self-switch belonging to a map (keys are "map#evId#letter").
+        // Used to make ephemeral run floors fresh each descent — opened chests
+        // refill, and the persisted state never accumulates across runs.
+        clearMap:   function (map) {
+            var pre = (map || '') + '#', removed = 0;
+            for (var k in state.selfSwitches) { if (k.indexOf(pre) === 0) { delete state.selfSwitches[k]; removed++; } }
+            if (removed) save();
+            return removed;
+        },
+        clearMaps:  function (maps) {
+            var total = 0; (maps || []).forEach(function (m) { total += this.clearMap(m); }, this); return total;
+        },
         reset:      function () { state = { switches: {}, variables: {}, selfSwitches: {} }; save(); }
     };
 })();

@@ -2,6 +2,22 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Run floors are EPHEMERAL (state purged) + procedural-gen status
+- **Map/dungeon generators ARE procedural** (`tools/mapgen_indoor.py`: seeded RNG carves rooms/
+  corridors, scatters props/monsters/chests) but run **OFFLINE at build time** → static
+  `RunFloor A–F`/`RunBoss1–2` JSON. The runtime descent picks from that fixed POOL by seed; it does
+  NOT generate fresh floors in-engine. (True per-run runtime gen = port the Python generator to JS —
+  future task.)
+- **No map memory leak:** the engine holds only one `GameMap.current` and re-fetches a fresh copy on
+  every visit (cache:'no-cache'), so old floors are GC'd and in-memory mutations (roamer positions,
+  despawned monsters) reset each entry. Nothing accumulates.
+- **The real lingering artifact was per-floor event state** (opened-chest self-switches in
+  localStorage, keyed by static map name) — it persisted across runs, so chests wouldn't refill and
+  the store grew unbounded. **Fixed:** run floors are now treated as ephemeral — `GameEventState`
+  gained `clearMap`/`clearMaps`, and `main.js._purgeRunFloors()` wipes the whole run pool's
+  self-switches on **run start AND run end**. Verified: open a chest → new descent → chest refilled;
+  non-run (Dawnhearth/town) self-switches preserved.
+
 ## ✅ DONE 2026-06-18 — Launch skills wired + ending gates live + meta confirmed
 - **Launch-class skills:** 34/38 already active; the 4 inert ones (`track`/`set_snare`/`sneak`/
   `pick_lock`) were world-utility and are now reframed into combat effects the engine supports

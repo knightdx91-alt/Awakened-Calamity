@@ -566,6 +566,17 @@
         if (result && result.winner === 'enemy') { await _endRun('died'); return; }
         if (col.collected) { await _endRun('collected'); return; }
     }
+    // Run floors are EPHEMERAL: their per-floor event state (opened chests, etc.)
+    // must not persist across descents, or chests won't refill and localStorage
+    // grows unbounded. Wipe the whole run pool's self-switches at run boundaries.
+    // (The map JSON itself is re-fetched fresh each visit and only one is held in
+    // memory, so there's nothing else to free.)
+    function _purgeRunFloors() {
+        if (!ES || !ES.clearMaps || !_runDb) return;
+        var pool = (_runDb.floorPool || []).concat(_runDb.bossPool || []);
+        var n = ES.clearMaps(pool);
+        if (n) console.log('[Run] purged ephemeral floor state for', pool.length, 'maps (', n, 'self-switches )');
+    }
     function _grantStartItems() {
         var st = GameSave.state, me = _metaEffects();
         if (!st || !me.startItems.length) return;
@@ -639,6 +650,7 @@
             GameQuests.setStage(st.quests, _questDbCache || {}, 'awakening', 3);
             await _say('(A memory stirs. Mira will want to see you.)');
         }
+        _purgeRunFloors();                                 // leaving the descent: drop all floor state
         var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
         await _enterMap('Dawnhearth', 'awakened', w.x, w.y);
         st.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
@@ -856,6 +868,7 @@
                 var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
                 await _loadRunDb();
                 if (c.start || !GameRun.active(st.run)) {
+                    _purgeRunFloors();                     // fresh descent: chests refill, no stale state
                     GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0, { tethered: c.tethered !== false });
                     await _loadMetaDb();
                     _grantStartItems();                    // meta boon: begin runs with kit
