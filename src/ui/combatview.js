@@ -156,6 +156,10 @@
             var actors = [buildPlayer()].concat(buildAllies(opts)).concat(buildEnemies(opts));
             var seed = (Date.now() ^ (seedCounter++ * 0x9e3779b1)) >>> 0;
             state = root.GameCombat.createBattle(db, actors, seed);
+            // Tether stance: the System only catches you if you're TETHERED. A run
+            // started untethered (refusing its help) gets no lethal-save / no top-up.
+            var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
+            state.tethered = !(_run && _run.active && _run.tethered === false);
             _seedVitals();   // carry persistent HP/MP/SP into the battle (no full-heal each fight)
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; chosenSkill = null; logQueue = [];
             cards = {};

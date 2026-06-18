@@ -490,9 +490,11 @@
     }
     async function _endRun(reason) {
         var st = GameSave.state; if (!window.GameRun || !st) return;
+        var unteth = st.run && st.run.tethered === false;
         var r = GameRun.end(st.run, st.meta || (st.meta = {}), reason);
         var msg = reason === 'cleared' ? 'You break the surface — alive, and still yourself. The descent is cleared.'
             : reason === 'collected' ? 'SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more.'
+            : unteth ? 'Untethered, you fall — and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should.'
             : 'You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more.';
         await _say(_subTokens(msg));
         await _say('Memory fragments +' + r.summary.fragments + '  (total ' + r.summary.totalFragments + ' · deepest floor ' + (st.meta.deepest | 0) + ')');
@@ -712,7 +714,7 @@
                 var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
                 await _loadRunDb();
                 if (c.start || !GameRun.active(st.run)) {
-                    GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0);
+                    GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0, { tethered: c.tethered !== false });
                     if (GameSave.markDirty) GameSave.markDirty();
                     await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
                 } else {

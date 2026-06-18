@@ -795,18 +795,33 @@
     },
     {
      "type": "choice",
-     "prompt": "Begin the descent?",
+     "prompt": "How will you descend?",
      "options": [
       {
-       "label": "Descend",
+       "label": "Tethered",
        "then": [
         {
          "type": "text",
-         "text": "You step through. The System follows."
+         "text": "You keep the System close. It will not let you die down there \u2014 and it will never stop watching. (Surveillance climbs toward Collection.)"
         },
         {
          "type": "descend",
-         "start": true
+         "start": true,
+         "tethered": true
+        }
+       ]
+      },
+      {
+       "label": "Untethered",
+       "then": [
+        {
+         "type": "text",
+         "text": "You cut the tether. No hand will catch you \u2014 death is real. But the System loses its grip, and you stay yourself. (The off-grid path.)"
+        },
+        {
+         "type": "descend",
+         "start": true,
+         "tethered": false
         }
        ]
       },

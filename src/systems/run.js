@@ -21,8 +21,8 @@
     return pool.length ? pool[((run.seed >>> 0) + (run.floor | 0)) % pool.length] : null;
   }
 
-  function start(run, db, seed) {
-    db = db || {};
+  function start(run, db, seed, opts) {
+    db = db || {}; opts = opts || {};
     run.active = true;
     run.seed = (seed >>> 0) || ((Math.random() * 0xffffffff) >>> 0);
     run.floor = 1;
@@ -30,7 +30,8 @@
     run.biome = db.biome || 'verdara';
     run.cleared = false;
     run.endedReason = null;
-    return { floor: 1, map: floorMap(run, db), boss: isBossFloor(run, db) };
+    run.tethered = opts.tethered !== false;        // refuse the System's help = untethered
+    return { floor: 1, map: floorMap(run, db), boss: isBossFloor(run, db), tethered: run.tethered };
   }
 
   // Go one floor deeper. Returns {cleared:true} past the boss, else the new floor.
@@ -54,10 +55,16 @@
     meta.deepest = Math.max(meta.deepest | 0, run.floor | 0);
     if (reason === 'cleared') meta.clears = (meta.clears | 0) + 1;
     if (reason === 'collected') meta.collections = (meta.collections | 0) + 1;
-    // memory fragments: deeper runs + clean runs (low Surveillance) remember more
-    var frag = (run.floor | 0) + (reason === 'cleared' ? 3 : 0) + ((run.surveillance | 0) < 60 ? 2 : 0);
+    if (run.tethered === false) meta.untetheredRuns = (meta.untetheredRuns | 0) + 1;
+    // lifetime Surveillance gates the good/true endings (untethered runs stay clean)
+    meta.lifetimeSurveillance = (meta.lifetimeSurveillance | 0) + (run.surveillance | 0);
+    // memory fragments: deeper runs + clean runs (low Surveillance) + untethered remember more
+    var frag = (run.floor | 0) + (reason === 'cleared' ? 3 : 0) + ((run.surveillance | 0) < 60 ? 2 : 0)
+      + (run.tethered === false ? 2 : 0);
     meta.fragments = (meta.fragments | 0) + frag;
-    var summary = { reason: reason, floor: run.floor | 0, surveillance: run.surveillance | 0, fragments: frag, totalFragments: meta.fragments };
+    var summary = { reason: reason, floor: run.floor | 0, surveillance: run.surveillance | 0,
+      tethered: run.tethered !== false, fragments: frag, totalFragments: meta.fragments,
+      lifetimeSurveillance: meta.lifetimeSurveillance };
     run.active = false;
     run.endedReason = reason;
     run.lastSummary = summary;

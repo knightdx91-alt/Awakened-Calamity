@@ -263,6 +263,7 @@
     // rockets, and high Surveillance corrupts you). Call wherever a player's hp
     // could reach 0 (attack / counter / DoT).
     function _guardLethal(state, t) {
+        if (state.tethered === false) return;          // UNTETHERED: the System won't catch you
         const iv = state.tuning.intervention;
         if (!iv || !iv.enabled || !iv.lethalSave) return;
         if (!t || t.side !== 'player' || t.hp > 0) return;
@@ -274,6 +275,7 @@
 
     // ---- intervention: the System as a third will -------------------------
     function _interventionTick(state, step) {
+        if (state.tethered === false) return;          // UNTETHERED: no System help at all
         const iv = state.tuning.intervention;
         if (!iv || !iv.enabled) return;
         state._ivTempo = (state._ivTempo || 0) + iv.speed * (step / 100);
