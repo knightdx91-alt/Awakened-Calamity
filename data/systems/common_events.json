@@ -16,6 +16,40 @@
       { "type": "text", "text": "SYSTEM: …logged." }
     ]
   },
+  "awakening_intro": {
+    "name": "Opening — System cold-open (autorun on new game)",
+    "trigger": "autorun",
+    "switch": "sys_intro",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: Welcome, [designation]. Classification complete. You have Awakened in Dawnhearth." },
+      { "type": "text", "text": "SYSTEM: There is a Calamity below. You will descend, and you will clear it. I will keep you alive. I will keep you. Always." },
+      { "type": "text", "text": "…For just a moment, the words feel worn — like you have heard them before. Then it passes. A woman by the roadside is waving you over." },
+      { "type": "switch", "id": "sys_intro", "value": false }
+    ]
+  },
+  "first_descent_tethered": {
+    "name": "Opening — first descent return (tethered: the System kept you)",
+    "commands": [
+      { "type": "text", "text": "The killing blow never lands. The System’s hand closes around you — warm, absolute. You are alive. You did not choose to be." },
+      { "type": "text", "text": "SYSTEM: I told you. I will keep you alive. I will keep you. Always." },
+      { "type": "text", "text": "The relief curdles in your chest. It has said that before. You have heard it before. How many times?" }
+    ]
+  },
+  "first_descent_untethered": {
+    "name": "Opening — first descent return (untethered: the dark took you, yet you woke)",
+    "commands": [
+      { "type": "text", "text": "Untethered, no hand closes around you. The dark is real, and it takes you whole." },
+      { "type": "text", "text": "…And then you are breathing. Standing in Dawnhearth. The System did not catch you — so how are you here, [designation]?" },
+      { "type": "text", "text": "That is the question it does not want you to ask." }
+    ]
+  },
+  "first_descent_cleared": {
+    "name": "Opening — first descent return (cleared on the first try)",
+    "commands": [
+      { "type": "text", "text": "You break the surface — alive. But the climb back felt worn, rehearsed, like muscle for a thing you have never done." },
+      { "type": "text", "text": "You have stood in this light before, [designation]. You are certain of it. And the certainty terrifies you." }
+    ]
+  },
   "intro_cutscene": {
     "name": "Example Autorun Cutscene",
     "trigger": "autorun",

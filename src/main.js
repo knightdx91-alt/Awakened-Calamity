@@ -334,12 +334,11 @@
                 if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
                 GameSave.save(0, GameSave.state);
             }
-            // Cold open — the System's first words, then a nudge toward Mira.
-            runCmdList([
-                { type: 'text', text: 'SYSTEM: Welcome, [designation]. Classification complete. You have Awakened in Dawnhearth.' },
-                { type: 'text', text: 'SYSTEM: There is a Calamity below. You will descend, and you will clear it. I will keep you alive. I will keep you. Always.' },
-                { type: 'text', text: '…For just a moment, the words feel worn — like you have heard them before. Then it passes. A woman by the roadside is waving you over.' }
-            ], { mapName: 'Dawnhearth', evId: 0, event: null });
+            // Cold open: a fresh game starts with clean event state, then flips the
+            // `sys_intro` switch — the AUTORUN common event `awakening_intro` plays the
+            // System's first words (fully editable in data/systems/common_events.json
+            // or the editor, no longer hardcoded here).
+            if (window.GameEventState) { GameEventState.reset(); GameEventState.setSwitch('sys_intro', true); }
             console.log('[Main] New game → Dawnhearth at', w.x, w.y);
         };
         if (window.GamePlayerCreation) GamePlayerCreation.start(finish);
@@ -898,18 +897,11 @@
         // by how you went down (tethered = the System "kept" you; untethered = the dark
         // took you, yet you woke anyway). One-time, then normal returns take over.
         if (firstRun) {
-            if (reason === 'cleared') {
-                await _say(_subTokens('You break the surface — alive. But the climb back felt worn, rehearsed, like muscle for a thing you have never done.'));
-                await _say(_subTokens('You have stood in this light before, [designation]. You are certain of it. And the certainty terrifies you.'));
-            } else if (unteth) {
-                await _say(_subTokens('Untethered, no hand closes around you. The dark is real, and it takes you whole.'));
-                await _say(_subTokens('…And then you are breathing. Standing in Dawnhearth. The System did not catch you — so how are you here, [designation]?'));
-                await _say(_subTokens('That is the question it does not want you to ask.'));
-            } else {
-                await _say(_subTokens('The killing blow never lands. The System’s hand closes around you — warm, absolute. You are alive. You did not choose to be.'));
-                await _say(_subTokens('SYSTEM: I told you. I will keep you alive. I will keep you. Always.'));
-                await _say(_subTokens('The relief curdles in your chest. It has said that before. You have heard it before. How many times?'));
-            }
+            // The pivotal first-descent beat lives in EDITABLE common events; the
+            // engine only picks which one by how the run ended.
+            var ceId = reason === 'cleared' ? 'first_descent_cleared'
+                : unteth ? 'first_descent_untethered' : 'first_descent_tethered';
+            await _callCommonEvent(ceId, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
         }
         // meta boons: bonus fragments per run (+ untethered bonus)
         await _loadMetaDb();

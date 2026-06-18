@@ -2,6 +2,18 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Opening/tutorial fully COMMAND-AUTHORED (editable, no hardcoded JS)
+The two hardcoded opening beats were moved into editable common events so the whole tutorial is
+now data: (1) the **cold-open** → `awakening_intro` **autorun** common event (switch `sys_intro`;
+`_newGame` resets event state + flips it on, the autorun self-clears it); (2) the **first-descent
+return** beat → `first_descent_tethered`/`_untethered`/`_cleared` common events, called by `_endRun`
+(engine picks WHICH by how the run ended; the words are editable). Everything else was already map
+events (Mira/crystal/fiend/board/DescentGate in `Dawnhearth.json`). `text` already token-substitutes
+`[name]`/`[designation]`. Full beat-by-beat map + how-to-edit in **`docs/TUTORIAL.md`**. Browser-
+verified: cold-open autoruns with token substitution + self-clears, first-descent common event
+plays; 0 errors. To rewrite the opening you now only touch DATA (`common_events.json`,
+`Dawnhearth.json`, `quests.json`).
+
 ## ✅ DONE 2026-06-18 — Show Animation + auto/parallel common-event triggers
 - **Show Animation** (`animation` command): flipbooks an RTP animation sheet's 192px cells over a
   target (player/this/event). NOTE the RTP ships only the sheets, NOT RM's frame-timing data
