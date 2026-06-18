@@ -2,20 +2,29 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
-## 🔴 NEXT SESSION — TOP PRIORITY: P1 combat/balance pass (`docs/FIX_LIST.md`)
-The roguelite loop now works end-to-end in-engine (run loop, untethered stance,
-mid-fight Collection, meta-progression, opening reframed to teach the loop). But
-every simulator points at the SAME blocker: **the combat/descent math is too
-hard**, and it's gating everything downstream — the tether-Collection numbers
-(`sweep_tether` = ~90% collected at all thresholds because players are FORCED to
-lean on saves), the difficulty curve (`sim_run` descent unwinnable on skill), and
-the launch-roster pick (`sim_balance`: 37 classes unwinnable at L1, 24 high-tier
-NO-KIT stat-blobs win 100%). **Do the P1 balance pass next:** flatten the enemy
-curve / lift player growth + a recovery economy until the fair mid-band roster
-clears 20–85% (`validate_design`), decide the floor for craft classes, then
-**re-run `sweep_tether`** to set the real Collection numbers. The toolchain
-(`tools/sim_*.mjs`, `validate_design.mjs`, `sweep_tether.mjs`, `dashboard.mjs`)
-is built to drive this iteratively. Full list + priorities in `docs/FIX_LIST.md`.
+## ✅ DONE 2026-06-18 — P1 combat/balance pass: `validate_design` now ✅ MECHANICALLY SOUND
+The core balance pass is complete. `validate_design.mjs` went from 🟡 CONDITIONAL (2 WARN) to
+✅ MECHANICALLY SOUND — all four checks PASS: Build diversity (53/101 fair, 1 legit-dominant
+apex), Difficulty curve (avg depth 5.4/8, 21% clear), No degenerate build (0 unkillable / 0
+one-shot), ★ Intervention dilemma (tempting +4.67 depth / costly +701 Surv/run). **What was
+done:** auto-tuned the 19 overtuned advanced/master combat classes' `statProfile` (atk/hp
+scaled into the 0.3–0.9 untethered-skill win band, intervention OFF) and gave `the_unmade` a
+dignified non-degenerate profile (150hp/28atk/45def). The earlier "combat is too hard" framing
+was stale — the live blocker had flipped to **overtuned** (125/125 dominant in the tethered
+read; everything won 100%). The tethered `sim_run`/`sim_balance` 100% is BY DESIGN (System
+saves you → you clear but get collected); the honest skill read is the intervention-OFF Build
+diversity check. `sweep_tether` still shows ~99% collected because its bot always accepts the
+save — that's the intended punishment for leaning, not a balance bug (the careful/reckless mix
+is a player-choice axis, validated by the dilemma check, not the one-policy sweep). Updated
+notes in `docs/FIX_LIST.md`.
+
+### 🔴 NEXT — remaining P1 + the P0 run loop
+- **Decide the craft-class floor** (~47 below-fair lifestyle classes): survivable minimum kit
+  vs. formally "non-combat, needs an ally" (then the tutorial fight must not hard-gate them).
+- **Pick the launch roster** (~10–15) from the 53 fair classes.
+- **Build the run loop in-engine** (P0) — the roguelite descent only exists in the sims; until
+  it runs, the game is the Dawnhearth opening only. The sweep's careful-accept survivability
+  (recovery economy / save-trigger tuning) is best finished once the loop is in-engine.
 
 ## ⏳ PENDING (next session) — MAP GENERATOR: gameplay + content next steps
 Owner asked to save these for next time (the "act as a game dev" roadmap). **#1 and #2 are

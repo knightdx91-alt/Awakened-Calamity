@@ -1409,8 +1409,8 @@
     "lifestyle": "craft",
     "affinityLean": "stone",
     "statProfile": {
-      "hp": 120,
-      "atk": 30,
+      "hp": 104,
+      "atk": 20,
       "def": 34,
       "speed": 40
     },
@@ -1444,8 +1444,8 @@
     "lifestyle": "craft",
     "affinityLean": "stone",
     "statProfile": {
-      "hp": 130,
-      "atk": 22,
+      "hp": 126,
+      "atk": 20,
       "def": 42,
       "speed": 38
     },
@@ -1479,8 +1479,8 @@
     "lifestyle": "craft",
     "affinityLean": "storm",
     "statProfile": {
-      "hp": 108,
-      "atk": 26,
+      "hp": 99,
+      "atk": 20,
       "def": 30,
       "speed": 52
     },
@@ -1514,8 +1514,8 @@
     "lifestyle": "craft",
     "affinityLean": "umbral",
     "statProfile": {
-      "hp": 96,
-      "atk": 32,
+      "hp": 93,
+      "atk": 30,
       "def": 26,
       "speed": 52
     },
@@ -2070,10 +2070,12 @@
     "lifestyle": "craft",
     "affinityLean": "corruption",
     "statProfile": {
-      "hp": 180,
-      "atk": 85,
-      "def": 50,
-      "speed": 66
+      "hp": 150,
+      "atk": 28,
+      "def": 45,
+      "speed": 66,
+      "mp": 40,
+      "sp": 120
     },
     "grantsSkills": [
       "unmake"
@@ -2965,8 +2967,8 @@
     "lifestyle": "combat",
     "affinityLean": "lumen",
     "statProfile": {
-      "hp": 120,
-      "atk": 26,
+      "hp": 110,
+      "atk": 20,
       "def": 28,
       "speed": 54
     },
@@ -2989,8 +2991,8 @@
     "lifestyle": "combat",
     "affinityLean": "ember",
     "statProfile": {
-      "hp": 110,
-      "atk": 34,
+      "hp": 95,
+      "atk": 24,
       "def": 16,
       "speed": 64
     },
@@ -3013,8 +3015,8 @@
     "lifestyle": "combat",
     "affinityLean": "storm",
     "statProfile": {
-      "hp": 84,
-      "atk": 26,
+      "hp": 77,
+      "atk": 20,
       "def": 14,
       "speed": 80
     },
@@ -3229,8 +3231,8 @@
     "lifestyle": "espionage",
     "affinityLean": "umbral",
     "statProfile": {
-      "hp": 82,
-      "atk": 28,
+      "hp": 76,
+      "atk": 22,
       "def": 14,
       "speed": 82
     },
@@ -3253,8 +3255,8 @@
     "lifestyle": "combat",
     "affinityLean": "stone",
     "statProfile": {
-      "hp": 130,
-      "atk": 24,
+      "hp": 122,
+      "atk": 20,
       "def": 30,
       "speed": 40
     },
@@ -3421,8 +3423,8 @@
     "lifestyle": "combat",
     "affinityLean": "ember",
     "statProfile": {
-      "hp": 96,
-      "atk": 28,
+      "hp": 93,
+      "atk": 26,
       "def": 18,
       "speed": 64
     },
@@ -3445,8 +3447,8 @@
     "lifestyle": "survival",
     "affinityLean": "umbral",
     "statProfile": {
-      "hp": 84,
-      "atk": 24,
+      "hp": 79,
+      "atk": 20,
       "def": 14,
       "speed": 72
     },
@@ -3685,8 +3687,8 @@
     "lifestyle": "combat",
     "affinityLean": "ember",
     "statProfile": {
-      "hp": 104,
-      "atk": 28,
+      "hp": 95,
+      "atk": 22,
       "def": 20,
       "speed": 66
     },
@@ -3709,8 +3711,8 @@
     "lifestyle": "combat",
     "affinityLean": "storm",
     "statProfile": {
-      "hp": 100,
-      "atk": 28,
+      "hp": 94,
+      "atk": 24,
       "def": 20,
       "speed": 64
     },
@@ -3733,8 +3735,8 @@
     "lifestyle": "combat",
     "affinityLean": "storm",
     "statProfile": {
-      "hp": 88,
-      "atk": 28,
+      "hp": 78,
+      "atk": 20,
       "def": 16,
       "speed": 78
     },
@@ -3757,8 +3759,8 @@
     "lifestyle": "combat",
     "affinityLean": "verdant",
     "statProfile": {
-      "hp": 84,
-      "atk": 28,
+      "hp": 77,
+      "atk": 22,
       "def": 14,
       "speed": 76
     },
@@ -3805,8 +3807,8 @@
     "lifestyle": "combat",
     "affinityLean": "storm",
     "statProfile": {
-      "hp": 90,
-      "atk": 28,
+      "hp": 87,
+      "atk": 26,
       "def": 18,
       "speed": 62
     },
@@ -3853,8 +3855,8 @@
     "lifestyle": "combat",
     "affinityLean": "ember",
     "statProfile": {
-      "hp": 102,
-      "atk": 26,
+      "hp": 96,
+      "atk": 22,
       "def": 20,
       "speed": 70
     },
@@ -4069,8 +4071,8 @@
     "lifestyle": "espionage",
     "affinityLean": "umbral",
     "statProfile": {
-      "hp": 84,
-      "atk": 26,
+      "hp": 79,
+      "atk": 22,
       "def": 14,
       "speed": 80
     },

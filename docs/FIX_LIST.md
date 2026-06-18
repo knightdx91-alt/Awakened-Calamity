@@ -17,14 +17,18 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   opening only.
 
 ## P1 — combat & class balance (the sims' hit-list)
+- ✅ **Balance pass DONE (2026-06-18) — `validate_design` now ✅ MECHANICALLY SOUND** (was 🟡,
+  2 WARN). Auto-tuned the 19 overtuned advanced/master combat classes' stat profiles
+  (atk/hp scaled down) into the fair band → build diversity 35→53/101 fair, 19→0 stat-blob
+  dominant; fixed the lone one-shot (`the_unmade` given a dignified non-degenerate profile,
+  150hp/28atk/45def — wins but takes real damage). Difficulty curve still PASS (avg depth
+  5.4/8, 21% clear); Intervention dilemma still PASS (+4.67 depth tempting / +701 Surv costly).
 - ⬜ **37 classes UNWINNABLE at L1** (craft/lifestyle). Decide the floor: a survivable
   minimum kit, OR formally "non-combat — needs an ally" (and then the tutorial fight
-  must not hard-gate them). `sim_balance`.
-- ⬜ **High-tier classes overtuned**: 24 NO-KIT classes win 100% on stat inflation with
-  ZERO combat skills of their own; 6 UNKILLABLE, 1 ONE-SHOT (`the_unmade`). Give them
-  real kits or rein in stat profiles. `sim_buildspace`.
+  must not hard-gate them). `sim_balance`. (Still open — these are the ~47 below-fair craft
+  classes; design call, not a stat tweak.)
 - ⬜ **Pick the launch roster** (~10–15) from the fair mid-band (rogue/scout/hunter/
-  brawler/lancer/fencer…) — `validate_design` build-diversity band.
+  brawler/lancer/fencer…) — `validate_design` build-diversity band (now 53 to choose from).
 - ⬜ **103/192 skills are INERT** (no combat/passive effect — pure data hooks). Wire the
   ones the launch classes use; cut or defer the rest. `content_lint`/`dashboard`.
 - ⬜ **Recovery economy** — descents need potions/lifesteal/relics tuned so the curve is
@@ -81,10 +85,16 @@ So: keep the cast, the tone, and most of the writing (it's good and on-theme); *
 the structure** around the hub + first-run + first-death-reset. It's a re-frame, not a rewrite.
 Best done *after* the run loop exists (P0), so the opening can teach a loop that actually runs.
 
-## Sweep finding (2026-06-18) — collection is BALANCE-GATED
-`tools/sweep_tether.mjs` swept collectionThreshold x surveillancePerSave: tethered runs end
-in Collection ~87-98% at EVERY setting (clears max 13%). The threshold is not the lever —
-the descent is so hard that tethered players are FORCED to lean on saves (8-13/run) and
-always get collected. Collection numbers can't be tuned until P1 (combat curve / recovery)
-is fixed. Interim set to perSave 10 + threshold 300 (most grace). Re-run the sweep after
-the balance pass; target a meaningful mix (careful=clear, reckless=collected).
+## Sweep finding (2026-06-18) — collection mix is a PLAYER-CHOICE axis, not a sweep knob
+`tools/sweep_tether.mjs` re-run after the P1 balance pass: tethered runs STILL end in
+Collection ~96-99% at every (perSave × threshold) setting. Root cause is now understood and
+is NOT a balance bug: the sweep bot uses a single **always-accept-the-save** policy, and the
+System save fires at ≤35% HP (`helpThreshold`), so a leaning bot racks up 7-14 saves/run and
+always blows past the threshold. That is the INTENDED punishment for leaning — lean on the
+System and you get collected, every time. The meaningful careful-vs-reckless **mix is a
+player-choice axis** (accept vs refuse each save in-game) that a one-policy bot can't model;
+it is instead validated by `validate_design`'s ★ Intervention-dilemma check (REFUSE vs ACCEPT
+arms): accepting reaches +4.67 deeper (tempting) and costs +701 Surveillance/run (costly) →
+PASS. Settings kept at perSave 10 + collectionThreshold 300. To make a *careful-accept* run
+survivable in the sweep itself you'd lower the save trigger (e.g. lethal-only) or add a
+recovery economy so HP stays above 35% — deferred (needs the run loop in-engine, P0).
