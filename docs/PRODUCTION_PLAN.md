@@ -71,12 +71,18 @@ A roguelite is a simulation; balance it by code, not by hand. Build order:
    win-rate/turns, flags UNWINNABLE/DOMINANT — DONE.
 3. ✅ **Full-run bot** (`tools/sim_run.mjs`) — simulates a descent (vitals carry, a
    `--rest` recovery knob), reports clear% / depth per class — DONE.
-4. **Build-space analyzer** — auto-hunt degenerate combos (infinite/unkillable/one-shot).
-5. **Content lint** — every class/skill/relic/quest/shop/map ref resolves; every run
-   completable; no dead content. On every commit.
-6. **Meta/economy tuner** — simulate the unlock-currency curve so the meta hooks.
+4. ✅ **Build-space analyzer** (`tools/sim_buildspace.mjs`) — flags UNKILLABLE /
+   ONE-SHOT / STALL / GLASS / NO-KIT builds — DONE. (Found: 6 UNKILLABLE, 24 NO-KIT
+   classes that win on stat inflation with zero combat skills, 1 one-shot, 30 glass.)
+5. ✅ **Content lint** (`tools/content_lint.mjs`) — all refs resolve; 0 broken — DONE.
+6. ✅ **Economy/progression tuner** (`tools/sim_economy.mjs`) — XP kills-to-level per
+   tier + shop affordability — DONE. (Confirms ~6 kills for L1; surfaced that credit
+   INCOME is undefined, so prices are meaningless until encounters drop credits.)
 7. **Telemetry** (once the demo's live) — where players quit/die, build picks → data-driven balance.
-8. **Content/health dashboard** — one readout of what's real vs designed-but-inert.
+8. ✅ **Content/health dashboard** (`tools/dashboard.mjs`) — what's real vs inert — DONE.
+9. ✅ **Reactive dialogue + authoring drafter** (`src/systems/dialogue_gen.js` +
+   `tools/gen_dialogue.mjs`) — story generated from the docs into a deterministic
+   runtime selector; wired into the engine (Surveillance-reactive townsfolk) — DONE.
 
 Tooling lives in `tools/`; sims share `tools/sim_core.mjs` (loads the pure combat core).
 
