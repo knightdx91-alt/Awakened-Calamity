@@ -275,17 +275,33 @@
         }
         return { x: cx, y: cy };
     }
+    // Where to drop the player when no explicit coords are given: the map's `start`
+    // field, else an Entrance/StairsUp event, else the map centre. (Generated run
+    // floors carry an Entrance event on walkable stairs.)
+    function _mapStart() {
+        var m = GameMap.current;
+        if (m && m.start && m.start.x != null && m.start.y != null) return { x: m.start.x | 0, y: m.start.y | 0 };
+        var evs = (m && m.events) || [];
+        for (var i = 0; i < evs.length; i++) {
+            if (evs[i].name === 'Entrance' || evs[i].name === 'StairsUp') return { x: evs[i].x | 0, y: evs[i].y | 0 };
+        }
+        return { x: Math.floor(GameMap.width / 2), y: Math.floor(GameMap.height / 2) };
+    }
     async function _enterMap(map, region, x, y) {
         currentRegion = region || currentRegion;
         await GameMap.load(map, currentRegion);
         window._mapName = (GameMap.current && GameMap.current.name) || map;
         window._mapLoaded = true;
         window._currentMapType = (GameMap.current && GameMap.current.map_type) || '';
-        var px = (x != null) ? x : Math.floor(GameMap.width / 2);
-        var py = (y != null) ? y : Math.floor(GameMap.height / 2);
+        var px, py;
+        if (x != null && y != null) { px = x | 0; py = y | 0; }
+        else { var s = _mapStart(); px = s.x; py = s.y; }
         px = Math.max(0, Math.min(px, GameMap.width - 1));
         py = Math.max(0, Math.min(py, GameMap.height - 1));
-        player.x = px; player.y = py; player.prevX = px; player.prevY = py;
+        // NEVER spawn in a wall: snap to the nearest walkable tile (fixes descents
+        // that dropped the player into solid rock at the map centre).
+        var w = _findWalkable(px, py);
+        player.x = w.x; player.y = w.y; player.prevX = w.x; player.prevY = w.y;
         player.direction = 'down'; player.walkFrame = 0; player.moveStartTime = 0;
         _snapPlayer();
         GameRenderer.setScene(GameMap, GameCamera, player);

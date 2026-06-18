@@ -13,7 +13,10 @@ Usage:
 """
 import json, os, sys, argparse
 from collections import deque
-from PIL import Image, ImageDraw
+try:
+    from PIL import Image, ImageDraw   # only needed for the contact-sheet render
+except ImportError:
+    Image = ImageDraw = None           # validation (file/all) works without it
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TS   = os.path.join(ROOT, "data", "tilesets")
@@ -145,6 +148,30 @@ def validate(layout, mapobj, map_type=""):
     if walk_total < (W * H) * 0.03:
         issues.append(("FAIL", f"almost no walkable space ({walk_total}/{W*H} tiles)"))
 
+    # 6) PLAYER SPAWN: where the engine drops the player when no coords are given
+    #    must be WALKABLE and in the main region — mirrors engine _mapStart():
+    #    map.start -> Entrance/StairsUp event -> map centre. A spawn in a wall is the
+    #    "descended into solid rock, can't move" bug.
+    mobj = mapobj or {}
+    start = None
+    if mobj.get("start") and mobj["start"].get("x") is not None:
+        start = (mobj["start"]["x"], mobj["start"]["y"], "map.start")
+    if start is None:
+        for e in events:
+            if e.get("name") in ("Entrance", "StairsUp") and e.get("x") is not None:
+                start = (e["x"], e["y"], f"'{e['name']}' event"); break
+    if start is None:
+        start = (W // 2, H // 2, "centre fallback")
+    sx, sy, ssrc = start
+    if not (0 <= sx < W and 0 <= sy < H):
+        issues.append(("FAIL", f"player spawn ({ssrc}) at ({sx},{sy}) is off-map"))
+    elif coll[sy * W + sx] != 0:
+        issues.append(("FAIL", f"player spawn ({ssrc}) at ({sx},{sy}) is a WALL "
+                               f"(engine will snap to nearest walkable, but fix the source)"))
+    elif (sy * W + sx) not in main:
+        issues.append(("WARN", f"player spawn ({ssrc}) at ({sx},{sy}) is walkable but in an "
+                               f"isolated pocket (not the main reachable area)"))
+
     stats = {"w": W, "h": H, "walkable": walk_total, "regions": len(comps),
              "isolated": isolated, "events": len(events)}
     return issues, stats
@@ -243,14 +270,51 @@ def file_check(layout_name):
         print("  OK — no issues")
     return sum(1 for s, _ in issues if s == "FAIL")
 
+def all_check():
+    """Validate EVERY committed map against its layout — collision/reachability/
+    spawn. Returns the FAIL count. This is the 'evaluate collision in all maps' pass."""
+    n_fail = n_warn = n_ok = 0
+    rows = []
+    for f in sorted(os.listdir(MAPS)):
+        if not f.endswith(".json") or f.startswith("_"):
+            continue
+        mo = json.load(open(os.path.join(MAPS, f)))
+        if not isinstance(mo, dict) or not mo.get("layout"):
+            continue
+        lp = os.path.join(LAY, mo["layout"] + ".json")
+        if not os.path.exists(lp):
+            rows.append(("FAIL", f, [("FAIL", f"missing layout {mo['layout']}")])); n_fail += 1; continue
+        layout = json.load(open(lp))
+        issues, _ = validate(layout, mo, mo.get("map_type", ""))
+        fails = [m for s, m in issues if s == "FAIL"]
+        warns = [m for s, m in issues if s == "WARN"]
+        status = "FAIL" if fails else ("WARN" if warns else "OK")
+        if status == "FAIL": n_fail += 1
+        elif status == "WARN": n_warn += 1
+        else: n_ok += 1
+        rows.append((status, f, issues))
+    print(f"MAPCHECK ALL — {len(rows)} maps: {n_ok} OK, {n_warn} WARN, {n_fail} FAIL\n" + "=" * 60)
+    for status, f, issues in rows:
+        if status == "OK":
+            continue
+        print(f"[{status}] {f}")
+        for sev, msg in issues:
+            print(f"   {sev}: {msg}")
+    if n_fail == 0:
+        print("\nNo FAILs — every map's spawn is walkable and events are reachable.")
+    return n_fail
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("batch"); b.add_argument("--seeds", type=int, default=5); b.add_argument("--out", default="/tmp/mapcheck")
     f = sub.add_parser("file"); f.add_argument("layout")
+    sub.add_parser("all")
     a = ap.parse_args()
     if a.cmd == "batch":
         sys.exit(1 if batch(a.seeds, a.out) else 0)
+    elif a.cmd == "all":
+        sys.exit(1 if all_check() else 0)
     else:
         sys.exit(1 if file_check(a.layout) else 0)
 

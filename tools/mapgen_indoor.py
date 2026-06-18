@@ -14,6 +14,26 @@ from PIL import Image
 import mapgen
 from mapgen import T, TS, ROOT, _sheet, _register, nineslice
 
+
+def _validate_map(layout, mapobj, name):
+    """Generator self-check: run the structural validators (collision/spawn/
+    reachability) and shout if anything FAILs. Imported lazily so a missing PIL in
+    mapcheck doesn't break generation."""
+    try:
+        from mapcheck import validate
+    except Exception as ex:
+        print("  [check] (skipped — %s)" % ex); return
+    issues, _ = validate(layout, mapobj, mapobj.get("map_type", ""))
+    fails = [m for s, m in issues if s == "FAIL"]
+    warns = [m for s, m in issues if s == "WARN"]
+    if fails:
+        print("  [check] ❌ %s FAIL: " % name + "; ".join(fails))
+    elif warns:
+        print("  [check] ⚠ %s: " % name + "; ".join(warns[:2]))
+    else:
+        print("  [check] ✓ %s — spawn walkable, events reachable" % name)
+    return not fails
+
 # floor base tileset per scene (baked autotiles); we use flat tile 0 = floor.
 SCENE = {
     "dungeon": {"ground": "rtp_dungeon_ground", "a4": "rtp_dungeon_a4",
@@ -341,18 +361,29 @@ class IndoorBuilder:
                   "overlay_tileset": self.props_name, "overlay": self.over, "tileSize": T}
         os.makedirs(os.path.join(ROOT, "data", "layouts", region), exist_ok=True)
         json.dump(layout, open(os.path.join(ROOT, "data", "layouts", region, lid + ".json"), "w"))
+        events = [{"id": i + 1, "name": e.get("name", "Event%d" % (i + 1)),
+                   "x": e["x"], "y": e["y"],
+                   "graphic": e.get("graphic", {"sprite": "", "file": "", "single": True}),
+                   "dir": e.get("dir", "down"), "trigger": e.get("trigger", "action"),
+                   "through": e.get("through", False),
+                   "behavior": e.get("behavior"),
+                   "commands": e.get("commands", [{"type": "text", "text": e.get("text", door_text)}])}
+                  for i, e in enumerate(self.events)]
+        # explicit player spawn = the Entrance (walkable stairs), else first walkable tile.
+        start = None
+        for e in events:
+            if e["name"] in ("Entrance", "StairsUp"):
+                start = {"x": e["x"], "y": e["y"]}; break
+        if start is None or self.coll[start["y"] * self.W + start["x"]]:
+            for i, c in enumerate(self.coll):
+                if not c: start = {"x": i % self.W, "y": i // self.W}; break
         mapobj = {"id": mid, "name": name, "region": region, "parent": "", "layout": lid,
                   "music": "MUS_NONE", "weather": "WEATHER_NONE", "map_type": map_type,
                   "allow_running": True, "show_map_name": True, "connections": [],
-                  "npcs": [], "warps": [], "triggers": [], "signs": [],
-                  "events": [{"id": i + 1, "name": e.get("name", "Event%d" % (i + 1)),
-                              "x": e["x"], "y": e["y"],
-                              "graphic": e.get("graphic", {"sprite": "", "file": "", "single": True}),
-                              "dir": e.get("dir", "down"), "trigger": e.get("trigger", "action"),
-                              "through": e.get("through", False),
-                              "behavior": e.get("behavior"),
-                              "commands": e.get("commands", [{"type": "text", "text": e.get("text", door_text)}])}
-                             for i, e in enumerate(self.events)]}
+                  "start": start, "npcs": [], "warps": [], "triggers": [], "signs": [],
+                  "events": events}
+        # ── self-CHECK: validate collision/spawn/reachability before writing ──
+        _validate_map(layout, mapobj, name)
         os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
         json.dump(mapobj, open(os.path.join(ROOT, "data", "maps", region, name + ".json"), "w"))
         ipath = os.path.join(ROOT, "data", "maps", region + "_index.json")

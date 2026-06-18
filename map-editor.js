@@ -972,7 +972,9 @@
           if (nx * nx + ny * ny > 1) continue;
         }
         if (state.mode === 'region') { state.region[idx(x, y)] = state.eraser ? 0 : state.regionId; continue; }
-        if (state.mode === 'collide') { layer.collision[idx(x, y)] = state.eraser ? 0 : 1; continue; }
+        // collision lives on the GROUND layer (the only one exported), regardless of
+        // which layer is active — match the single-tile paint + the render overlay.
+        if (state.mode === 'collide') { state.layers.ground.collision[idx(x, y)] = state.eraser ? 0 : 1; continue; }
         if (auto) { layer.terrain[idx(x, y)] = state.selectedTerrain; continue; }
         // tile the stamp block by relative position
         var s = state.stamp;

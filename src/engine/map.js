@@ -245,11 +245,14 @@ window.GameMap = (function () {
         if (layoutData && layoutData.collision && tilesetBehaviors && layoutData.metatiles) {
             const metatileIdx = layoutData.metatiles[y * mapWidth + x];
             const behavior = metatileIdx !== undefined ? tilesetBehaviors[metatileIdx] : 0;
-            // Grass/cave behaviors are walkable even if collision byte is set
-            if (GRASS_BEHAVIORS.has(behavior) || CAVE_BEHAVIORS.has(behavior)) return true;
             // Water requires Surf — block regardless of collision byte
             if (WATER_BEHAVIORS.has(behavior)) return false;
+            // AUTHORED collision wins: a tile marked solid (collision byte set, e.g. in
+            // the editor's collision tool) blocks even on grass/cave behaviors. Without
+            // this, painted collision on grass/cave was silently ignored.
             if (layoutData.collision[y * mapWidth + x] !== 0) return false;
+            // Grass/cave with no collision byte are walkable (tall grass, cave floor).
+            if (GRASS_BEHAVIORS.has(behavior) || CAVE_BEHAVIORS.has(behavior)) return true;
         } else if (layoutData && layoutData.collision) {
             if (layoutData.collision[y * mapWidth + x] !== 0) return false;
         }

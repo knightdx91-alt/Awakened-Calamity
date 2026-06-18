@@ -60,6 +60,25 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   curve. Deeper tuning (save-trigger %, per-tier difficulty, the careful/reckless tethered mix)
   needs **human playtest** — the sims confirm mechanical soundness but can't read fun. Deferred.
 
+## Collision / spawn fixes (2026-06-18)
+- ✅ **Spawn-in-wall on descent FIXED.** `descend` entered floors with no coords, so `_enterMap`
+  dropped the player at the map CENTRE — solid wall in 4/6 run floors → "descended, can't move".
+  `_enterMap` now uses `_mapStart()` (map `start` field → Entrance/StairsUp event → centre) AND
+  always snaps to the nearest walkable tile (`_findWalkable`). Verified: all descents spawn walkable.
+- ✅ **Collision checker over ALL maps:** `python3 tools/mapcheck.py all` validates every committed
+  map (collision/reachability/spawn). New **spawn validator** flags a spawn in a wall or an isolated
+  pocket. Current state: active run pool (RunFloor*/RunBoss*) + Dawnhearth = clean; ~20 OLD prototype
+  maps FAIL (spawn-in-wall on no-Entrance interiors, unreachable Entrance/Alpha in some named
+  dungeons) — surfaced for authoring cleanup; the runtime walkable-snap prevents soft-locks meanwhile.
+- ✅ **Generator self-check:** `tools/mapgen_indoor.py write()` now adds an explicit `start` field and
+  runs `mapcheck.validate` on every generated map (prints ✓/⚠/❌ for spawn + reachability).
+- ✅ **Editor collision tool FIXED (two bugs):** (1) rectangle/ellipse fill painted collision onto the
+  ACTIVE layer, but only GROUND collision is exported → lost; now always targets ground (matching the
+  single-tile paint + the red overlay + the exporter). (2) The engine `isWalkable` returned walkable on
+  grass/cave behaviors BEFORE checking the collision byte, so painted collision on grass/cave was
+  ignored in-game; now **authored collision wins** (water still blocks, grass/cave walkable only when
+  collision is 0). So the red collision you paint actually blocks now.
+
 ## P2 — economy & progression
 - ✅ **Credit income WIRED (2026-06-18).** Defeating enemies now drops credits
   (`combatview._finish`): `perKill = base(15) × level × creditYield × variance`, summed over the
