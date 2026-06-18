@@ -291,10 +291,14 @@ window.GameHUD = (function () {
 
     function _renderMeters() {
         if (!_metersEl) return;
-        // Hide the HUD whenever the start menu (or any sub-screen) is open.
+        // Hide the HUD whenever the start menu (or any sub-screen) is open, OR a
+        // battle is up — combat draws its own vitals, so the overworld meters would
+        // double up in the corner.
         var menuOpen = !!(window.GameStartMenu && GameStartMenu.isOpen);
-        _metersEl.style.display = menuOpen ? 'none' : 'flex';
-        if (menuOpen) return;
+        var inBattle = !!((window.GameCombatView && GameCombatView.isActive()) ||
+                          (window.GameBattle && GameBattle.isActive()));
+        _metersEl.style.display = (menuOpen || inBattle) ? 'none' : 'flex';
+        if (menuOpen || inBattle) return;
         // Portrait → right side; otherwise top-left.
         var portrait = _isPortraitLayout();
         if (portrait) {

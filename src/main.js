@@ -999,6 +999,7 @@
         if (window.GameCombatView && GameCombatView.isActive()) {
             GameCombatView.consumeInput(jp);
             GameInput.consumeJustPressed();
+            if (window.GameHUD) GameHUD.update();   // hides the overworld meters during combat
             requestAnimationFrame(gameLoop);
             return;
         }
@@ -1017,6 +1018,7 @@
                 GameBattle.consumeInput(jp);
             }
             GameInput.consumeJustPressed();
+            if (window.GameHUD) GameHUD.update();   // keep the overworld meters hidden during battle
             requestAnimationFrame(gameLoop);
             return;
         }
