@@ -98,21 +98,36 @@
             var me = root.GameMeta.effects(root._metaDb, root.GameSave.state.meta);
             if (me.hpMult) stats = Object.assign({}, stats, { hp: Math.round(stats.hp * (1 + me.hpMult)) });
         }
+        // RELICS: per-run rewards. Stat multipliers scale the build; the trait
+        // bundle (crit/evade/lifesteal/thorns/defBonus) feeds the combat actor.
+        var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
+        var bonuses = null;
+        if (_run && root.GameRelics && root._relicsDb) {
+            var re = root.GameRelics.effects(root._relicsDb, _run);
+            stats = Object.assign({}, stats, {
+                atk: Math.max(1, Math.round(stats.atk * (1 + re.atkMult))),
+                hp: Math.max(1, Math.round(stats.hp * (1 + re.hpMult))),
+                def: Math.max(0, Math.round(stats.def * (1 + re.defMult))),
+                speed: Math.max(1, Math.round((stats.speed || 40) * (1 + re.spdMult)))
+            });
+            bonuses = { crit: re.crit, evade: re.evade, lifesteal: re.lifesteal, thorns: re.thorns, defBonus: re.defBonus };
+        }
         // CORRUPTION: during a run, cumulative Surveillance saps your atk (the System
         // "deciding for you"). This is the FELT in-combat cost of leaning on the
         // System's saves — it mounts tier by tier until Collection ends the run.
-        var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
         if (_run && _run.active && root.GameCorruption && root._corruptDb) {
             var mod = root.GameCorruption.atkMod(root._corruptDb, _run.surveillance | 0);
             if (mod) stats = Object.assign({}, stats, { atk: Math.max(1, Math.round(stats.atk * (1 + mod))) });
         }
-        return {
+        var def = {
             id: 'p1', side: 'player',
             name: ps.name || cls.name || 'Survivor',
             affinity: ps.affinity || cls.affinityLean || 'stone',
             stats: stats,
             loadout: loadout
         };
+        if (bonuses) def.bonuses = bonuses;
+        return def;
     }
     // Bonded creatures fight at your side. Bond shape: { key, nickname?, level? }
     // (key = creature id in creatures.json). Up to 3 active. AI-controlled.

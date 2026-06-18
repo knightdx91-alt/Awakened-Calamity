@@ -30,6 +30,7 @@
     run.biome = db.biome || 'verdara';
     run.cleared = false;
     run.endedReason = null;
+    run.relics = [];                                // per-run relic rewards (wiped each run)
     run.tethered = opts.tethered !== false;        // refuse the System's help = untethered
     return { floor: 1, map: floorMap(run, db), boss: isBossFloor(run, db), tethered: run.tethered };
   }

@@ -69,8 +69,17 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
 ## P3 — systems still to build (the gap list)
 - ⬜ **Meta-progression model** — what carries across deaths (memory fragments, unlocks,
   meta-currency). Design before run scaffolding.
-- ⬜ **Relic/item system** — the roguelite reward layer (replaces crafting-sprawl); ~80
-  hand-tuned relics + extend `content_lint` to cover them.
+- ✅ **Relic/item system BUILT (2026-06-18).** The roguelite per-run reward layer:
+  `data/systems/relics.json` (16 relics, common/rare/epic) + pure `src/systems/relics.js`
+  (`GameRelics`: weighted seeded roll / grant / effects-aggregate). Relics live on `run.relics`
+  (wiped each run via `GameRun.start`). Combat reads them in `combatview.buildPlayer` — stat
+  multipliers scale the build; a data-driven `bonuses` bundle (crit/evade/lifesteal/thorns/
+  defBonus) feeds the pure combat core (new `_mkActor` merge + lifesteal/thorns in `_attack`).
+  Dilemma relics (`survPerSaveMult`/`collectionBonus`) fold into the threshold + Surveillance
+  accrual. New **`relic` event command** (choice of 3 rolled, or `guaranteed:<id>`); a **RelicCache**
+  placed one-per-floor (generator `place_relic_cache` + `migrate_relic_caches.py` for the existing
+  6 floors). Held relics shown on the STATUS screen. `tools/test_relics.mjs` (10 checks) + browser-
+  verified end-to-end. (Future: ~60 more relics; editor `relic` command; relic icons.)
 - ⬜ **Run-seed / reproducibility** — a seed → a fixed run (sharing, daily challenges,
   debugging). Small.
 - ⬜ **Biome system** — the 5 regions as biome recipes (palette + props + roster + hazard

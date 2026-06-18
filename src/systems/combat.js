@@ -53,6 +53,14 @@
             }
             // utility skills are out-of-battle; not added to the battle loadout
         }
+        // External bonuses (relics now, gear later): a flat, data-driven trait
+        // bundle folded in on top of skills. Keeps combat engine-agnostic — any
+        // data layer can feed {crit, evade, defBonus, lifesteal, thorns}.
+        const b = d.bonuses || {};
+        critChance += (b.crit || 0);
+        evadeChance += (b.evade || 0);
+        defBonus += (b.defBonus || 0);
+        const lifesteal = b.lifesteal || 0, thorns = b.thorns || 0;
         // Resource pools: MP fuels magical (affinity) skills, SP (stamina) fuels
         // physical ones. Defaults if the build doesn't specify.
         const maxMp = (d.stats.mp != null) ? d.stats.mp : 30;
@@ -62,7 +70,7 @@
             battler: d.battler || null, charset: d.charset || null,   // presentation: sprite art travels with the actor
             atk: d.stats.atk, def: d.stats.def, speed: d.stats.speed,
             hp: maxHp, maxHp, mp: maxMp, maxMp, sp: maxSp, maxSp, tempo: 0, hasActed: false,
-            defBonus, evadeChance, critChance, counterChance,
+            defBonus, evadeChance, critChance, counterChance, lifesteal, thorns,
             // timed statuses (all decrement on this actor's own turn)
             defBuff: 0, defBuffTurns: 0, atkBuff: 0, atkBuffTurns: 0,
             speedMod: 0, speedModTurns: 0, markMult: 0, markTurns: 0,
@@ -175,6 +183,9 @@
             t.hp = Math.max(0, t.hp - r.dmg);
             _guardLethal(state, t);
             log(state, 'hit', { actor: a.id, skill: action.skillId, target: t.id, dmg: r.dmg, crit: r.crit, targetHp: t.hp });
+            // relic/gear bonuses: lifesteal heals the attacker; thorns reflect to it
+            if (a.lifesteal && a.hp > 0) { const h = Math.round(r.dmg * a.lifesteal); if (h > 0) { a.hp = Math.min(a.maxHp, a.hp + h); log(state, 'lifesteal', { actor: a.id, amount: h, hp: a.hp }); } }
+            if (t.thorns && a.hp > 0) { const tn = Math.max(1, Math.round(r.dmg * t.thorns)); a.hp = Math.max(0, a.hp - tn); _guardLethal(state, a); log(state, 'thorns', { actor: t.id, target: a.id, dmg: tn, targetHp: a.hp }); }
             if (i === 0 && t.hp > 0 && ['slow', 'markTarget', 'sunder', 'applyToxin'].indexOf(eff.type) >= 0)
                 _applyRider(state, a, t, eff);          // rider applies to primary only
             if (t.hp === 0) log(state, 'down', { actor: t.id });

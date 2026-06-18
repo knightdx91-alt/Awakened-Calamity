@@ -2,6 +2,21 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — RELIC SYSTEM (roguelite per-run reward layer)
+Built the relic layer. `data/systems/relics.json` (16 relics: common/rare/epic — atk/hp/def/spd
+mults, crit, evade, lifesteal, thorns, Surveillance/collection modifiers) + pure
+`src/systems/relics.js` (`GameRelics`: weighted SEEDED roll / grant / effects-aggregate). Relics
+live on `run.relics`, wiped each run (`GameRun.start`). **Combat integration:** `combatview.buildPlayer`
+applies stat mults + passes a data-driven `bonuses` bundle into the pure core — `combat.js _mkActor`
+folds crit/evade/defBonus and stores lifesteal/thorns; `_attack` applies lifesteal (heal on hit) +
+thorns (reflect). **Dilemma relics** (`survPerSaveMult`, `collectionBonus`) fold into the collection
+threshold + per-fight Surveillance. New **`relic` event command** (offer a choice of 3 seeded-rolled,
+or `guaranteed:<id>`); a **RelicCache** is placed one-per-floor (generator `place_relic_cache` +
+`tools/migrate_relic_caches.py` retro-added to the existing 6 floors). Held relics show on the STATUS
+screen (cyan section, active-run only). `tools/test_relics.mjs` = 10 checks; browser-verified
+grant→hold→combat-bonus→STATUS, 0 errors. Loaded in game.html. (Future: more relics, editor command,
+icons.)
+
 ## ✅ DONE 2026-06-18 — Run floors are EPHEMERAL (state purged) + procedural-gen status
 - **Map/dungeon generators ARE procedural** (`tools/mapgen_indoor.py`: seeded RNG carves rooms/
   corridors, scatters props/monsters/chests) but run **OFFLINE at build time** → static

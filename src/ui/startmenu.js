@@ -595,6 +595,27 @@ window.GameStartMenu = (function () {
             el.appendChild(sl);
         }
 
+        // RELICS — per-run rewards carried this descent (only during an active run).
+        var run = GameSave.state && GameSave.state.run;
+        var relicIds = (run && run.active && run.relics) || [];
+        if (relicIds.length) {
+            var rdb = window._relicsDb;
+            var rh = document.createElement('div');
+            rh.style.cssText = 'margin-top:10px;font:7px "Press Start 2P";color:' + _SYS.cyan + ';';
+            rh.textContent = 'RELICS (this descent)';
+            el.appendChild(rh);
+            var rl = document.createElement('div');
+            rl.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin-top:5px;';
+            relicIds.forEach(function (id) {
+                var def = rdb && window.GameRelics ? GameRelics.get(rdb, id) : null;
+                var row = document.createElement('div');
+                row.style.cssText = 'font-size:7px;background:' + _FR.body + ';border:1px solid ' + _SYS.cyan + ';border-radius:4px;padding:4px 6px;color:' + _FR.text + ';';
+                row.innerHTML = '<b style="color:' + _SYS.cyan + '">' + (def ? def.name : id) + '</b>' + (def ? ' — ' + def.desc : '');
+                rl.appendChild(row);
+            });
+            el.appendChild(rl);
+        }
+
         // Attributes + allocation (spend banked points).
         if (prog) {
             var attrList = (_progData && _progData.attributes) || Object.keys(prog.attributes || {});

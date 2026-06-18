@@ -518,8 +518,8 @@
         // the System collects you mid-fight (no more infinite saves / stalemate).
         var st = window.GameSave && GameSave.state;
         if (st && window.GameRun && GameRun.active(st.run) && st.run.tethered !== false) {
-            await _loadCorrupt(); await _loadMetaDb();
-            var thr = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0);
+            await _loadCorrupt(); await _loadMetaDb(); await _loadRelicsDb();
+            var thr = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0) + (_relicEffects().collectionBonus | 0);
             opts.collectBudget = Math.max(15, thr - (st.run.surveillance | 0));
         }
         return new Promise(function (res) {
@@ -543,6 +543,18 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (window._corruptDb = _corruptDb = j); })
             .catch(function () { return (window._corruptDb = _corruptDb = { collectionThreshold: 240 }); });
     }
+    var _relicsDb = null;
+    function _loadRelicsDb() {
+        if (_relicsDb) return Promise.resolve(_relicsDb);
+        return fetch('data/systems/relics.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._relicsDb = _relicsDb = j); })
+            .catch(function () { return (window._relicsDb = _relicsDb = { relics: [], weights: {} }); });
+    }
+    function _relicEffects() {
+        var st = window.GameSave && GameSave.state;
+        if (!window.GameRelics || !_relicsDb || !st || !st.run) return { survPerSaveMult: 0, collectionBonus: 0 };
+        return GameRelics.effects(_relicsDb, st.run);
+    }
     function _loadMetaDb() {
         if (window._metaDb) return Promise.resolve(window._metaDb);
         return fetch('data/systems/meta.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
@@ -558,9 +570,12 @@
     async function _runReact(result) {
         var st = window.GameSave && GameSave.state;
         if (!st || !window.GameRun || !GameRun.active(st.run)) return;
-        await _loadCorrupt();
-        var threshold = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0);
-        var col = GameRun.addSurveillance(st.run, (result && result.surveillance) | 0, threshold);
+        await _loadCorrupt(); await _loadRelicsDb();
+        var rel = _relicEffects();
+        var threshold = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0) + (rel.collectionBonus | 0);
+        // relics like Faraday Cage reduce the Surveillance each fight added (mostly saves)
+        var gained = Math.round(((result && result.surveillance) | 0) * (1 + (rel.survPerSaveMult || 0)));
+        var col = GameRun.addSurveillance(st.run, Math.max(0, gained), threshold);
         if (GameSave.markDirty) GameSave.markDirty();
         if (result && result.collected) { await _endRun('collected'); return; }  // taken mid-fight
         if (result && result.winner === 'enemy') { await _endRun('died'); return; }
@@ -610,6 +625,35 @@
             else await _say(res.reason === 'cost' ? 'Not enough fragments yet.' : 'You cannot recover that yet.');
         }
         if (GameSave.save) GameSave.save(GameSave.currentSlot || 0, st);
+    }
+
+    // Relic reward: offer a choice of N rolled relics (default 3); the pick is
+    // added to the current run. c.count = how many offered; c.guaranteed = relic id
+    // to grant outright (boss drops). Roll is seeded by run.seed for reproducibility.
+    async function _grantRelic(c) {
+        var st = GameSave.state;
+        if (!window.GameRun || !st || !GameRun.active(st.run)) { await _say('A relic glimmers — but only the descent reveals its worth.'); return; }
+        await _loadRelicsDb();
+        st.run.relics = st.run.relics || [];
+        if (c && c.guaranteed) {
+            var g = GameRelics.grant(st.run, _relicsDb, c.guaranteed);
+            if (g) { if (GameSave.markDirty) GameSave.markDirty(); await _say('RELIC — ' + g.name + '\n' + g.desc); }
+            return;
+        }
+        var n = (c && c.count) || 3;
+        // deterministic per-encounter roll: run seed + a per-run pickup counter
+        st.run._relicRolls = (st.run._relicRolls | 0) + 1;
+        var seed = ((st.run.seed >>> 0) + st.run._relicRolls * 2654435761) >>> 0;
+        var rng = (function (s) { return function () { s |= 0; s = (s + 0x6D2B79F5) | 0; var t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })(seed);
+        var choices = GameRelics.roll(_relicsDb, rng, n, st.run.relics);
+        if (!choices.length) { await _say('Nothing here you do not already carry.'); return; }
+        await _say('A cache hums with System residue — choose one to carry.');
+        var labels = choices.map(function (r) { return r.name + ' [' + r.tier + '] — ' + r.desc; });
+        labels.push('Leave it');
+        var idx = await _choose('Take which relic?', labels);
+        if (idx < 0 || idx >= choices.length) { await _say('You leave the cache untouched.'); return; }
+        var got = GameRelics.grant(st.run, _relicsDb, choices[idx].id);
+        if (got) { if (GameSave.markDirty) GameSave.markDirty(); await _say('RELIC — ' + got.name + '\n' + got.desc); }
     }
 
     async function _endRun(reason) {
@@ -864,6 +908,7 @@
             case 'shake':  await _shake(c); break;
             case 'battle': { var _br = await _battle(c); await _runReact(_br); break; }
             case 'meta': await _metaMenu(); break;
+            case 'relic': await _grantRelic(c); break;
             case 'descend': {
                 var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
                 await _loadRunDb();

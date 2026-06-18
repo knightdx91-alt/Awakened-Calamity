@@ -222,6 +222,17 @@ class IndoorBuilder:
                 {"type": "battle", "enemies": [{"key": key, "level": level}]},
                 {"type": "despawn"}]})
 
+    def place_relic_cache(self, x, y, count=3):
+        """A relic cache: offers a choice of `count` rolled relics (the roguelite
+        per-run reward layer). One-shot is handled by the run controller (relics are
+        per-run); the cache itself just runs the `relic` command."""
+        self.setp(x, y, "crate", block=True)
+        self.events.append({
+            "x": x, "y": y, "name": "RelicCache", "trigger": "action", "through": False,
+            "graphic": {"sprite": "Chest", "file": "rtp/Chest.png",
+                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "commands": [{"type": "relic", "count": count}]})
+
     def place_chest(self, x, y, money=0, item=None, pocket="items"):
         """A ONE-TIME loot chest: the loot is gated behind self-switch A so it can
         only be claimed once. After opening, it reads as empty (the self-switch
@@ -432,6 +443,13 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
             money = rng.randint(40, 80) * (1 + int(far(r) / maxd * 2))
             item = rng.choice([None, "potion", "bandage", "ration", "ether"])
             b.place_chest(cx, cy, money=money, item=item)
+
+    # ── RELIC CACHE: one per floor, in the deepest body room (the run reward layer). ──
+    if loot_rooms:
+        rr = loot_rooms[0]
+        rx, ry = b._room_floor(rr, away_from_events=True, open_only=True)
+        if rx is not None:
+            b.place_relic_cache(rx, ry, count=3)
 
     # props: pillars line big halls; clutter scattered (kept lighter now)
     for (cx, cy, rw, rh) in rooms:
