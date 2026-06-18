@@ -1,0 +1,15 @@
+{
+  "_meta": { "doc": "Meta-progression: spend Memory Fragments (earned per run) at the hub on PERMANENT unlocks that carry across deaths. The loop's hook — and the diegetic 'you remember more each cycle'." },
+  "currency": "fragments",
+  "nodes": [
+    { "id": "resilience",  "name": "Hardened Memory",  "cost": 6,  "desc": "+15% max HP on every descent.",        "effect": { "hpMult": 0.15 } },
+    { "id": "resilience2", "name": "Tempered Memory",   "cost": 14, "desc": "+15% more max HP.",                      "effect": { "hpMult": 0.15 }, "requires": "resilience" },
+    { "id": "fieldkit",    "name": "Field Kit",         "cost": 5,  "desc": "Begin each descent with a Potion.",      "effect": { "startItem": { "id": "potion", "qty": 1 } } },
+    { "id": "fieldkit2",   "name": "Full Kit",          "cost": 12, "desc": "Begin with 2 Potions instead.",          "effect": { "startItem": { "id": "potion", "qty": 2 } }, "requires": "fieldkit" },
+    { "id": "attune",      "name": "Fragment Attunement","cost": 8, "desc": "+2 Memory Fragments from every run.",     "effect": { "fragmentBonus": 2 } },
+    { "id": "leash",       "name": "Loosened Leash",    "cost": 10, "desc": "Tethered: Collection threshold +40.",    "effect": { "collectionBonus": 40 } },
+    { "id": "unbound",     "name": "Unbound",           "cost": 9,  "desc": "Untethered descents grant +3 Fragments.", "effect": { "untetheredBonus": 3 } },
+    { "id": "recall1",     "name": "Remembrance: The First Waking", "cost": 4,  "desc": "Recover a buried memory of the cycle.",     "effect": { "lore": "recall1" } },
+    { "id": "recall2",     "name": "Remembrance: Joran's Road",     "cost": 10, "desc": "Remember where the taken ones go.",         "effect": { "lore": "recall2" }, "requires": "recall1" }
+  ]
+}

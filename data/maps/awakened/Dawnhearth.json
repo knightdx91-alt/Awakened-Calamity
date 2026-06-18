@@ -837,6 +837,33 @@
      ]
     }
    ]
+  },
+  {
+   "id": 24,
+   "name": "Remembrance",
+   "x": 26,
+   "y": 30,
+   "graphic": {
+    "sprite": "Crystal",
+    "file": "rtp/Crystal.png",
+    "frame_w": 32,
+    "frame_h": 64,
+    "cols": 12,
+    "rows": 8,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A still place where the cycle's edges show through. Here, what you carried back from the dark can be remembered."
+    },
+    {
+     "type": "meta"
+    }
+   ]
   }
  ]
 }

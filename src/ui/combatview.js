@@ -93,6 +93,11 @@
         if (pr && root.GameProgression && root.GameProgression.applyAttributes) {
             stats = root.GameProgression.applyAttributes(stats, pr.attributes, db.progression);
         }
+        // meta-progression boon: permanent max-HP unlocks carry across runs
+        if (root.GameMeta && root._metaDb && root.GameSave && root.GameSave.state && root.GameSave.state.meta) {
+            var me = root.GameMeta.effects(root._metaDb, root.GameSave.state.meta);
+            if (me.hpMult) stats = Object.assign({}, stats, { hp: Math.round(stats.hp * (1 + me.hpMult)) });
+        }
         return {
             id: 'p1', side: 'player',
             name: ps.name || cls.name || 'Survivor',

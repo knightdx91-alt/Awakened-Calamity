@@ -478,20 +478,67 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_corruptDb = j); })
             .catch(function () { return (_corruptDb = { collectionThreshold: 240 }); });
     }
+    function _loadMetaDb() {
+        if (window._metaDb) return Promise.resolve(window._metaDb);
+        return fetch('data/systems/meta.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._metaDb = j); })
+            .catch(function () { return (window._metaDb = { nodes: [] }); });
+    }
+    function _metaEffects() {
+        var st = window.GameSave && GameSave.state;
+        if (!window.GameMeta || !window._metaDb || !st || !st.meta) return { hpMult: 0, fragmentBonus: 0, collectionBonus: 0, untetheredBonus: 0, startItems: [], lore: [] };
+        return GameMeta.effects(window._metaDb, st.meta);
+    }
     // after each battle, a run reacts: accrue Surveillance -> maybe COLLECTED; defeat -> died.
     async function _runReact(result) {
         var st = window.GameSave && GameSave.state;
         if (!st || !window.GameRun || !GameRun.active(st.run)) return;
         await _loadCorrupt();
-        var col = GameRun.addSurveillance(st.run, (result && result.surveillance) | 0, _corruptDb.collectionThreshold);
+        var threshold = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0);
+        var col = GameRun.addSurveillance(st.run, (result && result.surveillance) | 0, threshold);
         if (GameSave.markDirty) GameSave.markDirty();
         if (result && result.winner === 'enemy') { await _endRun('died'); return; }
         if (col.collected) { await _endRun('collected'); return; }
     }
+    function _grantStartItems() {
+        var st = GameSave.state, me = _metaEffects();
+        if (!st || !me.startItems.length) return;
+        st.inventory = st.inventory || {};
+        me.startItems.forEach(function (it) {
+            var pk = 'items'; st.inventory[pk] = st.inventory[pk] || {};
+            st.inventory[pk][it.id] = (st.inventory[pk][it.id] || 0) + (it.qty || 1);
+        });
+    }
+    // The Remembrance interface: spend Memory Fragments on permanent unlocks.
+    async function _metaMenu() {
+        await _loadMetaDb();
+        var st = GameSave.state; st.meta = st.meta || { fragments: 0, unlocks: [] };
+        st.meta.unlocks = st.meta.unlocks || [];
+        while (true) {
+            var avail = GameMeta.available(window._metaDb, st.meta);
+            await _say('Memory Fragments: ' + (st.meta.fragments | 0) + '   ·   Remembered: ' + (st.meta.unlocks.length));
+            if (!avail.length) { await _say('Nothing more surfaces — for now.'); break; }
+            var labels = avail.map(function (n) { return n.name + ' (' + n.cost + ')' + (GameMeta.canAfford(st.meta, n) ? '' : ' — locked'); });
+            labels.push('Leave');
+            var idx = await _choose('Recover which memory?', labels);
+            if (idx < 0 || idx >= avail.length) break;
+            var node = avail[idx];
+            var res = GameMeta.purchase(window._metaDb, st.meta, node.id);
+            if (res.ok) { if (GameSave.markDirty) GameSave.markDirty(); await _say('Recovered: ' + node.name + '.\n' + node.desc); }
+            else await _say(res.reason === 'cost' ? 'Not enough fragments yet.' : 'You cannot recover that yet.');
+        }
+        if (GameSave.save) GameSave.save(GameSave.currentSlot || 0, st);
+    }
+
     async function _endRun(reason) {
         var st = GameSave.state; if (!window.GameRun || !st) return;
         var unteth = st.run && st.run.tethered === false;
         var r = GameRun.end(st.run, st.meta || (st.meta = {}), reason);
+        // meta boons: bonus fragments per run (+ untethered bonus)
+        await _loadMetaDb();
+        var me = _metaEffects();
+        var bonus = (me.fragmentBonus | 0) + (unteth ? (me.untetheredBonus | 0) : 0);
+        if (bonus) { st.meta.fragments = (st.meta.fragments | 0) + bonus; r.summary.fragments += bonus; r.summary.totalFragments += bonus; }
         var msg = reason === 'cleared' ? 'You break the surface — alive, and still yourself. The descent is cleared.'
             : reason === 'collected' ? 'SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more.'
             : unteth ? 'Untethered, you fall — and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should.'
@@ -710,11 +757,14 @@
             case 'fade':   await _fade(c); break;
             case 'shake':  await _shake(c); break;
             case 'battle': { var _br = await _battle(c); await _runReact(_br); break; }
+            case 'meta': await _metaMenu(); break;
             case 'descend': {
                 var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
                 await _loadRunDb();
                 if (c.start || !GameRun.active(st.run)) {
                     GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0, { tethered: c.tethered !== false });
+                    await _loadMetaDb();
+                    _grantStartItems();                    // meta boon: begin runs with kit
                     if (GameSave.markDirty) GameSave.markDirty();
                     await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
                 } else {
