@@ -80,6 +80,8 @@ function playerPolicy(db, GC, state, me) {
 // Run one fight. opts.startVit = {hp,mp,sp} fractions to carry vitals between fights.
 export function runFight(db, GC, playerDef, enemyDefs, seed, opts = {}) {
   const state = GC.createBattle(db, [playerDef, ...enemyDefs], seed);
+  if (opts.tethered === false) state.tethered = false;          // untethered: no System help
+  if (opts.collectBudget != null) state.collectBudget = opts.collectBudget; // mid-fight collection
   const p = state.actors.p1;
   if (opts.startVit) {
     p.hp = Math.max(1, Math.round(p.maxHp * (opts.startVit.hp ?? 1)));
@@ -98,6 +100,7 @@ export function runFight(db, GC, playerDef, enemyDefs, seed, opts = {}) {
   const pe = state.actors.p1;
   return {
     winner: state.winner, turns, surveillance: state.surveillance,
+    collected: !!state.collected, saves: state._saves || 0,
     endVit: { hp: Math.max(0, pe.hp) / pe.maxHp, mp: pe.mp / pe.maxMp, sp: pe.sp / pe.maxSp },
   };
 }

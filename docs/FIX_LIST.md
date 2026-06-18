@@ -80,3 +80,11 @@ persistent town you then explore outward from. The roguelite reframes it:
 So: keep the cast, the tone, and most of the writing (it's good and on-theme); **re-scaffold
 the structure** around the hub + first-run + first-death-reset. It's a re-frame, not a rewrite.
 Best done *after* the run loop exists (P0), so the opening can teach a loop that actually runs.
+
+## Sweep finding (2026-06-18) — collection is BALANCE-GATED
+`tools/sweep_tether.mjs` swept collectionThreshold x surveillancePerSave: tethered runs end
+in Collection ~87-98% at EVERY setting (clears max 13%). The threshold is not the lever —
+the descent is so hard that tethered players are FORCED to lean on saves (8-13/run) and
+always get collected. Collection numbers can't be tuned until P1 (combat curve / recovery)
+is fixed. Interim set to perSave 10 + threshold 300 (most grace). Re-run the sweep after
+the balance pass; target a meaningful mix (careful=clear, reckless=collected).
