@@ -2,6 +2,19 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — VX Ace event-command expansion + scripting decision
+Added 16 RPG-Maker-VX-Ace event commands (engine `runCmd` + editor forms, browser-verified):
+**flow** `loop`/`break_loop`, `input_number`, `common_event` (calls reusable lists in
+`data/systems/common_events.json`), `timer` (+ `conditional` kind `timer`, on-screen MM:SS);
+**audio** `bgm`/`bgs`/`me`/`stop_se` (via `GameAudio`, + new `stopAllSE`); **screen** `tint`
+(persistent), `flash`, `scroll_map`; **character/message** `balloon` (emote), `scroll_text`,
+`location_info` (collision/walkable/region/event → variable). `runCmdList` now honors
+`ctx._break`; `_camScroll` overrides player-follow during a scroll. **Scripting decision:
+DON'T port RGSS3 (Ruby)** — its value is the proprietary VX Ace class library, not the
+language; MV/MZ themselves moved to JS. We grow our own serializable **command VM** (portable
+to Unity) + the existing `script` JS escape-hatch (`$` api). Full reference + the "not yet /
+N/A" list in `docs/EVENT_COMMANDS.md`. ~54 commands total now.
+
 ## ✅ DONE 2026-06-18 — RELIC SYSTEM (roguelite per-run reward layer)
 Built the relic layer. `data/systems/relics.json` (16 relics: common/rare/epic — atk/hp/def/spd
 mults, crit, evade, lifesteal, thorns, Surveillance/collection modifiers) + pure

@@ -1,0 +1,19 @@
+{
+  "_meta": { "doc": "Common Events (VX Ace) — reusable command lists called by id from any event via the `common_event` command. Keep authoring DRY: define a sequence once here, call it anywhere. (CALL only for now; auto/parallel triggers are a future addition.)" },
+  "heal_chime": {
+    "name": "Heal + Chime",
+    "commands": [
+      { "type": "se", "name": "Heal1" },
+      { "type": "heal", "what": "all" },
+      { "type": "text", "text": "A warmth settles over you. You feel restored." }
+    ]
+  },
+  "system_ping": {
+    "name": "System Ping",
+    "commands": [
+      { "type": "flash", "color": "#00ccff", "frames": 8 },
+      { "type": "se", "name": "Decision1" },
+      { "type": "text", "text": "SYSTEM: …logged." }
+    ]
+  }
+}

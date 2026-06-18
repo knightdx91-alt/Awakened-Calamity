@@ -23,6 +23,7 @@
     let _transitioning   = false;
     let _warpCooldownUntil = 0;
     let lastMoveTime       = 0;
+    var _timer = { running: false, remain: 0, endAt: 0 };   // VX Ace Control Timer
 
     setInterval(function () {
         if (window.GameSave) GameSave.autosave();
@@ -446,6 +447,11 @@
             var v = ES.getVar(cond.id), t = cond.value | 0;
             switch (cond.op) { case '>=': return v >= t; case '<=': return v <= t; case '>': return v > t; case '<': return v < t; case '!=': return v !== t; default: return v === t; }
         }
+        if (cond.kind === 'timer') {
+            var rem = _timer.running ? Math.max(0, Math.ceil((_timer.endAt - performance.now()) / 1000)) : 0;
+            var tt = cond.value | 0;
+            switch (cond.op) { case '>=': return rem >= tt; case '>': return rem > tt; case '<': return rem < tt; default: return rem <= tt; }
+        }
         return true;
     }
     function _runScript(code, ctx) {
@@ -524,6 +530,130 @@
             })();
         });
     }
+    // ── Input Number: a numeric prompt that stores into a variable. ──
+    function _inputNumber(prompt, digits, initial) {
+        return new Promise(function (res) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#0a0e1a;border:2px solid #00ccff;border-radius:8px;padding:16px;min-width:200px;text-align:center;color:#cfe;font:10px "Press Start 2P",monospace;';
+            var lbl = document.createElement('div'); lbl.textContent = prompt; lbl.style.cssText = 'margin-bottom:12px;line-height:1.5;';
+            var inp = document.createElement('input');
+            inp.type = 'number'; inp.value = String(initial | 0);
+            inp.max = String(Math.pow(10, digits) - 1); inp.min = '0';
+            inp.style.cssText = 'width:100%;font:12px monospace;padding:6px;text-align:center;background:#04111c;color:#7fe0ff;border:1px solid #2a4656;border-radius:4px;';
+            var ok = document.createElement('button'); ok.textContent = 'OK';
+            ok.style.cssText = 'margin-top:12px;font:9px "Press Start 2P",monospace;padding:6px 14px;background:#00ccff;color:#001;border:0;border-radius:4px;cursor:pointer;';
+            function done() { var v = Math.max(0, Math.min(Math.pow(10, digits) - 1, parseInt(inp.value, 10) || 0)); box.remove(); res(v); }
+            ok.addEventListener('click', done);
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') done(); });
+            inner.appendChild(lbl); inner.appendChild(inp); inner.appendChild(ok); box.appendChild(inner); document.body.appendChild(box);
+            inp.focus(); inp.select();
+        });
+    }
+
+    // ── Common Events: reusable command lists called by id (data/systems/common_events.json). ──
+    var _commonDb = null;
+    function _loadCommonDb() {
+        if (_commonDb) return Promise.resolve(_commonDb);
+        return fetch('data/systems/common_events.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { return (_commonDb = j || {}); })
+            .catch(function () { return (_commonDb = {}); });
+    }
+    async function _callCommonEvent(id, ctx) {
+        await _loadCommonDb();
+        var ce = _commonDb[id] || (_commonDb.events && _commonDb.events[id]);
+        if (!ce || !ce.commands) { console.warn('[CommonEvent] not found:', id); return; }
+        // Run in the CALLER's context (shares its event/self-switch scope), but a
+        // Break/Exit inside the common event must not leak out past the call.
+        var sub = { mapName: ctx.mapName, evId: ctx.evId, event: ctx.event, exited: false, _break: false };
+        await runCmdList(ce.commands, sub);
+        if (sub.exited) ctx.exited = true;   // Exit Event propagates; Break does not
+    }
+
+    // ── Screen tint: a persistent colored overlay (cleared by tinting to transparent). ──
+    function _tint(color, frames) {
+        var d = document.getElementById('ac-tint');
+        if (!d) { d = document.createElement('div'); d.id = 'ac-tint'; d.style.cssText = 'position:fixed;inset:0;z-index:7500;pointer-events:none;opacity:1;transition:background ' + (frames * 16) + 'ms linear;'; document.body.appendChild(d); }
+        d.style.transition = 'background ' + (frames * 16) + 'ms linear';
+        d.style.background = color;
+    }
+    // ── Flash: a quick full-screen color pulse that fades out. ──
+    function _flash(color, frames) {
+        return new Promise(function (res) {
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;inset:0;z-index:7600;pointer-events:none;background:' + color + ';opacity:0.85;transition:opacity ' + (frames * 16) + 'ms ease-out;';
+            document.body.appendChild(d);
+            void d.offsetWidth; d.style.opacity = '0';
+            setTimeout(function () { d.remove(); res(); }, frames * 16);
+        });
+    }
+    // ── Scroll Map: pan the camera by N tiles, then restore player-follow. ──
+    function _scrollMap(dir, distance, frames) {
+        return new Promise(function (res) {
+            if (!window.GameCamera) { res(); return; }
+            var dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+            var dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+            var steps = Math.max(1, distance), i = 0;
+            var baseX = player.x, baseY = player.y;
+            _camScroll = { x: 0, y: 0 };
+            (function tick() {
+                i++;
+                _camScroll.x = dx * distance * (i / (frames || 30));
+                _camScroll.y = dy * distance * (i / (frames || 30));
+                GameCamera.update(baseX + _camScroll.x, baseY + _camScroll.y, GameMap.width, GameMap.height);
+                if (i >= (frames || 30)) { _camScroll = null; GameCamera.update(player.x, player.y, GameMap.width, GameMap.height); res(); return; }
+                requestAnimationFrame(tick);
+            })();
+        });
+    }
+    var _camScroll = null;
+    // ── Balloon icon: a small emote bubble over the player or an event. ──
+    function _balloon(target, kind, wait) {
+        return new Promise(function (res) {
+            var ICONS = { exclaim: '❗', question: '❓', music: '♪', heart: '❤', anger: '💢', sweat: '💧', sleep: '💤', idea: '💡', silence: '…' };
+            var d = document.createElement('div');
+            d.textContent = ICONS[kind] || '❗';
+            var scr = document.getElementById('screen-primary') || document.body;
+            var cs = scr.clientWidth / (GameMap.width || 15);
+            var tx = (target && target.x != null) ? target.x : player.x;
+            var ty = (target && target.y != null) ? target.y : player.y;
+            d.style.cssText = 'position:absolute;z-index:7700;font-size:18px;pointer-events:none;transition:transform 120ms;transform:translateY(6px) scale(0.6);opacity:0;';
+            scr.appendChild(d);
+            d.style.left = '50%'; d.style.top = '40%';   // simple centered cue (tile-accurate placement needs camera math)
+            requestAnimationFrame(function () { d.style.opacity = '1'; d.style.transform = 'translateY(-4px) scale(1)'; });
+            setTimeout(function () { d.remove(); if (wait) res(); }, 700);
+            if (!wait) res();
+        });
+    }
+    // ── Scrolling Text: full-screen credits-style text that scrolls up. ──
+    function _scrollText(text, frames) {
+        return new Promise(function (res) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;inset:0;z-index:8200;background:#000;color:#cfe;overflow:hidden;font:10px "Press Start 2P",monospace;line-height:2;text-align:center;';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'position:absolute;width:100%;top:100%;padding:0 16px;white-space:pre-wrap;transition:top ' + (frames * 16) + 'ms linear;';
+            inner.textContent = text;
+            box.appendChild(inner); document.body.appendChild(box);
+            box.addEventListener('click', function () { box.remove(); res(); });
+            void inner.offsetWidth; inner.style.top = '-' + (inner.scrollHeight + 40) + 'px';
+            setTimeout(function () { if (box.parentNode) box.remove(); res(); }, frames * 16 + 200);
+        });
+    }
+    // ── Get Location Info: read map data at a tile into a number. ──
+    function _locationInfo(x, y, info) {
+        if (!GameMap.current) return 0;
+        if (info === 'walkable') return GameMap.isWalkable(x, y) ? 1 : 0;
+        if (info === 'region') {
+            var L = GameMap.current.layout || GameMap.current;
+            var regs = (GameMap.current.region_ids) || (L && L.region_ids);
+            return regs ? (regs[y * GameMap.width + x] | 0) : 0;
+        }
+        if (info === 'event') { var e = _eventAt(x, y); return e ? (e.id | 0) : 0; }
+        // default: collision byte (1 = solid)
+        return GameMap.isWalkable(x, y) ? 0 : 1;
+    }
+
     // Battle processing — start a combat and resolve when it ends.
     async function _battle(c) {
         var empty = { winner: null, surveillance: 0 };
@@ -739,7 +869,7 @@
     async function runCmdList(list, ctx) {
         var i = 0;
         while (i < list.length) {
-            if (ctx.exited) return;
+            if (ctx.exited || ctx._break) return;   // Exit Event / Break Loop stop this list
             var c = list[i];
             if (c.type === 'label') { i++; continue; }
             await runCmd(c, ctx);
@@ -966,6 +1096,52 @@
             case 'label':  break; // resolved in runCmdList
             case 'comment': break; // author note; no-op at runtime
             case 'exit':   ctx.exited = true; break;
+
+            // ── flow control (VX Ace) ──────────────────────────────────────────
+            case 'loop': {
+                // Repeat the nested body until Break Loop / Exit Event. A guard +
+                // per-iteration yield keep a body with no Wait from freezing the page.
+                ctx._break = false;
+                var _g = 0;
+                while (!ctx.exited && !ctx._break && _g++ < 10000) {
+                    await runCmdList(c.commands || [], ctx);
+                    await new Promise(function (r) { setTimeout(r, 0); });
+                }
+                ctx._break = false;
+                break;
+            }
+            case 'break_loop': ctx._break = true; break;
+            case 'input_number': {
+                var inum = await _inputNumber(c.prompt || 'Enter a number', c.digits || 3, c.initial | 0);
+                if (ES) ES.setVar(c.variable != null ? c.variable : (c.id || 1), inum | 0);
+                break;
+            }
+            case 'common_event': await _callCommonEvent(c.id, ctx); break;
+            case 'timer': {
+                if (c.op === 'stop') { _timer.running = false; }
+                else { _timer.running = true; _timer.remain = Math.max(0, (c.seconds | 0)); _timer.endAt = performance.now() + _timer.remain * 1000; }
+                break;
+            }
+
+            // ── audio (VX Ace) ─────────────────────────────────────────────────
+            case 'bgm': if (window.GameAudio) { if (c.op === 'stop') GameAudio.stopBGM(); else GameAudio.playBGM(c.name); } break;
+            case 'bgs': if (window.GameAudio) { if (c.op === 'stop') GameAudio.stopBGS(); else GameAudio.playBGS(c.name); } break;
+            case 'me':  if (window.GameAudio && c.name) GameAudio.playME(c.name); break;
+            case 'stop_se': if (window.GameAudio && GameAudio.stopAllSE) GameAudio.stopAllSE(); break;
+
+            // ── screen effects (VX Ace) ────────────────────────────────────────
+            case 'tint':  _tint(c.color || 'rgba(0,0,0,0)', c.frames || 30); break;
+            case 'flash': await _flash(c.color || '#ffffff', c.frames || 12); break;
+            case 'scroll_map': await _scrollMap(c.dir || 'right', c.distance | 0 || 4, c.frames || 30); break;
+
+            // ── character / message extras (VX Ace) ────────────────────────────
+            case 'balloon': await _balloon(_resolveTarget(c, ctx), c.balloon || 'exclaim', c.wait !== false); break;
+            case 'scroll_text': await _scrollText(c.text || '', c.frames || 180); break;
+            case 'location_info': {
+                var li = _locationInfo(c.x | 0, c.y | 0, c.info || 'collision');
+                if (ES) ES.setVar(c.variable != null ? c.variable : (c.id || 1), li | 0);
+                break;
+            }
         }
     }
     async function runEvent(ev) {
@@ -1212,9 +1388,26 @@
         }
 
         GameInput.consumeJustPressed();
-        GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+        if (_camScroll == null) GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
         GameHUD.update();
+        _tickTimer(timestamp);
         requestAnimationFrame(gameLoop);
+    }
+
+    // VX Ace Control Timer: count down in real time, show MM:SS, stop at 0.
+    function _tickTimer() {
+        var el = document.getElementById('ac-timer');
+        if (!_timer.running) { if (el) el.style.display = 'none'; return; }
+        var rem = Math.max(0, Math.ceil((_timer.endAt - performance.now()) / 1000));
+        _timer.remain = rem;
+        if (!el) {
+            el = document.createElement('div'); el.id = 'ac-timer';
+            el.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:6000;font:12px "Press Start 2P",monospace;color:#7fe0ff;background:rgba(4,17,28,0.75);padding:3px 8px;border-radius:4px;';
+            document.body.appendChild(el);
+        }
+        el.style.display = 'block';
+        el.textContent = String((rem / 60) | 0).padStart(2, '0') + ':' + String(rem % 60).padStart(2, '0');
+        if (rem <= 0) _timer.running = false;
     }
 
     // ---------------------------------------------------------------

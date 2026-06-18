@@ -57,13 +57,18 @@ window.GameAudio = (function () {
     }
 
     // ---- SE: one-shot, overlapping ----------------------------------------
+    var _seActive = [];
     function playSE(name, opts) {
         if (!name || _muted) return;
         var a = new Audio(_path('se', name));
         a.volume = _clamp(_vol.master * _vol.se * ((opts && opts.volume) || 1));
         a.play().catch(function () {}); // browsers block until first user gesture
+        _seActive.push(a);
+        a.addEventListener('ended', function () { var k = _seActive.indexOf(a); if (k >= 0) _seActive.splice(k, 1); });
+        if (_seActive.length > 16) _seActive.shift();
         return a;
     }
+    function stopAllSE() { _seActive.forEach(function (a) { try { a.pause(); a.src = ''; } catch (e) {} }); _seActive = []; }
 
     // ---- ME: one-shot fanfare; ducks BGM, restores after -------------------
     function playME(name) {
@@ -135,7 +140,7 @@ window.GameAudio = (function () {
 
     return {
         init: init,
-        playSE: playSE, playME: playME,
+        playSE: playSE, stopAllSE: stopAllSE, playME: playME,
         playBGS: playBGS, stopBGS: stopBGS,
         playBGM: playBGM, stopBGM: stopBGM,
         setMute: setMute, toggleMute: toggleMute, isMuted: isMuted,

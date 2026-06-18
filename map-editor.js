@@ -1278,7 +1278,16 @@
     ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
-    ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event']
+    ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event'],
+    // flow control
+    ['loop', '🔁 Loop'], ['break_loop', '⏹️ Break Loop'], ['input_number', '🔢 Input Number'],
+    ['common_event', '📑 Common Event'], ['timer', '⏱️ Control Timer'],
+    // audio
+    ['bgm', '🎵 Play/Stop BGM'], ['bgs', '🌊 Play/Stop BGS'], ['me', '🎺 Play ME'], ['stop_se', '🔇 Stop SE'],
+    // screen / camera
+    ['tint', '🎨 Tint Screen'], ['flash', '⚡ Flash Screen'], ['scroll_map', '🎥 Scroll Map'],
+    // character / message
+    ['balloon', '💭 Show Balloon'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info']
   ];
   function newCmd(type) {
     switch (type) {
@@ -1311,6 +1320,22 @@
       case 'jump': return { type: 'jump', label: '' };
       case 'comment': return { type: 'comment', text: '' };
       case 'exit': return { type: 'exit' };
+      // ── added VX Ace commands ──
+      case 'loop': return { type: 'loop', commands: [] };
+      case 'break_loop': return { type: 'break_loop' };
+      case 'input_number': return { type: 'input_number', prompt: 'Enter a number', digits: 3, variable: '1', initial: 0 };
+      case 'common_event': return { type: 'common_event', id: '' };
+      case 'timer': return { type: 'timer', op: 'start', seconds: 60 };
+      case 'bgm': return { type: 'bgm', op: 'play', name: '' };
+      case 'bgs': return { type: 'bgs', op: 'play', name: '' };
+      case 'me': return { type: 'me', name: '' };
+      case 'stop_se': return { type: 'stop_se' };
+      case 'tint': return { type: 'tint', color: 'rgba(0,0,0,0.4)', frames: 30 };
+      case 'flash': return { type: 'flash', color: '#ffffff', frames: 12 };
+      case 'scroll_map': return { type: 'scroll_map', dir: 'right', distance: 4, frames: 30 };
+      case 'balloon': return { type: 'balloon', target: 'player', balloon: 'exclaim', wait: true };
+      case 'scroll_text': return { type: 'scroll_text', text: '', frames: 180 };
+      case 'location_info': return { type: 'location_info', x: 0, y: 0, info: 'collision', variable: '1' };
     }
     return { type: type };
   }
@@ -1677,6 +1702,64 @@
       ca.value = cmd.text || ''; ca.placeholder = 'author note (not shown in game)';
       ca.addEventListener('change', function () { cmd.text = this.value; });
       body.appendChild(ca);
+    } else if (cmd.type === 'loop') {
+      body.appendChild(el('div', 'font-size:9px;color:#888;', 'Repeats until Break Loop / Exit Event:'));
+      renderCmdList(cmd.commands = cmd.commands || [], body, depth + 1, ev);
+    } else if (cmd.type === 'input_number') {
+      body.innerHTML = '<div class="row">' + lbl('Prompt') + '<input type="text" class="cP" value="' + (cmd.prompt || '') + '" style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('Digits') + '<input type="number" class="cD" value="' + (cmd.digits || 3) + '" style="width:46px;">' + lbl('→ Var #') + '<input type="text" class="cV" value="' + (cmd.variable || '1') + '" style="width:46px;"></div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.prompt = this.value; });
+      body.querySelector('.cD').addEventListener('change', function () { cmd.digits = parseInt(this.value, 10) || 3; });
+      body.querySelector('.cV').addEventListener('change', function () { cmd.variable = this.value; });
+    } else if (cmd.type === 'common_event') {
+      body.innerHTML = '<div class="row">' + lbl('Event id') + '<input type="text" class="cI" value="' + (cmd.id || '') + '" style="flex:1;min-width:0;" placeholder="e.g. heal_chime"></div>';
+      body.querySelector('.cI').addEventListener('change', function () { cmd.id = this.value.trim(); });
+    } else if (cmd.type === 'timer') {
+      body.innerHTML = '<div class="row">' + lbl('Op') + '<select class="cO"><option value="start">Start</option><option value="stop">Stop</option></select>' +
+        lbl('Seconds') + '<input type="number" class="cS" value="' + (cmd.seconds || 60) + '" style="width:60px;"></div>';
+      body.querySelector('.cO').value = cmd.op || 'start'; body.querySelector('.cO').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cS').addEventListener('change', function () { cmd.seconds = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'bgm' || cmd.type === 'bgs') {
+      body.innerHTML = '<div class="row">' + lbl('Op') + '<select class="cO"><option value="play">Play</option><option value="stop">Stop</option></select>' +
+        lbl('Name') + '<input type="text" class="cN" value="' + (cmd.name || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cO').value = cmd.op || 'play'; body.querySelector('.cO').addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cN').addEventListener('change', function () { cmd.name = this.value; });
+    } else if (cmd.type === 'me') {
+      body.innerHTML = '<div class="row">' + lbl('ME name') + '<input type="text" class="cN" value="' + (cmd.name || '') + '" style="flex:1;min-width:0;"></div>';
+      body.querySelector('.cN').addEventListener('change', function () { cmd.name = this.value; });
+    } else if (cmd.type === 'tint' || cmd.type === 'flash') {
+      body.innerHTML = '<div class="row">' + lbl('Color') + '<input type="text" class="cC" value="' + (cmd.color || '') + '" style="width:120px;" placeholder="rgba(0,0,0,0.4)">' +
+        lbl('Frames') + '<input type="number" class="cF" value="' + (cmd.frames || 30) + '" style="width:50px;"></div>';
+      body.querySelector('.cC').addEventListener('change', function () { cmd.color = this.value; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'scroll_map') {
+      body.innerHTML = '<div class="row">' + lbl('Dir') + '<select class="cDir"><option>right</option><option>left</option><option>up</option><option>down</option></select>' +
+        lbl('Tiles') + '<input type="number" class="cDist" value="' + (cmd.distance || 4) + '" style="width:46px;">' + lbl('Frames') + '<input type="number" class="cF" value="' + (cmd.frames || 30) + '" style="width:50px;"></div>';
+      body.querySelector('.cDir').value = cmd.dir || 'right'; body.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
+      body.querySelector('.cDist').addEventListener('change', function () { cmd.distance = parseInt(this.value, 10) || 1; });
+      body.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 30; });
+    } else if (cmd.type === 'balloon') {
+      body.innerHTML = '<div class="row">' + lbl('Target') + '<select class="cT"><option value="player">Player</option><option value="this">This event</option></select>' +
+        lbl('Icon') + '<select class="cB"><option>exclaim</option><option>question</option><option>music</option><option>heart</option><option>anger</option><option>sweat</option><option>sleep</option><option>idea</option><option>silence</option></select></div>';
+      body.querySelector('.cT').value = (typeof cmd.target === 'string') ? cmd.target : 'player';
+      body.querySelector('.cT').addEventListener('change', function () { cmd.target = this.value; });
+      body.querySelector('.cB').value = cmd.balloon || 'exclaim'; body.querySelector('.cB').addEventListener('change', function () { cmd.balloon = this.value; });
+    } else if (cmd.type === 'scroll_text') {
+      var sta = el('textarea'); sta.rows = 3; sta.style.cssText = 'width:100%;box-sizing:border-box;';
+      sta.value = cmd.text || ''; sta.placeholder = 'scrolling credits text…';
+      sta.addEventListener('change', function () { cmd.text = this.value; });
+      body.appendChild(sta);
+      var sf = el('div', 'margin-top:4px;'); sf.innerHTML = lbl('Frames') + '<input type="number" class="cF" value="' + (cmd.frames || 180) + '" style="width:60px;">';
+      sf.querySelector('.cF').addEventListener('change', function () { cmd.frames = parseInt(this.value, 10) || 180; });
+      body.appendChild(sf);
+    } else if (cmd.type === 'location_info') {
+      body.innerHTML = '<div class="row">' + lbl('X') + '<input type="number" class="cX" value="' + (cmd.x | 0) + '" style="width:46px;">' + lbl('Y') + '<input type="number" class="cY" value="' + (cmd.y | 0) + '" style="width:46px;"></div>' +
+        '<div class="row">' + lbl('Info') + '<select class="cInfo"><option value="collision">collision</option><option value="walkable">walkable</option><option value="region">region</option><option value="event">event id</option></select>' +
+        lbl('→ Var #') + '<input type="text" class="cV" value="' + (cmd.variable || '1') + '" style="width:46px;"></div>';
+      body.querySelector('.cX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+      body.querySelector('.cY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+      body.querySelector('.cInfo').value = cmd.info || 'collision'; body.querySelector('.cInfo').addEventListener('change', function () { cmd.info = this.value; });
+      body.querySelector('.cV').addEventListener('change', function () { cmd.variable = this.value; });
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
