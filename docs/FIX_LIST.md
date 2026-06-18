@@ -4,17 +4,22 @@ Compiled from the simulators (`sim_balance`/`sim_run`/`sim_buildspace`/`sim_econ
 the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
 (`validate_design`). Ordered by leverage. Re-run the tools after each fix to confirm.
 
-## P0 — core loop / keystone (mostly DONE this pass)
+## P0 — core loop / keystone (DONE — verified in-engine 2026-06-18)
 - ✅ **System Intervention dilemma** — lethal-save (temptation) + Surveillance→Corruption
   collection (cost). Harness: ❌→🟡, ★ dilemma PASS. (combat.js, corruption.js/json)
-- ⬜ **Wire corruption into actual play.** Rules exist (`GameCorruption`) but only the
-  combat-level Surveillance + lethal-save run in-engine. Still need: the **run-level
-  collection** (you're reclaimed → bad ending), the **tier atk penalties**, and the
-  **ending gates** applied during a real run. Blocked on the run loop (below).
-- ⬜ **Build the run loop in-engine.** The roguelite descent (biome floors → boss →
-  death/reset → carry-over) exists only in the sims. This is the single biggest build
-  and what "a simple run" will eventually exercise. Until then the game = the Dawnhearth
-  opening only.
+- ✅ **Run loop BUILT & verified in-engine.** The roguelite descent runs end-to-end:
+  Dawnhearth **DescentGate** (tethered/untethered choice) → `descend` chains the
+  `RunFloor*` pool → `RunBoss*` → clear/death/collection → back to the hub with carry-over
+  (Memory Fragments, deepest floor), and a **Remembrance** NPC spends fragments (`meta`).
+  Pure controller `GameRun` (`src/systems/run.js`) + wiring in `main.js` (`descend`/`meta`
+  commands, `_runReact`, `_endRun`, `_metaMenu`). Headless-verified: start→3 floors→boss→
+  **cleared**, meta `runs/clears/deepest/fragments` all update; combat inits clean.
+- ✅ **Corruption wired into actual play.** Run-level **collection** (Surveillance ≥ threshold
+  → reclaimed → hub, the bad reset) + the **tier atk penalty** now applied in LIVE combat
+  (`combatview.buildPlayer` reads the active run's Surveillance → `GameCorruption.atkMod`),
+  so leaning on the System's saves has a felt, mounting in-combat cost — not just collection.
+- ⬜ **Ending gates** (`GameCorruption.endingsOpen` / lifetime-Surveillance good/true gates)
+  still need an actual ENDING sequence to gate — deferred until there's an ending beat to show.
 
 ## P1 — combat & class balance (the sims' hit-list)
 - ✅ **Balance pass DONE (2026-06-18) — `validate_design` now ✅ MECHANICALLY SOUND** (was 🟡,

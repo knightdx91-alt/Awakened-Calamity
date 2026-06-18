@@ -540,8 +540,8 @@
     function _loadCorrupt() {
         if (_corruptDb) return Promise.resolve(_corruptDb);
         return fetch('data/systems/corruption.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
-            .then(function (r) { return r.json(); }).then(function (j) { return (_corruptDb = j); })
-            .catch(function () { return (_corruptDb = { collectionThreshold: 240 }); });
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._corruptDb = _corruptDb = j); })
+            .catch(function () { return (window._corruptDb = _corruptDb = { collectionThreshold: 240 }); });
     }
     function _loadMetaDb() {
         if (window._metaDb) return Promise.resolve(window._metaDb);
@@ -1215,6 +1215,22 @@
         // Game loop starts unconditionally so input/HUD always work
         requestAnimationFrame(gameLoop);
     }
+
+    // Debug/automation hook (used by headless tests + content authoring). Exposes
+    // the player, map entry, and event firing so a run can be driven without
+    // pixel-perfect input. Presentation/testing only — no game logic lives here.
+    window.GameDebug = {
+        player: player,
+        enterMap: function (m, x, y) { return _enterMap(m, currentRegion, x, y); },
+        teleport: function (x, y) { player.x = x | 0; player.y = y | 0; player.prevX = player.x; player.prevY = player.y; _snapPlayer(); GameCamera.update(player.x, player.y, GameMap.width, GameMap.height); },
+        eventAt: function (x, y) { return _eventAt(x, y); },
+        fireEvent: function (ev) { return runEvent(ev); },
+        fireEventAt: function (x, y) { var e = _eventAt(x, y); return e ? runEvent(e) : Promise.resolve(); },
+        run: function () { return window.GameSave && GameSave.state && GameSave.state.run; },
+        meta: function () { return window.GameSave && GameSave.state && GameSave.state.meta; },
+        mapName: function () { return GameMap.current && GameMap.current.name; },
+        busy: function () { return _eventRunning || _transitioning; }
+    };
 
     document.addEventListener('DOMContentLoaded', init);
 })();

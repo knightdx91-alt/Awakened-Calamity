@@ -98,6 +98,14 @@
             var me = root.GameMeta.effects(root._metaDb, root.GameSave.state.meta);
             if (me.hpMult) stats = Object.assign({}, stats, { hp: Math.round(stats.hp * (1 + me.hpMult)) });
         }
+        // CORRUPTION: during a run, cumulative Surveillance saps your atk (the System
+        // "deciding for you"). This is the FELT in-combat cost of leaning on the
+        // System's saves — it mounts tier by tier until Collection ends the run.
+        var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
+        if (_run && _run.active && root.GameCorruption && root._corruptDb) {
+            var mod = root.GameCorruption.atkMod(root._corruptDb, _run.surveillance | 0);
+            if (mod) stats = Object.assign({}, stats, { atk: Math.max(1, Math.round(stats.atk * (1 + mod))) });
+        }
         return {
             id: 'p1', side: 'player',
             name: ps.name || cls.name || 'Survivor',

@@ -2,6 +2,22 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — P0 RUN LOOP verified in-engine + corruption wired into play
+The roguelite run loop was found already BUILT (FIX_LIST was stale) and is now **headless-verified
+end-to-end**: Dawnhearth **DescentGate** (tethered/untethered choice) → `descend` chains the
+`RunFloor*` pool → `RunBoss*` boss → clear/death/collection → return to the hub with carry-over
+(Memory Fragments + deepest floor); a **Remembrance** NPC (`meta` cmd) spends fragments on
+permanent unlocks. Pure controller = `src/systems/run.js` (`GameRun`); engine wiring in `main.js`
+(`descend`/`meta` cmds, `_runReact`, `_endRun`, `_metaMenu`). Verified: start→RunFloorC→D→E→
+RunBoss2→**cleared**, meta `runs/clears/deepest/fragments` update; combat inits with 0 errors.
+**Also wired this pass:** the **corruption tier atk penalty** now applies in LIVE combat
+(`combatview.buildPlayer` → `GameCorruption.atkMod` on the active run's Surveillance), so leaning
+on the System's saves costs you atk that mounts tier-by-tier until Collection — the dilemma now
+has felt teeth in actual play, not just the sims. Added a small `window.GameDebug` hook
+(player/teleport/fireEvent/run/meta) for headless tests + content authoring. **Remaining:** the
+good/true **ending gates** (`GameCorruption.endingsOpen`) need an actual ending sequence to gate;
+recovery-economy tuning (`sim_run --rest`) and the launch-roster/craft-floor decisions are next.
+
 ## ✅ DONE 2026-06-18 — P1 combat/balance pass: `validate_design` now ✅ MECHANICALLY SOUND
 The core balance pass is complete. `validate_design.mjs` went from 🟡 CONDITIONAL (2 WARN) to
 ✅ MECHANICALLY SOUND — all four checks PASS: Build diversity (53/101 fair, 1 legit-dominant
