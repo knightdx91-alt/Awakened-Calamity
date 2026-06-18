@@ -2,6 +2,21 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## 🔴 NEXT SESSION — TOP PRIORITY: P1 combat/balance pass (`docs/FIX_LIST.md`)
+The roguelite loop now works end-to-end in-engine (run loop, untethered stance,
+mid-fight Collection, meta-progression, opening reframed to teach the loop). But
+every simulator points at the SAME blocker: **the combat/descent math is too
+hard**, and it's gating everything downstream — the tether-Collection numbers
+(`sweep_tether` = ~90% collected at all thresholds because players are FORCED to
+lean on saves), the difficulty curve (`sim_run` descent unwinnable on skill), and
+the launch-roster pick (`sim_balance`: 37 classes unwinnable at L1, 24 high-tier
+NO-KIT stat-blobs win 100%). **Do the P1 balance pass next:** flatten the enemy
+curve / lift player growth + a recovery economy until the fair mid-band roster
+clears 20–85% (`validate_design`), decide the floor for craft classes, then
+**re-run `sweep_tether`** to set the real Collection numbers. The toolchain
+(`tools/sim_*.mjs`, `validate_design.mjs`, `sweep_tether.mjs`, `dashboard.mjs`)
+is built to drive this iteratively. Full list + priorities in `docs/FIX_LIST.md`.
+
 ## ⏳ PENDING (next session) — MAP GENERATOR: gameplay + content next steps
 Owner asked to save these for next time (the "act as a game dev" roadmap). **#1 and #2 are
 DONE** (2026-06-18): `tools/mapcheck.py` = validation + batch-preview harness (reachability /
