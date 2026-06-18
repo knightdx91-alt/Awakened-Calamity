@@ -2,6 +2,21 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Show Animation + auto/parallel common-event triggers
+- **Show Animation** (`animation` command): flipbooks an RTP animation sheet's 192px cells over a
+  target (player/this/event). NOTE the RTP ships only the sheets, NOT RM's frame-timing data
+  (`Animations.rvdata2` is project data we don't have — re-import wouldn't get it), so it's a
+  cell-sequence flipbook; an optional per-anim frames JSON could add exact timing later. Loader
+  `_loadAnimDb` + `_animation`; editor form w/ a datalist of anim ids.
+- **Balloon upgraded to the real RTP `system/Balloon.png`** (8 frames × 10 emotes, 32px) instead of
+  the emoji stub. `_tileScreenPct` positions balloons/animations over the target tile via the camera.
+- **Auto/parallel common-event triggers:** `common_events.json` entries can carry `trigger`
+  ('autorun' = BLOCKING cutscene while `switch` ON, usually self-clears; 'parallel' = CONCURRENT
+  background process while `switch` ON) + optional `switch` (omit = always on). `_pumpCommonEvents()`
+  runs each free-roam frame (not during dialogue/menus/battle); one autorun at a time, parallels
+  restart after each pass. Browser-verified: animation renders, balloon uses real art, a parallel
+  ticked a variable in the background, an autorun ran + turned its own switch off; 0 errors.
+
 ## ✅ DONE 2026-06-18 — VX Ace event-command expansion + scripting decision
 Added 16 RPG-Maker-VX-Ace event commands (engine `runCmd` + editor forms, browser-verified):
 **flow** `loop`/`break_loop`, `input_number`, `common_event` (calls reusable lists in

@@ -571,6 +571,39 @@
         if (sub.exited) ctx.exited = true;   // Exit Event propagates; Break does not
     }
 
+    // ── Auto/parallel common-event triggers (VX Ace) ──────────────────────────
+    // A common event with trigger:'autorun' runs BLOCKING (pauses the player, like a
+    // cutscene) while its `switch` is ON — it usually turns the switch off to stop.
+    // trigger:'parallel' runs CONCURRENTLY (non-blocking) while its switch is ON.
+    // Switch omitted = always on. Pumped each free-roam frame from the game loop.
+    var _parallelRunning = {};
+    function _ceSwitchOn(ce) { return !ce.switch || (ES && ES.getSwitch(ce.switch)); }
+    async function _runCommonAuto(id, ce) {
+        _eventRunning = true;
+        try { await runCmdList(ce.commands || [], { mapName: GameMap.current && GameMap.current.name, evId: 'ce:' + id, event: null, exited: false, _break: false }); }
+        catch (e) { console.warn('[Autorun]', id, e); }
+        finally { _eventRunning = false; }
+    }
+    async function _runCommonParallel(id, ce) {
+        _parallelRunning[id] = true;
+        try { await runCmdList(ce.commands || [], { mapName: GameMap.current && GameMap.current.name, evId: 'ce:' + id, event: null, exited: false, _break: false }); }
+        catch (e) { console.warn('[Parallel]', id, e); }
+        finally { _parallelRunning[id] = false; }
+    }
+    function _pumpCommonEvents() {
+        if (!_commonDb) { _loadCommonDb(); return; }   // first frame kicks the load
+        for (var id in _commonDb) {
+            if (id === '_meta') continue;
+            var ce = _commonDb[id]; if (!ce || !ce.trigger) continue;
+            if (ce.trigger === 'autorun') {
+                // one autorun at a time; only in free-roam (not mid-event/transition)
+                if (!_eventRunning && !_transitioning && _ceSwitchOn(ce)) { _runCommonAuto(id, ce); return; }
+            } else if (ce.trigger === 'parallel') {
+                if (_ceSwitchOn(ce) && !_parallelRunning[id]) _runCommonParallel(id, ce);
+            }
+        }
+    }
+
     // ── Screen tint: a persistent colored overlay (cleared by tinting to transparent). ──
     function _tint(color, frames) {
         var d = document.getElementById('ac-tint');
@@ -608,21 +641,74 @@
         });
     }
     var _camScroll = null;
-    // ── Balloon icon: a small emote bubble over the player or an event. ──
+    // Tile → on-screen position (% of the game-screen element), via the camera.
+    // Centers the cue on the tile; works at any zoom/orientation.
+    function _tileScreenPct(tx, ty) {
+        var vw = GameCamera.viewportW || 15, vh = GameCamera.viewportH || 13;
+        return { left: ((tx - GameCamera.x + 0.5) / vw) * 100, top: ((ty - GameCamera.y + 0.5) / vh) * 100 };
+    }
+    // ── Balloon icon: the real RTP Balloon.png (8 frames × 10 emotes, 32px cells),
+    // animated over the player or an event's head. ──
+    var _BALLOON_ROW = { exclaim: 0, question: 1, music: 2, heart: 3, anger: 4, sweat: 5, cobweb: 6, silence: 7, idea: 8, sleep: 9 };
     function _balloon(target, kind, wait) {
         return new Promise(function (res) {
-            var ICONS = { exclaim: '❗', question: '❓', music: '♪', heart: '❤', anger: '💢', sweat: '💧', sleep: '💤', idea: '💡', silence: '…' };
-            var d = document.createElement('div');
-            d.textContent = ICONS[kind] || '❗';
             var scr = document.getElementById('screen-primary') || document.body;
-            var cs = scr.clientWidth / (GameMap.width || 15);
             var tx = (target && target.x != null) ? target.x : player.x;
             var ty = (target && target.y != null) ? target.y : player.y;
-            d.style.cssText = 'position:absolute;z-index:7700;font-size:18px;pointer-events:none;transition:transform 120ms;transform:translateY(6px) scale(0.6);opacity:0;';
+            var pos = _tileScreenPct(tx, ty);
+            var row = _BALLOON_ROW[kind] != null ? _BALLOON_ROW[kind] : 0;
+            var sz = Math.max(20, (scr.clientWidth / (GameCamera.viewportW || 15)) * 1.1); // ~1 tile
+            var d = document.createElement('div');
+            d.style.cssText = 'position:absolute;z-index:7700;pointer-events:none;width:' + sz + 'px;height:' + sz + 'px;' +
+                'background-image:url(data/system/Balloon.png);background-repeat:no-repeat;image-rendering:pixelated;' +
+                'background-size:' + (sz * 8) + 'px ' + (sz * 10) + 'px;' +
+                'left:' + pos.left + '%;top:' + pos.top + '%;transform:translate(-50%,-150%);';
             scr.appendChild(d);
-            d.style.left = '50%'; d.style.top = '40%';   // simple centered cue (tile-accurate placement needs camera math)
-            requestAnimationFrame(function () { d.style.opacity = '1'; d.style.transform = 'translateY(-4px) scale(1)'; });
-            setTimeout(function () { d.remove(); if (wait) res(); }, 700);
+            var frame = 0;
+            var iv = setInterval(function () {
+                // 8 frames: a couple of intro frames, then the held icon
+                d.style.backgroundPosition = '-' + (frame * sz) + 'px -' + (row * sz) + 'px';
+                frame++;
+                if (frame >= 8) { clearInterval(iv); setTimeout(function () { d.remove(); if (wait) res(); }, 250); }
+            }, 90);
+            if (!wait) res();
+        });
+    }
+    // ── Show Animation: flipbook the cells of an RTP animation sheet over a target.
+    // (RTP ships only the sheets, not RM's frame-timing data, so we play the cells in
+    // sequence — a faithful-enough hit/cast effect. An optional per-anim frames JSON
+    // could drive exact timing later.) ──
+    var _animDb = null;
+    function _loadAnimDb() {
+        if (_animDb) return Promise.resolve(_animDb);
+        return fetch('data/animations/rtp_animations_index.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : { animations: [] }; })
+            .then(function (j) { _animDb = {}; (j.animations || []).forEach(function (a) { _animDb[a.id] = a; }); return _animDb; })
+            .catch(function () { return (_animDb = {}); });
+    }
+    async function _animation(target, id, wait) {
+        await _loadAnimDb();
+        var a = _animDb[id];
+        if (!a) { console.warn('[Animation] not found:', id); return; }
+        return new Promise(function (res) {
+            var scr = document.getElementById('screen-primary') || document.body;
+            var tx = (target && target.x != null) ? target.x : player.x;
+            var ty = (target && target.y != null) ? target.y : player.y;
+            var pos = _tileScreenPct(tx, ty);
+            var sz = Math.max(48, (scr.clientWidth / (GameCamera.viewportW || 15)) * 2); // ~2 tiles
+            var d = document.createElement('div');
+            d.style.cssText = 'position:absolute;z-index:7750;pointer-events:none;width:' + sz + 'px;height:' + sz + 'px;' +
+                'background-image:url(data/animations/' + a.id + '.png);background-repeat:no-repeat;image-rendering:pixelated;' +
+                'background-size:' + (sz * a.cols) + 'px ' + (sz * a.rows) + 'px;' +
+                'left:' + pos.left + '%;top:' + pos.top + '%;transform:translate(-50%,-50%);';
+            scr.appendChild(d);
+            var n = a.cells || (a.cols * a.rows), frame = 0;
+            var iv = setInterval(function () {
+                if (frame >= n) { clearInterval(iv); d.remove(); if (wait) res(); return; }
+                var cx = frame % a.cols, cy = (frame / a.cols) | 0;
+                d.style.backgroundPosition = '-' + (cx * sz) + 'px -' + (cy * sz) + 'px';
+                frame++;
+            }, 55);
             if (!wait) res();
         });
     }
@@ -1136,6 +1222,7 @@
 
             // ── character / message extras (VX Ace) ────────────────────────────
             case 'balloon': await _balloon(_resolveTarget(c, ctx), c.balloon || 'exclaim', c.wait !== false); break;
+            case 'animation': await _animation(_resolveTarget(c, ctx), c.id || c.animation || 'Attack1', c.wait !== false); break;
             case 'scroll_text': await _scrollText(c.text || '', c.frames || 180); break;
             case 'location_info': {
                 var li = _locationInfo(c.x | 0, c.y | 0, c.info || 'collision');
@@ -1330,6 +1417,9 @@
 
         // Roaming monsters wander and chase (only in free-roam, never mid-event).
         if (!_transitioning && !_eventRunning) _updateRoamers(timestamp);
+
+        // Auto/parallel common events (cutscenes / background processes).
+        _pumpCommonEvents();
 
         // Movement
         // justPressed bypasses the cooldown for immediate tap-to-move response.

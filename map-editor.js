@@ -1287,7 +1287,7 @@
     // screen / camera
     ['tint', '🎨 Tint Screen'], ['flash', '⚡ Flash Screen'], ['scroll_map', '🎥 Scroll Map'],
     // character / message
-    ['balloon', '💭 Show Balloon'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info']
+    ['balloon', '💭 Show Balloon'], ['animation', '✨ Show Animation'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info']
   ];
   function newCmd(type) {
     switch (type) {
@@ -1334,6 +1334,7 @@
       case 'flash': return { type: 'flash', color: '#ffffff', frames: 12 };
       case 'scroll_map': return { type: 'scroll_map', dir: 'right', distance: 4, frames: 30 };
       case 'balloon': return { type: 'balloon', target: 'player', balloon: 'exclaim', wait: true };
+      case 'animation': return { type: 'animation', target: 'player', id: 'Attack1', wait: true };
       case 'scroll_text': return { type: 'scroll_text', text: '', frames: 180 };
       case 'location_info': return { type: 'location_info', x: 0, y: 0, info: 'collision', variable: '1' };
     }
@@ -1744,6 +1745,16 @@
       body.querySelector('.cT').value = (typeof cmd.target === 'string') ? cmd.target : 'player';
       body.querySelector('.cT').addEventListener('change', function () { cmd.target = this.value; });
       body.querySelector('.cB').value = cmd.balloon || 'exclaim'; body.querySelector('.cB').addEventListener('change', function () { cmd.balloon = this.value; });
+    } else if (cmd.type === 'animation') {
+      body.innerHTML = '<div class="row">' + lbl('Target') + '<select class="cT"><option value="player">Player</option><option value="this">This event</option></select>' +
+        lbl('Anim') + '<input type="text" class="cA" list="animList" value="' + (cmd.id || 'Attack1') + '" style="width:120px;"></div>' +
+        '<datalist id="animList"></datalist>';
+      body.querySelector('.cT').value = (typeof cmd.target === 'string') ? cmd.target : 'player';
+      body.querySelector('.cT').addEventListener('change', function () { cmd.target = this.value; });
+      body.querySelector('.cA').addEventListener('change', function () { cmd.id = this.value.trim(); });
+      fetch('data/animations/rtp_animations_index.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        if (!j) return; var dl = body.querySelector('#animList'); (j.animations || []).forEach(function (a) { var o = document.createElement('option'); o.value = a.id; dl.appendChild(o); });
+      }).catch(function () {});
     } else if (cmd.type === 'scroll_text') {
       var sta = el('textarea'); sta.rows = 3; sta.style.cssText = 'width:100%;box-sizing:border-box;';
       sta.value = cmd.text || ''; sta.placeholder = 'scrolling credits text…';

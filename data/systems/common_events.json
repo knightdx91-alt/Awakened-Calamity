@@ -1,5 +1,5 @@
 {
-  "_meta": { "doc": "Common Events (VX Ace) — reusable command lists called by id from any event via the `common_event` command. Keep authoring DRY: define a sequence once here, call it anywhere. (CALL only for now; auto/parallel triggers are a future addition.)" },
+  "_meta": { "doc": "Common Events (VX Ace) — reusable command lists. Called by id via the `common_event` command, OR run automatically by a `trigger`: 'autorun' (BLOCKING cutscene, runs while `switch` is ON — usually turns the switch off to stop) or 'parallel' (CONCURRENT background process while `switch` is ON). Omit `switch` to mean always-on. No trigger = call-only." },
   "heal_chime": {
     "name": "Heal + Chime",
     "commands": [
@@ -14,6 +14,24 @@
       { "type": "flash", "color": "#00ccff", "frames": 8 },
       { "type": "se", "name": "Decision1" },
       { "type": "text", "text": "SYSTEM: …logged." }
+    ]
+  },
+  "intro_cutscene": {
+    "name": "Example Autorun Cutscene",
+    "trigger": "autorun",
+    "switch": "cutscene_intro",
+    "commands": [
+      { "type": "text", "text": "(An autorun cutscene plays while switch 'cutscene_intro' is ON.)" },
+      { "type": "switch", "id": "cutscene_intro", "value": false }
+    ]
+  },
+  "ambient_watch": {
+    "name": "Example Parallel Process",
+    "trigger": "parallel",
+    "switch": "ambient_watch",
+    "commands": [
+      { "type": "variable", "id": "ambient_ticks", "op": "+", "value": 1 },
+      { "type": "wait", "frames": 60 }
     ]
   }
 }
