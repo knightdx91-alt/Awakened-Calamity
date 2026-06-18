@@ -173,6 +173,7 @@
             const r = _damage(state, a, t, sk, splash);
             if (r.evaded) { log(state, 'miss', { actor: a.id, skill: action.skillId, target: t.id }); continue; }
             t.hp = Math.max(0, t.hp - r.dmg);
+            _guardLethal(state, t);
             log(state, 'hit', { actor: a.id, skill: action.skillId, target: t.id, dmg: r.dmg, crit: r.crit, targetHp: t.hp });
             if (i === 0 && t.hp > 0 && ['slow', 'markTarget', 'sunder', 'applyToxin'].indexOf(eff.type) >= 0)
                 _applyRider(state, a, t, eff);          // rider applies to primary only
@@ -211,6 +212,7 @@
         const r = _damage(state, defender, attacker, { power: 0.6, effect: {} }, 1);
         if (r.evaded) return;
         attacker.hp = Math.max(0, attacker.hp - r.dmg);
+        _guardLethal(state, attacker);
         log(state, 'counter', { actor: defender.id, target: attacker.id, dmg: r.dmg, targetHp: attacker.hp });
         if (attacker.hp === 0) log(state, 'down', { actor: attacker.id });
     }
@@ -239,6 +241,7 @@
             a.dot = a.dot.filter(d => d.turns > 0);
             if (total > 0) {
                 a.hp = Math.max(0, a.hp - total);
+                _guardLethal(state, a);
                 log(state, 'dot', { actor: a.id, dmg: total, hp: a.hp });
                 if (a.hp === 0) log(state, 'down', { actor: a.id });
             }
@@ -252,6 +255,21 @@
         // NO passive HP/MP/SP regen in battle (by design): recover only via
         // items, healing skills, or a healer ally. A free basic 'strike' (cost 0)
         // keeps a drained fighter from soft-locking.
+    }
+
+    // The System will not let a tethered Subject die: when a player actor would
+    // fall, it revives them — for a steep, escalating Surveillance cost. THIS is
+    // the temptation (near-unkillable while tethered) AND the horror (your number
+    // rockets, and high Surveillance corrupts you). Call wherever a player's hp
+    // could reach 0 (attack / counter / DoT).
+    function _guardLethal(state, t) {
+        const iv = state.tuning.intervention;
+        if (!iv || !iv.enabled || !iv.lethalSave) return;
+        if (!t || t.side !== 'player' || t.hp > 0) return;
+        t.hp = Math.max(1, Math.round(t.maxHp * (iv.saveTo || 0.3)));
+        state._saves = (state._saves || 0) + 1;
+        state.surveillance += (iv.surveillancePerSave || 15) * state._saves; // escalates
+        log(state, 'intervention', { kind: 'lethal_save', actor: t.id, hp: t.hp, saves: state._saves, surveillance: state.surveillance });
     }
 
     // ---- intervention: the System as a third will -------------------------

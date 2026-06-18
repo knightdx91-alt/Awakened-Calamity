@@ -1,0 +1,11 @@
+{
+  "_meta": { "doc": "Surveillance -> Corruption. The System's help is free in the moment and ruinous in aggregate. Cumulative Surveillance (across a run) corrupts the Subject; at the collection threshold the System 'collects' you — the run ends and you are reclaimed (the bad ending). Tiers impose escalating penalties so leaning on the System is a real, mounting cost." },
+  "collectionThreshold": 240,
+  "tiers": [
+    { "id": "clear",    "min": 0,   "name": "Untethered-clean", "atkMod": 0.0,  "note": "The System barely notices you." },
+    { "id": "watched",  "min": 60,  "name": "Watched",          "atkMod": -0.05, "note": "It logs your every move; you hesitate." },
+    { "id": "flagged",  "min": 120, "name": "Flagged",          "atkMod": -0.12, "note": "It nudges your hand; you fight a half-second behind yourself." },
+    { "id": "claimed",  "min": 200, "name": "Near-Claimed",     "atkMod": -0.22, "note": "It is deciding for you now. You can feel it choosing." }
+  ],
+  "endingGate": { "goodEndingMaxSurveillance": 120, "trueEndingMaxSurveillance": 40 }
+}

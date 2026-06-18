@@ -7,6 +7,11 @@
 //
 //   node tools/validate_design.mjs [--n 24]
 import { loadCore, buildPlayerDef, buildEnemyDef, runFight, classIds, combatLoadout } from './sim_core.mjs';
+import { readFileSync } from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const GameCorruption = require(`${process.cwd()}/src/systems/corruption.js`);
+const corruptDb = JSON.parse(readFileSync(`${process.cwd()}/data/systems/corruption.json`, 'utf8'));
 
 const args = process.argv.slice(2);
 const N = parseInt((args[args.indexOf('--n') + 1]) || '24', 10);
@@ -22,19 +27,26 @@ function withIntervention(on) {
 const pick = (rng, a) => a[Math.floor(rng() * a.length) % a.length];
 function mulberry(s) { return () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-// a descent under a given db (policy). returns {depth, surveillance}
+// a descent under a given db (policy). returns {depth, surveillance, collected}.
+// CORRUPTION: cumulative Surveillance applies a tiered atk penalty (the System
+// "deciding for you") and, past the collection threshold, ENDS the run — the
+// System reclaims you. This is what gives the System's help a real cost.
 function descent(database, classId, seed, { depth = 8, rest = 0.5 } = {}) {
   const rng = mulberry(seed); let vit = { hp: 1, mp: 1, sp: 1 }, surv = 0;
   for (let f = 1; f <= depth; f++) {
+    if (GameCorruption.collected(corruptDb, surv)) return { depth: f - 1, surv, collected: true };
     const boss = f === depth, lvl = boss ? f + 2 : f;
     const en = [buildEnemyDef(database, pick(rng, creatures), lvl, 'e1')];
     if (boss || (f >= 5 && rng() < 0.5)) en.push(buildEnemyDef(database, pick(rng, creatures), Math.max(1, lvl - 2), 'e2'));
-    const r = runFight(database, GameCombat, buildPlayerDef(database, classId, Math.max(1, Math.ceil(f * 0.8))), en, seed * 31 + f, { startVit: vit });
+    const pdef = buildPlayerDef(database, classId, Math.max(1, Math.ceil(f * 0.8)));
+    const mod = GameCorruption.atkMod(corruptDb, surv);          // corruption saps your edge
+    if (mod) pdef.stats = { ...pdef.stats, atk: Math.round(pdef.stats.atk * (1 + mod)) };
+    const r = runFight(database, GameCombat, pdef, en, seed * 31 + f, { startVit: vit });
     surv += r.surveillance || 0;
-    if (r.winner !== 'player') return { depth: f - 1, surv };
+    if (r.winner !== 'player') return { depth: f - 1, surv, collected: false };
     vit = { hp: Math.min(1, r.endVit.hp + rest), mp: Math.min(1, r.endVit.mp + rest), sp: Math.min(1, r.endVit.sp + rest) };
   }
-  return { depth, surv };
+  return { depth, surv, collected: false };
 }
 
 // ── roster = combat-viable classes (so crafters don't skew the design read) ──
@@ -47,12 +59,14 @@ const roster = all.filter((cid) => {
 console.log(`DESIGN VALIDATION — ${roster.length} combat-viable classes (of ${all.length}), ${N} samples\n`);
 const checks = [];
 
-// 1) BUILD DIVERSITY — fair win-band spread at a mid level (not all-dominant / all-dead)
+// 1) BUILD DIVERSITY — fair win-band spread on SKILL (System help OFF, so the
+// lethal-save doesn't flatten everyone to 100%). Measures genuine build variety.
 {
+  const dbOff = withIntervention(false);
   let fair = 0, dom = 0;
   for (const cid of roster) {
     let w = 0, t = 0;
-    for (const cr of creatures) for (let s = 0; s < N; s++) { t++; if (runFight(db, GameCombat, buildPlayerDef(db, cid, 4), [buildEnemyDef(db, cr, 4)], 200 + s).winner === 'player') w++; }
+    for (const cr of creatures) for (let s = 0; s < N; s++) { t++; if (runFight(dbOff, GameCombat, buildPlayerDef(dbOff, cid, 4), [buildEnemyDef(dbOff, cr, 4)], 200 + s).winner === 'player') w++; }
     const wr = w / t; if (wr >= 0.3 && wr <= 0.9) fair++; if (wr > 0.97) dom++;
   }
   const ratio = fair / roster.length;
@@ -97,8 +111,7 @@ const checks = [];
   const tempting = tempt >= 0.4, costly = cost >= 8;
   checks.push({ name: '★ Intervention dilemma', verdict: (tempting && costly) ? 'PASS' : (tempting || costly) ? 'WARN' : 'FAIL',
     note: `tempting: +${tempt.toFixed(2)} depth when accepting (${tempting ? 'yes' : 'NO — no reason to take help'}); `
-        + `costly: +${cost.toFixed(1)} Surveillance/run (${costly ? 'yes' : 'low'}). `
-        + `NOTE: Surveillance only bites once a corruption threshold is wired to fail the run / lock the good ending.` });
+        + `costly: +${cost.toFixed(1)} Surveillance/run (${costly ? 'yes' : 'low'}) -> corruption collects you at ${corruptDb.collectionThreshold}.` });
 }
 
 // ── verdict ──
