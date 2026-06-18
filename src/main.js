@@ -172,6 +172,62 @@
         for (const ev of evs) if (ev.x === x && ev.y === y) return ev;
         return null;
     }
+
+    // ── Roaming encounters (Radiant-Mythology style: visible monsters that wander,
+    // and CHASE once they spot you within sight range; contact = battle). Each
+    // roamer event carries `behavior:{type:'roam', sight, speed}`. Moves are
+    // grid-stepped on a per-event cooldown; rendering reads ev.x/ev.y/ev.dir.
+    function _losClear(x0, y0, x1, y1) {
+        // simple tile walk so monsters don't "see"/chase through walls
+        let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx - dy, x = x0, y = y0;
+        for (let g = 0; g < 64; g++) {
+            if (x === x1 && y === y1) return true;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx)  { err += dx; y += sy; }
+            if ((x !== x1 || y !== y1) && !GameMap.isWalkable(x, y)) return false;
+        }
+        return true;
+    }
+    function _updateRoamers(timestamp) {
+        if (_transitioning || _eventRunning) return;
+        const evs = (GameMap.current && GameMap.current.events) || [];
+        for (const ev of evs) {
+            const b = ev.behavior;
+            if (!b || b.type !== 'roam') continue;
+            if (ev._nextStep && timestamp < ev._nextStep) continue;
+            const speed = b.speed || 420, sight = b.sight || 5;
+            const dxp = player.x - ev.x, dyp = player.y - ev.y;
+            const cheb = Math.max(Math.abs(dxp), Math.abs(dyp));
+            // already on the player's tile shouldn't happen; adjacency = contact
+            let step = null, chasing = false;
+            if (cheb <= sight && _losClear(ev.x, ev.y, player.x, player.y)) {
+                chasing = true;
+                // step along the dominant axis toward the player
+                if (Math.abs(dxp) >= Math.abs(dyp) && dxp !== 0) step = [Math.sign(dxp), 0];
+                else if (dyp !== 0) step = [0, Math.sign(dyp)];
+                else if (dxp !== 0) step = [Math.sign(dxp), 0];
+            } else if (Math.random() < 0.5) {
+                const opts = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                step = opts[(Math.random() * 4) | 0];
+            }
+            ev._nextStep = timestamp + (chasing ? Math.max(160, speed * 0.7) : speed);
+            if (!step) continue;
+            const nx = ev.x + step[0], ny = ev.y + step[1];
+            ev.dir = step[0] < 0 ? 'left' : step[0] > 0 ? 'right' : step[1] < 0 ? 'up' : 'down';
+            // walked into the player → contact → battle
+            if (nx === player.x && ny === player.y) {
+                if (performance.now() >= _warpCooldownUntil && ev.commands && ev.commands.length) runEvent(ev);
+                continue;
+            }
+            if (nx < 0 || ny < 0 || nx >= GameMap.width || ny >= GameMap.height) continue;
+            if (!GameMap.isWalkable(nx, ny)) continue;
+            if (_eventAt(nx, ny)) continue;            // don't stack on another event
+            if (GameMap.getWarp && GameMap.getWarp(nx, ny)) continue;
+            ev.x = nx; ev.y = ny;
+        }
+    }
     async function transitionToEventTransfer(cmd) {
         if (_transitioning || !cmd || !cmd.map) return;
         _transitioning = true;
@@ -978,6 +1034,9 @@
         if (jp.a) {
             _interact();
         }
+
+        // Roaming monsters wander and chase (only in free-roam, never mid-event).
+        if (!_transitioning && !_eventRunning) _updateRoamers(timestamp);
 
         // Movement
         // justPressed bypasses the cooldown for immediate tap-to-move response.

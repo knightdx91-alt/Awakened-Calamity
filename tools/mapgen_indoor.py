@@ -207,10 +207,14 @@ class IndoorBuilder:
             if not removed:
                 return
 
-    def place_monster(self, x, y, key, level, sprite="Monster1", name="Roamer"):
-        """A roaming creature: contact starts a battle, then it despawns."""
+    def place_monster(self, x, y, key, level, sprite="Monster1", name="Roamer", sight=5, speed=420):
+        """A ROAMING creature (Radiant-Mythology style): it wanders the room and
+        CHASES the player once they're within sight; contact starts a battle, then
+        it despawns. `behavior` drives the engine's roamer update; `touch` is the
+        contact fallback if the player walks into it."""
         self.events.append({
             "x": x, "y": y, "name": name, "trigger": "touch", "through": False,
+            "behavior": {"type": "roam", "sight": sight, "speed": speed},
             "graphic": {"sprite": sprite, "file": "rtp/%s.png" % sprite,
                         "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
             "commands": [
@@ -219,11 +223,20 @@ class IndoorBuilder:
                 {"type": "despawn"}]})
 
     def place_chest(self, x, y, money=0, item=None, pocket="items"):
-        cmds = [{"type": "text", "text": "A weathered chest, half-buried in the dust."}]
+        """A ONE-TIME loot chest: the loot is gated behind self-switch A so it can
+        only be claimed once. After opening, it reads as empty (the self-switch
+        persists across saves via the engine's event-state store)."""
+        loot = []
         gained = []
-        if money: cmds.append({"type": "money", "op": "+", "amount": money}); gained.append("%d Cr" % money)
-        if item: cmds.append({"type": "item", "op": "+", "id": item, "pocket": pocket, "qty": 1}); gained.append("a " + item.replace("_", " "))
-        cmds.append({"type": "text", "text": "You found " + (" and ".join(gained) if gained else "nothing of use") + "."})
+        if money: loot.append({"type": "money", "op": "+", "amount": money}); gained.append("%d Cr" % money)
+        if item: loot.append({"type": "item", "op": "+", "id": item, "pocket": pocket, "qty": 1}); gained.append("a " + item.replace("_", " "))
+        loot.append({"type": "text", "text": "You found " + (" and ".join(gained) if gained else "nothing of use") + "."})
+        loot.append({"type": "selfswitch", "letter": "A", "value": True})
+        cmds = [{
+            "type": "conditional",
+            "cond": {"kind": "selfswitch", "letter": "A", "value": True},
+            "then": [{"type": "text", "text": "The chest lies open and empty."}],
+            "else": [{"type": "text", "text": "A weathered chest, half-buried in the dust."}] + loot}]
         self.setp(x, y, "crate", block=True)
         self.events.append({
             "x": x, "y": y, "name": "Chest", "trigger": "action", "through": False,
@@ -326,6 +339,7 @@ class IndoorBuilder:
                               "graphic": e.get("graphic", {"sprite": "", "file": "", "single": True}),
                               "dir": e.get("dir", "down"), "trigger": e.get("trigger", "action"),
                               "through": e.get("through", False),
+                              "behavior": e.get("behavior"),
                               "commands": e.get("commands", [{"type": "text", "text": e.get("text", door_text)}])}
                              for i, e in enumerate(self.events)]}
         os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
