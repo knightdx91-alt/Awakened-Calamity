@@ -931,11 +931,12 @@
             await _say(_subTokens(verdict + '\n[Lifetime Surveillance ' + lifeSurv + ']'));
             st.meta.endingTier = open['true'] ? 'true' : open.good ? 'good' : 'submit';
         }
-        // opening tutorial: the FIRST descent's return reveals the cycle (advance the quest)
+        // opening tutorial: the FIRST descent's return reveals the cycle (advance the
+        // quest). The narration is in the first_descent_* common events above; here we
+        // only advance the quest stage so Mira (stage 3) gives the next editable beat.
         if (window.GameQuests && st.quests && GameQuests.status(st.quests, 'awakening') === 'active'
             && GameQuests.stageIndex(st.quests, 'awakening') === 2) {
             GameQuests.setStage(st.quests, _questDbCache || {}, 'awakening', 3);
-            await _say('(A memory stirs. Mira will want to see you.)');
         }
         _purgeRunFloors();                                 // leaving the descent: drop all floor state
         var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
