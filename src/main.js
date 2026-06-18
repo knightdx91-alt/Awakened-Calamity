@@ -320,6 +320,30 @@
     var ES = window.GameEventState;
     function _say(text, face) { return new Promise(function (res) { if (window.GameDialogue) GameDialogue.show(String(text || '').split('\n'), res, face ? { face: face } : null); else res(); }); }
     function _wait(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+
+    // ---- reactive dialogue (GameVoice) ----
+    var _voiceCache = {};
+    function _loadVoice(id) {
+        if (_voiceCache[id] !== undefined) return Promise.resolve(_voiceCache[id]);
+        return fetch('data/dialogue/' + id + '.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { _voiceCache[id] = j; return j; })
+            .catch(function () { _voiceCache[id] = null; return null; });
+    }
+    function _voiceState(id) {
+        var s = window.GameSave && GameSave.state; if (!s) return { meet: 0, said: {} };
+        s.voice = s.voice || {}; s.voice[id] = s.voice[id] || { meet: 0, said: {} }; return s.voice[id];
+    }
+    function _voiceCtx(id) {
+        var s = (window.GameSave && GameSave.state) || {}; var vs = _voiceState(id);
+        return { quests: s.quests || {}, surveillance: (s.survival && s.survival.surveillance) | 0,
+                 meet: vs.meet | 0, said: vs.said || {}, flags: s.flags || {}, map: window._mapName };
+    }
+    function _voiceRecord(id, picked) {
+        var vs = _voiceState(id); vs.meet = (vs.meet | 0) + 1;
+        if (picked.once) { vs.said = vs.said || {}; vs.said[picked.id] = true; }
+        if (window.GameSave && GameSave.markDirty) GameSave.markDirty();
+    }
     function _choose(prompt, options) {
         return new Promise(function (res) {
             var box = document.createElement('div');
@@ -466,6 +490,16 @@
     async function runCmd(c, ctx) {
         switch (c.type) {
             case 'text': await _say(_subTokens(c.text || ''), c.face); break;
+            case 'voice': {
+                // Reactive dialogue: pick a context-appropriate line for a speaker
+                // (data/dialogue/<id>.json) from the current game state, then run it.
+                var sp = await _loadVoice(c.speaker);
+                if (sp && window.GameVoice) {
+                    var picked = GameVoice.pick(sp, _voiceCtx(c.speaker), c.seed);
+                    if (picked) { _voiceRecord(c.speaker, picked); await runCmdList(GameVoice.toCommands(sp, picked), ctx); }
+                }
+                break;
+            }
             case 'choice': {
                 var idx = await _choose(c.prompt || '', (c.options || []).map(function (o) { return o.label; }));
                 var opt = (c.options || [])[idx];

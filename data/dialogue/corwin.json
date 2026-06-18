@@ -1,0 +1,52 @@
+{
+  "id": "corwin",
+  "name": "Vanguard Sentry Corwin",
+  "face": {
+    "sheet": "People4",
+    "index": 2
+  },
+  "persona": "Vanguard enforcer. Outwardly dutiful, inwardly uneasy about what the order does to the Untethered. Stiff, official, with cracks of doubt that widen as the player's Surveillance rises.",
+  "lines": [
+    {
+      "id": "intro",
+      "priority": 20,
+      "once": true,
+      "when": {
+        "surveillance": "<50"
+      },
+      "text": [
+        "Vanguard Sentry Corwin. Stay tethered, Subject, and we'll have no trouble.",
+        "The System protects those who let it. The Untethered are a danger \u2014 to Dawnhearth and to themselves."
+      ]
+    },
+    {
+      "id": "watching",
+      "priority": 24,
+      "when": {
+        "surveillance": ">=50"
+      },
+      "text": [
+        "Your record's thickening, Subject. The Audit notices the ones the System favors most. So do I."
+      ]
+    },
+    {
+      "id": "doubt",
+      "priority": 28,
+      "when": {
+        "surveillance": ">=80"
+      },
+      "text": [
+        "You take so much from it now. Doesn't it frighten you, how easy that became?",
+        "\u2026Forget I said that. Stay tethered. That's the line. That's always the line."
+      ]
+    },
+    {
+      "id": "idle",
+      "priority": 0,
+      "when": {},
+      "text": [
+        "Report anyone living off-grid. It's for their own good."
+      ]
+    }
+  ]
+}
