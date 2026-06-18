@@ -30,11 +30,26 @@ the **Remembrance** NPC (`meta` cmd) spends Memory Fragments on permanent unlock
   is `conditional` commands with `kind:"quest"` (check: stage/active/done).
 - **The quest itself** (stage names/objectives/reward): `data/systems/quests.json` → `awakening`.
 
+## Every-run feedback is editable too
+The per-run return narration, the fragments tally, and the ending verdict are also common
+events (the engine sets result variables, the words are data):
+- `run_return_cleared` / `run_return_collected` / `run_return_died_tethered` /
+  `run_return_died_untethered` — shown each run by `_endRun`. They use `[v:run_fragments]`,
+  `[v:run_total_fragments]`, `[v:run_deepest]` tokens.
+- `ending_verdict_true` / `_good` / `_submit` — shown on a clear, picked by lifetime
+  Surveillance; use `[v:life_surv]`.
+
+## Character creation as events
+The creation screen is launchable from an event with the **`creation`** command (its
+affinities + classes are already data in `affinities.json` / `classes.json`). For a fully
+hand-rolled flow you can also use **`name_input`** (RPG Maker's Name Input Processing) +
+`choice` + `grantclass` + `setgfx`. `_newGame` calls the polished screen by default.
+
 ## What the engine still controls (logic, not content)
 - `_newGame` (`src/main.js`): fresh state, seeds the `awakening` quest, flips `sys_intro`.
-- `_endRun`: increments the run, then on the FIRST descent calls the right `first_descent_*`
-  common event. (It chooses *which*; the words are editable.)
+- `_endRun`: tallies the run, sets the result variables, then calls the right `run_return_*`
+  / `first_descent_*` / `ending_verdict_*` common event. (It chooses *which*; words are data.)
 - The `descend` command: runs `GameRun.start`/`descend` and transfers the player to the floor.
 
-So to rewrite the opening you only touch DATA: `common_events.json`, `Dawnhearth.json`, and
-`quests.json`. See `docs/EVENT_COMMANDS.md` for the full command reference.
+So to rewrite the opening or the run-feedback you only touch DATA: `common_events.json`,
+`Dawnhearth.json`, `quests.json`. See `docs/EVENT_COMMANDS.md` for the full command reference.

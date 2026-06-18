@@ -2,6 +2,18 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Run-feedback eventified + name_input/creation commands + [v:] tokens
+Finished moving the LAST hardcoded narrative out of `_endRun`: the per-run return text +
+fragments tally + ending verdict are now **editable common events** (`run_return_cleared/
+collected/died_tethered/died_untethered`, `ending_verdict_true/good/submit`). `_endRun` sets
+result VARIABLES (`run_fragments`, `run_total_fragments`, `run_deepest`, `life_surv`) and calls
+the right common event — words are data. New **`[v:id]`/`[s:id]` text tokens** (RPG-Maker `\V[n]`
+variable + switch interpolation) in `_subTokens`. **Creation as events:** new `name_input`
+command (RM Name Input Processing → player.name) + `creation` command (launch the Awakening
+screen from any event; its affinities/classes are already data). Editor forms + CMD_TYPES added.
+Browser-verified: `[v:]` numbers interpolate, descent-clear plays run_return + verdict commons,
+name_input writes the name; 0 errors. Docs: `docs/TUTORIAL.md`, `docs/EVENT_COMMANDS.md`.
+
 ## ✅ DONE 2026-06-18 — Opening/tutorial fully COMMAND-AUTHORED (editable, no hardcoded JS)
 The two hardcoded opening beats were moved into editable common events so the whole tutorial is
 now data: (1) the **cold-open** → `awakening_intro` **autorun** common event (switch `sys_intro`;

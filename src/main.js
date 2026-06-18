@@ -551,6 +551,29 @@
         });
     }
 
+    // ── Name Input (VX Ace Name Input Processing): a text-entry screen. Writes the
+    // result to player.name (default) or, if `variable` is set, that var (as text isn't
+    // numeric, we just store the name on the player). ──
+    function _nameInput(prompt, maxLen, initial) {
+        return new Promise(function (res) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#0a0e1a;border:2px solid #00ccff;border-radius:8px;padding:16px;min-width:240px;text-align:center;color:#cfe;font:10px "Press Start 2P",monospace;';
+            var lbl = document.createElement('div'); lbl.textContent = prompt; lbl.style.cssText = 'margin-bottom:12px;line-height:1.6;';
+            var inp = document.createElement('input');
+            inp.type = 'text'; inp.value = String(initial || ''); inp.maxLength = maxLen || 12;
+            inp.style.cssText = 'width:100%;font:12px monospace;padding:6px;text-align:center;background:#04111c;color:#7fe0ff;border:1px solid #2a4656;border-radius:4px;';
+            var ok = document.createElement('button'); ok.textContent = 'OK';
+            ok.style.cssText = 'margin-top:12px;font:9px "Press Start 2P",monospace;padding:6px 14px;background:#00ccff;color:#001;border:0;border-radius:4px;cursor:pointer;';
+            function done() { var v = inp.value.trim().slice(0, maxLen || 12) || (initial || 'Awakened'); box.remove(); res(v); }
+            ok.addEventListener('click', done);
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') done(); });
+            inner.appendChild(lbl); inner.appendChild(inp); inner.appendChild(ok); box.appendChild(inner); document.body.appendChild(box);
+            inp.focus(); inp.select();
+        });
+    }
+
     // ── Common Events: reusable command lists called by id (data/systems/common_events.json). ──
     var _commonDb = null;
     function _loadCommonDb() {
@@ -908,28 +931,29 @@
         var me = _metaEffects();
         var bonus = (me.fragmentBonus | 0) + (unteth ? (me.untetheredBonus | 0) : 0);
         if (bonus) { st.meta.fragments = (st.meta.fragments | 0) + bonus; r.summary.fragments += bonus; r.summary.totalFragments += bonus; }
-        var msg = reason === 'cleared' ? 'You break the surface — alive, and still yourself. The descent is cleared.'
-            : reason === 'collected' ? 'SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more.'
-            : unteth ? 'Untethered, you fall — and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should.'
-            : 'You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more.';
-        await _say(_subTokens(msg));
-        await _say('Memory fragments +' + r.summary.fragments + '  (total ' + r.summary.totalFragments + ' · deepest floor ' + (st.meta.deepest | 0) + ')');
-        // ENDING GATES: on a CLEAR, the System delivers its verdict — which of the
-        // four endings remain reachable, gated by your LIFETIME Surveillance. Clean
-        // (untethered / low-Surveillance) play keeps the true way out open; leaning on
-        // the System closes it, tilting you toward SUBMIT. This is the roguelite
-        // foreshadow of the Act-IV finale; the gates are GameCorruption.endingsOpen.
+        // Expose the run results as variables so the EDITABLE common-event text can
+        // show them via [v:...] tokens. The engine sets numbers; the words are data.
+        if (ES) {
+            ES.setVar('run_fragments', r.summary.fragments | 0);
+            ES.setVar('run_total_fragments', r.summary.totalFragments | 0);
+            ES.setVar('run_deepest', st.meta.deepest | 0);
+            ES.setVar('life_surv', st.meta.lifetimeSurveillance | 0);
+        }
+        // The per-run return narration lives in common_events.json (editable). The
+        // engine only picks WHICH by how the run ended.
+        var retId = reason === 'cleared' ? 'run_return_cleared'
+            : reason === 'collected' ? 'run_return_collected'
+            : unteth ? 'run_return_died_untethered' : 'run_return_died_tethered';
+        await _callCommonEvent(retId, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
+        // ENDING GATES: on a CLEAR, the System's verdict is gated by LIFETIME
+        // Surveillance (which endings remain open). Engine resolves the tier; the
+        // verdict text is the editable common event ending_verdict_<tier>.
         if (reason === 'cleared' && window.GameCorruption) {
             await _loadCorrupt();
-            var lifeSurv = (st.meta.lifetimeSurveillance | 0);
-            var open = GameCorruption.endingsOpen(_corruptDb, lifeSurv);
-            var verdict = open['true']
-                ? 'SYSTEM: …anomaly. Your record is too clean to read. Something in you still remembers a way OUT. (The true ending remains open.)'
-                : open.good
-                ? 'SYSTEM: Compliance acceptable, [designation]. You are still mostly yourself — for now. (A good ending is still reachable; the true one has slipped away.)'
-                : 'SYSTEM: You lean on me so sweetly now. Soon there will be nothing left to reclaim. The cycle will keep you. (Only SUBMIT remains.)';
-            await _say(_subTokens(verdict + '\n[Lifetime Surveillance ' + lifeSurv + ']'));
-            st.meta.endingTier = open['true'] ? 'true' : open.good ? 'good' : 'submit';
+            var open = GameCorruption.endingsOpen(_corruptDb, st.meta.lifetimeSurveillance | 0);
+            var tier = open['true'] ? 'true' : open.good ? 'good' : 'submit';
+            st.meta.endingTier = tier;
+            await _callCommonEvent('ending_verdict_' + tier, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
         }
         // opening tutorial: the FIRST descent's return reveals the cycle (advance the
         // quest). The narration is in the first_descent_* common events above; here we
@@ -967,7 +991,10 @@
         var p = (window.GameSave && GameSave.state && GameSave.state.player) || {};
         return String(s || '')
             .replace(/\[name\]/g, p.name || 'Awakened')
-            .replace(/\[designation\]/g, p.designation || 'SUBJECT');
+            .replace(/\[designation\]/g, p.designation || 'SUBJECT')
+            // [v:id] = a game variable value (RPG Maker's \V[n]); [s:id] = ON/OFF switch
+            .replace(/\[v:([^\]]+)\]/g, function (_, id) { return ES ? String(ES.getVar(id.trim())) : '0'; })
+            .replace(/\[s:([^\]]+)\]/g, function (_, id) { return (ES && ES.getSwitch(id.trim())) ? 'ON' : 'OFF'; });
     }
     async function runCmd(c, ctx) {
         switch (c.type) {
@@ -1196,6 +1223,19 @@
                 break;
             }
             case 'common_event': await _callCommonEvent(c.id, ctx); break;
+            case 'name_input': {
+                var nm = await _nameInput(c.prompt || 'Enter your name', c.maxLength || 12, (GameSave.state && GameSave.state.player && GameSave.state.player.name) || '');
+                if (GameSave.state && GameSave.state.player) { GameSave.state.player.name = nm; if (GameSave.markDirty) GameSave.markDirty(); }
+                break;
+            }
+            case 'creation': {
+                // Launch the Awakening character-creation screen from an event (its
+                // affinities/classes are data; this controls WHEN it runs).
+                if (window.GamePlayerCreation && GamePlayerCreation.start && !GamePlayerCreation.isActive()) {
+                    await new Promise(function (res) { GamePlayerCreation.start(function () { res(); }); });
+                }
+                break;
+            }
             case 'timer': {
                 if (c.op === 'stop') { _timer.running = false; }
                 else { _timer.running = true; _timer.remain = Math.max(0, (c.seconds | 0)); _timer.endAt = performance.now() + _timer.remain * 1000; }

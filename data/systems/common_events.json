@@ -53,6 +53,52 @@
       { "type": "text", "text": "(A memory stirs. Mira will want to see you.)" }
     ]
   },
+  "run_return_cleared": {
+    "name": "Run return — cleared the descent",
+    "commands": [
+      { "type": "text", "text": "You break the surface — alive, and still yourself. The descent is cleared." },
+      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
+    ]
+  },
+  "run_return_collected": {
+    "name": "Run return — collected (Surveillance maxed)",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more." },
+      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
+    ]
+  },
+  "run_return_died_tethered": {
+    "name": "Run return — died (tethered: the System pulls you back)",
+    "commands": [
+      { "type": "text", "text": "You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more." },
+      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
+    ]
+  },
+  "run_return_died_untethered": {
+    "name": "Run return — died (untethered: no hand catches you)",
+    "commands": [
+      { "type": "text", "text": "Untethered, you fall — and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should." },
+      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
+    ]
+  },
+  "ending_verdict_true": {
+    "name": "Ending verdict — true path still open",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: …anomaly. Your record is too clean to read. Something in you still remembers a way OUT. (The true ending remains open.)\n[Lifetime Surveillance [v:life_surv]]" }
+    ]
+  },
+  "ending_verdict_good": {
+    "name": "Ending verdict — good still reachable",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: Compliance acceptable, [designation]. You are still mostly yourself — for now. (A good ending is still reachable; the true one has slipped away.)\n[Lifetime Surveillance [v:life_surv]]" }
+    ]
+  },
+  "ending_verdict_submit": {
+    "name": "Ending verdict — only SUBMIT remains",
+    "commands": [
+      { "type": "text", "text": "SYSTEM: You lean on me so sweetly now. Soon there will be nothing left to reclaim. The cycle will keep you. (Only SUBMIT remains.)\n[Lifetime Surveillance [v:life_surv]]" }
+    ]
+  },
   "intro_cutscene": {
     "name": "Example Autorun Cutscene",
     "trigger": "autorun",

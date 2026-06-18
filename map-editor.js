@@ -1282,6 +1282,7 @@
     // flow control
     ['loop', '🔁 Loop'], ['break_loop', '⏹️ Break Loop'], ['input_number', '🔢 Input Number'],
     ['common_event', '📑 Common Event'], ['timer', '⏱️ Control Timer'],
+    ['name_input', '⌨️ Name Input'], ['creation', '🧬 Character Creation'],
     // audio
     ['bgm', '🎵 Play/Stop BGM'], ['bgs', '🌊 Play/Stop BGS'], ['me', '🎺 Play ME'], ['stop_se', '🔇 Stop SE'],
     // screen / camera
@@ -1325,6 +1326,8 @@
       case 'break_loop': return { type: 'break_loop' };
       case 'input_number': return { type: 'input_number', prompt: 'Enter a number', digits: 3, variable: '1', initial: 0 };
       case 'common_event': return { type: 'common_event', id: '' };
+      case 'name_input': return { type: 'name_input', prompt: 'Enter your name', maxLength: 12 };
+      case 'creation': return { type: 'creation' };
       case 'timer': return { type: 'timer', op: 'start', seconds: 60 };
       case 'bgm': return { type: 'bgm', op: 'play', name: '' };
       case 'bgs': return { type: 'bgs', op: 'play', name: '' };
@@ -1715,6 +1718,13 @@
     } else if (cmd.type === 'common_event') {
       body.innerHTML = '<div class="row">' + lbl('Event id') + '<input type="text" class="cI" value="' + (cmd.id || '') + '" style="flex:1;min-width:0;" placeholder="e.g. heal_chime"></div>';
       body.querySelector('.cI').addEventListener('change', function () { cmd.id = this.value.trim(); });
+    } else if (cmd.type === 'name_input') {
+      body.innerHTML = '<div class="row">' + lbl('Prompt') + '<input type="text" class="cP" value="' + (cmd.prompt || '') + '" style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('Max len') + '<input type="number" class="cM" value="' + (cmd.maxLength || 12) + '" style="width:50px;"></div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.prompt = this.value; });
+      body.querySelector('.cM').addEventListener('change', function () { cmd.maxLength = parseInt(this.value, 10) || 12; });
+    } else if (cmd.type === 'creation') {
+      body.appendChild(el('div', 'font-size:9px;color:#888;', 'Launches the Awakening creation screen (name / appearance / affinity / class). Affinities + classes are data.'));
     } else if (cmd.type === 'timer') {
       body.innerHTML = '<div class="row">' + lbl('Op') + '<select class="cO"><option value="start">Start</option><option value="stop">Stop</option></select>' +
         lbl('Seconds') + '<input type="number" class="cS" value="' + (cmd.seconds || 60) + '" style="width:60px;"></div>';

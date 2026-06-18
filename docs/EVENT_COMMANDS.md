@@ -22,6 +22,10 @@ Use it for one-offs the data commands don't cover; prefer data commands for port
 
 ## Command reference
 **Message** — `text` (+ optional RTP `face`), `choice`, `scroll_text` (credits-style), `voice`.
+Text tokens: `[name]`, `[designation]`, `[v:id]` = a variable's value (RPG Maker `\V[n]`),
+`[s:id]` = a switch's ON/OFF.
+**Creation/identity** — `name_input` (Name Input Processing → player.name), `creation` (launch
+the Awakening name/appearance/affinity/class screen; its affinities + classes are data).
 **Flow** — `conditional` (kinds: switch/selfswitch/variable/quest/**timer**), `loop` +
 `break_loop`, `label` + `jump`, `common_event` (call a reusable list from
 `data/systems/common_events.json`), `comment`, `exit`, `script`.
