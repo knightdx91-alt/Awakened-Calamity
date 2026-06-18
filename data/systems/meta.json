@@ -9,7 +9,7 @@
     { "id": "attune",      "name": "Fragment Attunement","cost": 8, "desc": "+2 Memory Fragments from every run.",     "effect": { "fragmentBonus": 2 } },
     { "id": "leash",       "name": "Loosened Leash",    "cost": 10, "desc": "Tethered: Collection threshold +40.",    "effect": { "collectionBonus": 40 } },
     { "id": "unbound",     "name": "Unbound",           "cost": 9,  "desc": "Untethered descents grant +3 Fragments.", "effect": { "untetheredBonus": 3 } },
-    { "id": "recall1",     "name": "Remembrance: The First Waking", "cost": 4,  "desc": "Recover a buried memory of the cycle.",     "effect": { "lore": "recall1" } },
-    { "id": "recall2",     "name": "Remembrance: Joran's Road",     "cost": 10, "desc": "Remember where the taken ones go.",         "effect": { "lore": "recall2" }, "requires": "recall1" }
+    { "id": "recall1",     "name": "Remembrance: The First Waking", "cost": 4,  "desc": "Recover a buried memory of the cycle.",     "effect": { "lore": "recall1" }, "reveal": "MEMORY — THE FIRST WAKING\nYou have woken in Dawnhearth before. Many times. The well, the crystal, Mira's face — worn smooth by repetition you cannot place. The System calls it your Awakening, singular. It is lying by omission. Each descent that takes you resets the board and files the old you away. The fragments you spend are pieces of the ones who came before. They were you." },
+    { "id": "recall2",     "name": "Remembrance: Joran's Road",     "cost": 10, "desc": "Remember where the taken ones go.",         "effect": { "lore": "recall2" }, "requires": "recall1", "reveal": "MEMORY — JORAN'S ROAD\nLys's brother did not vanish. The taken are not killed; they are COLLECTED — folded into the System's lower strata, kept lucid, kept watching. Joran went off-grid and the Vanguard delivered him below. If your Surveillance crests the threshold, that is your road too. Untethered is the only path that does not end at the bottom of the well." }
   ]
 }

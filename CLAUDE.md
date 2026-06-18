@@ -2,6 +2,21 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Launch skills wired + ending gates live + meta confirmed
+- **Launch-class skills:** 34/38 already active; the 4 inert ones (`track`/`set_snare`/`sneak`/
+  `pick_lock`) were world-utility and are now reframed into combat effects the engine supports
+  (mark / slow / self def-up / sunder). **0 inert among the 12 launch classes**; they show in the
+  FIGHT menu. (~99 globally-inert skills remain on non-launch classes — defer.)
+- **Ending gates LIVE** (the Act-IV finale isn't built, so this is a roguelite EPILOGUE): clearing
+  a descent → a System verdict gated by LIFETIME Surveillance (`GameCorruption.endingsOpen`) —
+  ≤40 keeps the **true** ending open, ≤120 **good**, else **submit**; stored as `meta.endingTier`.
+  Wired the corruption-tier atk penalty earlier; this closes the loop on the dilemma's stakes.
+- **Meta-progression (the "what you unlock on a run" system) CONFIRMED working:** completing a run
+  earns Memory Fragments (depth + clear/clean/untethered bonuses); the **Remembrance** NPC (`meta`
+  cmd) spends them on 9 permanent unlocks (+HP ×2, start Potions ×2, +fragments, Collection-leash
+  +40, untethered bonus, 2 lore recalls). The 2 **lore unlocks now reveal** their buried-cycle
+  memory text on purchase (was a dangling hook). `src/systems/meta.js` + `data/systems/meta.json`.
+
 ## ✅ DONE 2026-06-18 — Launch roster + craft-class floor + recovery finding
 Resolved three P1 items. (1) **Craft-class floor:** every class in `classes.json` now has a
 `combatRole` — **75 combatant / 44 support / 6 noncombat** (measured untethered L4 win-band +

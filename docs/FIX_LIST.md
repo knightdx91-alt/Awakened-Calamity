@@ -18,8 +18,12 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   → reclaimed → hub, the bad reset) + the **tier atk penalty** now applied in LIVE combat
   (`combatview.buildPlayer` reads the active run's Surveillance → `GameCorruption.atkMod`),
   so leaning on the System's saves has a felt, mounting in-combat cost — not just collection.
-- ⬜ **Ending gates** (`GameCorruption.endingsOpen` / lifetime-Surveillance good/true gates)
-  still need an actual ENDING sequence to gate — deferred until there's an ending beat to show.
+- ✅ **Ending gates LIVE (2026-06-18).** The full Act-IV finale (Vael/Exile/Distortion) isn't
+  built, but the gates now have teeth as a roguelite EPILOGUE: clearing a descent triggers a
+  System verdict gated by LIFETIME Surveillance via `GameCorruption.endingsOpen` — clean play
+  (≤40) keeps the **true** ending open ("too clean to read… a way OUT"), ≤120 = **good**, else
+  **submit** (only SUBMIT remains). Stored as `meta.endingTier`. Browser-verified. Also wired the
+  meta **lore unlocks** (recall1/recall2) to reveal their buried-cycle memory text on purchase.
 
 ## P1 — combat & class balance (the sims' hit-list)
 - ✅ **Balance pass DONE (2026-06-18) — `validate_design` now ✅ MECHANICALLY SOUND** (was 🟡,
@@ -39,8 +43,13 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   hunter, archer (ranged), rogue (stealth), spellblade (magic), cleric (support), vanguard
   (tank). Marked with a ★ "Recommended start" badge + detail line in the creation screen.
   Browser-verified.
-- ⬜ **103/192 skills are INERT** (no combat/passive effect — pure data hooks). Wire the
-  ones the launch classes use; cut or defer the rest. `content_lint`/`dashboard`.
+- ✅ **Launch-class skills WIRED (2026-06-18).** Of the 38 skills the 12 launch classes use,
+  34 were already active; the 4 inert ones were world-utility (`track`/`set_snare`/`sneak`/
+  `pick_lock`) and are now reframed into combat-usable effects the engine supports — Track→mark,
+  Set Snare→slow, Sneak→self def-up, Pick Lock ("Find the Gap")→sunder. **0 inert among launch
+  classes**; verified they appear in the FIGHT menu. (The remaining ~99 globally-inert skills are
+  on non-launch classes — defer/cut later; the world-utility layer for track/sneak/etc. can be
+  re-added as a separate hook.)
 - 🟡 **Recovery economy — finding (2026-06-18): it is NOT the lever; untethered is meta-gated
   BY DESIGN.** Measured untethered (System-OFF, honest-skill) descents across recovery rates
   0→0.6: clear stays **0%, avg depth ~1/8 at every rate**. You die *inside* a fight at depth

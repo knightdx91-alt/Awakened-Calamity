@@ -590,7 +590,12 @@
             if (idx < 0 || idx >= avail.length) break;
             var node = avail[idx];
             var res = GameMeta.purchase(window._metaDb, st.meta, node.id);
-            if (res.ok) { if (GameSave.markDirty) GameSave.markDirty(); await _say('Recovered: ' + node.name + '.\n' + node.desc); }
+            if (res.ok) {
+                if (GameSave.markDirty) GameSave.markDirty();
+                await _say('Recovered: ' + node.name + '.\n' + node.desc);
+                // lore unlocks reveal a buried memory of the cycle (the loop's hook)
+                if (node.reveal) await _say(_subTokens(node.reveal));
+            }
             else await _say(res.reason === 'cost' ? 'Not enough fragments yet.' : 'You cannot recover that yet.');
         }
         if (GameSave.save) GameSave.save(GameSave.currentSlot || 0, st);
@@ -611,6 +616,23 @@
             : 'You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more.';
         await _say(_subTokens(msg));
         await _say('Memory fragments +' + r.summary.fragments + '  (total ' + r.summary.totalFragments + ' · deepest floor ' + (st.meta.deepest | 0) + ')');
+        // ENDING GATES: on a CLEAR, the System delivers its verdict — which of the
+        // four endings remain reachable, gated by your LIFETIME Surveillance. Clean
+        // (untethered / low-Surveillance) play keeps the true way out open; leaning on
+        // the System closes it, tilting you toward SUBMIT. This is the roguelite
+        // foreshadow of the Act-IV finale; the gates are GameCorruption.endingsOpen.
+        if (reason === 'cleared' && window.GameCorruption) {
+            await _loadCorrupt();
+            var lifeSurv = (st.meta.lifetimeSurveillance | 0);
+            var open = GameCorruption.endingsOpen(_corruptDb, lifeSurv);
+            var verdict = open['true']
+                ? 'SYSTEM: …anomaly. Your record is too clean to read. Something in you still remembers a way OUT. (The true ending remains open.)'
+                : open.good
+                ? 'SYSTEM: Compliance acceptable, [designation]. You are still mostly yourself — for now. (A good ending is still reachable; the true one has slipped away.)'
+                : 'SYSTEM: You lean on me so sweetly now. Soon there will be nothing left to reclaim. The cycle will keep you. (Only SUBMIT remains.)';
+            await _say(_subTokens(verdict + '\n[Lifetime Surveillance ' + lifeSurv + ']'));
+            st.meta.endingTier = open['true'] ? 'true' : open.good ? 'good' : 'submit';
+        }
         // opening tutorial: the FIRST descent's return reveals the cycle (advance the quest)
         if (window.GameQuests && st.quests && GameQuests.status(st.quests, 'awakening') === 'active'
             && GameQuests.stageIndex(st.quests, 'awakening') === 2) {

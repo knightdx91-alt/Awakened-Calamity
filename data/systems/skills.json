@@ -1,211 +1,2641 @@
 {
   "_meta": {
-    "note": "Skill library — Basic tier (in progress toward the full pool CLASSES.md §1.5 assembles from). Each class draws ~6-10, ~half unique. effect types implemented by the combat rules engine: power/heal/defUp/maxHp/evade/critUp. Other effect types (craft/gather/lockpick/social/etc.) are DATA HOOKS for systems built later (crafting, survival, social).",
+    "note": "Skill library \u2014 Basic tier (in progress toward the full pool CLASSES.md \u00a71.5 assembles from). Each class draws ~6-10, ~half unique. effect types implemented by the combat rules engine: power/heal/defUp/maxHp/evade/critUp. Other effect types (craft/gather/lockpick/social/etc.) are DATA HOOKS for systems built later (crafting, survival, social).",
     "kinds": "active | passive | reactive | utility"
   },
-
-  "strike":       { "name": "Strike",       "category": "combat",   "kind": "active",  "shared": true,  "power": 0.6,  "tempoCost": 300, "affinity": null,    "effect": null, "cost": { "mp": 0, "sp": 0 } },
-  "jab":          { "name": "Jab",          "category": "combat",   "kind": "active",  "shared": true,  "power": 0.85, "tempoCost": 320, "affinity": null,    "effect": null },
-  "heavy_strike": { "name": "Heavy Strike", "category": "combat",   "kind": "active",  "shared": false, "power": 1.7,  "tempoCost": 760, "affinity": null,    "effect": null },
-  "guard":        { "name": "Guard",        "category": "combat",   "kind": "active",  "shared": true,  "power": 0,    "tempoCost": 300, "affinity": null,    "effect": { "type": "defUp", "amount": 0.5, "turns": 2 } },
-  "toughness":    { "name": "Toughness",    "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "maxHp", "amount": 0.15 } },
-  "quick_shot":   { "name": "Quick Shot",   "category": "combat",   "kind": "active",  "shared": false, "power": 0.7,  "tempoCost": 270, "affinity": null,    "effect": null },
-  "backstab":     { "name": "Backstab",     "category": "combat",   "kind": "active",  "shared": false, "power": 1.45, "tempoCost": 470, "affinity": null,    "effect": { "type": "bonusVsUnaware", "amount": 0.6 } },
-  "evade":        { "name": "Evade",        "category": "combat",   "kind": "reactive","shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "evade", "chance": 0.22 } },
-  "keen_eye":     { "name": "Keen Eye",     "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "critUp", "amount": 0.1 } },
-  "sturdy":       { "name": "Sturdy",       "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "def", "amount": 0.1 } },
-  "light_step":   { "name": "Light Step",   "category": "combat",   "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "evade", "amount": 0.1 } },
-
-  "ember_bolt":   { "name": "Ember Bolt",   "category": "affinity", "kind": "active",  "shared": true,  "power": 1.25, "tempoCost": 520, "affinity": "ember", "effect": null },
-  "affinity_focus":{ "name":"Affinity Focus","category":"affinity", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "affinityPower", "amount": 0.15 } },
-  "mana_well":    { "name": "Mana Well",    "category": "affinity", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "resourceRegen", "amount": 0.1 } },
-
-  "mend":         { "name": "Mend",         "category": "survival", "kind": "active",  "shared": true,  "power": 0,    "tempoCost": 600, "affinity": "tide",  "effect": { "type": "heal", "amount": 0.35 } },
-  "first_aid":    { "name": "First Aid",    "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 420, "affinity": null,    "effect": { "type": "heal", "amount": 0.22 } },
-  "triage":       { "name": "Triage",       "category": "survival", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "healBoost", "amount": 0.2 } },
-  "trail_sense":  { "name": "Trail Sense",  "category": "survival", "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null,    "effect": { "type": "exposureResist", "amount": 0.2 } },
-
-  "forge":        { "name": "Forge",        "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "gear" } },
-  "repair":       { "name": "Repair",       "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "repair" } },
-  "brew":         { "name": "Brew",         "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "tonic" } },
-  "identify":     { "name": "Identify",     "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "identify" } },
-  "camp_craft":   { "name": "Camp Craft",   "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "campkit" } },
-  "steady_hands": { "name": "Steady Hands", "category": "crafting", "kind": "passive", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craftQuality", "amount": 0.15 } },
-
-  "forage":       { "name": "Forage",       "category": "gathering","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "gather", "tag": "food" } },
-  "gather_herb":  { "name": "Gather Herb",  "category": "gathering","kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "gather", "tag": "herb" } },
-  "track":        { "name": "Track",        "category": "gathering","kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "track" } },
-
-  "haggle":       { "name": "Haggle",       "category": "social",   "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "price", "amount": 0.12 } },
-  "appraise":     { "name": "Appraise",     "category": "social",   "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "appraise" } },
-  "network":      { "name": "Network",      "category": "social",   "kind": "passive", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "repGain", "amount": 0.15 } },
-  "persuade":     { "name": "Persuade",     "category": "social",   "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "social" } },
-
-  "sneak":        { "name": "Sneak",        "category": "espionage","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "stealth" } },
-  "pick_lock":    { "name": "Pick Lock",    "category": "espionage","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "lockpick" } },
-
-  "bind_focus":   { "name": "Bind Focus",   "category": "tamer",    "kind": "passive", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "bindChance", "amount": 0.2 } },
-  "beast_call":   { "name": "Beast Call",   "category": "tamer",    "kind": "active",  "shared": false, "power": 0, "tempoCost": 500, "affinity": null, "effect": { "type": "creatureAssist" } },
-  "pack_sense":   { "name": "Pack Sense",   "category": "tamer",    "kind": "passive", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "creatureBuff", "amount": 0.1 } },
-
-  "cleave":       { "name": "Cleave",       "category": "combat",   "kind": "active",  "shared": false, "power": 1.55, "tempoCost": 680, "affinity": null, "effect": { "type": "aoe", "splits": 0.5 } },
-  "bulwark":      { "name": "Bulwark",      "category": "combat",   "kind": "active",  "shared": false, "power": 0,    "tempoCost": 360, "affinity": null, "effect": { "type": "defUp", "amount": 0.8, "turns": 2 } },
-  "aimed_shot":   { "name": "Aimed Shot",   "category": "combat",   "kind": "active",  "shared": false, "power": 1.3,  "tempoCost": 560, "affinity": null, "effect": { "type": "critUp", "amount": 0.3 } },
-  "riposte":      { "name": "Riposte",      "category": "combat",   "kind": "reactive","shared": false, "power": 0.9,  "tempoCost": 0,   "affinity": null, "effect": { "type": "counter", "chance": 0.3 } },
-  "overcharge":   { "name": "Overcharge",   "category": "affinity", "kind": "active",  "shared": false, "power": 2.0,  "tempoCost": 900, "affinity": null, "effect": { "type": "selfCost", "amount": 0.1 } },
-  "ward":         { "name": "Ward",         "category": "affinity", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 400, "affinity": null, "effect": { "type": "exposureShield", "amount": 0.3 } },
-  "rally_beasts": { "name": "Rally Beasts", "category": "tamer",    "kind": "active",  "shared": false, "power": 0,    "tempoCost": 500, "affinity": null, "effect": { "type": "creatureBuff", "amount": 0.2 } },
-  "calm_aura":    { "name": "Calm Aura",    "category": "tamer",    "kind": "passive", "shared": true,  "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "bindChance", "amount": 0.15 } },
-  "temper":       { "name": "Temper",       "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craftQuality", "tag": "weapons", "amount": 0.2 } },
-  "panacea":      { "name": "Panacea",      "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "cure" } },
-  "coat_blade":   { "name": "Coat Blade",   "category": "crafting", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 300, "affinity": "toxin","effect": { "type": "applyToxin", "amount": 0.2 } },
-  "operate":      { "name": "Operate",      "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 700, "affinity": "tide", "effect": { "type": "heal", "amount": 0.5 } },
-  "stabilize":    { "name": "Stabilize",    "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 380, "affinity": null, "effect": { "type": "heal", "amount": 0.18 } },
-  "rare_find":    { "name": "Rare Find",    "category": "gathering","kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "yield", "tag": "rare", "amount": 0.2 } },
-  "set_snare":    { "name": "Set Snare",    "category": "gathering","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "trap" } },
-  "bulk_deal":    { "name": "Bulk Deal",    "category": "social",   "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "price", "amount": 0.2 } },
-  "broker_peace": { "name": "Broker Peace", "category": "social",   "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "diplomacy" } },
-  "pickpocket":   { "name": "Pickpocket",   "category": "espionage","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "steal" } },
-  "garrote":      { "name": "Garrote",      "category": "espionage","kind": "active",  "shared": false, "power": 1.8,  "tempoCost": 620, "affinity": null, "effect": { "type": "bonusVsUnaware", "amount": 1.0 } },
-  "taunt":        { "name": "Taunt",        "category": "combat",   "kind": "active",  "shared": false, "power": 0,    "tempoCost": 280, "affinity": null, "effect": { "type": "taunt", "turns": 2 } },
-  "intercept":    { "name": "Intercept",    "category": "combat",   "kind": "reactive","shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "guardAlly", "amount": 0.5 } },
-  "ground_slam":  { "name": "Ground Slam",  "category": "combat",   "kind": "active",  "shared": false, "power": 1.2,  "tempoCost": 640, "affinity": "stone","effect": { "type": "aoe", "splits": 0.6 } },
-  "cook":         { "name": "Cook",         "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "food" } },
-  "banquet":      { "name": "Banquet",      "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "buff_meal" } },
-  "preserve":     { "name": "Preserve",     "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "ration" } },
-  "deploy_turret":{ "name": "Deploy Turret","category": "combat",   "kind": "active",  "shared": false, "power": 0.9,  "tempoCost": 720, "affinity": null, "effect": { "type": "summon", "tag": "turret" } },
-  "tinker":       { "name": "Tinker",       "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "gadget" } },
-  "twin_mount":   { "name": "Twin Mount",   "category": "combat",   "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "summonPower", "tag": "turret", "amount": 0.18 } },
-  "charge_bomb":  { "name": "Charge Bomb",  "category": "combat",   "kind": "active",  "shared": false, "power": 1.6,  "tempoCost": 700, "affinity": "storm","effect": { "type": "aoe", "splits": 0.7 } },
-  "decrypt":      { "name": "Decrypt",      "category": "espionage","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "decrypt" } },
-  "break_seal":   { "name": "Break Seal",   "category": "espionage","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "decrypt", "tier": "high" } },
-  "appraise_relic":{ "name":"Appraise Relic","category":"social",   "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "appraise", "tag": "relic" } },
-  "mark_prey":    { "name": "Mark Prey",    "category": "combat",   "kind": "active",  "shared": false, "power": 0,    "tempoCost": 300, "affinity": null, "effect": { "type": "markTarget", "amount": 0.18 } },
-  "pin_shot":     { "name": "Pin Shot",     "category": "combat",   "kind": "active",  "shared": false, "power": 0.95, "tempoCost": 480, "affinity": null, "effect": { "type": "slow", "amount": 0.25 } },
-  "parley":       { "name": "Parley",       "category": "social",   "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "diplomacy", "tag": "nonhuman" } },
-  "rouse":        { "name": "Rouse",        "category": "social",   "kind": "active",  "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "influence", "tag": "crowd" } },
-  "rally_aura":   { "name": "Rally Aura",   "category": "affinity", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": "lumen","effect": { "type": "partyBuff", "amount": 0.1 } },
-  "battle_hymn":  { "name": "Battle Hymn",  "category": "affinity", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 520, "affinity": "lumen","effect": { "type": "partyBuff", "tag": "offense", "amount": 0.18 } },
-  "guardian_chord":{ "name":"Guardian Chord","category":"affinity", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 520, "affinity": "lumen","effect": { "type": "partyBuff", "tag": "defense", "amount": 0.18 } },
-  "mine":         { "name": "Mine",         "category": "gathering","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "gather", "tag": "ore" } },
-  "vein_sense":   { "name": "Vein Sense",   "category": "gathering","kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "detect", "tag": "ore" } },
-  "shore_up":     { "name": "Shore Up",     "category": "survival", "kind": "active",  "shared": false, "power": 0,    "tempoCost": 400, "affinity": "stone","effect": { "type": "defUp", "amount": 0.4, "turns": 3 } },
-  "fish":         { "name": "Fish",         "category": "gathering","kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "gather", "tag": "fish" } },
-  "big_haul":     { "name": "Big Haul",     "category": "gathering","kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "yield", "tag": "fish", "amount": 0.2 } },
-  "steady_keel":  { "name": "Steady Keel",  "category": "survival", "kind": "passive", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "exposureResist", "tag": "water", "amount": 0.2 } },
-  "inscribe":     { "name": "Inscribe",     "category": "crafting", "kind": "utility", "shared": false, "power": 0,    "tempoCost": 0,   "affinity": null, "effect": { "type": "craft", "tag": "rune" }, "tags": ["rune","inscription"], "selfTeachable": true, "toolRequired": "rune_chisel" },
-
-  "_comment_smith_tree": "Skills for the full Smith lineage (CLASSES.md Smith tree). High-tier forge signatures are selfTeachable:false (class-only). tags[] feed evolution requires; toolRequired enables self-teach (SKILLS.md §1.5).",
-  "forge_weapon":  { "name": "Forge Weapon",  "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "ember", "effect": { "type": "craft", "tag": "weapon" }, "tags": ["smithing","weapons"], "selfTeachable": true, "toolRequired": "anvil" },
-  "forge_armor":   { "name": "Forge Armor",   "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "armor" }, "tags": ["smithing","armor"], "selfTeachable": true, "toolRequired": "anvil" },
-  "bind_rune":     { "name": "Bind Rune",     "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "umbral", "effect": { "type": "craft", "tag": "rune" }, "tags": ["rune","inscription"], "selfTeachable": true, "toolRequired": "rune_chisel" },
-  "fold_steel":    { "name": "Fold Steel",    "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "ember", "effect": { "type": "craftQuality", "tag": "edged", "amount": 0.2 }, "tags": ["weapons","edged"], "selfTeachable": true, "toolRequired": "anvil" },
-  "forge_maul":    { "name": "Forge Maul",    "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "heavy_weapon" }, "tags": ["weapons","heavy"], "selfTeachable": true, "toolRequired": "anvil" },
-  "forge_plate":   { "name": "Forge Plate",   "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "heavy_armor" }, "tags": ["armor","heavy"], "selfTeachable": true, "toolRequired": "anvil" },
-  "weave_mail":    { "name": "Weave Mail",    "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "storm", "effect": { "type": "craft", "tag": "light_armor" }, "tags": ["armor","light"], "selfTeachable": true, "toolRequired": "anvil" },
-  "etch_glyph":    { "name": "Etch Glyph",    "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "umbral", "effect": { "type": "craft", "tag": "offense_rune" }, "tags": ["rune","offense"], "selfTeachable": false, "toolRequired": "rune_chisel" },
-  "etch_ward":     { "name": "Etch Ward",     "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "lumen", "effect": { "type": "craft", "tag": "defense_rune" }, "tags": ["rune","defense"], "selfTeachable": false, "toolRequired": "rune_chisel" },
-  "perfect_edge":  { "name": "Perfect Edge",  "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "ember", "effect": { "type": "craftQuality", "tag": "edged", "amount": 0.35 }, "tags": ["weapons","edged"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "forge_siege":   { "name": "Forge Siege",   "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "siege" }, "tags": ["weapons","heavy","siege"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "forge_aegis":   { "name": "Forge Aegis",   "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "greatshield" }, "tags": ["armor","heavy"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "work_mithril":  { "name": "Work Mithril",  "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "storm", "effect": { "type": "craft", "tag": "exotic_armor" }, "tags": ["armor","light","exotic"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "forge_runeblade":{ "name": "Forge Runeblade","category": "crafting","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "umbral", "effect": { "type": "craft", "tag": "runeblade" }, "tags": ["weapons","rune"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "weave_wardplate":{ "name":"Weave Wardplate","category": "crafting","kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "lumen", "effect": { "type": "craft", "tag": "wardplate" }, "tags": ["armor","rune"], "selfTeachable": false, "toolRequired": "masterforge" },
-  "storm_temper":  { "name": "Storm Temper",  "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "storm", "effect": { "type": "craft", "tag": "storm_weapon" }, "tags": ["weapons","storm"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "warforge":      { "name": "Warforge",      "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "ember", "effect": { "type": "craft", "tag": "warmachine" }, "tags": ["weapons","heavy"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "bulwark_forge": { "name": "Bulwark Forge", "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "fortress_armor" }, "tags": ["armor","heavy"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "work_starmetal":{ "name":"Work Starmetal", "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "storm", "effect": { "type": "craft", "tag": "starmetal" }, "tags": ["armor","exotic"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "soul_etch":     { "name": "Soul Etch",     "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "umbral", "effect": { "type": "craft", "tag": "soulrune" }, "tags": ["rune","umbral"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "ward_forge":    { "name": "Ward Forge",    "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "lumen", "effect": { "type": "craft", "tag": "wardrelic" }, "tags": ["armor","rune","lumen"], "selfTeachable": false, "toolRequired": "stormforge" },
-  "forge_calamity":{ "name": "Forge Calamity","category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "ember", "effect": { "type": "craft", "tag": "calamity_arm" }, "tags": ["weapons","legendary"], "selfTeachable": false, "toolRequired": "worldanvil" },
-  "world_anvil":   { "name": "World Anvil",   "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": "stone", "effect": { "type": "craft", "tag": "aegis_legendary" }, "tags": ["armor","legendary"], "selfTeachable": false, "toolRequired": "worldanvil" },
-  "forge_system_relic":{ "name":"Forge System Relic","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":"umbral","effect":{ "type":"craft","tag":"system_relic" }, "tags": ["rune","system","legendary"], "selfTeachable": false, "toolRequired": "worldanvil" },
-  "unmake":        { "name": "Unmake",        "category": "crafting", "kind": "active",  "shared": false, "power": 1.4, "tempoCost": 700, "affinity": "corruption", "effect": { "type": "sunder", "amount": 0.3 }, "tags": ["corruption","untethered"], "selfTeachable": false, "toolRequired": null },
-
-  "_comment_leather": "Hide/leather line — the canonical self-teach example (knife -> skinning). Leatherworker base class crafts leather/hide armor (CLASSES.md crafter family).",
-  "skin":          { "name": "Skin / Butcher","category": "gathering","kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "gather", "tag": "hide" }, "tags": ["hide","butchering"], "selfTeachable": true, "untrainedPenalty": 0.6, "toolRequired": "knife" },
-  "tan":           { "name": "Tan Hide",      "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "leather" }, "tags": ["leather","tanning"], "selfTeachable": true, "untrainedPenalty": 0.5, "toolRequired": "tanning_rack" },
-  "work_leather":  { "name": "Work Leather",  "category": "crafting", "kind": "utility", "shared": false, "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "leather_armor" }, "tags": ["leather","armor"], "selfTeachable": true, "untrainedPenalty": 0.5, "toolRequired": "leather_tools" },
-  "stitch":        { "name": "Stitch",        "category": "crafting", "kind": "utility", "shared": true,  "power": 0, "tempoCost": 0, "affinity": null, "effect": { "type": "craft", "tag": "cloth" }, "tags": ["leather","cloth"], "selfTeachable": true, "untrainedPenalty": 0.4, "toolRequired": "needle" },
-
-  "flurry": {"name":"Flurry","category":"combat","kind":"active","shared":false,"power":1.1,"tempoCost":520,"affinity":null,"effect":null},
-  "palm_strike": {"name":"Palm Strike","category":"combat","kind":"active","shared":false,"power":1,"tempoCost":480,"affinity":null,"effect":null},
-  "pierce": {"name":"Pierce","category":"combat","kind":"active","shared":false,"power":1.2,"tempoCost":600,"affinity":null,"effect":{"type":"sunder","amount":0.25,"turns":2}},
-  "reach_strike": {"name":"Reach Strike","category":"combat","kind":"active","shared":false,"power":0.9,"tempoCost":460,"affinity":null,"effect":null},
-  "lunge": {"name":"Lunge","category":"combat","kind":"active","shared":false,"power":1.3,"tempoCost":640,"affinity":null,"effect":null},
-  "parry": {"name":"Parry","category":"combat","kind":"reactive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"counter","amount":0.5}},
-  "volley": {"name":"Volley","category":"combat","kind":"active","shared":false,"power":0.7,"tempoCost":720,"affinity":null,"effect":{"type":"aoe"}},
-  "rapid_draw": {"name":"Rapid Draw","category":"combat","kind":"active","shared":false,"power":0.7,"tempoCost":240,"affinity":null,"effect":null},
-  "shield_bash": {"name":"Shield Bash","category":"combat","kind":"active","shared":false,"power":0.6,"tempoCost":420,"affinity":null,"effect":{"type":"slow","amount":0.3,"turns":2}},
-  "spell_strike": {"name":"Spell Strike","category":"combat","kind":"active","shared":false,"power":1,"tempoCost":520,"affinity":"storm","effect":null},
-  "arcane_edge": {"name":"Arcane Edge","category":"combat","kind":"active","shared":false,"power":1.1,"tempoCost":560,"affinity":"umbral","effect":null},
-  "ki_focus": {"name":"Ki Focus","category":"combat","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"critUp","amount":0.1}},
-  "meditate": {"name":"Meditate","category":"survival","kind":"active","shared":false,"power":0,"tempoCost":700,"affinity":"lumen","effect":{"type":"heal","amount":0.3}},
-  "swoop": {"name":"Swoop","category":"combat","kind":"active","shared":false,"power":0.9,"tempoCost":440,"affinity":null,"effect":null},
-  "mount_charge": {"name":"Mounted Charge","category":"combat","kind":"active","shared":false,"power":1.2,"tempoCost":620,"affinity":null,"effect":null},
-  "trample": {"name":"Trample","category":"combat","kind":"active","shared":false,"power":0.8,"tempoCost":700,"affinity":null,"effect":{"type":"aoe"}},
-  "plant_charge": {"name":"Plant Charge","category":"combat","kind":"active","shared":false,"power":1.4,"tempoCost":760,"affinity":"ember","effect":null},
-  "command_beast": {"name":"Command Beast","category":"combat","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"beast"}},
-  "feral_bond": {"name":"Feral Bond","category":"combat","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"maxHp","amount":0.1}},
-  "scout_flight": {"name":"Scout Flight","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"scout"}},
-  "bless": {"name":"Bless","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":520,"affinity":"lumen","effect":{"type":"partyBuff","stat":"def","amount":0.2,"turns":3}},
-  "sanctuary": {"name":"Sanctuary","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":560,"affinity":"lumen","effect":{"type":"defUp","amount":0.6,"turns":2}},
-  "spirit_call": {"name":"Spirit Call","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":560,"affinity":"verdant","effect":{"type":"partyBuff","stat":"atk","amount":0.15,"turns":3}},
-  "totem": {"name":"Totem","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":600,"affinity":"stone","effect":{"type":"partyBuff","stat":"def","amount":0.2,"turns":3}},
-  "inspire": {"name":"Inspire","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":480,"affinity":null,"effect":{"type":"partyBuff","stat":"atk","amount":0.1,"turns":3}},
-  "salve": {"name":"Salve","category":"survival","kind":"active","shared":false,"power":0,"tempoCost":560,"affinity":"tide","effect":{"type":"heal","amount":0.3}},
-  "endure": {"name":"Endure","category":"survival","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"maxHp","amount":0.15}},
-  "self_reliance": {"name":"Self-Reliance","category":"survival","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"maxHp","amount":0.1}},
-  "arcane_theory": {"name":"Arcane Theory","category":"scholar","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"critUp","amount":0.08}},
-  "foresee": {"name":"Foresee","category":"scholar","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"evade","amount":0.1}},
-  "carve": {"name":"Carve","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"wood"}},
-  "build": {"name":"Build","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"structure"}},
-  "sew": {"name":"Sew","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"cloth"}},
-  "weave_cloth": {"name":"Weave Cloth","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"cloth"}},
-  "set_gem": {"name":"Set Gem","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"jewel"}},
-  "enchant_trinket": {"name":"Enchant Trinket","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"trinket"}},
-  "lay_stone": {"name":"Lay Stone","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"stone"}},
-  "fletch": {"name":"Fletch","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"ammo"}},
-  "string_bow": {"name":"String Bow","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"bow"}},
-  "decoct": {"name":"Decoct","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"tonic"}},
-  "navigate": {"name":"Navigate","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"navigate"}},
-  "weather_sense": {"name":"Weather Sense","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"sense","tag":"weather"}},
-  "wild_lore": {"name":"Wild Lore","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"lore","tag":"wild"}},
-  "perform": {"name":"Perform","category":"social","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"social","tag":"crowd"}},
-  "rally_crowd": {"name":"Rally Crowd","category":"social","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"social","tag":"rally"}},
-  "sabotage": {"name":"Sabotage","category":"espionage","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"sabotage"}},
-  "infiltrate": {"name":"Infiltrate","category":"espionage","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"stealth","tag":"infiltrate"}},
-  "disguise": {"name":"Disguise","category":"espionage","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"stealth","tag":"disguise"}},
-  "research": {"name":"Research","category":"scholar","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"study"}},
-  "star_read": {"name":"Star-Read","category":"scholar","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"divine"}},
-  "chop_wood": {"name":"Chop Wood","category":"gathering","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"gather","tag":"wood"}},
-  "fell_tree": {"name":"Fell Tree","category":"gathering","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"gather","tag":"wood"}},
-  "harvest": {"name":"Harvest","category":"gathering","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"gather","tag":"crop"}},
-  "cultivate": {"name":"Cultivate","category":"gathering","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"gather","tag":"crop"}},
-
-  "smite": {"name":"Smite","category":"combat","kind":"active","shared":false,"power":1.4,"tempoCost":640,"affinity":"lumen","effect":null},
-  "lay_on_hands": {"name":"Lay on Hands","category":"survival","kind":"active","shared":false,"power":0,"tempoCost":800,"affinity":"lumen","effect":{"type":"heal","amount":0.5}},
-  "oath_guard": {"name":"Oath Guard","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":560,"affinity":"lumen","effect":{"type":"partyBuff","stat":"def","amount":0.25,"turns":3}},
-  "rampage": {"name":"Rampage","category":"combat","kind":"active","shared":false,"power":1.6,"tempoCost":820,"affinity":"ember","effect":null},
-  "bloodlust": {"name":"Bloodlust","category":"combat","kind":"passive","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"critUp","amount":0.12}},
-  "fireball": {"name":"Fireball","category":"combat","kind":"active","shared":false,"power":1.3,"tempoCost":700,"affinity":"ember","effect":{"type":"aoe"}},
-  "immolate": {"name":"Immolate","category":"combat","kind":"active","shared":false,"power":0.6,"tempoCost":600,"affinity":"ember","effect":{"type":"applyToxin","amount":0.12,"turns":3}},
-  "soul_tether": {"name":"Soul Tether","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":560,"affinity":"umbral","effect":{"type":"mark","amount":0.15,"turns":3}},
-  "venom_brew": {"name":"Venom Brew","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"poison"}},
-  "diagnose": {"name":"Diagnose","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"study","tag":"medical"}},
-  "field_dressing": {"name":"Field Dressing","category":"survival","kind":"active","shared":false,"power":0,"tempoCost":600,"affinity":"tide","effect":{"type":"heal","amount":0.4}},
-  "blaze_trail": {"name":"Blaze Trail","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"navigate","tag":"trail"}},
-  "arbitrage": {"name":"Arbitrage","category":"social","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"social","tag":"trade"}},
-  "treaty": {"name":"Treaty","category":"social","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"social","tag":"treaty"}},
-  "shadowstep": {"name":"Shadowstep","category":"combat","kind":"active","shared":false,"power":1,"tempoCost":300,"affinity":"umbral","effect":{"type":"bonusVsUnaware","amount":0.5}},
-  "assassinate": {"name":"Assassinate","category":"combat","kind":"active","shared":false,"power":2.2,"tempoCost":1000,"affinity":"umbral","effect":{"type":"bonusVsUnaware","amount":0.6}},
-  "fortify": {"name":"Fortify","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":520,"affinity":"stone","effect":{"type":"defUp","amount":0.6,"turns":3}},
-  "gourmet": {"name":"Gourmet","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"feast"}},
-  "imbue": {"name":"Imbue","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"imbue"}},
-  "catalog": {"name":"Catalog","category":"scholar","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"study","tag":"archive"}},
-  "monster_lore": {"name":"Monster Lore","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":360,"affinity":null,"effect":{"type":"mark","amount":0.2,"turns":3}},
-  "crescendo": {"name":"Crescendo","category":"combat","kind":"active","shared":false,"power":0,"tempoCost":640,"affinity":"storm","effect":{"type":"partyBuff","stat":"atk","amount":0.2,"turns":3}},
-  "excavate": {"name":"Excavate","category":"gathering","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"gather","tag":"ore"}},
-  "chart_course": {"name":"Chart Course","category":"survival","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"navigate","tag":"sea"}},
-  "fit_gear": {"name":"Fit Gear","category":"crafting","kind":"utility","shared":false,"power":0,"tempoCost":0,"affinity":null,"effect":{"type":"craft","tag":"outfit"}}
+  "strike": {
+    "name": "Strike",
+    "category": "combat",
+    "kind": "active",
+    "shared": true,
+    "power": 0.6,
+    "tempoCost": 300,
+    "affinity": null,
+    "effect": null,
+    "cost": {
+      "mp": 0,
+      "sp": 0
+    }
+  },
+  "jab": {
+    "name": "Jab",
+    "category": "combat",
+    "kind": "active",
+    "shared": true,
+    "power": 0.85,
+    "tempoCost": 320,
+    "affinity": null,
+    "effect": null
+  },
+  "heavy_strike": {
+    "name": "Heavy Strike",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.7,
+    "tempoCost": 760,
+    "affinity": null,
+    "effect": null
+  },
+  "guard": {
+    "name": "Guard",
+    "category": "combat",
+    "kind": "active",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 300,
+    "affinity": null,
+    "effect": {
+      "type": "defUp",
+      "amount": 0.5,
+      "turns": 2
+    }
+  },
+  "toughness": {
+    "name": "Toughness",
+    "category": "combat",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "maxHp",
+      "amount": 0.15
+    }
+  },
+  "quick_shot": {
+    "name": "Quick Shot",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.7,
+    "tempoCost": 270,
+    "affinity": null,
+    "effect": null
+  },
+  "backstab": {
+    "name": "Backstab",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.45,
+    "tempoCost": 470,
+    "affinity": null,
+    "effect": {
+      "type": "bonusVsUnaware",
+      "amount": 0.6
+    }
+  },
+  "evade": {
+    "name": "Evade",
+    "category": "combat",
+    "kind": "reactive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "evade",
+      "chance": 0.22
+    }
+  },
+  "keen_eye": {
+    "name": "Keen Eye",
+    "category": "combat",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "critUp",
+      "amount": 0.1
+    }
+  },
+  "sturdy": {
+    "name": "Sturdy",
+    "category": "combat",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "def",
+      "amount": 0.1
+    }
+  },
+  "light_step": {
+    "name": "Light Step",
+    "category": "combat",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "evade",
+      "amount": 0.1
+    }
+  },
+  "ember_bolt": {
+    "name": "Ember Bolt",
+    "category": "affinity",
+    "kind": "active",
+    "shared": true,
+    "power": 1.25,
+    "tempoCost": 520,
+    "affinity": "ember",
+    "effect": null
+  },
+  "affinity_focus": {
+    "name": "Affinity Focus",
+    "category": "affinity",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "affinityPower",
+      "amount": 0.15
+    }
+  },
+  "mana_well": {
+    "name": "Mana Well",
+    "category": "affinity",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "resourceRegen",
+      "amount": 0.1
+    }
+  },
+  "mend": {
+    "name": "Mend",
+    "category": "survival",
+    "kind": "active",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 600,
+    "affinity": "tide",
+    "effect": {
+      "type": "heal",
+      "amount": 0.35
+    }
+  },
+  "first_aid": {
+    "name": "First Aid",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 420,
+    "affinity": null,
+    "effect": {
+      "type": "heal",
+      "amount": 0.22
+    }
+  },
+  "triage": {
+    "name": "Triage",
+    "category": "survival",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "healBoost",
+      "amount": 0.2
+    }
+  },
+  "trail_sense": {
+    "name": "Trail Sense",
+    "category": "survival",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "exposureResist",
+      "amount": 0.2
+    }
+  },
+  "forge": {
+    "name": "Forge",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "gear"
+    }
+  },
+  "repair": {
+    "name": "Repair",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "repair"
+    }
+  },
+  "brew": {
+    "name": "Brew",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "tonic"
+    }
+  },
+  "identify": {
+    "name": "Identify",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "identify"
+    }
+  },
+  "camp_craft": {
+    "name": "Camp Craft",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "campkit"
+    }
+  },
+  "steady_hands": {
+    "name": "Steady Hands",
+    "category": "crafting",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craftQuality",
+      "amount": 0.15
+    }
+  },
+  "forage": {
+    "name": "Forage",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "food"
+    }
+  },
+  "gather_herb": {
+    "name": "Gather Herb",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "herb"
+    }
+  },
+  "track": {
+    "name": "Track",
+    "category": "gathering",
+    "kind": "active",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 1.0,
+    "affinity": null,
+    "effect": {
+      "type": "markTarget",
+      "amount": 0.2,
+      "turns": 3
+    },
+    "desc": "Read your quarry's movements \u2014 it takes more damage (mark)."
+  },
+  "haggle": {
+    "name": "Haggle",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "price",
+      "amount": 0.12
+    }
+  },
+  "appraise": {
+    "name": "Appraise",
+    "category": "social",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "appraise"
+    }
+  },
+  "network": {
+    "name": "Network",
+    "category": "social",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "repGain",
+      "amount": 0.15
+    }
+  },
+  "persuade": {
+    "name": "Persuade",
+    "category": "social",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "social"
+    }
+  },
+  "sneak": {
+    "name": "Sneak",
+    "category": "espionage",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 1.0,
+    "affinity": null,
+    "effect": {
+      "type": "defUp",
+      "amount": 0.4,
+      "turns": 2
+    },
+    "desc": "Slip out of sight \u2014 you become harder to strike (def up)."
+  },
+  "pick_lock": {
+    "name": "Find the Gap",
+    "category": "espionage",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 1.0,
+    "affinity": null,
+    "effect": {
+      "type": "sunder",
+      "amount": 0.3,
+      "turns": 3
+    },
+    "desc": "Pick apart its guard \u2014 armor sundered."
+  },
+  "bind_focus": {
+    "name": "Bind Focus",
+    "category": "tamer",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "bindChance",
+      "amount": 0.2
+    }
+  },
+  "beast_call": {
+    "name": "Beast Call",
+    "category": "tamer",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 500,
+    "affinity": null,
+    "effect": {
+      "type": "creatureAssist"
+    }
+  },
+  "pack_sense": {
+    "name": "Pack Sense",
+    "category": "tamer",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "creatureBuff",
+      "amount": 0.1
+    }
+  },
+  "cleave": {
+    "name": "Cleave",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.55,
+    "tempoCost": 680,
+    "affinity": null,
+    "effect": {
+      "type": "aoe",
+      "splits": 0.5
+    }
+  },
+  "bulwark": {
+    "name": "Bulwark",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 360,
+    "affinity": null,
+    "effect": {
+      "type": "defUp",
+      "amount": 0.8,
+      "turns": 2
+    }
+  },
+  "aimed_shot": {
+    "name": "Aimed Shot",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.3,
+    "tempoCost": 560,
+    "affinity": null,
+    "effect": {
+      "type": "critUp",
+      "amount": 0.3
+    }
+  },
+  "riposte": {
+    "name": "Riposte",
+    "category": "combat",
+    "kind": "reactive",
+    "shared": false,
+    "power": 0.9,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "counter",
+      "chance": 0.3
+    }
+  },
+  "overcharge": {
+    "name": "Overcharge",
+    "category": "affinity",
+    "kind": "active",
+    "shared": false,
+    "power": 2.0,
+    "tempoCost": 900,
+    "affinity": null,
+    "effect": {
+      "type": "selfCost",
+      "amount": 0.1
+    }
+  },
+  "ward": {
+    "name": "Ward",
+    "category": "affinity",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 400,
+    "affinity": null,
+    "effect": {
+      "type": "exposureShield",
+      "amount": 0.3
+    }
+  },
+  "rally_beasts": {
+    "name": "Rally Beasts",
+    "category": "tamer",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 500,
+    "affinity": null,
+    "effect": {
+      "type": "creatureBuff",
+      "amount": 0.2
+    }
+  },
+  "calm_aura": {
+    "name": "Calm Aura",
+    "category": "tamer",
+    "kind": "passive",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "bindChance",
+      "amount": 0.15
+    }
+  },
+  "temper": {
+    "name": "Temper",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craftQuality",
+      "tag": "weapons",
+      "amount": 0.2
+    }
+  },
+  "panacea": {
+    "name": "Panacea",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "cure"
+    }
+  },
+  "coat_blade": {
+    "name": "Coat Blade",
+    "category": "crafting",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 300,
+    "affinity": "toxin",
+    "effect": {
+      "type": "applyToxin",
+      "amount": 0.2
+    }
+  },
+  "operate": {
+    "name": "Operate",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 700,
+    "affinity": "tide",
+    "effect": {
+      "type": "heal",
+      "amount": 0.5
+    }
+  },
+  "stabilize": {
+    "name": "Stabilize",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 380,
+    "affinity": null,
+    "effect": {
+      "type": "heal",
+      "amount": 0.18
+    }
+  },
+  "rare_find": {
+    "name": "Rare Find",
+    "category": "gathering",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "yield",
+      "tag": "rare",
+      "amount": 0.2
+    }
+  },
+  "set_snare": {
+    "name": "Set Snare",
+    "category": "gathering",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 1.0,
+    "affinity": null,
+    "effect": {
+      "type": "slow",
+      "amount": 0.3,
+      "turns": 3
+    },
+    "desc": "Snare the target's footing \u2014 it slows."
+  },
+  "bulk_deal": {
+    "name": "Bulk Deal",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "price",
+      "amount": 0.2
+    }
+  },
+  "broker_peace": {
+    "name": "Broker Peace",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "diplomacy"
+    }
+  },
+  "pickpocket": {
+    "name": "Pickpocket",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "steal"
+    }
+  },
+  "garrote": {
+    "name": "Garrote",
+    "category": "espionage",
+    "kind": "active",
+    "shared": false,
+    "power": 1.8,
+    "tempoCost": 620,
+    "affinity": null,
+    "effect": {
+      "type": "bonusVsUnaware",
+      "amount": 1.0
+    }
+  },
+  "taunt": {
+    "name": "Taunt",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 280,
+    "affinity": null,
+    "effect": {
+      "type": "taunt",
+      "turns": 2
+    }
+  },
+  "intercept": {
+    "name": "Intercept",
+    "category": "combat",
+    "kind": "reactive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "guardAlly",
+      "amount": 0.5
+    }
+  },
+  "ground_slam": {
+    "name": "Ground Slam",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.2,
+    "tempoCost": 640,
+    "affinity": "stone",
+    "effect": {
+      "type": "aoe",
+      "splits": 0.6
+    }
+  },
+  "cook": {
+    "name": "Cook",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "food"
+    }
+  },
+  "banquet": {
+    "name": "Banquet",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "buff_meal"
+    }
+  },
+  "preserve": {
+    "name": "Preserve",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "ration"
+    }
+  },
+  "deploy_turret": {
+    "name": "Deploy Turret",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.9,
+    "tempoCost": 720,
+    "affinity": null,
+    "effect": {
+      "type": "summon",
+      "tag": "turret"
+    }
+  },
+  "tinker": {
+    "name": "Tinker",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "gadget"
+    }
+  },
+  "twin_mount": {
+    "name": "Twin Mount",
+    "category": "combat",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "summonPower",
+      "tag": "turret",
+      "amount": 0.18
+    }
+  },
+  "charge_bomb": {
+    "name": "Charge Bomb",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.6,
+    "tempoCost": 700,
+    "affinity": "storm",
+    "effect": {
+      "type": "aoe",
+      "splits": 0.7
+    }
+  },
+  "decrypt": {
+    "name": "Decrypt",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "decrypt"
+    }
+  },
+  "break_seal": {
+    "name": "Break Seal",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "decrypt",
+      "tier": "high"
+    }
+  },
+  "appraise_relic": {
+    "name": "Appraise Relic",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "appraise",
+      "tag": "relic"
+    }
+  },
+  "mark_prey": {
+    "name": "Mark Prey",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 300,
+    "affinity": null,
+    "effect": {
+      "type": "markTarget",
+      "amount": 0.18
+    }
+  },
+  "pin_shot": {
+    "name": "Pin Shot",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.95,
+    "tempoCost": 480,
+    "affinity": null,
+    "effect": {
+      "type": "slow",
+      "amount": 0.25
+    }
+  },
+  "parley": {
+    "name": "Parley",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "diplomacy",
+      "tag": "nonhuman"
+    }
+  },
+  "rouse": {
+    "name": "Rouse",
+    "category": "social",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "influence",
+      "tag": "crowd"
+    }
+  },
+  "rally_aura": {
+    "name": "Rally Aura",
+    "category": "affinity",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "lumen",
+    "effect": {
+      "type": "partyBuff",
+      "amount": 0.1
+    }
+  },
+  "battle_hymn": {
+    "name": "Battle Hymn",
+    "category": "affinity",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 520,
+    "affinity": "lumen",
+    "effect": {
+      "type": "partyBuff",
+      "tag": "offense",
+      "amount": 0.18
+    }
+  },
+  "guardian_chord": {
+    "name": "Guardian Chord",
+    "category": "affinity",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 520,
+    "affinity": "lumen",
+    "effect": {
+      "type": "partyBuff",
+      "tag": "defense",
+      "amount": 0.18
+    }
+  },
+  "mine": {
+    "name": "Mine",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "ore"
+    }
+  },
+  "vein_sense": {
+    "name": "Vein Sense",
+    "category": "gathering",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "detect",
+      "tag": "ore"
+    }
+  },
+  "shore_up": {
+    "name": "Shore Up",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 400,
+    "affinity": "stone",
+    "effect": {
+      "type": "defUp",
+      "amount": 0.4,
+      "turns": 3
+    }
+  },
+  "fish": {
+    "name": "Fish",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "fish"
+    }
+  },
+  "big_haul": {
+    "name": "Big Haul",
+    "category": "gathering",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "yield",
+      "tag": "fish",
+      "amount": 0.2
+    }
+  },
+  "steady_keel": {
+    "name": "Steady Keel",
+    "category": "survival",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "exposureResist",
+      "tag": "water",
+      "amount": 0.2
+    }
+  },
+  "inscribe": {
+    "name": "Inscribe",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "rune"
+    },
+    "tags": [
+      "rune",
+      "inscription"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "rune_chisel"
+  },
+  "_comment_smith_tree": "Skills for the full Smith lineage (CLASSES.md Smith tree). High-tier forge signatures are selfTeachable:false (class-only). tags[] feed evolution requires; toolRequired enables self-teach (SKILLS.md \u00a71.5).",
+  "forge_weapon": {
+    "name": "Forge Weapon",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "ember",
+    "effect": {
+      "type": "craft",
+      "tag": "weapon"
+    },
+    "tags": [
+      "smithing",
+      "weapons"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "forge_armor": {
+    "name": "Forge Armor",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "armor"
+    },
+    "tags": [
+      "smithing",
+      "armor"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "bind_rune": {
+    "name": "Bind Rune",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "umbral",
+    "effect": {
+      "type": "craft",
+      "tag": "rune"
+    },
+    "tags": [
+      "rune",
+      "inscription"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "rune_chisel"
+  },
+  "fold_steel": {
+    "name": "Fold Steel",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "ember",
+    "effect": {
+      "type": "craftQuality",
+      "tag": "edged",
+      "amount": 0.2
+    },
+    "tags": [
+      "weapons",
+      "edged"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "forge_maul": {
+    "name": "Forge Maul",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "heavy_weapon"
+    },
+    "tags": [
+      "weapons",
+      "heavy"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "forge_plate": {
+    "name": "Forge Plate",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "heavy_armor"
+    },
+    "tags": [
+      "armor",
+      "heavy"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "weave_mail": {
+    "name": "Weave Mail",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "storm",
+    "effect": {
+      "type": "craft",
+      "tag": "light_armor"
+    },
+    "tags": [
+      "armor",
+      "light"
+    ],
+    "selfTeachable": true,
+    "toolRequired": "anvil"
+  },
+  "etch_glyph": {
+    "name": "Etch Glyph",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "umbral",
+    "effect": {
+      "type": "craft",
+      "tag": "offense_rune"
+    },
+    "tags": [
+      "rune",
+      "offense"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "rune_chisel"
+  },
+  "etch_ward": {
+    "name": "Etch Ward",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "lumen",
+    "effect": {
+      "type": "craft",
+      "tag": "defense_rune"
+    },
+    "tags": [
+      "rune",
+      "defense"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "rune_chisel"
+  },
+  "perfect_edge": {
+    "name": "Perfect Edge",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "ember",
+    "effect": {
+      "type": "craftQuality",
+      "tag": "edged",
+      "amount": 0.35
+    },
+    "tags": [
+      "weapons",
+      "edged"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "forge_siege": {
+    "name": "Forge Siege",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "siege"
+    },
+    "tags": [
+      "weapons",
+      "heavy",
+      "siege"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "forge_aegis": {
+    "name": "Forge Aegis",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "greatshield"
+    },
+    "tags": [
+      "armor",
+      "heavy"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "work_mithril": {
+    "name": "Work Mithril",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "storm",
+    "effect": {
+      "type": "craft",
+      "tag": "exotic_armor"
+    },
+    "tags": [
+      "armor",
+      "light",
+      "exotic"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "forge_runeblade": {
+    "name": "Forge Runeblade",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "umbral",
+    "effect": {
+      "type": "craft",
+      "tag": "runeblade"
+    },
+    "tags": [
+      "weapons",
+      "rune"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "weave_wardplate": {
+    "name": "Weave Wardplate",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "lumen",
+    "effect": {
+      "type": "craft",
+      "tag": "wardplate"
+    },
+    "tags": [
+      "armor",
+      "rune"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "masterforge"
+  },
+  "storm_temper": {
+    "name": "Storm Temper",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "storm",
+    "effect": {
+      "type": "craft",
+      "tag": "storm_weapon"
+    },
+    "tags": [
+      "weapons",
+      "storm"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "warforge": {
+    "name": "Warforge",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "ember",
+    "effect": {
+      "type": "craft",
+      "tag": "warmachine"
+    },
+    "tags": [
+      "weapons",
+      "heavy"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "bulwark_forge": {
+    "name": "Bulwark Forge",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "fortress_armor"
+    },
+    "tags": [
+      "armor",
+      "heavy"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "work_starmetal": {
+    "name": "Work Starmetal",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "storm",
+    "effect": {
+      "type": "craft",
+      "tag": "starmetal"
+    },
+    "tags": [
+      "armor",
+      "exotic"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "soul_etch": {
+    "name": "Soul Etch",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "umbral",
+    "effect": {
+      "type": "craft",
+      "tag": "soulrune"
+    },
+    "tags": [
+      "rune",
+      "umbral"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "ward_forge": {
+    "name": "Ward Forge",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "lumen",
+    "effect": {
+      "type": "craft",
+      "tag": "wardrelic"
+    },
+    "tags": [
+      "armor",
+      "rune",
+      "lumen"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "stormforge"
+  },
+  "forge_calamity": {
+    "name": "Forge Calamity",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "ember",
+    "effect": {
+      "type": "craft",
+      "tag": "calamity_arm"
+    },
+    "tags": [
+      "weapons",
+      "legendary"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "worldanvil"
+  },
+  "world_anvil": {
+    "name": "World Anvil",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "stone",
+    "effect": {
+      "type": "craft",
+      "tag": "aegis_legendary"
+    },
+    "tags": [
+      "armor",
+      "legendary"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "worldanvil"
+  },
+  "forge_system_relic": {
+    "name": "Forge System Relic",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": "umbral",
+    "effect": {
+      "type": "craft",
+      "tag": "system_relic"
+    },
+    "tags": [
+      "rune",
+      "system",
+      "legendary"
+    ],
+    "selfTeachable": false,
+    "toolRequired": "worldanvil"
+  },
+  "unmake": {
+    "name": "Unmake",
+    "category": "crafting",
+    "kind": "active",
+    "shared": false,
+    "power": 1.4,
+    "tempoCost": 700,
+    "affinity": "corruption",
+    "effect": {
+      "type": "sunder",
+      "amount": 0.3
+    },
+    "tags": [
+      "corruption",
+      "untethered"
+    ],
+    "selfTeachable": false,
+    "toolRequired": null
+  },
+  "_comment_leather": "Hide/leather line \u2014 the canonical self-teach example (knife -> skinning). Leatherworker base class crafts leather/hide armor (CLASSES.md crafter family).",
+  "skin": {
+    "name": "Skin / Butcher",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "hide"
+    },
+    "tags": [
+      "hide",
+      "butchering"
+    ],
+    "selfTeachable": true,
+    "untrainedPenalty": 0.6,
+    "toolRequired": "knife"
+  },
+  "tan": {
+    "name": "Tan Hide",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "leather"
+    },
+    "tags": [
+      "leather",
+      "tanning"
+    ],
+    "selfTeachable": true,
+    "untrainedPenalty": 0.5,
+    "toolRequired": "tanning_rack"
+  },
+  "work_leather": {
+    "name": "Work Leather",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "leather_armor"
+    },
+    "tags": [
+      "leather",
+      "armor"
+    ],
+    "selfTeachable": true,
+    "untrainedPenalty": 0.5,
+    "toolRequired": "leather_tools"
+  },
+  "stitch": {
+    "name": "Stitch",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": true,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "cloth"
+    },
+    "tags": [
+      "leather",
+      "cloth"
+    ],
+    "selfTeachable": true,
+    "untrainedPenalty": 0.4,
+    "toolRequired": "needle"
+  },
+  "flurry": {
+    "name": "Flurry",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.1,
+    "tempoCost": 520,
+    "affinity": null,
+    "effect": null
+  },
+  "palm_strike": {
+    "name": "Palm Strike",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1,
+    "tempoCost": 480,
+    "affinity": null,
+    "effect": null
+  },
+  "pierce": {
+    "name": "Pierce",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.2,
+    "tempoCost": 600,
+    "affinity": null,
+    "effect": {
+      "type": "sunder",
+      "amount": 0.25,
+      "turns": 2
+    }
+  },
+  "reach_strike": {
+    "name": "Reach Strike",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.9,
+    "tempoCost": 460,
+    "affinity": null,
+    "effect": null
+  },
+  "lunge": {
+    "name": "Lunge",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.3,
+    "tempoCost": 640,
+    "affinity": null,
+    "effect": null
+  },
+  "parry": {
+    "name": "Parry",
+    "category": "combat",
+    "kind": "reactive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "counter",
+      "amount": 0.5
+    }
+  },
+  "volley": {
+    "name": "Volley",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.7,
+    "tempoCost": 720,
+    "affinity": null,
+    "effect": {
+      "type": "aoe"
+    }
+  },
+  "rapid_draw": {
+    "name": "Rapid Draw",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.7,
+    "tempoCost": 240,
+    "affinity": null,
+    "effect": null
+  },
+  "shield_bash": {
+    "name": "Shield Bash",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.6,
+    "tempoCost": 420,
+    "affinity": null,
+    "effect": {
+      "type": "slow",
+      "amount": 0.3,
+      "turns": 2
+    }
+  },
+  "spell_strike": {
+    "name": "Spell Strike",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1,
+    "tempoCost": 520,
+    "affinity": "storm",
+    "effect": null
+  },
+  "arcane_edge": {
+    "name": "Arcane Edge",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.1,
+    "tempoCost": 560,
+    "affinity": "umbral",
+    "effect": null
+  },
+  "ki_focus": {
+    "name": "Ki Focus",
+    "category": "combat",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "critUp",
+      "amount": 0.1
+    }
+  },
+  "meditate": {
+    "name": "Meditate",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 700,
+    "affinity": "lumen",
+    "effect": {
+      "type": "heal",
+      "amount": 0.3
+    }
+  },
+  "swoop": {
+    "name": "Swoop",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.9,
+    "tempoCost": 440,
+    "affinity": null,
+    "effect": null
+  },
+  "mount_charge": {
+    "name": "Mounted Charge",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.2,
+    "tempoCost": 620,
+    "affinity": null,
+    "effect": null
+  },
+  "trample": {
+    "name": "Trample",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.8,
+    "tempoCost": 700,
+    "affinity": null,
+    "effect": {
+      "type": "aoe"
+    }
+  },
+  "plant_charge": {
+    "name": "Plant Charge",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.4,
+    "tempoCost": 760,
+    "affinity": "ember",
+    "effect": null
+  },
+  "command_beast": {
+    "name": "Command Beast",
+    "category": "combat",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "beast"
+    }
+  },
+  "feral_bond": {
+    "name": "Feral Bond",
+    "category": "combat",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "maxHp",
+      "amount": 0.1
+    }
+  },
+  "scout_flight": {
+    "name": "Scout Flight",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "scout"
+    }
+  },
+  "bless": {
+    "name": "Bless",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 520,
+    "affinity": "lumen",
+    "effect": {
+      "type": "partyBuff",
+      "stat": "def",
+      "amount": 0.2,
+      "turns": 3
+    }
+  },
+  "sanctuary": {
+    "name": "Sanctuary",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 560,
+    "affinity": "lumen",
+    "effect": {
+      "type": "defUp",
+      "amount": 0.6,
+      "turns": 2
+    }
+  },
+  "spirit_call": {
+    "name": "Spirit Call",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 560,
+    "affinity": "verdant",
+    "effect": {
+      "type": "partyBuff",
+      "stat": "atk",
+      "amount": 0.15,
+      "turns": 3
+    }
+  },
+  "totem": {
+    "name": "Totem",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 600,
+    "affinity": "stone",
+    "effect": {
+      "type": "partyBuff",
+      "stat": "def",
+      "amount": 0.2,
+      "turns": 3
+    }
+  },
+  "inspire": {
+    "name": "Inspire",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 480,
+    "affinity": null,
+    "effect": {
+      "type": "partyBuff",
+      "stat": "atk",
+      "amount": 0.1,
+      "turns": 3
+    }
+  },
+  "salve": {
+    "name": "Salve",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 560,
+    "affinity": "tide",
+    "effect": {
+      "type": "heal",
+      "amount": 0.3
+    }
+  },
+  "endure": {
+    "name": "Endure",
+    "category": "survival",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "maxHp",
+      "amount": 0.15
+    }
+  },
+  "self_reliance": {
+    "name": "Self-Reliance",
+    "category": "survival",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "maxHp",
+      "amount": 0.1
+    }
+  },
+  "arcane_theory": {
+    "name": "Arcane Theory",
+    "category": "scholar",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "critUp",
+      "amount": 0.08
+    }
+  },
+  "foresee": {
+    "name": "Foresee",
+    "category": "scholar",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "evade",
+      "amount": 0.1
+    }
+  },
+  "carve": {
+    "name": "Carve",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "wood"
+    }
+  },
+  "build": {
+    "name": "Build",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "structure"
+    }
+  },
+  "sew": {
+    "name": "Sew",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "cloth"
+    }
+  },
+  "weave_cloth": {
+    "name": "Weave Cloth",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "cloth"
+    }
+  },
+  "set_gem": {
+    "name": "Set Gem",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "jewel"
+    }
+  },
+  "enchant_trinket": {
+    "name": "Enchant Trinket",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "trinket"
+    }
+  },
+  "lay_stone": {
+    "name": "Lay Stone",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "stone"
+    }
+  },
+  "fletch": {
+    "name": "Fletch",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "ammo"
+    }
+  },
+  "string_bow": {
+    "name": "String Bow",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "bow"
+    }
+  },
+  "decoct": {
+    "name": "Decoct",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "tonic"
+    }
+  },
+  "navigate": {
+    "name": "Navigate",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "navigate"
+    }
+  },
+  "weather_sense": {
+    "name": "Weather Sense",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "sense",
+      "tag": "weather"
+    }
+  },
+  "wild_lore": {
+    "name": "Wild Lore",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "lore",
+      "tag": "wild"
+    }
+  },
+  "perform": {
+    "name": "Perform",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "social",
+      "tag": "crowd"
+    }
+  },
+  "rally_crowd": {
+    "name": "Rally Crowd",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "social",
+      "tag": "rally"
+    }
+  },
+  "sabotage": {
+    "name": "Sabotage",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "sabotage"
+    }
+  },
+  "infiltrate": {
+    "name": "Infiltrate",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "stealth",
+      "tag": "infiltrate"
+    }
+  },
+  "disguise": {
+    "name": "Disguise",
+    "category": "espionage",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "stealth",
+      "tag": "disguise"
+    }
+  },
+  "research": {
+    "name": "Research",
+    "category": "scholar",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "study"
+    }
+  },
+  "star_read": {
+    "name": "Star-Read",
+    "category": "scholar",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "divine"
+    }
+  },
+  "chop_wood": {
+    "name": "Chop Wood",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "wood"
+    }
+  },
+  "fell_tree": {
+    "name": "Fell Tree",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "wood"
+    }
+  },
+  "harvest": {
+    "name": "Harvest",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "crop"
+    }
+  },
+  "cultivate": {
+    "name": "Cultivate",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "crop"
+    }
+  },
+  "smite": {
+    "name": "Smite",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.4,
+    "tempoCost": 640,
+    "affinity": "lumen",
+    "effect": null
+  },
+  "lay_on_hands": {
+    "name": "Lay on Hands",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 800,
+    "affinity": "lumen",
+    "effect": {
+      "type": "heal",
+      "amount": 0.5
+    }
+  },
+  "oath_guard": {
+    "name": "Oath Guard",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 560,
+    "affinity": "lumen",
+    "effect": {
+      "type": "partyBuff",
+      "stat": "def",
+      "amount": 0.25,
+      "turns": 3
+    }
+  },
+  "rampage": {
+    "name": "Rampage",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.6,
+    "tempoCost": 820,
+    "affinity": "ember",
+    "effect": null
+  },
+  "bloodlust": {
+    "name": "Bloodlust",
+    "category": "combat",
+    "kind": "passive",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "critUp",
+      "amount": 0.12
+    }
+  },
+  "fireball": {
+    "name": "Fireball",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1.3,
+    "tempoCost": 700,
+    "affinity": "ember",
+    "effect": {
+      "type": "aoe"
+    }
+  },
+  "immolate": {
+    "name": "Immolate",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0.6,
+    "tempoCost": 600,
+    "affinity": "ember",
+    "effect": {
+      "type": "applyToxin",
+      "amount": 0.12,
+      "turns": 3
+    }
+  },
+  "soul_tether": {
+    "name": "Soul Tether",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 560,
+    "affinity": "umbral",
+    "effect": {
+      "type": "mark",
+      "amount": 0.15,
+      "turns": 3
+    }
+  },
+  "venom_brew": {
+    "name": "Venom Brew",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "poison"
+    }
+  },
+  "diagnose": {
+    "name": "Diagnose",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "study",
+      "tag": "medical"
+    }
+  },
+  "field_dressing": {
+    "name": "Field Dressing",
+    "category": "survival",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 600,
+    "affinity": "tide",
+    "effect": {
+      "type": "heal",
+      "amount": 0.4
+    }
+  },
+  "blaze_trail": {
+    "name": "Blaze Trail",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "navigate",
+      "tag": "trail"
+    }
+  },
+  "arbitrage": {
+    "name": "Arbitrage",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "social",
+      "tag": "trade"
+    }
+  },
+  "treaty": {
+    "name": "Treaty",
+    "category": "social",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "social",
+      "tag": "treaty"
+    }
+  },
+  "shadowstep": {
+    "name": "Shadowstep",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 1,
+    "tempoCost": 300,
+    "affinity": "umbral",
+    "effect": {
+      "type": "bonusVsUnaware",
+      "amount": 0.5
+    }
+  },
+  "assassinate": {
+    "name": "Assassinate",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 2.2,
+    "tempoCost": 1000,
+    "affinity": "umbral",
+    "effect": {
+      "type": "bonusVsUnaware",
+      "amount": 0.6
+    }
+  },
+  "fortify": {
+    "name": "Fortify",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 520,
+    "affinity": "stone",
+    "effect": {
+      "type": "defUp",
+      "amount": 0.6,
+      "turns": 3
+    }
+  },
+  "gourmet": {
+    "name": "Gourmet",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "feast"
+    }
+  },
+  "imbue": {
+    "name": "Imbue",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "imbue"
+    }
+  },
+  "catalog": {
+    "name": "Catalog",
+    "category": "scholar",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "study",
+      "tag": "archive"
+    }
+  },
+  "monster_lore": {
+    "name": "Monster Lore",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 360,
+    "affinity": null,
+    "effect": {
+      "type": "mark",
+      "amount": 0.2,
+      "turns": 3
+    }
+  },
+  "crescendo": {
+    "name": "Crescendo",
+    "category": "combat",
+    "kind": "active",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 640,
+    "affinity": "storm",
+    "effect": {
+      "type": "partyBuff",
+      "stat": "atk",
+      "amount": 0.2,
+      "turns": 3
+    }
+  },
+  "excavate": {
+    "name": "Excavate",
+    "category": "gathering",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "gather",
+      "tag": "ore"
+    }
+  },
+  "chart_course": {
+    "name": "Chart Course",
+    "category": "survival",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "navigate",
+      "tag": "sea"
+    }
+  },
+  "fit_gear": {
+    "name": "Fit Gear",
+    "category": "crafting",
+    "kind": "utility",
+    "shared": false,
+    "power": 0,
+    "tempoCost": 0,
+    "affinity": null,
+    "effect": {
+      "type": "craft",
+      "tag": "outfit"
+    }
+  }
 }
