@@ -2,7 +2,22 @@
   "_meta": {
     "note": "Basic-tier classes (seed of the 50-Base target, CLASSES.md §1.5). Lifestyles span combat AND non-combat (crafter/healer/gatherer/social/etc.) per CLASSES.md §1.6 — combat is universal-but-optional. evolvesInto = Advanced-tier lineage (authored next tier); foundation skills here amplify those evolutions (synergy). specializations = in-class focus picks (CLASSES.md §1.7 axis 2): pick one at unlockAtLevel for mastery bonuses, no Tier change; opensEvolution hard-points a branch and narrowsTo restricts the post-evolution skill pool to that tag. maxLevel null = no hard cap (CLASSES.md §1.7).",
     "evolveForms": "evolvesInto entries are EITHER a plain id (default-eligible branch) OR {class, requires:{skillTags[],minCount,stat?,affinity?}, default?} — PATH-GATED: the System offers only branches whose requires the build satisfies (CLASSES.md §1.5 'Path-gated evolution offers'). warrior/rogue/smith below show the gated form.",
-    "schema": "name, tier, family, lifestyle, affinityLean, statProfile{hp,atk,def,speed}, grantsSkills[], signature, maxLevel, specializations[{id,name,unlockAtLevel,focus,bonuses[{type,target,amount}],grantsSkill,opensEvolution?,narrowsTo?}], evolvesInto[]"
+    "schema": "name, tier, family, lifestyle, affinityLean, statProfile{hp,atk,def,speed}, grantsSkills[], signature, maxLevel, specializations[{id,name,unlockAtLevel,focus,bonuses[{type,target,amount}],grantsSkill,opensEvolution?,narrowsTo?}], evolvesInto[]",
+    "launchRoster": [
+      "warrior",
+      "brawler",
+      "monk",
+      "fencer",
+      "lancer",
+      "scout",
+      "hunter",
+      "archer",
+      "rogue",
+      "spellblade",
+      "cleric",
+      "vanguard"
+    ],
+    "combatRoleDoc": "combatRole: 'combatant' = fair solo fighter (clears the L4 untethered win-band); 'support' = weak solo, viable with bonded allies / recovery; 'noncombat' = no real combat kit, needs an ally to descend. launchRoster = the curated starter set surfaced in creation."
   },
   "warrior": {
     "name": "Warrior",
@@ -78,7 +93,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "scout": {
     "name": "Scout",
@@ -134,7 +150,8 @@
     "evolvesInto": [
       "ranger",
       "skirmisher"
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "channeler": {
     "name": "Channeler",
@@ -189,7 +206,8 @@
     "evolvesInto": [
       "pyromancer",
       "runesmith"
-    ]
+    ],
+    "combatRole": "support"
   },
   "warden": {
     "name": "Warden",
@@ -245,7 +263,8 @@
     "evolvesInto": [
       "beastmaster",
       "soulbinder"
-    ]
+    ],
+    "combatRole": "support"
   },
   "smith": {
     "name": "Smith",
@@ -340,7 +359,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "alchemist": {
     "name": "Alchemist",
@@ -396,7 +416,8 @@
     "evolvesInto": [
       "apothecary",
       "toxicologist"
-    ]
+    ],
+    "combatRole": "support"
   },
   "medic": {
     "name": "Medic",
@@ -452,7 +473,8 @@
     "evolvesInto": [
       "physician",
       "field_medic"
-    ]
+    ],
+    "combatRole": "support"
   },
   "forager": {
     "name": "Forager",
@@ -508,7 +530,8 @@
     "evolvesInto": [
       "ranger",
       "pathfinder"
-    ]
+    ],
+    "combatRole": "support"
   },
   "trader": {
     "name": "Trader",
@@ -564,7 +587,8 @@
     "evolvesInto": [
       "broker",
       "envoy"
-    ]
+    ],
+    "combatRole": "support"
   },
   "rogue": {
     "name": "Rogue",
@@ -641,7 +665,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "vanguard": {
     "name": "Vanguard",
@@ -697,7 +722,8 @@
     "evolvesInto": [
       "sentinel",
       "juggernaut"
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "cook": {
     "name": "Cook",
@@ -753,7 +779,8 @@
     "evolvesInto": [
       "chef",
       "provisioner"
-    ]
+    ],
+    "combatRole": "support"
   },
   "engineer": {
     "name": "Engineer",
@@ -809,7 +836,8 @@
     "evolvesInto": [
       "artificer",
       "mechanist"
-    ]
+    ],
+    "combatRole": "support"
   },
   "loreseeker": {
     "name": "Loreseeker",
@@ -865,7 +893,8 @@
     "evolvesInto": [
       "cipher",
       "archivist"
-    ]
+    ],
+    "combatRole": "support"
   },
   "hunter": {
     "name": "Hunter",
@@ -921,7 +950,8 @@
     "evolvesInto": [
       "beastslayer",
       "stalker"
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "envoy_b": {
     "name": "Emissary",
@@ -977,7 +1007,8 @@
     "evolvesInto": [
       "envoy",
       "peacekeeper"
-    ]
+    ],
+    "combatRole": "support"
   },
   "resonant": {
     "name": "Resonant",
@@ -1033,7 +1064,8 @@
     "evolvesInto": [
       "conductor",
       "warchanter"
-    ]
+    ],
+    "combatRole": "support"
   },
   "miner": {
     "name": "Miner",
@@ -1089,7 +1121,8 @@
     "evolvesInto": [
       "prospector",
       "excavator"
-    ]
+    ],
+    "combatRole": "support"
   },
   "fisher": {
     "name": "Fisher",
@@ -1145,7 +1178,8 @@
     "evolvesInto": [
       "angler",
       "mariner"
-    ]
+    ],
+    "combatRole": "support"
   },
   "leatherworker": {
     "name": "Leatherworker",
@@ -1225,7 +1259,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "_tree_smith": "FULL SMITH LINEAGE (CLASSES.md §Smith tree) — Basic Smith climbs through all 6 tiers to Legendary. Path-gated branches; cumulative skills; stats placeholder (ARCHITECTURE.md). Heroic pairs converge into 3 Legendary capstones + 1 Untethered (Original-System only, DESIGN.md §6.5).",
   "weaponsmith": {
@@ -1272,7 +1307,8 @@
           "minCount": 1
         }
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "armorsmith": {
     "name": "Armorsmith",
@@ -1318,7 +1354,8 @@
           "minCount": 1
         }
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "runesmith": {
     "name": "Runesmith",
@@ -1365,7 +1402,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "bladelord": {
     "name": "Bladelord",
@@ -1400,7 +1438,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "maulwarden": {
     "name": "Maulwarden",
@@ -1435,7 +1474,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "plateforger": {
     "name": "Plateforger",
@@ -1470,7 +1510,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "mailweaver": {
     "name": "Mailweaver",
@@ -1505,7 +1546,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "glyphcarver": {
     "name": "Glyphcarver",
@@ -1540,7 +1582,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "wardbinder": {
     "name": "Wardbinder",
@@ -1575,7 +1618,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "keenedge": {
     "name": "Keenedge",
@@ -1609,7 +1653,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "siegemaster": {
     "name": "Siegemaster",
@@ -1643,7 +1688,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "aegisforger": {
     "name": "Aegisforger",
@@ -1677,7 +1723,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "quicksilver": {
     "name": "Quicksilver",
@@ -1711,7 +1758,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "runebrand": {
     "name": "Runebrand",
@@ -1746,7 +1794,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "sigilward": {
     "name": "Sigilward",
@@ -1781,7 +1830,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "stormtemper": {
     "name": "Stormtemper",
@@ -1815,7 +1865,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "warmonger": {
     "name": "Warmonger",
@@ -1849,7 +1900,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "ironbulwark": {
     "name": "Ironbulwark",
@@ -1883,7 +1935,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "starbinder": {
     "name": "Starbinder",
@@ -1917,7 +1970,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "souletcher": {
     "name": "Souletcher",
@@ -1951,7 +2005,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "reliquarist": {
     "name": "Reliquarist",
@@ -1985,7 +2040,8 @@
         },
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "calamity_forgemaster": {
     "name": "Calamity Forgemaster",
@@ -2008,7 +2064,8 @@
       "stormtemper",
       "warmonger"
     ],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "worldanvil": {
     "name": "World-Anvil",
@@ -2031,7 +2088,8 @@
       "ironbulwark",
       "starbinder"
     ],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "systemscribe": {
     "name": "Systemscribe",
@@ -2061,7 +2119,8 @@
           "type": "original_system"
         }
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "the_unmade": {
     "name": "The Unmade",
@@ -2088,7 +2147,8 @@
     "unlock": {
       "type": "original_system"
     },
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "brawler": {
     "name": "Brawler",
@@ -2117,7 +2177,8 @@
         "class": "champion",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "lancer": {
     "name": "Lancer",
@@ -2146,7 +2207,8 @@
         "class": "dragoon",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "fencer": {
     "name": "Fencer",
@@ -2175,7 +2237,8 @@
         "class": "blademaster",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "archer": {
     "name": "Archer",
@@ -2204,7 +2267,8 @@
         "class": "sharpshooter",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "sentinel": {
     "name": "Sentinel",
@@ -2233,7 +2297,8 @@
         "class": "bastion",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "spellblade": {
     "name": "Spellblade",
@@ -2262,7 +2327,8 @@
         "class": "battlemage",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "monk": {
     "name": "Monk",
@@ -2291,7 +2357,8 @@
         "class": "champion",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "beastmaster": {
     "name": "Beastmaster",
@@ -2320,7 +2387,8 @@
         "class": "packlord",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "falconer": {
     "name": "Falconer",
@@ -2349,7 +2417,8 @@
         "class": "sharpshooter",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "rider": {
     "name": "Rider",
@@ -2378,7 +2447,8 @@
         "class": "cavalier",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "woodwright": {
     "name": "Woodwright",
@@ -2407,7 +2477,8 @@
         "class": "builder",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "tailor": {
     "name": "Tailor",
@@ -2436,7 +2507,8 @@
         "class": "artisan",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "jeweler": {
     "name": "Jeweler",
@@ -2465,7 +2537,8 @@
         "class": "artisan",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "mason": {
     "name": "Mason",
@@ -2494,7 +2567,8 @@
         "class": "builder",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "fletcher": {
     "name": "Fletcher",
@@ -2523,7 +2597,8 @@
         "class": "sharpshooter",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "apothecary": {
     "name": "Apothecary",
@@ -2552,7 +2627,8 @@
         "class": "chemist",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "cleric": {
     "name": "Cleric",
@@ -2581,7 +2657,8 @@
         "class": "priest",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "shaman": {
     "name": "Shaman",
@@ -2610,7 +2687,8 @@
         "class": "spiritualist",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "ranger": {
     "name": "Ranger",
@@ -2639,7 +2717,8 @@
         "class": "huntsman",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "survivalist": {
     "name": "Survivalist",
@@ -2668,7 +2747,8 @@
         "class": "huntsman",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "hermit": {
     "name": "Hermit",
@@ -2697,7 +2777,8 @@
         "class": "sage",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "performer": {
     "name": "Performer",
@@ -2726,7 +2807,8 @@
         "class": "ambassador",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "emissary": {
     "name": "Emissary",
@@ -2755,7 +2837,8 @@
         "class": "ambassador",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "saboteur": {
     "name": "Saboteur",
@@ -2784,7 +2867,8 @@
         "class": "shadow_operative",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "infiltrator": {
     "name": "Infiltrator",
@@ -2813,7 +2897,8 @@
         "class": "shadow_operative",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "combatant"
   },
   "arcanist": {
     "name": "Arcanist",
@@ -2842,7 +2927,8 @@
         "class": "mage",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "cartographer": {
     "name": "Cartographer",
@@ -2871,7 +2957,8 @@
         "class": "explorer",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "seer": {
     "name": "Seer",
@@ -2900,7 +2987,8 @@
         "class": "sage",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "logger": {
     "name": "Logger",
@@ -2929,7 +3017,8 @@
         "class": "steward",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "support"
   },
   "farmer": {
     "name": "Farmer",
@@ -2958,7 +3047,8 @@
         "class": "steward",
         "default": true
       }
-    ]
+    ],
+    "combatRole": "noncombat"
   },
   "paladin": {
     "name": "Paladin",
@@ -2982,7 +3072,8 @@
     "signature": "Holy front-liner; protects and mends.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "reaver": {
     "name": "Reaver",
@@ -3006,7 +3097,8 @@
     "signature": "All offense; trades defense for slaughter.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "skirmisher": {
     "name": "Skirmisher",
@@ -3030,7 +3122,8 @@
     "signature": "Hit-and-run ranged harasser.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "pyromancer": {
     "name": "Pyromancer",
@@ -3054,7 +3147,8 @@
     "signature": "Burns the field with fire affinity.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "soulbinder": {
     "name": "Soulbinder",
@@ -3078,7 +3172,8 @@
     "signature": "Master of binding and bonds.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "toxicologist": {
     "name": "Toxicologist",
@@ -3102,7 +3197,8 @@
     "signature": "Poisons and the cures for them.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "physician": {
     "name": "Physician",
@@ -3126,7 +3222,8 @@
     "signature": "Master healer; saves the dying.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "field_medic": {
     "name": "Field Medic",
@@ -3150,7 +3247,8 @@
     "signature": "Heals under fire on the front.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "pathfinder": {
     "name": "Pathfinder",
@@ -3174,7 +3272,8 @@
     "signature": "Never lost; opens the wild.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "broker": {
     "name": "Broker",
@@ -3198,7 +3297,8 @@
     "signature": "Turns deals into empires.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "envoy": {
     "name": "Envoy",
@@ -3222,7 +3322,8 @@
     "signature": "Speaks nations into peace.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "ninja": {
     "name": "Ninja",
@@ -3246,7 +3347,8 @@
     "signature": "Unseen killer.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "juggernaut": {
     "name": "Juggernaut",
@@ -3270,7 +3372,8 @@
     "signature": "Immovable; absorbs armies.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "chef": {
     "name": "Chef",
@@ -3294,7 +3397,8 @@
     "signature": "Food that empowers parties.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "provisioner": {
     "name": "Provisioner",
@@ -3318,7 +3422,8 @@
     "signature": "Keeps an army fed and supplied.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "noncombat"
   },
   "artificer": {
     "name": "Artificer",
@@ -3342,7 +3447,8 @@
     "signature": "Imbues devices with affinity.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "mechanist": {
     "name": "Mechanist",
@@ -3366,7 +3472,8 @@
     "signature": "Machines and turrets.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "cipher": {
     "name": "Cipher",
@@ -3390,7 +3497,8 @@
     "signature": "Breaks any code or seal.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "noncombat"
   },
   "archivist": {
     "name": "Archivist",
@@ -3414,7 +3522,8 @@
     "signature": "Keeper of all knowledge.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "beastslayer": {
     "name": "Beastslayer",
@@ -3438,7 +3547,8 @@
     "signature": "Hunts the great beasts.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "stalker": {
     "name": "Stalker",
@@ -3462,7 +3572,8 @@
     "signature": "Tracks and ambushes prey.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "peacekeeper": {
     "name": "Peacekeeper",
@@ -3486,7 +3597,8 @@
     "signature": "Ends conflicts; shields the weak.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "conductor": {
     "name": "Conductor",
@@ -3510,7 +3622,8 @@
     "signature": "Orchestrates the party tempo.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "warchanter": {
     "name": "Warchanter",
@@ -3534,7 +3647,8 @@
     "signature": "Sings allies into fury.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "prospector": {
     "name": "Prospector",
@@ -3558,7 +3672,8 @@
     "signature": "Finds the richest veins.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "excavator": {
     "name": "Excavator",
@@ -3582,7 +3697,8 @@
     "signature": "Digs out dungeons and ore.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "angler": {
     "name": "Angler",
@@ -3606,7 +3722,8 @@
     "signature": "Lands the legendary catch.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "mariner": {
     "name": "Mariner",
@@ -3630,7 +3747,8 @@
     "signature": "Commands the sea routes.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "outfitter": {
     "name": "Outfitter",
@@ -3654,7 +3772,8 @@
     "signature": "Kits out the whole party.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "noncombat"
   },
   "tanner": {
     "name": "Tanner",
@@ -3678,7 +3797,8 @@
     "signature": "Turns hides into fine leather.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "noncombat"
   },
   "champion": {
     "name": "Champion",
@@ -3702,7 +3822,8 @@
     "signature": "Peerless martial fighter.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "dragoon": {
     "name": "Dragoon",
@@ -3726,7 +3847,8 @@
     "signature": "Spear-master; reach and leap.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "blademaster": {
     "name": "Blademaster",
@@ -3750,7 +3872,8 @@
     "signature": "Flawless blade; openings into kills.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "sharpshooter": {
     "name": "Sharpshooter",
@@ -3774,7 +3897,8 @@
     "signature": "Death at any range.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "bastion": {
     "name": "Bastion",
@@ -3798,7 +3922,8 @@
     "signature": "The unbreakable wall.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "battlemage": {
     "name": "Battlemage",
@@ -3822,7 +3947,8 @@
     "signature": "Blade and storm as one.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "packlord": {
     "name": "Packlord",
@@ -3846,7 +3972,8 @@
     "signature": "Leads a pack into war.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "cavalier": {
     "name": "Cavalier",
@@ -3870,7 +3997,8 @@
     "signature": "Mounted shock-lord.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "builder": {
     "name": "Builder",
@@ -3894,7 +4022,8 @@
     "signature": "Raises walls and works.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "artisan": {
     "name": "Artisan",
@@ -3918,7 +4047,8 @@
     "signature": "Master of fine goods.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "chemist": {
     "name": "Chemist",
@@ -3942,7 +4072,8 @@
     "signature": "Tonics, toxins, and cures.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "priest": {
     "name": "Priest",
@@ -3966,7 +4097,8 @@
     "signature": "Faith made power.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "spiritualist": {
     "name": "Spiritualist",
@@ -3990,7 +4122,8 @@
     "signature": "Channels spirits and wards.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "huntsman": {
     "name": "Huntsman",
@@ -4014,7 +4147,8 @@
     "signature": "Wilderness master-hunter.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "sage": {
     "name": "Sage",
@@ -4038,7 +4172,8 @@
     "signature": "Quiet, far-seeing wisdom.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "ambassador": {
     "name": "Ambassador",
@@ -4062,7 +4197,8 @@
     "signature": "Voice of nations and crowds.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "support"
   },
   "shadow_operative": {
     "name": "Shadow Operative",
@@ -4086,7 +4222,8 @@
     "signature": "Infiltration and sabotage.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "mage": {
     "name": "Mage",
@@ -4110,7 +4247,8 @@
     "signature": "Pure wielder of affinity.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "explorer": {
     "name": "Explorer",
@@ -4134,7 +4272,8 @@
     "signature": "Charts the unknown Reaches.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "combatant"
   },
   "steward": {
     "name": "Steward",
@@ -4158,6 +4297,7 @@
     "signature": "Feeds and provisions a settlement.",
     "maxLevel": null,
     "specializations": [],
-    "evolvesInto": []
+    "evolvesInto": [],
+    "combatRole": "noncombat"
   }
 }

@@ -2,6 +2,20 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Launch roster + craft-class floor + recovery finding
+Resolved three P1 items. (1) **Craft-class floor:** every class in `classes.json` now has a
+`combatRole` — **75 combatant / 44 support / 6 noncombat** (measured untethered L4 win-band +
+whether it has a real combat kit). Surfaced in creation: support/noncombat picks show a caution
+("weak in solo descents — pair with a bonded ally"), allowed not gated. (2) **Launch roster:**
+`_meta.launchRoster` = 12 curated fair basics (warrior/brawler/monk/fencer/lancer/scout/hunter/
+archer/rogue/spellblade/cleric/vanguard), shown with a ★ "Recommended start" badge + detail line
+(`creation.js`). Browser-verified. (3) **Recovery economy — finding:** it's NOT the lever —
+untethered (System-OFF) descents clear **0% at every recovery rate 0→0.6** because you die *in*
+a fight at depth (under-leveled vs floor + enemy growth > player growth). Untethered is
+**meta-gated by design** (refusing the System is meant to be brutal until meta-progression makes
+it viable) — coherent with "you need the System, that's the horror." Deeper tuning needs human
+playtest. Details in `docs/FIX_LIST.md`.
+
 ## ✅ DONE 2026-06-18 — P0 RUN LOOP verified in-engine + corruption wired into play
 The roguelite run loop was found already BUILT (FIX_LIST was stale) and is now **headless-verified
 end-to-end**: Dawnhearth **DescentGate** (tethered/untethered choice) → `descend` chains the

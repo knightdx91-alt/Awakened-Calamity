@@ -44,6 +44,7 @@ window.GamePlayerCreation = (function () {
     var _affId = null;
     var _classId = null;
     var _classes = null;     // loaded data/systems/classes.json (basic tier only)
+    var _launchRoster = [];  // curated starter set (_meta.launchRoster)
     var _classOrder = [];    // ids in display order
 
     function isActive() { return _active; }
@@ -134,6 +135,7 @@ window.GamePlayerCreation = (function () {
             .then(function (j) {
                 if (!j) return;
                 _classes = {}; _classOrder = [];
+                _launchRoster = (j._meta && j._meta.launchRoster) || [];
                 // Group by tier in TIERS order so the grid reads basic → advanced → …
                 TIERS.forEach(function (tier) {
                     Object.keys(j).forEach(function (k) {
@@ -208,7 +210,8 @@ window.GamePlayerCreation = (function () {
             b.dataset.cls = id;
             b.style.setProperty('--tint', LIFE_TINT[cl.lifestyle] || '#80e8ff');
             if (ringC) b.style.setProperty('--ring', ringC);
-            b.innerHTML = '<span class="pc-class-name">' + (cl.name || id) + '</span>' +
+            var star = _launchRoster.indexOf(id) >= 0 ? '<span class="pc-class-rec" title="Recommended start" style="color:#7fe0a0"> ★</span>' : '';
+            b.innerHTML = '<span class="pc-class-name">' + (cl.name || id) + star + '</span>' +
                 '<span class="pc-class-life">' + (cl.lifestyle || '') + '</span>';
             b.addEventListener('click', function () {
                 // Picking an Advanced+ class at creation trades fast leveling for
@@ -289,9 +292,23 @@ window.GamePlayerCreation = (function () {
                 // Paladin/Reaver"), which would spoil the hidden evolution paths.
                 var ringC = TIER_RING[cl.tier];
                 var tierTag = '<span class="pc-class-tiertag" style="color:' + (ringC || '#6b7a8d') + ';border-color:' + (ringC || '#3a4656') + '">' + (TIER_LABEL[cl.tier] || cl.tier || '') + '</span>';
+                // Combat-role guidance: the descent is combat-centric, so warn when a
+                // pick is weak/unviable solo (craft & lifestyle classes), and flag the
+                // recommended starter set.
+                var role = cl.combatRole || 'combatant';
+                var recommended = _launchRoster.indexOf(_classId) >= 0;
+                var roleHtml = '';
+                if (recommended) {
+                    roleHtml = '<div class="pc-class-role" style="color:#7fe0a0">★ Recommended start — a balanced solo descender.</div>';
+                } else if (role === 'support') {
+                    roleHtml = '<div class="pc-class-role" style="color:#e0c060">⚠ Support class — weak in solo descents. Best paired with a bonded ally.</div>';
+                } else if (role === 'noncombat') {
+                    roleHtml = '<div class="pc-class-role" style="color:#e08060">⚠ Non-combat class — cannot hold its own below. You will need an ally to descend.</div>';
+                }
                 det.innerHTML =
                     '<div class="pc-class-title">' + (cl.name || _classId) + ' ' + tierTag +
                         '<span class="pc-class-sub" style="display:block">' + (cl.lifestyle || '') + ' · ' + (cl.affinityLean || '') + '</span></div>' +
+                    roleHtml +
                     '<div class="pc-class-stats" style="margin-top:6px">' + _statBars(cl.statProfile) + '</div>' +
                     '<div class="pc-class-skills"><b>Starting skills:</b> ' + ((cl.grantsSkills || []).join(', ') || '—') + '</div>';
             } else {

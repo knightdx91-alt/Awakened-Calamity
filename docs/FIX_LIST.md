@@ -28,16 +28,28 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   dominant; fixed the lone one-shot (`the_unmade` given a dignified non-degenerate profile,
   150hp/28atk/45def — wins but takes real damage). Difficulty curve still PASS (avg depth
   5.4/8, 21% clear); Intervention dilemma still PASS (+4.67 depth tempting / +701 Surv costly).
-- ⬜ **37 classes UNWINNABLE at L1** (craft/lifestyle). Decide the floor: a survivable
-  minimum kit, OR formally "non-combat — needs an ally" (and then the tutorial fight
-  must not hard-gate them). `sim_balance`. (Still open — these are the ~47 below-fair craft
-  classes; design call, not a stat tweak.)
-- ⬜ **Pick the launch roster** (~10–15) from the fair mid-band (rogue/scout/hunter/
-  brawler/lancer/fencer…) — `validate_design` build-diversity band (now 53 to choose from).
+- ✅ **Craft-class floor DECIDED + classified in data (2026-06-18).** Every class now carries
+  a `combatRole` in `classes.json`: **75 combatant** (fair solo, clears the L4 untethered
+  win-band), **44 support** (weak solo, viable with bonded allies / recovery), **6 noncombat**
+  (no real kit — needs an ally to descend). Surfaced in creation: support/noncombat picks show
+  a caution line ("weak in solo descents — pair with a bonded ally"); the choice is allowed,
+  not hard-gated. (`_meta.combatRoleDoc`.)
+- ✅ **Launch roster PICKED (2026-06-18).** `classes.json _meta.launchRoster` = 12 curated fair
+  basics spanning archetypes: warrior, brawler, monk, fencer, lancer (melee/martial), scout,
+  hunter, archer (ranged), rogue (stealth), spellblade (magic), cleric (support), vanguard
+  (tank). Marked with a ★ "Recommended start" badge + detail line in the creation screen.
+  Browser-verified.
 - ⬜ **103/192 skills are INERT** (no combat/passive effect — pure data hooks). Wire the
   ones the launch classes use; cut or defer the rest. `content_lint`/`dashboard`.
-- ⬜ **Recovery economy** — descents need potions/lifesteal/relics tuned so the curve is
-  fair with skill (not just corruption-gated). `sim_run --rest`.
+- 🟡 **Recovery economy — finding (2026-06-18): it is NOT the lever; untethered is meta-gated
+  BY DESIGN.** Measured untethered (System-OFF, honest-skill) descents across recovery rates
+  0→0.6: clear stays **0%, avg depth ~1/8 at every rate**. You die *inside* a fight at depth
+  (player under-levels the floor + enemy growth > player growth), so between-floor recovery
+  can't save you — refusing the System is meant to be brutal until accumulated meta-progression
+  (HP unlocks, potions, fragments) makes it viable. This is coherent with the core "you need
+  the System, and that's the horror" design, and `validate_design` already blesses the tethered
+  curve. Deeper tuning (save-trigger %, per-tier difficulty, the careful/reckless tethered mix)
+  needs **human playtest** — the sims confirm mechanical soundness but can't read fun. Deferred.
 
 ## P2 — economy & progression
 - ⬜ **Credit income is undefined** — wire a credit drop to encounters/chests so shop
