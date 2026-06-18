@@ -61,8 +61,14 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
   needs **human playtest** — the sims confirm mechanical soundness but can't read fun. Deferred.
 
 ## P2 — economy & progression
-- ⬜ **Credit income is undefined** — wire a credit drop to encounters/chests so shop
-  prices mean something (target: potion ≈ 1 fight, class ≈ a run). `sim_economy`.
+- ✅ **Credit income WIRED (2026-06-18).** Defeating enemies now drops credits
+  (`combatview._finish`): `perKill = base(15) × level × creditYield × variance`, summed over the
+  fight and added to `player.money` on a win (shown in the result: "+N XP · +M Cr"). Tuning lives in
+  `progression.json.credits`; creatures gained `creditYield` (emberling 1.0 / thornwolf 1.3 / dummy 0).
+  An early single-foe fight ≈ 30–45 Cr ≈ a Potion (50) ✓ (target met). `sim_economy` now models the
+  income: a full 8-floor descent ≈ ~1.6k Cr (combat ~860 + baked chests ~720) ≈ 3× a class/run —
+  generous & chest-dominated; chest values are baked in the run maps, so tuning the full-run total +
+  class cost is a human-playtest feel call.
 - ⬜ **Tier XP multipliers extreme** (legendary 270× → ~1589 kills for L2). Review against
   the roguelite run length; high tiers may want to be run-unlocks, not in-run grinds.
 

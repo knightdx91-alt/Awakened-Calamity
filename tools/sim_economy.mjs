@@ -46,6 +46,29 @@ console.log('  ' + shop.map(([k, v]) => `${k}:${v}`).join('  '));
 const CLASS_COST = 500; // System Shop: acquire a new Basic class (src/ui/systemshop.js)
 const potion = (items.potion || {}).value || 50;
 console.log(`  new Basic class (System Shop): ${CLASS_COST} Cr`);
-console.log('  NOTE: credit INCOME is currently thin (chests + bounties) — the economy needs a');
-console.log('        defined per-run income so prices have meaning. Recommend wiring a credit');
-console.log(`        drop to encounters, then re-run to balance (e.g. target: a potion ≈ 1 fight, a class ≈ a full run).`);
+
+// CREDIT INCOME — now wired to combat drops (src/ui/combatview.js _finish):
+// perKill = base * level * creditYield * variance. Model a descent's income.
+const cr = prog.credits || { base: 15, variance: [0.85, 1.15] };
+const vAvg = (cr.variance[0] + cr.variance[1]) / 2;
+const killCr = (L, yld = 1) => Math.round(cr.base * L * yld * vAvg);
+// a representative 8-floor descent: enemy level ~= floor, ~1.5 foes/fight avg,
+// plus per-floor chest money (~40–80 base scaling with depth) and a relic (no Cr).
+let combatCr = 0, chestCr = 0;
+for (let f = 1; f <= 8; f++) {
+  const lvl = f === 8 ? f + 2 : f;
+  const foes = 1 + (f >= 5 ? 0.5 : 0);            // packs deeper in
+  combatCr += killCr(lvl, 1.1) * foes;            // ~avg creditYield
+  // chests: loot rooms (~2/floor early) with depth-scaled money — BAKED in the maps
+  if (f % 2 === 1) chestCr += 2 * Math.round(60 * (1 + (f / 8)));
+}
+combatCr = Math.round(combatCr); chestCr = Math.round(chestCr);
+const runCr = combatCr + chestCr;
+const fightCr = killCr(2, 1.0);                    // an early single-foe fight
+console.log('\nCREDIT INCOME (combat drops now WIRED in combatview; chests baked in maps)');
+console.log(`  early fight (L2 foe): ~${fightCr} Cr  ` + (Math.abs(fightCr - potion) <= potion * 0.6 ? `≈ a Potion (${potion}) ✓` : `(potion ${potion})`));
+console.log(`  per 8-floor descent: ~${combatCr} Cr combat + ~${chestCr} Cr chests = ~${runCr} Cr`);
+console.log(`    → ${(runCr / CLASS_COST).toFixed(1)}× a new class (${CLASS_COST} Cr) per run, ~${Math.floor(runCr / potion)} potions/run.`);
+console.log('  ✓ per-fight income ≈ a potion (target met). Full-run total is generous and');
+console.log('    chest-dominated — chest values are baked in the run maps; tune there + class');
+console.log('    cost via human playtest (how fast classes should unlock is a feel call).');

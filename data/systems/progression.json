@@ -1,35 +1,74 @@
 {
-  "_meta": "XP/leveling tuning (PROGRESSION.md §3.7, §2). All constants are data so they port + tune without code changes. Consumed by src/systems/progression.js.",
-
+  "_meta": "XP/leveling tuning (PROGRESSION.md \u00a73.7, \u00a72). All constants are data so they port + tune without code changes. Consumed by src/systems/progression.js.",
   "xp": {
     "B": 100,
     "p": 2.2,
-    "tierMult": { "basic": 1.0, "advanced": 3.5, "master": 10, "grandmaster": 30, "heroic": 90, "legendary": 270 }
+    "tierMult": {
+      "basic": 1.0,
+      "advanced": 3.5,
+      "master": 10,
+      "grandmaster": 30,
+      "heroic": 90,
+      "legendary": 270
+    }
   },
-
-  "mob": { "K": 17, "q": 1.6 },
-
+  "mob": {
+    "K": 17,
+    "q": 1.6
+  },
   "levelDiff": {
-    "_note": "PROGRESSION.md §5: lethal gap (mob >> you) → bonus XP; matched → full; trivial (mob << you) → near-zero. diff = mobLevel - playerLevel.",
-    "redAt": 5, "greyAt": -8,
-    "redMult": 1.5, "whiteMult": 1.0, "greyMult": 0.1
+    "_note": "PROGRESSION.md \u00a75: lethal gap (mob >> you) \u2192 bonus XP; matched \u2192 full; trivial (mob << you) \u2192 near-zero. diff = mobLevel - playerLevel.",
+    "redAt": 5,
+    "greyAt": -8,
+    "redMult": 1.5,
+    "whiteMult": 1.0,
+    "greyMult": 0.1
   },
-
-  "attributes": ["strength", "agility", "constitution", "intelligence", "wisdom", "perception", "charisma", "luck"],
-
+  "attributes": [
+    "strength",
+    "agility",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "perception",
+    "charisma",
+    "luck"
+  ],
   "attrEffects": {
-    "_note": "Per-point bonus each attribute adds to derived COMBAT stats (PROGRESSION.md §2). strength/constitution/agility/wisdom map to the four base combat stats today; intelligence/perception/charisma/luck govern systems built later (affinity power, crafting, social, drops) and carry no base-stat bonus yet.",
-    "strength":     { "atk": 2 },
-    "constitution": { "hp": 6 },
-    "agility":      { "speed": 2 },
-    "wisdom":       { "def": 1 }
+    "_note": "Per-point bonus each attribute adds to derived COMBAT stats (PROGRESSION.md \u00a72). strength/constitution/agility/wisdom map to the four base combat stats today; intelligence/perception/charisma/luck govern systems built later (affinity power, crafting, social, drops) and carry no base-stat bonus yet.",
+    "strength": {
+      "atk": 2
+    },
+    "constitution": {
+      "hp": 6
+    },
+    "agility": {
+      "speed": 2
+    },
+    "wisdom": {
+      "def": 1
+    }
   },
-
   "pointsPerLevel": {
-    "_note": "PROGRESSION.md §2: points = base + (Tier rank above Basic). Basic 3 … Legendary 8.",
-    "base": 3, "perTierAboveBasic": 1,
-    "tierOrder": ["basic", "advanced", "master", "grandmaster", "heroic", "legendary"]
+    "_note": "PROGRESSION.md \u00a72: points = base + (Tier rank above Basic). Basic 3 \u2026 Legendary 8.",
+    "base": 3,
+    "perTierAboveBasic": 1,
+    "tierOrder": [
+      "basic",
+      "advanced",
+      "master",
+      "grandmaster",
+      "heroic",
+      "legendary"
+    ]
   },
-
-  "softCap": 450
+  "softCap": 450,
+  "credits": {
+    "_doc": "Credit drops from defeating enemies. perKill = base * level * creditYield * variance. Tuned so a fight \u2248 one Potion (50 Cr) early, scaling with depth/level.",
+    "base": 15,
+    "variance": [
+      0.85,
+      1.15
+    ]
+  }
 }

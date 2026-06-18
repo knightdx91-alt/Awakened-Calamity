@@ -166,7 +166,7 @@
         return list.map(function (spec, i) {
             var c = db.creatures[spec.key] || db.creatures.emberling;
             var id = 'e' + (i + 1);
-            enemyMeta[id] = { key: spec.key, level: spec.level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, name: c.name, battler: c.battler || null };
+            enemyMeta[id] = { key: spec.key, level: spec.level || 2, xpYield: c.xpYield != null ? c.xpYield : 1.0, creditYield: c.creditYield != null ? c.creditYield : 1.0, name: c.name, battler: c.battler || null };
             return { id: id, side: 'enemy', name: c.name, affinity: c.affinity, stats: Object.assign({}, c.stats), loadout: (c.loadout || ['jab']).slice(), battler: c.battler || null, charset: c.charset || null };
         });
     }
@@ -403,13 +403,25 @@
         _persistVitals();
         var msg;
         if (state.winner === 'player') {
-            var totalXp = 0, lvlEvents = [];
+            var totalXp = 0, lvlEvents = [], totalCr = 0;
+            var cc = (db.progression && db.progression.credits) || { base: 15, variance: [0.85, 1.15] };
             for (var id in enemyMeta) {
                 var g = root.GameProgression.gainFromKill(prog, { level: enemyMeta[id].level, xpYield: enemyMeta[id].xpYield }, db.progression);
                 totalXp += g.xp; lvlEvents = lvlEvents.concat(g.events);
+                // Credit drop: base * level * creditYield * variance (defeated foes only).
+                var em = enemyMeta[id];
+                if (em.creditYield > 0) {
+                    var vmin = cc.variance[0], vspan = cc.variance[1] - cc.variance[0];
+                    var v = vmin + Math.random() * vspan;
+                    totalCr += Math.round(cc.base * em.level * em.creditYield * v);
+                }
             }
             _saveProg();
-            msg = 'You won.  +' + totalXp + ' XP';
+            if (totalCr > 0 && root.GameSave && GameSave.state && GameSave.state.player) {
+                var pl = GameSave.state.player; pl.money = (pl.money || 0) + totalCr;
+                if (GameSave.markDirty) GameSave.markDirty();
+            }
+            msg = 'You won.  +' + totalXp + ' XP' + (totalCr > 0 ? ' · +' + totalCr + ' Cr' : '');
             if (lvlEvents.length) {
                 var pts = lvlEvents.reduce(function (s, e) { return s + e.points; }, 0);
                 msg += '   ⤴ LEVEL UP → Lv' + prog.level + ' (+' + pts + ' pts)';
