@@ -165,6 +165,8 @@
             // started untethered (refusing its help) gets no lethal-save / no top-up.
             var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
             state.tethered = !(_run && _run.active && _run.tethered === false);
+            // remaining Surveillance budget before the System collects you mid-fight
+            if (state.tethered && opts && opts.collectBudget != null) state.collectBudget = opts.collectBudget;
             _seedVitals();   // carry persistent HP/MP/SP into the battle (no full-heal each fight)
             pendingActorId = null; awaitingClose = false; menuSkills = []; cursor = 0; chosenSkill = null; logQueue = [];
             cards = {};
@@ -361,7 +363,7 @@
         // carry Surveillance accrued this fight onto the persistent meter + remember
         // the outcome for the run controller (passed to onEnd).
         sv.surveillance = (sv.surveillance | 0) + (state.surveillance | 0);
-        _lastResult = { winner: state.winner, surveillance: state.surveillance | 0 };
+        _lastResult = { winner: state.winner, surveillance: state.surveillance | 0, collected: !!state.collected };
         if (state.winner === 'enemy') {
             // System "rescue" on defeat — back on your feet, but watched (TODO: real down/respawn + penalty).
             sv.hp = 50; if (sv.mana < 30) sv.mana = 30; if (sv.stamina < 30) sv.stamina = 30;

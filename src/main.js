@@ -453,14 +453,23 @@
         });
     }
     // Battle processing — start a combat and resolve when it ends.
-    function _battle(c) {
+    async function _battle(c) {
+        var empty = { winner: null, surveillance: 0 };
+        if (!window.GameCombatView || !GameCombatView.start) return empty;
+        var opts = {};
+        if (c.enemies && c.enemies.length) opts.enemies = c.enemies;
+        // tethered run -> tell combat how much Surveillance budget remains before
+        // the System collects you mid-fight (no more infinite saves / stalemate).
+        var st = window.GameSave && GameSave.state;
+        if (st && window.GameRun && GameRun.active(st.run) && st.run.tethered !== false) {
+            await _loadCorrupt(); await _loadMetaDb();
+            var thr = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0);
+            opts.collectBudget = Math.max(15, thr - (st.run.surveillance | 0));
+        }
         return new Promise(function (res) {
-            var empty = { winner: null, surveillance: 0 };
-            if (!window.GameCombatView || !GameCombatView.start) { res(empty); return; }
-            var opts = { onEnd: function (r) { res(r || empty); } };
-            if (c.enemies && c.enemies.length) opts.enemies = c.enemies;
+            opts.onEnd = function (r) { res(r || empty); };
             GameCombatView.start(opts);
-            if (!GameCombatView.isActive()) res(empty); // start refused (already active)
+            if (!GameCombatView.isActive()) res(empty);
         });
     }
 
@@ -497,6 +506,7 @@
         var threshold = (_corruptDb.collectionThreshold | 0) + (_metaEffects().collectionBonus | 0);
         var col = GameRun.addSurveillance(st.run, (result && result.surveillance) | 0, threshold);
         if (GameSave.markDirty) GameSave.markDirty();
+        if (result && result.collected) { await _endRun('collected'); return; }  // taken mid-fight
         if (result && result.winner === 'enemy') { await _endRun('died'); return; }
         if (col.collected) { await _endRun('collected'); return; }
     }

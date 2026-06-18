@@ -267,6 +267,13 @@
         const iv = state.tuning.intervention;
         if (!iv || !iv.enabled || !iv.lethalSave) return;
         if (!t || t.side !== 'player' || t.hp > 0) return;
+        // COLLECTION: if leaning on the System has spent the run's whole budget,
+        // it takes you on the spot instead of saving you again — the fight ends.
+        if (state.collectBudget != null && state.surveillance >= state.collectBudget) {
+            state.over = true; state.winner = 'collected'; state.collected = true;
+            log(state, 'intervention', { kind: 'collected', actor: t.id, surveillance: state.surveillance });
+            return;
+        }
         t.hp = Math.max(1, Math.round(t.maxHp * (iv.saveTo || 0.3)));
         state._saves = (state._saves || 0) + 1;
         state.surveillance += (iv.surveillancePerSave || 15) * state._saves; // escalates
