@@ -1,0 +1,462 @@
+{
+ "id": "MAP_RUNBOSS1",
+ "name": "RunBoss1",
+ "region": "awakened",
+ "parent": "",
+ "layout": "LAYOUT_RUNBOSS1",
+ "music": "MUS_NONE",
+ "weather": "WEATHER_NONE",
+ "map_type": "MAP_TYPE_DUNGEON",
+ "allow_running": true,
+ "show_map_name": true,
+ "connections": [],
+ "npcs": [],
+ "warps": [],
+ "triggers": [],
+ "signs": [],
+ "events": [
+  {
+   "id": 1,
+   "name": "Entrance",
+   "x": 30,
+   "y": 5,
+   "graphic": {
+    "sprite": "Other3",
+    "file": "rtp/Other3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "Worn stairs lead back up to the surface."
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Alpha",
+   "x": 8,
+   "y": 32,
+   "graphic": {
+    "sprite": "Monster2",
+    "file": "rtp/Monster2.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "The Alpha uncoils from the dark \u2014 far larger than its kin."
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "thornwolf",
+       "level": 6
+      },
+      {
+       "key": "thornwolf",
+       "level": 4
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": "The Alpha falls. The dungeon goes still."
+    },
+    {
+     "type": "despawn"
+    },
+    {
+     "type": "descend"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Roamer",
+   "x": 31,
+   "y": 12,
+   "graphic": {
+    "sprite": "Monster1",
+    "file": "rtp/Monster1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Roamer",
+   "x": 17,
+   "y": 14,
+   "graphic": {
+    "sprite": "Monster1",
+    "file": "rtp/Monster1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "Roamer",
+   "x": 33,
+   "y": 17,
+   "graphic": {
+    "sprite": "Monster3",
+    "file": "rtp/Monster3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 2
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Roamer",
+   "x": 23,
+   "y": 17,
+   "graphic": {
+    "sprite": "Monster1",
+    "file": "rtp/Monster1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Roamer",
+   "x": 10,
+   "y": 23,
+   "graphic": {
+    "sprite": "Monster3",
+    "file": "rtp/Monster3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Roamer",
+   "x": 34,
+   "y": 29,
+   "graphic": {
+    "sprite": "Monster3",
+    "file": "rtp/Monster3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Roamer",
+   "x": 24,
+   "y": 30,
+   "graphic": {
+    "sprite": "Monster1",
+    "file": "rtp/Monster1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 3
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "name": "Chest",
+   "x": 20,
+   "y": 32,
+   "graphic": {
+    "sprite": "Chest",
+    "file": "rtp/Chest.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A weathered chest, half-buried in the dust."
+    },
+    {
+     "type": "money",
+     "op": "+",
+     "amount": 102
+    },
+    {
+     "type": "item",
+     "op": "+",
+     "id": "ether",
+     "pocket": "items",
+     "qty": 1
+    },
+    {
+     "type": "text",
+     "text": "You found 102 Cr and a ether."
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "name": "Chest",
+   "x": 10,
+   "y": 22,
+   "graphic": {
+    "sprite": "Chest",
+    "file": "rtp/Chest.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A weathered chest, half-buried in the dust."
+    },
+    {
+     "type": "money",
+     "op": "+",
+     "amount": 104
+    },
+    {
+     "type": "item",
+     "op": "+",
+     "id": "bandage",
+     "pocket": "items",
+     "qty": 1
+    },
+    {
+     "type": "text",
+     "text": "You found 104 Cr and a bandage."
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "name": "Chest",
+   "x": 32,
+   "y": 28,
+   "graphic": {
+    "sprite": "Chest",
+    "file": "rtp/Chest.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A weathered chest, half-buried in the dust."
+    },
+    {
+     "type": "money",
+     "op": "+",
+     "amount": 75
+    },
+    {
+     "type": "item",
+     "op": "+",
+     "id": "bandage",
+     "pocket": "items",
+     "qty": 1
+    },
+    {
+     "type": "text",
+     "text": "You found 75 Cr and a bandage."
+    }
+   ]
+  }
+ ]
+}

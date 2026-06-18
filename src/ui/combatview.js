@@ -8,6 +8,7 @@
 
     var db = null, state = null, active = false;
     var _onEnd = null;   // optional callback fired when combat tears down
+    var _lastResult = null; // {winner, surveillance} captured before teardown nulls state
     var mode = 'idle';                  // 'beat'|'ticking'|'action'|'menu'|'item'|'target'|'over'
     var awaitingClose = false, pendingActorId = null;
     var menuSkills = [], cursor = 0;
@@ -348,6 +349,10 @@
     }
     function _persistVitals() {
         var sv = _surv(), a = state && state.actors.p1; if (!sv || !a) return;
+        // carry Surveillance accrued this fight onto the persistent meter + remember
+        // the outcome for the run controller (passed to onEnd).
+        sv.surveillance = (sv.surveillance | 0) + (state.surveillance | 0);
+        _lastResult = { winner: state.winner, surveillance: state.surveillance | 0 };
         if (state.winner === 'enemy') {
             // System "rescue" on defeat — back on your feet, but watched (TODO: real down/respawn + penalty).
             sv.hp = 50; if (sv.mana < 30) sv.mana = 30; if (sv.stamina < 30) sv.stamina = 30;
@@ -540,8 +545,8 @@
         if (els.root && els.root.parentNode) els.root.parentNode.removeChild(els.root);
         els = {}; cards = {}; state = null;
         // Notify any awaiter (e.g. an event 'battle' command) that combat is over.
-        var cb = _onEnd; _onEnd = null;
-        if (cb) try { cb(); } catch (e) {}
+        var cb = _onEnd, result = _lastResult; _onEnd = null; _lastResult = null;
+        if (cb) try { cb(result || { winner: null, surveillance: 0 }); } catch (e) {}
         // Combat may have leveled the player past an evolution threshold.
         if (root.GameEvolvePopup) try { root.GameEvolvePopup.check(); } catch (e) {}
     }

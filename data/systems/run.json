@@ -1,0 +1,4 @@
+{ "_meta":{"doc":"Run-loop config: a 4-floor descent (3 floors + boss) through a biome pool. floorPool/bossPool are committed generated dungeons the GameRun controller cycles by seed."},
+  "maxDepth": 4, "biome": "verdara",
+  "floorPool": ["RunFloorA","RunFloorB","RunFloorC","RunFloorD","RunFloorE","RunFloorF"],
+  "bossPool": ["RunBoss1","RunBoss2"] }

@@ -1,0 +1,222 @@
+{
+ "id": "MAP_RUNFLOORF",
+ "name": "RunFloorF",
+ "region": "awakened",
+ "parent": "",
+ "layout": "LAYOUT_RUNFLOORF",
+ "music": "MUS_NONE",
+ "weather": "WEATHER_NONE",
+ "map_type": "MAP_TYPE_DUNGEON",
+ "allow_running": true,
+ "show_map_name": true,
+ "connections": [],
+ "npcs": [],
+ "warps": [],
+ "triggers": [],
+ "signs": [],
+ "events": [
+  {
+   "id": 1,
+   "name": "Entrance",
+   "x": 32,
+   "y": 7,
+   "graphic": {
+    "sprite": "Other3",
+    "file": "rtp/Other3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "Worn stairs lead back up to the surface."
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "StairsDown",
+   "x": 7,
+   "y": 26,
+   "graphic": {
+    "sprite": "Other3",
+    "file": "rtp/Other3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "Worn stairs spiral down into the dark. Descend deeper?"
+    },
+    {
+     "type": "descend"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Roamer",
+   "x": 19,
+   "y": 8,
+   "graphic": {
+    "sprite": "Monster1",
+    "file": "rtp/Monster1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 1
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Roamer",
+   "x": 31,
+   "y": 17,
+   "graphic": {
+    "sprite": "Monster3",
+    "file": "rtp/Monster3.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A System-twisted creature lunges from the dark!"
+    },
+    {
+     "type": "battle",
+     "enemies": [
+      {
+       "key": "emberling",
+       "level": 1
+      }
+     ]
+    },
+    {
+     "type": "despawn"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "Chest",
+   "x": 6,
+   "y": 20,
+   "graphic": {
+    "sprite": "Chest",
+    "file": "rtp/Chest.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A weathered chest, half-buried in the dust."
+    },
+    {
+     "type": "money",
+     "op": "+",
+     "amount": 126
+    },
+    {
+     "type": "item",
+     "op": "+",
+     "id": "potion",
+     "pocket": "items",
+     "qty": 1
+    },
+    {
+     "type": "text",
+     "text": "You found 126 Cr and a potion."
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Chest",
+   "x": 26,
+   "y": 31,
+   "graphic": {
+    "sprite": "Chest",
+    "file": "rtp/Chest.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A weathered chest, half-buried in the dust."
+    },
+    {
+     "type": "money",
+     "op": "+",
+     "amount": 128
+    },
+    {
+     "type": "item",
+     "op": "+",
+     "id": "ether",
+     "pocket": "items",
+     "qty": 1
+    },
+    {
+     "type": "text",
+     "text": "You found 128 Cr and a ether."
+    }
+   ]
+  }
+ ]
+}

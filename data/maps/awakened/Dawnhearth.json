@@ -770,6 +770,58 @@
      "speaker": "corwin"
     }
    ]
+  },
+  {
+   "id": 23,
+   "name": "DescentGate",
+   "x": 30,
+   "y": 30,
+   "graphic": {
+    "sprite": "Crystal",
+    "file": "rtp/Crystal.png",
+    "frame_w": 32,
+    "frame_h": 64,
+    "cols": 12,
+    "rows": 8,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A fracture in the air hums where the System thins \u2014 a way DOWN, into the dark beneath Dawnhearth."
+    },
+    {
+     "type": "choice",
+     "prompt": "Begin the descent?",
+     "options": [
+      {
+       "label": "Descend",
+       "then": [
+        {
+         "type": "text",
+         "text": "You step through. The System follows."
+        },
+        {
+         "type": "descend",
+         "start": true
+        }
+       ]
+      },
+      {
+       "label": "Not yet",
+       "then": [
+        {
+         "type": "text",
+         "text": "You step back. The fracture waits."
+        }
+       ]
+      }
+     ]
+    }
+   ]
   }
  ]
 }

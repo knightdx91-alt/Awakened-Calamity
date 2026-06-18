@@ -455,12 +455,51 @@
     // Battle processing — start a combat and resolve when it ends.
     function _battle(c) {
         return new Promise(function (res) {
-            if (!window.GameCombatView || !GameCombatView.start) { res(); return; }
-            var opts = { onEnd: function () { res(); } };
+            var empty = { winner: null, surveillance: 0 };
+            if (!window.GameCombatView || !GameCombatView.start) { res(empty); return; }
+            var opts = { onEnd: function (r) { res(r || empty); } };
             if (c.enemies && c.enemies.length) opts.enemies = c.enemies;
             GameCombatView.start(opts);
-            if (!GameCombatView.isActive()) res(); // start refused (already active)
+            if (!GameCombatView.isActive()) res(empty); // start refused (already active)
         });
+    }
+
+    // ---- run loop (GameRun) ----
+    var _runDb = null, _corruptDb = null;
+    function _loadRunDb() {
+        if (_runDb) return Promise.resolve(_runDb);
+        return fetch('data/systems/run.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_runDb = j); })
+            .catch(function () { return (_runDb = { maxDepth: 4, floorPool: [], bossPool: [] }); });
+    }
+    function _loadCorrupt() {
+        if (_corruptDb) return Promise.resolve(_corruptDb);
+        return fetch('data/systems/corruption.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_corruptDb = j); })
+            .catch(function () { return (_corruptDb = { collectionThreshold: 240 }); });
+    }
+    // after each battle, a run reacts: accrue Surveillance -> maybe COLLECTED; defeat -> died.
+    async function _runReact(result) {
+        var st = window.GameSave && GameSave.state;
+        if (!st || !window.GameRun || !GameRun.active(st.run)) return;
+        await _loadCorrupt();
+        var col = GameRun.addSurveillance(st.run, (result && result.surveillance) | 0, _corruptDb.collectionThreshold);
+        if (GameSave.markDirty) GameSave.markDirty();
+        if (result && result.winner === 'enemy') { await _endRun('died'); return; }
+        if (col.collected) { await _endRun('collected'); return; }
+    }
+    async function _endRun(reason) {
+        var st = GameSave.state; if (!window.GameRun || !st) return;
+        var r = GameRun.end(st.run, st.meta || (st.meta = {}), reason);
+        var msg = reason === 'cleared' ? 'You break the surface — alive, and still yourself. The descent is cleared.'
+            : reason === 'collected' ? 'SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more.'
+            : 'You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more.';
+        await _say(_subTokens(msg));
+        await _say('Memory fragments +' + r.summary.fragments + '  (total ' + r.summary.totalFragments + ' · deepest floor ' + (st.meta.deepest | 0) + ')');
+        var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
+        await _enterMap('Dawnhearth', 'awakened', w.x, w.y);
+        st.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
+        if (GameSave.save) GameSave.save(GameSave.currentSlot || 0, st);
     }
 
     async function runCmdList(list, ctx) {
@@ -668,7 +707,22 @@
             }
             case 'fade':   await _fade(c); break;
             case 'shake':  await _shake(c); break;
-            case 'battle': await _battle(c); break;
+            case 'battle': { var _br = await _battle(c); await _runReact(_br); break; }
+            case 'descend': {
+                var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
+                await _loadRunDb();
+                if (c.start || !GameRun.active(st.run)) {
+                    GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0);
+                    if (GameSave.markDirty) GameSave.markDirty();
+                    await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
+                } else {
+                    var d = GameRun.descend(st.run, _runDb);
+                    if (GameSave.markDirty) GameSave.markDirty();
+                    if (d.cleared) await _endRun('cleared');
+                    else await _enterMap(d.map, 'awakened', null, null);
+                }
+                break;
+            }
             case 'jump':   ctx._jumpTo = c.label || ''; break;
             case 'label':  break; // resolved in runCmdList
             case 'comment': break; // author note; no-op at runtime
