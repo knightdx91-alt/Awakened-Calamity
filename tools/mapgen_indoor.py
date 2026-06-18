@@ -123,6 +123,114 @@ class IndoorBuilder:
         if rt: return "r"
         return "f"
 
+    def _walk_components(self):
+        W, H = self.W, self.H; seen = [False] * (W * H); out = []
+        for s in range(W * H):
+            if seen[s] or not self.walk[s]:
+                continue
+            comp = []; stack = [s]; seen[s] = True
+            while stack:
+                i = stack.pop(); comp.append(i); x, y = i % W, i // W
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < W and 0 <= ny < H:
+                        j = ny * W + nx
+                        if not seen[j] and self.walk[j]:
+                            seen[j] = True; stack.append(j)
+            out.append(comp)
+        return out
+
+    def ensure_connected(self):
+        """REACHABILITY GUARANTEE — after carving rooms/corridors, no walkable area
+        may be stranded. Connect every disconnected component to the main (largest)
+        one by carving a corridor between their centroids. Run before finalize_walls.
+        This is what stops the boss/entrance ever being walled off (a soft-lock)."""
+        W = self.W
+        def centroid(comp):
+            sx = sum(i % W for i in comp) // len(comp); sy = sum(i // W for i in comp) // len(comp)
+            # snap to an actual cell of the component (nearest to the average)
+            return min(comp, key=lambda i: (i % W - sx) ** 2 + (i // W - sy) ** 2)
+        guard = 0
+        comps = self._walk_components()
+        while len(comps) > 1 and guard < 40:
+            guard += 1
+            comps.sort(key=len, reverse=True)
+            main_c = centroid(comps[0])
+            mx, my = main_c % W, main_c // W
+            for comp in comps[1:]:
+                c = centroid(comp); cx, cy = c % W, c // W
+                self.carve_corridor(cx, cy, mx, my, width=1)
+            comps = self._walk_components()
+
+    def repair_prop_connectivity(self):
+        """FINAL reachability guarantee — after props are placed, a blocking prop
+        may sit on a cut vertex and sever the COLLISION map even though the floor
+        (walk) is connected. Find any floor-prop that bridges two passable regions
+        and remove it until the whole map is one passable component. This is what
+        makes the no-soft-lock guarantee hold end-to-end."""
+        W, H = self.W, self.H
+        def coll_comps():
+            seen = [False] * (W * H); cid = [-1] * (W * H); out = 0
+            for s in range(W * H):
+                if seen[s] or self.coll[s]:
+                    continue
+                stack = [s]; seen[s] = True
+                while stack:
+                    i = stack.pop(); cid[i] = out; x, y = i % W, i // W
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < W and 0 <= ny < H:
+                            j = ny * W + nx
+                            if not seen[j] and not self.coll[j]:
+                                seen[j] = True; stack.append(j)
+                out += 1
+            return cid, out
+        for _ in range(200):
+            cid, ncomp = coll_comps()
+            if ncomp <= 1:
+                return
+            # a removable prop = a blocked floor cell (walk + overlay prop, not a wall)
+            # whose orthogonal neighbours touch >=2 different passable components.
+            removed = False
+            for i in range(W * H):
+                if not (self.walk[i] and self.coll[i] and self.over[i] >= 0):
+                    continue
+                x, y = i % W, i // W
+                nbr = set()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < W and 0 <= ny < H and not self.coll[ny * W + nx]:
+                        nbr.add(cid[ny * W + nx])
+                if len(nbr) >= 2:
+                    self.over[i] = -1; self.coll[i] = 0; removed = True
+                    break
+            if not removed:
+                return
+
+    def place_monster(self, x, y, key, level, sprite="Monster1", name="Roamer"):
+        """A roaming creature: contact starts a battle, then it despawns."""
+        self.events.append({
+            "x": x, "y": y, "name": name, "trigger": "touch", "through": False,
+            "graphic": {"sprite": sprite, "file": "rtp/%s.png" % sprite,
+                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "commands": [
+                {"type": "text", "text": "A System-twisted creature lunges from the dark!"},
+                {"type": "battle", "enemies": [{"key": key, "level": level}]},
+                {"type": "despawn"}]})
+
+    def place_chest(self, x, y, money=0, item=None, pocket="items"):
+        cmds = [{"type": "text", "text": "A weathered chest, half-buried in the dust."}]
+        gained = []
+        if money: cmds.append({"type": "money", "op": "+", "amount": money}); gained.append("%d Cr" % money)
+        if item: cmds.append({"type": "item", "op": "+", "id": item, "pocket": pocket, "qty": 1}); gained.append("a " + item.replace("_", " "))
+        cmds.append({"type": "text", "text": "You found " + (" and ".join(gained) if gained else "nothing of use") + "."})
+        self.setp(x, y, "crate", block=True)
+        self.events.append({
+            "x": x, "y": y, "name": "Chest", "trigger": "action", "through": False,
+            "graphic": {"sprite": "Chest", "file": "rtp/Chest.png",
+                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "commands": cmds})
+
     def finalize_walls(self):
         for y in range(self.H):
             for x in range(self.W):
@@ -163,6 +271,33 @@ class IndoorBuilder:
                     self.over[yy * self.W + x] = self.gid[f"face_{name}_{col}"]
                     self.coll[yy * self.W + x] = 1
 
+    def _room_floor(self, room, away_from_events=False, open_only=False):
+        """A random empty walkable floor tile inside a room (cx,cy,rw,rh), avoiding
+        overlay props, walls, and (optionally) other event tiles. `open_only` keeps
+        it off narrow corridors (for blocking placements). Returns (x,y) or (None,None)."""
+        cx, cy, rw, rh = room
+        evset = {(e["x"], e["y"]) for e in self.events} if away_from_events else set()
+        for _ in range(40):
+            x = cx + self.rng.randint(-(rw // 2) + 1, rw // 2 - 1)
+            y = cy + self.rng.randint(-(rh // 2) + 1, rh // 2 - 1)
+            i = y * self.W + x
+            if (0 <= x < self.W and 0 <= y < self.H and self.walk[i]
+                    and self.over[i] == -1 and not self.coll[i] and (x, y) not in evset
+                    and (not open_only or self._is_open(x, y))):
+                return x, y
+        return None, None
+
+    def _is_open(self, x, y):
+        """True if (x,y) has >=3 walkable orthogonal neighbours — i.e. it's in a
+        room body, not a 1-wide corridor. Placing a BLOCKING prop here can never
+        sever a passage, so connectivity stays intact after prop placement."""
+        n = 0
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.W and 0 <= ny < self.H and self.walk[ny * self.W + nx]:
+                n += 1
+        return n >= 3
+
     def scatter_in_rooms(self, name, n, block=True):
         placed = tries = 0
         while placed < n and tries < n * 80:
@@ -170,7 +305,8 @@ class IndoorBuilder:
             x, y = self.rng.randint(1, self.W - 2), self.rng.randint(1, self.H - 2)
             i = y * self.W + x
             if not self.walk[i] or self.over[i] != -1 or self.coll[i]: continue
-            # keep it off the very centre of corridors: require a wall neighbour
+            # a BLOCKING prop must sit in open room space, never plugging a corridor
+            if block and not self._is_open(x, y): continue
             self.setp(x, y, name, block); placed += 1
 
     def write(self, name, region, map_type, door_text):
@@ -187,9 +323,10 @@ class IndoorBuilder:
                   "npcs": [], "warps": [], "triggers": [], "signs": [],
                   "events": [{"id": i + 1, "name": e.get("name", "Event%d" % (i + 1)),
                               "x": e["x"], "y": e["y"],
-                              "graphic": {"sprite": "", "file": "", "single": True},
-                              "dir": "down", "trigger": "action", "through": False,
-                              "commands": [{"type": "text", "text": e.get("text", door_text)}]}
+                              "graphic": e.get("graphic", {"sprite": "", "file": "", "single": True}),
+                              "dir": e.get("dir", "down"), "trigger": e.get("trigger", "action"),
+                              "through": e.get("through", False),
+                              "commands": e.get("commands", [{"type": "text", "text": e.get("text", door_text)}])}
                              for i, e in enumerate(self.events)]}
         os.makedirs(os.path.join(ROOT, "data", "maps", region), exist_ok=True)
         json.dump(mapobj, open(os.path.join(ROOT, "data", "maps", region, name + ".json"), "w"))
@@ -221,29 +358,78 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
         b.carve_rect(rx, ry, rx + rw, ry + rh)
         rooms.append((cx, cy, rw, rh))
     rooms.sort(key=lambda r: (r[1], r[0]))
+    # connect each room to the previous (a spanning chain) + a couple of extra
+    # edges so the layout has LOOPS / decision points, not a single corridor.
     for i in range(1, len(rooms)):
         ax, ay = rooms[i - 1][:2]; bx, by = rooms[i][:2]
         b.carve_corridor(ax, ay, bx, by, width=rng.choice([1, 2]))
+    for _ in range(1 + tier):                       # extra loop edges
+        if len(rooms) >= 3:
+            r1, r2 = rng.sample(rooms, 2)
+            b.carve_corridor(r1[0], r1[1], r2[0], r2[1], width=1)
+    # REACHABILITY GUARANTEE: nothing may be walled off from the main area.
+    b.ensure_connected()
     b.finalize_walls()
     b.render_north_faces()
-    # entrance (first room) + Alpha lair (last room)
+
+    # ── critical path: Entrance = first room; Alpha lair = the room FARTHEST from
+    # it (so the boss sits deep), measured by walking distance through the graph. ──
     ex, ey = rooms[0][:2]
+    def far(r): return (r[0] - ex) ** 2 + (r[1] - ey) ** 2
+    alpha_room = max(rooms, key=far)
+    ax, ay = alpha_room[:2]
     b.setp(ex, ey, "stairs", block=False)
-    b.events.append({"x": ex, "y": ey, "name": "Entrance", "text": "Stairs back up."})
-    ax, ay = rooms[-1][:2]
-    b.setp(ax, ay, "grave", block=False)
-    b.events.append({"x": ax, "y": ay, "name": "Alpha",
-                     "text": "The Alpha stirs in the dark."})
-    # props: pillars line big rooms; clutter scattered
+    b.events.append({"x": ex, "y": ey, "name": "Entrance",
+                     "graphic": {"sprite": "Other3", "file": "rtp/Other3.png",
+                                 "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+                     "commands": [{"type": "text", "text": "Worn stairs lead back up to the surface."}]})
+    # the Alpha = a real boss encounter (a tougher creature, level-scaled)
+    boss_key = rng.choice(["thornwolf", "emberling"])
+    boss_lvl = 2 + tier * 2
+    b.events.append({"x": ax, "y": ay, "name": "Alpha", "trigger": "action", "through": False,
+                     "graphic": {"sprite": "Monster2", "file": "rtp/Monster2.png",
+                                 "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+                     "commands": [
+                         {"type": "text", "text": "The Alpha uncoils from the dark — far larger than its kin."},
+                         {"type": "battle", "enemies": [{"key": boss_key, "level": boss_lvl},
+                                                        {"key": boss_key, "level": max(1, boss_lvl - 2)}]},
+                         {"type": "text", "text": "The Alpha falls. The dungeon goes still."},
+                         {"type": "despawn"}]})
+
+    # ── ENCOUNTERS: roaming creatures in the non-entrance rooms, scaled by tier
+    # and by depth (distance from the entrance). Contact = battle. ──
+    body_rooms = [r for r in rooms if r is not rooms[0] and r is not alpha_room]
+    maxd = max((far(r) for r in rooms), default=1) or 1
+    sprites = ["Monster1", "Monster3"]
+    for r in body_rooms:
+        if rng.random() < 0.75:
+            depth = far(r) / maxd                    # 0 near entrance .. 1 deep
+            lvl = max(1, tier + int(depth * 2 + rng.random()))
+            key = "thornwolf" if depth > 0.5 and rng.random() < 0.6 else "emberling"
+            sx, sy = b._room_floor(r)
+            if sx is not None:
+                b.place_monster(sx, sy, key, lvl, sprite=rng.choice(sprites))
+
+    # ── LOOT: chests reward exploring the deep / dead-end rooms (risk→reward). ──
+    loot_rooms = sorted(body_rooms, key=far, reverse=True)[:1 + tier]
+    for r in loot_rooms:
+        cx, cy = b._room_floor(r, away_from_events=True, open_only=True)
+        if cx is not None:
+            money = rng.randint(40, 80) * (1 + int(far(r) / maxd * 2))
+            item = rng.choice([None, "potion", "bandage", "ration", "ether"])
+            b.place_chest(cx, cy, money=money, item=item)
+
+    # props: pillars line big halls; clutter scattered (kept lighter now)
     for (cx, cy, rw, rh) in rooms:
         if rw >= 7 and rh >= 5:
             for dx in (-(rw // 2) + 1, (rw // 2) - 1):
-                b.setp(cx + dx, cy - rh // 2 + 1, "pillar")
-                b.setp(cx + dx, cy + rh // 2 - 1, "pillar")
-    b.scatter_in_rooms("crystal", 6 + tier * 2, block=True)
-    b.scatter_in_rooms("rockpile", 8, block=True)
-    b.scatter_in_rooms("barrel", 6); b.scatter_in_rooms("crate", 5)
-    b.scatter_in_rooms("bones", 5, block=False); b.scatter_in_rooms("goldpile", 3)
+                for py in (cy - rh // 2 + 1, cy + rh // 2 - 1):
+                    if b.inb(cx + dx, py) and b.over[py * b.W + cx + dx] == -1 and b._is_open(cx + dx, py):
+                        b.setp(cx + dx, py, "pillar")
+    b.scatter_in_rooms("crystal", 4 + tier, block=True)
+    b.scatter_in_rooms("rockpile", 6, block=True)
+    b.scatter_in_rooms("bones", 4, block=False)
+    b.repair_prop_connectivity()                     # guarantee: no prop soft-locks
     return b.write(name, region, "MAP_TYPE_DUNGEON", "The dark presses in.")
 
 
@@ -260,6 +446,7 @@ def gen_interior(name, w=26, h=18, seed=2, region="awakened", tier=1, hazard="")
         mx = w // 2
         for y in range(top, h - 2):
             b.walk[y * b.W + mx] = (y == h - 4)
+    b.ensure_connected()
     b.finalize_walls()
     b.render_north_faces()
     # exit at the bottom-centre (back outside)
@@ -286,4 +473,5 @@ def gen_interior(name, w=26, h=18, seed=2, region="awakened", tier=1, hazard="")
         b.setp(w - 4, by, "crate"); b.setp(w - 5, by, "crate")
         b.setp(w - 4, fy + 2, "barrel")
     b.scatter_in_rooms("pot", 2); b.scatter_in_rooms("crate", 2)
+    b.repair_prop_connectivity()                     # guarantee: no prop soft-locks
     return b.write(name, region, "MAP_TYPE_INTERIOR", "...")

@@ -365,6 +365,64 @@ class MapBuilder:
         self.setp(x, y + 1, "tree_bl"); self.setp(x + 1, y + 1, "tree_br")
         return True
 
+    def ensure_doors_reachable(self):
+        """REACHABILITY GUARANTEE (towns) — every door's front tile must be
+        reachable from the main walkable area (the plaza/road network). For any
+        stranded door, carve a dirt path to the nearest reachable tile, routing
+        AROUND buildings/water where possible (weighted search) so it reads as a
+        natural footpath rather than punching through a house."""
+        import heapq
+        W, H = self.W, self.H
+        # main walkable component (coll==0)
+        seen = [False] * (W * H); main = set(); best = []
+        for s in range(W * H):
+            if seen[s] or self.coll[s]:
+                continue
+            comp = []; st = [s]; seen[s] = True
+            while st:
+                i = st.pop(); comp.append(i); x, y = i % W, i // W
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < W and 0 <= ny < H and not seen[ny * W + nx] and not self.coll[ny * W + nx]:
+                        seen[ny * W + nx] = True; st.append(ny * W + nx)
+            if len(comp) > len(best):
+                best = comp
+        main = set(best)
+
+        def cost(i):
+            if self.coll[i] == 0: return 1                 # already walkable
+            if self.terr[i // W][i % W] == "water": return 40
+            if self.over[i] >= 0: return 6                 # a clearable prop
+            return 12                                      # a building wall (avoid)
+
+        for e in self.events:
+            fx, fy = e["x"], e["y"] + 1                    # the tile you stand on
+            if not self.inb(fx, fy) or (fy * W + fx) in main:
+                continue
+            # Dijkstra from the door front to the nearest main-area cell.
+            src = fy * W + fx
+            dist = {src: 0}; prev = {}; pq = [(0, src)]
+            target = None
+            while pq:
+                d, i = heapq.heappop(pq)
+                if d > dist.get(i, 1e9): continue
+                if i in main: target = i; break
+                x, y = i % W, i // W
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < W and 0 <= ny < H:
+                        j = ny * W + nx; nd = d + cost(j)
+                        if nd < dist.get(j, 1e9):
+                            dist[j] = nd; prev[j] = i; heapq.heappush(pq, (nd, j))
+            if target is None:
+                continue
+            i = target
+            while i != src:
+                self.coll[i] = 0; self.over[i] = -1
+                self.terr[i // W][i % W] = "dirt" if self.terr[i // W][i % W] == "grass" else self.terr[i // W][i % W]
+                i = prev[i]
+            self.coll[src] = 0; self.over[src] = -1
+
     def scatter(self, name, n, block=True, on=("grass",)):
         placed = tries = 0
         while placed < n and tries < n * 60:
@@ -517,6 +575,7 @@ def gen_town(name, w=50, h=50, seed=11, region="awakened", houses=12, keep=True,
         if b.empty(cx + dx, cy + dy): b.setp(cx + dx, cy + dy, obj)
     _tree_border(b, 0.6)
     _nature_pass(b, trees=22, bushes=24, flowers=8, tufts=30, rocks=8)
+    b.ensure_doors_reachable()                       # guarantee: no walled-off doors
     return b.write(name, region, "MAP_TYPE_TOWN")
 
 def gen_route(name, w=64, h=30, seed=5, region="awakened", vertical=False):
