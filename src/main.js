@@ -659,7 +659,26 @@
     async function _endRun(reason) {
         var st = GameSave.state; if (!window.GameRun || !st) return;
         var unteth = st.run && st.run.tethered === false;
+        var firstRun = ((st.meta && st.meta.runs) | 0) === 0;   // capture BEFORE end() increments it
         var r = GameRun.end(st.run, st.meta || (st.meta = {}), reason);
+        // FIRST DESCENT — the pivotal beat: death is not a game-over, it is the cycle
+        // revealing itself. Teach the Intervention dilemma's stakes the first time, framed
+        // by how you went down (tethered = the System "kept" you; untethered = the dark
+        // took you, yet you woke anyway). One-time, then normal returns take over.
+        if (firstRun) {
+            if (reason === 'cleared') {
+                await _say(_subTokens('You break the surface — alive. But the climb back felt worn, rehearsed, like muscle for a thing you have never done.'));
+                await _say(_subTokens('You have stood in this light before, [designation]. You are certain of it. And the certainty terrifies you.'));
+            } else if (unteth) {
+                await _say(_subTokens('Untethered, no hand closes around you. The dark is real, and it takes you whole.'));
+                await _say(_subTokens('…And then you are breathing. Standing in Dawnhearth. The System did not catch you — so how are you here, [designation]?'));
+                await _say(_subTokens('That is the question it does not want you to ask.'));
+            } else {
+                await _say(_subTokens('The killing blow never lands. The System’s hand closes around you — warm, absolute. You are alive. You did not choose to be.'));
+                await _say(_subTokens('SYSTEM: I told you. I will keep you alive. I will keep you. Always.'));
+                await _say(_subTokens('The relief curdles in your chest. It has said that before. You have heard it before. How many times?'));
+            }
+        }
         // meta boons: bonus fragments per run (+ untethered bonus)
         await _loadMetaDb();
         var me = _metaEffects();

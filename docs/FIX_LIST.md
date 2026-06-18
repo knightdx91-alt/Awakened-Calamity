@@ -93,8 +93,15 @@ the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
 - ⬜ **Telemetry** — only after a live demo (the sole automated read on *fun*).
 
 ## P4 — content / structure
-- ⬜ **Redo the beginning for the roguelite framing** (see below). The current Dawnhearth
-  opening was built for the open-world version.
+- ✅ **Opening reframed for the roguelite loop (2026-06-18).** The `awakening` quest + Dawnhearth
+  events already taught the loop (meet_mira → awaken_crystal → first_descent → the_cycle; Mira's
+  stage-gated dialogue reveals the cycle on return; the DescentGate offers tethered/untethered).
+  Added the missing pivot: a **one-time first-descent return beat** in `_endRun` — death is not a
+  game-over but the cycle revealing itself, framed by how you went down (tethered = the System
+  "kept" you, warm and absolute → dread; untethered = the dark took you, yet you woke anyway →
+  the question it doesn't want you to ask; cleared = the worn, rehearsed déjà-vu). Fires once
+  (keyed off `meta.runs===0`), then normal returns take over. Browser-verified: shows on run 1,
+  not run 2, 0 errors. The TutorialFiend remains an optional combat warm-up (not a gate).
 - ⬜ **Wire the rest of the cast to `GameVoice`** (reactive, Surveillance-aware).
 - ⬜ **Normalize `evolvesInto`** — two forms (string vs {class,requires}); the engine
   tolerates both, but unify for sanity. 32 classes affected. `content_lint`.
