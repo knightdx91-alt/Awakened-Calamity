@@ -2,7 +2,38 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
-## ⏳ PENDING (next session) — MAP GENERATOR follow-ups
+## ⏳ PENDING (next session) — MAP GENERATOR: gameplay + content next steps
+Owner asked to save these for next time (the "act as a game dev" roadmap). **#1 and #2 are
+DONE** (2026-06-18): `tools/mapcheck.py` = validation + batch-preview harness (reachability /
+event-interactability / overlap / route-edge validators + color-coded contact sheet; run
+`python3 tools/mapcheck.py batch`). Gameplay layer in dungeons: a **reachability GUARANTEE**
+(`ensure_connected` + `_is_open` prop gating + `repair_prop_connectivity`; towns get
+`ensure_doors_reachable` — mapcheck now 0 FAIL), **roaming encounters** (tier+depth scaled,
+contact→battle), **loot chests** (deep/dead-end rooms, money+consumable), a **critical path**
+(Alpha = farthest room, real boss battle) and **loop edges**. `write()` now honors per-event
+graphic/trigger/commands. **Still TODO (in priority order):**
+- **#3 — Data-driven templates / recipes.** Author intent in JSON (`{town, biome, anchors,
+  buildings:[{type,npc}], landmarks, hook}`) and let the generator fill detail. This is the bridge
+  to the **World Area Bible** (`data/world/<region>.json`) and enables **hybrid authoring** —
+  hand-place anchors/quest spots, generate the filler around them (the proper way to "regenerate
+  Dawnhearth" without wiping its tutorial events).
+- **Extend the gameplay layer to routes/forests** — roaming encounters + the frayed-road ends and
+  one deliberate landmark per route/forest (see `docs/MAPGEN_SPEC.md` §3–4).
+- **Dungeon room-shape variety** — mix small chambers / large halls (pillars) / **organic cave
+  rooms** (cellular-automata blob carve), break rectangles by merging/blocking (MAPGEN_SPEC §6).
+- **Biome system** — one biome def (palette + autotile set + prop tables + encounters + weather)
+  driving every archetype so Verdara/Halveth/Calderra/Vael read as different places.
+- **World-graph connectivity** — edge-matched warps so a route's exit aligns to the next map's
+  entrance (seamless world; MAP_STREAMING ring-2).
+
+### House/building polish still open (from `docs/MAPGEN_BUILDINGS.md`)
+✅ DONE: real door+window tiles (was blank window 54 / boulder-ish recess 116 → real Outside_B 67
+window + Door1 closed-door, one window per column), and the **interior/dungeon back-wall side-view
+FACE** (`render_north_faces` — walk up, see the wall rise). **TODO:** eave depth/shadow on house
+roofs, per-town roof/wall palette, L/3×3/landmark footprints, match interior side/bottom walls to
+the face material, and the bigger interior room-sectioning + furniture-by-function rework.
+
+## ⏳ EARLIER PENDING — MAP GENERATOR autotile/interior follow-ups
 Done so far (`tools/mapgen.py` + `tools/mapgen_indoor.py`, RM-convention research): flush
 same-width house roofs (no side overhang), curated roofs, fixed the `!Door1`→`Door1` sprite
 path (doors render again), windows in clean columns, continuous routes/forest trails, a compact
