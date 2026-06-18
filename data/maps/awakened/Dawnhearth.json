@@ -402,7 +402,7 @@
         },
         {
          "type": "text",
-         "text": "SYSTEM: Catalogued. A nearby anomaly has been flagged for you, [designation]. Clear it \u2014 and be rewarded."
+         "text": "SYSTEM: Catalogued. The Calamity stirs in the dark below Dawnhearth. Descend, [designation], and clear it \u2014 and be rewarded."
         }
        ]
       }
@@ -439,7 +439,7 @@
      "then": [
       {
        "type": "text",
-       "text": "You're finding your feet. Stay sharp out there \u2014 the System always is.",
+       "text": "Round and round, Awakened. Descend, remember, descend. One of these cycles, we get out.",
        "face": {
         "sheet": "People1",
         "index": 0
@@ -458,7 +458,7 @@
        "then": [
         {
          "type": "text",
-         "text": "You did it. The System already logged the kill, of course. It logs everything.",
+         "text": "\u2026You're back. Of course you are. They always come back \u2014 the System makes sure of it.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -466,7 +466,15 @@
         },
         {
          "type": "text",
-         "text": "Here \u2014 a little field medicine. Out there, you patch yourself or you don't get up.",
+         "text": "You feel it, don't you? You've stood here before. Said these words before. This isn't your first waking, Awakened. It's not anyone's first.",
+         "face": {
+          "sheet": "People1",
+          "index": 0
+         }
+        },
+        {
+         "type": "text",
+         "text": "That's the cycle. The System loops us \u2014 wipes us, wakes us, sends us down again. Most never notice. You're starting to.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -487,7 +495,7 @@
         },
         {
          "type": "text",
-         "text": "Welcome to Dawnhearth, Awakened. Try to stay yourself.",
+         "text": "Hold onto what you bring back. The still place by the square \u2014 the Remembrance \u2014 lets you keep it. Each cycle, remember a little more. That's how we break this. Now go \u2014 descend again.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -506,7 +514,23 @@
          "then": [
           {
            "type": "text",
-           "text": "That thing's still prowling the east field. Put it down, then come back.",
+           "text": "Now the hard part, Awakened. There's a fracture below the plaza \u2014 the way DOWN. That's what we do here: we descend.",
+           "face": {
+            "sheet": "People1",
+            "index": 0
+           }
+          },
+          {
+           "type": "text",
+           "text": "Down there the System will offer to keep you alive no matter what. Go TETHERED and it won't let you die \u2014 but it watches, and watches, until there's not much 'you' left to watch.",
+           "face": {
+            "sheet": "People1",
+            "index": 0
+           }
+          },
+          {
+           "type": "text",
+           "text": "Go UNTETHERED and it lets go. Death is real then. But you stay yourself, and you remember. Lys's brother chose that. \u2026Choose at the fracture. Then come back \u2014 if you come back.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -515,50 +539,63 @@
          ],
          "else": [
           {
-           "type": "text",
-           "text": "Easy, now. You just Awakened \u2014 the System pulled you up out of the dark, same as everyone in Dawnhearth.",
-           "face": {
-            "sheet": "People1",
-            "index": 0
-           }
-          },
-          {
-           "type": "text",
-           "text": "You'll feel it humming at the edge of your thoughts. It names you, ranks you, hands you power. That's [designation] to the System now \u2014 but I'll call you [name].",
-           "face": {
-            "sheet": "People1",
-            "index": 0
-           }
-          },
-          {
-           "type": "text",
-           "text": "Move with the arrows or the pad; press A to speak to folk and to examine things. Your menu holds your Status, Supplies, and the meters that keep you alive out there.",
-           "face": {
-            "sheet": "People1",
-            "index": 0
-           }
-          },
-          {
-           "type": "text",
-           "text": "The System will offer you the world. Take what you need\u2026 but every favor it does you, it watches a little closer. Keep an eye on your Surveillance.",
-           "face": {
-            "sheet": "People1",
-            "index": 0
-           }
-          },
-          {
-           "type": "text",
-           "text": "Go on \u2014 touch the crystal in the plaza and let it 'welcome' you properly. Then come back and we'll talk.",
-           "face": {
-            "sheet": "People1",
-            "index": 0
-           }
-          },
-          {
-           "type": "quest",
-           "op": "stage",
-           "id": "awakening",
-           "stage": 1
+           "type": "conditional",
+           "cond": {
+            "kind": "quest",
+            "id": "awakening",
+            "check": "stage",
+            "stage": 1
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "The crystal's right there in the plaza. It only takes a moment \u2014 and it always takes something. Go on.",
+             "face": {
+              "sheet": "People1",
+              "index": 0
+             }
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "Easy, now. You just Awakened \u2014 the System pulled you up out of the dark, same as everyone in Dawnhearth.",
+             "face": {
+              "sheet": "People1",
+              "index": 0
+             }
+            },
+            {
+             "type": "text",
+             "text": "Move with the arrows or the pad; press A to speak and to examine. Your menu holds your Status, Supplies, and the meters that keep you alive.",
+             "face": {
+              "sheet": "People1",
+              "index": 0
+             }
+            },
+            {
+             "type": "text",
+             "text": "It'll offer you the world. Take what you need\u2026 but every favor it does you, it watches a little closer. Mind your Surveillance.",
+             "face": {
+              "sheet": "People1",
+              "index": 0
+             }
+            },
+            {
+             "type": "text",
+             "text": "Go on \u2014 touch the crystal in the plaza and let it 'welcome' you properly. Then come back to me.",
+             "face": {
+              "sheet": "People1",
+              "index": 0
+             }
+            },
+            {
+             "type": "quest",
+             "op": "stage",
+             "id": "awakening",
+             "stage": 1
+            }
+           ]
           }
          ]
         }
@@ -587,32 +624,16 @@
    "through": false,
    "commands": [
     {
-     "type": "conditional",
-     "cond": {
-      "kind": "quest",
-      "id": "awakening",
-      "check": "done"
-     },
-     "then": [
+     "type": "text",
+     "text": "A System-twisted emberling snarls \u2014 a taste of what waits below. Cut your teeth?"
+    },
+    {
+     "type": "choice",
+     "prompt": "Fight it?",
+     "options": [
       {
-       "type": "text",
-       "text": "The field is quiet now."
-      }
-     ],
-     "else": [
-      {
-       "type": "conditional",
-       "cond": {
-        "kind": "quest",
-        "id": "awakening",
-        "check": "stage",
-        "stage": 2
-       },
+       "label": "Fight",
        "then": [
-        {
-         "type": "text",
-         "text": "A System-twisted creature snarls and lunges!"
-        },
         {
          "type": "battle",
          "enemies": [
@@ -623,23 +644,17 @@
          ]
         },
         {
-         "type": "quest",
-         "op": "stage",
-         "id": "awakening",
-         "stage": 3
-        },
-        {
          "type": "text",
-         "text": "The threat is down. Mira will want to know."
-        },
-        {
-         "type": "despawn"
+         "text": "Down it goes. You're ready for worse."
         }
-       ],
-       "else": [
+       ]
+      },
+      {
+       "label": "Leave it",
+       "then": [
         {
          "type": "text",
-         "text": "Something rustles in the grass \u2014 but Mira said to meet her first."
+         "text": "You give it a wide berth."
         }
        ]
       }

@@ -1,16 +1,29 @@
 {
   "_meta": "Quest database. Each quest: name, giver, summary, ordered stages[{id,text}] (text = the current objective shown in the Journal), optional reward{money,item,skill,class}. Quest progress lives in GameSave.state.quests = { <id>: {status:'active'|'done'|'failed', stage:<index>} }. Driven by the `quest` event command (start/advance/complete/fail/stage) and read by `conditional` kind 'quest'. Rewards apply on complete. Engine-agnostic DATA.",
-
   "awakening": {
     "name": "The Awakening",
     "giver": "Mira of the Hearth",
-    "summary": "You have Awakened in Dawnhearth. The System is eager to help. Learn what it wants of you.",
+    "summary": "You have Awakened in Dawnhearth. The System is eager to help. Learn what it wants \u2014 and what it costs.",
     "stages": [
-      { "id": "talk_mira",   "text": "Speak with Mira in Dawnhearth." },
-      { "id": "use_crystal", "text": "Interface with the System crystal in the plaza." },
-      { "id": "first_fight", "text": "Clear the creature troubling the edge of town." },
-      { "id": "return_mira", "text": "Return to Mira." }
+      {
+        "id": "meet_mira",
+        "text": "Speak with Mira in Dawnhearth."
+      },
+      {
+        "id": "awaken_crystal",
+        "text": "Let the System crystal 'welcome' you in the plaza."
+      },
+      {
+        "id": "first_descent",
+        "text": "Take your first descent through the fracture (the way DOWN)."
+      },
+      {
+        "id": "the_cycle",
+        "text": "Return to Mira \u2014 and learn what coming back means."
+      }
     ],
-    "reward": { "money": 200 }
+    "reward": {
+      "money": 200
+    }
   }
 }

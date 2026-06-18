@@ -263,9 +263,9 @@
             }
             // Cold open — the System's first words, then a nudge toward Mira.
             runCmdList([
-                { type: 'text', text: 'SYSTEM: Welcome, [designation]. Classification complete.' },
-                { type: 'text', text: 'SYSTEM: You have Awakened in Dawnhearth. I am here to help you. Always.' },
-                { type: 'text', text: 'A woman by the roadside is waving you over.' }
+                { type: 'text', text: 'SYSTEM: Welcome, [designation]. Classification complete. You have Awakened in Dawnhearth.' },
+                { type: 'text', text: 'SYSTEM: There is a Calamity below. You will descend, and you will clear it. I will keep you alive. I will keep you. Always.' },
+                { type: 'text', text: '…For just a moment, the words feel worn — like you have heard them before. Then it passes. A woman by the roadside is waving you over.' }
             ], { mapName: 'Dawnhearth', evId: 0, event: null });
             console.log('[Main] New game → Dawnhearth at', w.x, w.y);
         };
@@ -555,6 +555,12 @@
             : 'You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more.';
         await _say(_subTokens(msg));
         await _say('Memory fragments +' + r.summary.fragments + '  (total ' + r.summary.totalFragments + ' · deepest floor ' + (st.meta.deepest | 0) + ')');
+        // opening tutorial: the FIRST descent's return reveals the cycle (advance the quest)
+        if (window.GameQuests && st.quests && GameQuests.status(st.quests, 'awakening') === 'active'
+            && GameQuests.stageIndex(st.quests, 'awakening') === 2) {
+            GameQuests.setStage(st.quests, _questDbCache || {}, 'awakening', 3);
+            await _say('(A memory stirs. Mira will want to see you.)');
+        }
         var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
         await _enterMap('Dawnhearth', 'awakened', w.x, w.y);
         st.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
