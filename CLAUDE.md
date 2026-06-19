@@ -2,6 +2,44 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## 🔴 NEXT SESSION — PRIORITY LIST (set 2026-06-19)
+Ordered by bang-for-buck. Items 1–2 are the meaty ones; 3+ are smaller/optional.
+1. **Wire the inert skills (~99/192).** Most non-launch classes grant skills the combat core
+   ignores (no `power` and no engine-honored `effect.type`). Audit `skills.json`, map each to an
+   existing effect (dmg / heal / slow / mark / sunder / toxin / taunt / buff / summon / def-up) or
+   add the few missing effect handlers in `combat.js`. Goal: 0 globally-inert combat skills, so every
+   class's FIGHT menu is real. (Launch 12 already clean.)
+2. **Hub redesign + reactive NPCs (onboarding #3–4 from `docs/ONBOARDING_DESIGN.md`).** Dawnhearth
+   should react to run state: NPCs comment on your deepest floor / Surveillance tier / clears; the
+   Remembrance + System crystal more legible; a "replay seed" board (uses the new `run_seed`/
+   `run_seed_in` vars — see below) so players can re-run a layout.
+3. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
+   author more dilemma-axis and build-defining relics. (Pool is at 24 now.)
+4. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;
+   combat RNG still uses live-timing seeds, so battles aren't frame-identical — derive the battle
+   seed from `run.seed + floor + encounterIdx` for full replay if desired.
+5. **Generator roadmap** (`docs/GENERATOR_ROADMAP.md`): port mapgen to JS for runtime floors, biome
+   system, run/act composer. Bigger lift — schedule deliberately.
+6. **Shipping blockers (not yet):** original art to replace EULA-gated RTP; human playtest of the
+   untethered difficulty curve (sims say it's brutal-by-design — needs a human read).
+
+## ✅ DONE 2026-06-19 — Combat feel + relics + reproducible seeds
+Short polish session (all pushed to `main`, headless/node-verified):
+- **Combat JUICE pass** (`combatview.js`, presentation-only, no balance change): floating damage/heal
+  numbers over the target (crit / super / resist / poison / heal styled), hit-flash on the struck
+  sprite, screenshake on the field (bigger on crit/super-effective), and per-affinity RTP impact SE
+  (Fire/Ice/Thunder/Earth/Water/Wind/Poison/Darkness/Saint; physical Blow fallback) + miss/down cues
+  + Powerup on level-up. All driven off `combat.js`'s log. Browser-verified: floats spawn with correct
+  affinity classes, 0 errors.
+- **Victory/defeat fanfare** — Victory1 ME on a win, Gameover1 on defeat (ducks BGM), fired in `_finish`.
+- **Relics 16 → 24** (`relics.json`): +8 (Barbed Vest, Gut Brace, Duelist's Glove, Thorn Buckler,
+  Stalker's Cowl, Bloodletter, Dead Man's Dial glass-cannon, Null Shroud dilemma). All effect keys
+  validated; `test_relics.mjs` green.
+- **Reproducible run seeds** (`main.js` descend): honors an explicit `c.seed` or a `run_seed_in`
+  variable (a replay board can set it), writes the chosen seed to `run_seed` so `[v:run_seed]` shows/
+  shares it; kept positive 31-bit nonzero. Floor + relic rolls were already seed-derived → a shared
+  seed reproduces the descent layout.
+
 ## ✅ DONE 2026-06-18 — Combat feel pass: tempo reset, save-as-CHOICE, sprite fixes
 Owner-requested battle changes (all browser-verified, suites green, validate_design still
 ✅ MECHANICALLY SOUND):
