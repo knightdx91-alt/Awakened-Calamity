@@ -242,7 +242,11 @@
             player.walkFrame = 0;
             _snapPlayer();
             GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
-            if (window.GameSave) GameSave.markDirty();
+            if (window.GameSave && GameSave.state) {
+                GameSave.state.currentLocation = { region: currentRegion, mapName: cmd.map, x: player.x, y: player.y };
+                if (GameSave.state.meta) GameSave.state.meta.currentMapName = cmd.map;
+                GameSave.markDirty();
+            }
             _warpCooldownUntil = performance.now() + WARP_COOLDOWN_MS;
             GameMap.loadEncounterData(currentRegion);
         } finally {
@@ -325,25 +329,23 @@
             GameSave.currentSlot = 0;
         }
         var finish = async function () {
-            await _enterMap('Dawnhearth', 'awakened', null, null);
-            var w = _findWalkable(DAWNHEARTH_SEED.x, DAWNHEARTH_SEED.y);
-            player.x = w.x; player.y = w.y; player.prevX = w.x; player.prevY = w.y; _snapPlayer();
-            GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+            // A fresh game opens on the VOID — a blank black stage map. The AUTORUN
+            // common event `character_creation` runs the whole Awakening there as
+            // editable event blocks (text / name_input / affinity / appearance /
+            // class), and ENDS with a `transfer` to Dawnhearth, then flips `sys_intro`
+            // (the cold-open). Everything is data in common_events.json — to use the
+            // polished DOM screen instead, make `character_creation` a single
+            // `{ "type": "creation" }` command, or change the start map back here.
+            await _enterMap('Void', 'awakened', null, null);
             if (window.GameSave && GameSave.state) {
-                GameSave.state.currentLocation = { region: 'awakened', mapName: 'Dawnhearth', x: w.x, y: w.y };
-                if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Dawnhearth';
+                GameSave.state.currentLocation = { region: 'awakened', mapName: 'Void', x: player.x, y: player.y };
+                if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Void';
                 // Kick off the opening quest (scripted beats advance it).
                 if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
                 GameSave.save(0, GameSave.state);
             }
-            // A fresh game starts with clean event state, then flips `do_creation` —
-            // the AUTORUN common event `character_creation` runs the event-driven
-            // Awakening (name / affinity / appearance / class, RPG-Maker style), and
-            // ends by flipping `sys_intro` (the cold-open). Both are fully editable in
-            // data/systems/common_events.json. (To use the polished DOM screen instead,
-            // make `character_creation` a single `{ "type": "creation" }` command.)
             if (window.GameEventState) { GameEventState.reset(); GameEventState.setSwitch('do_creation', true); }
-            console.log('[Main] New game → Dawnhearth at', w.x, w.y);
+            console.log('[Main] New game → Void (creation stage)');
         };
         finish();
     }

@@ -1,0 +1,23 @@
+{
+ "id": "MAP_VOID",
+ "name": "Void",
+ "region": "awakened",
+ "parent": "",
+ "layout": "LAYOUT_VOID",
+ "music": "MUS_NONE",
+ "weather": "WEATHER_NONE",
+ "map_type": "MAP_TYPE_INDOOR",
+ "allow_running": false,
+ "show_map_name": false,
+ "hide_player": true,
+ "connections": [],
+ "start": {
+  "x": 7,
+  "y": 5
+ },
+ "npcs": [],
+ "warps": [],
+ "triggers": [],
+ "signs": [],
+ "events": []
+}

@@ -335,10 +335,13 @@ window.GameRenderer = (function () {
             }
         }
 
-        // Player
+        // Player — suppressed on maps flagged hide_player (e.g. the creation Void:
+        // a blank black stage where only event text/choices show, RPG-Maker style).
+        const _hidePlayer = !!(_map.current && _map.current.hide_player);
         const playerSX = (vx - vcamX) * _rt;
         const playerSY = (vy - vcamY) * _rt;
-        if (_playerImg && _playerMV) {
+        if (_hidePlayer) { /* no player sprite on this map */ }
+        else if (_playerImg && _playerMV) {
             // MV charset: 3 cols (walk frames) x 4 rows (down,left,right,up).
             const dir = _player.direction || 'down';
             const DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };

@@ -215,6 +215,13 @@
     "type": "switch",
     "id": "sys_intro",
     "value": true
+   },
+   {
+    "type": "transfer",
+    "map": "Dawnhearth",
+    "x": 8,
+    "y": 18,
+    "dir": "down"
    }
   ]
  },
