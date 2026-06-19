@@ -81,9 +81,16 @@ Pumped each free-roam frame; not pumped during dialogue/menus/battle.
 **Movement** — `transfer`, `move` (route: up/down/left/right/wait), `setdir`, `scroll_map`.
 **Character** — `setgfx`, `spawn`, `despawn`, `balloon` (real RTP Balloon.png emote over
 player/event), `animation` (Show Animation — flipbooks an RTP animation sheet over a target).
-**Screen** — `fade`, `tint` (persistent overlay), `flash`, `shake`.
+**Screen** — `fade`, `tint` (persistent overlay), `flash`, `shake`, `weather`
+(none/rain/storm/snow/fog + power; resets to none on map change).
 **Audio** — `se`, `stop_se`, `bgm` (play/stop), `bgs` (play/stop), `me`.
 **Battle** — `battle`.
+**Character (more)** — `setevloc` (Set Event Location — teleport an event/player),
+`transparency` (Change Transparency — hide/show the player), `erase_event` (= Erase Event).
+**Scene/system** — `openmenu` (Open Menu Screen), `opensave` (Open Save Screen → saves the
+current slot), `gameover` (Game Over → fanfare + title), `totitle` (Return to Title).
+**Actor** — `recover_all` (Recover All vitals), `change_level` (Change Level +/−/=),
+`change_exp` (Change EXP +/−), `select_item` (Select Item → variable = chosen item id).
 
 ### Show Animation — note on fidelity
 The RTP ships only the animation *sheets*, not RM's frame-timing data (that lives in a
@@ -91,7 +98,23 @@ project's `Animations.rvdata2`, which we don't have). So `animation` plays the s
 in sequence (a flipbook) — a faithful-enough hit/cast effect. An optional per-animation
 frames JSON could drive exact RM timing later; the renderer would use it when present.
 
-## Not yet (need a system first)
-Change Weapons/Armor & Equipment (no gear system), Show/Move Picture (no picture layer),
-Change Party Member/Followers, Shop/Name-Input/Save scene calls. **N/A to this game:**
-vehicles, Change Tileset/Parallax/Vehicle graphics.
+## VX Ace coverage — what's still BLOCKED (and why) — owner FYI
+Per the "build it like RPG Maker" directive, these VX Ace commands are NOT wired because they
+need a system this prototype doesn't have yet. Flagging them rather than silently faking it:
+- **Show / Move / Rotate / Tint / Erase Picture** — no picture layer (a stack of positioned
+  image sprites over the map). Needs a Picture subsystem first.
+- **Change Weapons / Change Armors / Change Equipment** — no equipment/gear system yet (item
+  DB has a `gear` stub; equip slots aren't implemented).
+- **Change Party Member / Change Followers / Gather Followers** — no multi-actor party (we have
+  `bonds`, not RM party slots/followers).
+- **Vehicles** (Set Vehicle Location, Get On/Off, Vehicle BGM/Graphic) — no vehicle system.
+- **Battle-scene-only** (Change Enemy HP/MP/TP/State, Enemy Appear/Transform, Force Action,
+  Show Battle Animation, Abort Battle) — our combat is a custom Tempo/Intervention engine, not
+  the VX Ace battle scene; these don't map 1:1.
+- **Shop Processing (generic goods list)** — we have the `system` command (System Shop). A
+  generic data-driven shop (arbitrary goods) needs a small shop UI. *Tell me if you want it.*
+- **Change Parameters / Change Skills→remove / Change Class via menu / Change Nickname** —
+  partial: we have `grantclass`/`grantspec`/`grantskill`/`change_level`/`change_exp`/`heal`/
+  `hurt`. The remaining stat-edit variants can be added when needed.
+- **N/A to this game:** Change Tileset/Parallax/Vehicle graphics, Change Battle BGM/Victory ME
+  toggles (we play these directly), Change Formation/Encounter access flags.

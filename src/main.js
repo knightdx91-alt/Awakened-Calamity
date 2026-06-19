@@ -323,6 +323,7 @@
         _snapPlayer();
         GameRenderer.setScene(GameMap, GameCamera, player);
         GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+        if (GameRenderer.setWeather) GameRenderer.setWeather('none', 0);  // weather is per-map (set via the `weather` command)
         GameMap.loadEncounterData(currentRegion);
     }
     // Full-screen black cover to hide the boot/previous map while the next map
@@ -365,7 +366,9 @@
             var region = ng.region || 'awakened';
             var firstMap = ng.creationMap || ng.startMap || 'Dawnhearth';
             var useCreation = !!ng.creationMap;
-            await _enterMap(firstMap, region, null, null);
+            // We usually BOOT straight onto firstMap (the black stage), so there's
+            // nothing to load here — no transition. Only load if we're not already on it.
+            if (!(GameMap.current && GameMap.current.name === firstMap)) await _enterMap(firstMap, region, null, null);
             // Spawn straight-start (no creation stage) snaps to a walkable tile.
             if (!useCreation && ng.startX != null) {
                 var ws = _findWalkable(ng.startX | 0, ng.startY | 0);
@@ -1449,6 +1452,79 @@
                 }
                 break;
             }
+            // ── more RPG-Maker VX Ace event commands ──────────────────────────
+            case 'gameover': {                              // Game Over
+                if (window.GameAudio) GameAudio.playME ? GameAudio.playME('Gameover1') : GameAudio.playSE && GameAudio.playSE('Gameover1');
+                ctx.exited = true;
+                if (window.GameTitle) GameTitle.show({ hasSave: !!(window.GameSave && GameSave.hasAnySave()), meta: _firstSlotMeta(), onChoose: function (ch) { if (ch === 'continue') _continueGame(); else _newGame(); } });
+                break;
+            }
+            case 'totitle': {                               // Return to Title Screen
+                ctx.exited = true;
+                if (window.GameTitle) GameTitle.show({ hasSave: !!(window.GameSave && GameSave.hasAnySave()), meta: _firstSlotMeta(), onChoose: function (ch) { if (ch === 'continue') _continueGame(); else _newGame(); } });
+                break;
+            }
+            case 'openmenu': if (window.GameStartMenu && GameStartMenu.open) GameStartMenu.open(); break;  // Open Menu Screen
+            case 'opensave': {                              // Open Save Screen (save to current slot)
+                if (window.GameSave && GameSave.state) { GameSave.save(GameSave.currentSlot || 0, GameSave.state); if (window.GameSystem) GameSystem.notify('Game saved.', 'info'); }
+                break;
+            }
+            case 'recover_all': {                           // Recover All (full vitals)
+                var sra = window.GameSave && GameSave.state;
+                if (sra) {
+                    var svr = sra.survival || (sra.survival = { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 });
+                    svr.hp = 100; svr.mana = 100; svr.stamina = 100; svr.exposure = 0;
+                    if (GameSave.markDirty) GameSave.markDirty();
+                    if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(svr);
+                    if (window.GameAudio) GameAudio.playSE('Heal1');
+                }
+                break;
+            }
+            case 'erase_event': {                           // Erase Event (alias of despawn)
+                var eevs = GameMap.current && GameMap.current.events;
+                if (eevs) { var eidx = eevs.indexOf(ctx.event); if (eidx >= 0) eevs.splice(eidx, 1); }
+                ctx.exited = true;
+                break;
+            }
+            case 'setevloc': {                              // Set Event Location (teleport an event)
+                var tgt = _resolveTarget(c, ctx);
+                if (tgt && tgt !== player) { tgt.x = c.x | 0; tgt.y = c.y | 0; if (c.dir && c.dir !== 'retain') tgt.dir = c.dir; }
+                else if (tgt === player) { player.x = c.x | 0; player.y = c.y | 0; player.prevX = player.x; player.prevY = player.y; _snapPlayer(); }
+                break;
+            }
+            case 'transparency': {                          // Change Transparency (player)
+                player.transparent = (c.on !== false);
+                break;
+            }
+            case 'weather': if (window.GameRenderer && GameRenderer.setWeather) GameRenderer.setWeather(c.kind || 'none', (c.power == null ? 5 : c.power | 0)); break;  // Set Weather Effect
+            case 'change_level': {                          // Change Level
+                var stl = window.GameSave && GameSave.state;
+                if (stl && stl.progress && window.GameProgression) {
+                    var pr = stl.progress, cur = pr.level | 0, amt = c.amount | 0;
+                    var nl = Math.max(1, c.op === '-' ? cur - amt : c.op === '=' ? amt : cur + amt);
+                    pr.level = nl; if (stl.player && stl.player.class) stl.player.class.level = nl;
+                    if (GameSave.markDirty) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'change_exp': {                            // Change EXP
+                var ste = window.GameSave && GameSave.state;
+                if (ste && ste.progress && window.GameProgression && GameProgression.awardXP) {
+                    GameProgression.awardXP(ste.progress, (c.op === '-' ? -(c.amount | 0) : (c.amount | 0)));
+                    if (GameSave.markDirty) GameSave.markDirty();
+                }
+                break;
+            }
+            case 'select_item': {                           // Select Item (key item → variable)
+                var pocket = c.pocket || 'items';
+                var inv = (window.GameSave && GameSave.state && GameSave.state.inventory && GameSave.state.inventory[pocket]) || {};
+                var ids = Object.keys(inv).filter(function (k) { return inv[k] > 0; });
+                var names = ids.map(function (id) { return (window.GameItems && GameItems.name) ? GameItems.name(id) : id; });
+                var pick = ids.length ? await _choose(c.prompt || 'Select an item', names.concat(['Cancel'])) : -1;
+                if (ES) ES.setVar(c.variable != null ? c.variable : (c.id || 1), (pick >= 0 && pick < ids.length) ? (ids[pick] | 0 || 0) : 0);
+                if (ES && pick >= 0 && pick < ids.length) ES.setVar((c.variable != null ? c.variable : (c.id || 1)) + '_id', ids[pick]);
+                break;
+            }
             case 'jump':   ctx._jumpTo = c.label || ''; break;
             case 'label':  break; // resolved in runCmdList
             case 'comment': break; // author note; no-op at runtime
@@ -1843,7 +1919,14 @@
             // Explicit ?x=&y= always win (editor Play passes these).
             if (_ux != null) _startX = parseInt(_ux, 10);
             if (_uy != null) _startY = parseInt(_uy, 10);
-            _startMap = _startMap || 'AwakeningCamp';
+            // No override → boot DIRECTLY onto the System's creation map (the black
+            // stage) so the title sits over it and NEW GAME starts creation on the
+            // ALREADY-LOADED map (RPG-Maker "Starting Position" — no transition/flash).
+            if (!_startMap) {
+                await _loadSystemCfg();
+                var _ng = (_systemCfg && _systemCfg.newGame) || {};
+                _startMap = _ng.creationMap || _ng.startMap || 'Dawnhearth';
+            }
             _startReg = _startReg || currentRegion;
             currentRegion = _startReg;
             await GameMap.load(_startMap, _startReg);

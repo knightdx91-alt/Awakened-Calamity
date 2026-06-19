@@ -337,10 +337,10 @@ window.GameRenderer = (function () {
 
         // Player — suppressed on maps flagged hide_player (e.g. the creation Void:
         // a blank black stage where only event text/choices show, RPG-Maker style).
-        const _hidePlayer = !!(_map.current && _map.current.hide_player);
+        const _hidePlayer = !!((_map.current && _map.current.hide_player) || (_player && _player.transparent));
         const playerSX = (vx - vcamX) * _rt;
         const playerSY = (vy - vcamY) * _rt;
-        if (_hidePlayer) { /* no player sprite on this map */ }
+        if (_hidePlayer) { /* no player sprite on this map (hide_player / transparency) */ }
         else if (_playerImg && _playerMV) {
             // MV charset: 3 cols (walk frames) x 4 rows (down,left,right,up).
             const dir = _player.direction || 'down';
@@ -386,6 +386,46 @@ window.GameRenderer = (function () {
                 }
             }
         }
+
+        // Weather overlay (RPG Maker "Set Weather Effect") — drawn over everything.
+        _drawWeather();
+    }
+
+    // ── Weather (Set Weather Effect: none/rain/storm/snow/fog) ────────────────
+    let _weather = { kind: 'none', power: 0 };
+    let _wparts = [];
+    function setWeather(kind, power) {
+        _weather.kind = kind || 'none';
+        _weather.power = Math.max(0, Math.min(9, power == null ? 5 : power | 0));
+        const n = _weather.kind === 'none' ? 0 : 16 + _weather.power * 10;
+        _wparts = [];
+        for (let i = 0; i < n; i++) _wparts.push({ x: Math.random(), y: Math.random(), s: 0.4 + Math.random() });
+    }
+    function _drawWeather() {
+        if (!canvas || _weather.kind === 'none' || !_wparts.length) return;
+        const W = canvas.width, H = canvas.height, k = _weather.kind;
+        if (k === 'fog') {
+            ctx.fillStyle = 'rgba(200,205,215,' + (0.10 + _weather.power * 0.035) + ')';
+            ctx.fillRect(0, 0, W, H);
+            return;
+        }
+        const snow = (k === 'snow');
+        ctx.save();
+        ctx.strokeStyle = snow ? 'rgba(255,255,255,0.9)' : 'rgba(170,195,230,0.7)';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1;
+        const speed = snow ? 0.6 : (k === 'storm' ? 2.4 : 1.5);
+        const len = snow ? 0 : (k === 'storm' ? 14 : 9);
+        for (const p of _wparts) {
+            const px = p.x * W, py = p.y * H;
+            if (snow) { ctx.beginPath(); ctx.arc(px, py, 1.3 * p.s, 0, 6.283); ctx.fill(); }
+            else { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px - len * 0.25, py + len * p.s); ctx.stroke(); }
+            p.y += (speed * p.s) / H * 8; p.x += snow ? (Math.sin(py * 0.05) * 0.0008) : (-0.0012 * speed);
+            if (p.y > 1) { p.y = -0.02; p.x = Math.random(); }
+            if (p.x < 0) p.x = 1;
+        }
+        if (k === 'storm' && Math.random() < 0.012) { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(0, 0, W, H); }
+        ctx.restore();
     }
 
     function loop(timestamp) {
@@ -485,5 +525,5 @@ window.GameRenderer = (function () {
     // creation writes a new `ac_player_sprite`). Presentation-only.
     function reloadPlayer() { _playerImg = null; _loadPlayerImg(); }
 
-    return { init, setScene, stop, render, reloadPlayer };
+    return { init, setScene, stop, render, reloadPlayer, setWeather };
 })();

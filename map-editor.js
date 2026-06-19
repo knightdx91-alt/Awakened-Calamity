@@ -1291,8 +1291,13 @@
     ['bgm', '🎵 Play/Stop BGM'], ['bgs', '🌊 Play/Stop BGS'], ['me', '🎺 Play ME'], ['stop_se', '🔇 Stop SE'],
     // screen / camera
     ['tint', '🎨 Tint Screen'], ['flash', '⚡ Flash Screen'], ['scroll_map', '🎥 Scroll Map'],
+    ['weather', '🌧️ Set Weather Effect'],
     // character / message
-    ['balloon', '💭 Show Balloon'], ['animation', '✨ Show Animation'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info']
+    ['balloon', '💭 Show Balloon'], ['animation', '✨ Show Animation'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info'],
+    ['setevloc', '📌 Set Event Location'], ['transparency', '👻 Change Transparency'], ['erase_event', '❌ Erase Event'],
+    // scene / system
+    ['openmenu', '☰ Open Menu Screen'], ['opensave', '💾 Open Save Screen'], ['gameover', '💀 Game Over'], ['totitle', '🏁 Return to Title'],
+    ['recover_all', '❤️‍🩹 Recover All'], ['change_level', '⬆️ Change Level'], ['change_exp', '✨ Change EXP'], ['select_item', '🗝️ Select Item']
   ];
   function newCmd(type) {
     switch (type) {
@@ -1319,6 +1324,18 @@
       case 'descend': return { type: 'descend', start: true, tethered: true, seed: null };
       case 'relic': return { type: 'relic', count: 3, guaranteed: '' };
       case 'meta': return { type: 'meta' };
+      case 'weather': return { type: 'weather', kind: 'rain', power: 5 };
+      case 'setevloc': return { type: 'setevloc', target: 'this', x: 0, y: 0, dir: 'retain' };
+      case 'transparency': return { type: 'transparency', on: true };
+      case 'erase_event': return { type: 'erase_event' };
+      case 'openmenu': return { type: 'openmenu' };
+      case 'opensave': return { type: 'opensave' };
+      case 'gameover': return { type: 'gameover' };
+      case 'totitle': return { type: 'totitle' };
+      case 'recover_all': return { type: 'recover_all' };
+      case 'change_level': return { type: 'change_level', op: '+', amount: 1 };
+      case 'change_exp': return { type: 'change_exp', op: '+', amount: 50 };
+      case 'select_item': return { type: 'select_item', pocket: 'items', prompt: 'Select an item', variable: '1' };
       case 'grantclass': return { type: 'grantclass', classId: '', unlockOnly: false };
       case 'grantspec': return { type: 'grantspec', specId: '' };
       case 'grantskill': return { type: 'grantskill', skill: '' };
@@ -1877,6 +1894,43 @@
       body.querySelector('.cReason').addEventListener('change', function () { cmd.reason = this.value; });
     } else if (cmd.type === 'gendungeon') {
       body.innerHTML = '<div style="font-size:10px;color:#aaa;">Generates the CURRENT run floor (from run.seed + floor) and transfers the player onto it. Pool fallback when runtime-gen is off. Use after a <b>Run: Start/Deeper</b>.</div>';
+    } else if (cmd.type === 'weather') {
+      body.innerHTML = '<div class="row">' + lbl('Type') +
+        '<select class="cWk"><option value="none">None</option><option value="rain">Rain</option><option value="storm">Storm</option><option value="snow">Snow</option><option value="fog">Fog</option></select>' +
+        lbl('Power') + '<input type="number" class="cWp" min="0" max="9" value="' + ((cmd.power == null ? 5 : cmd.power) | 0) + '" style="width:50px;"></div>' +
+        '<div style="font-size:9px;color:#888;">Weather resets to None when you change maps.</div>';
+      body.querySelector('.cWk').value = cmd.kind || 'rain';
+      body.querySelector('.cWk').addEventListener('change', function () { cmd.kind = this.value; });
+      body.querySelector('.cWp').addEventListener('change', function () { cmd.power = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'setevloc') {
+      body.innerHTML = '<div class="row">' + lbl('Target') + '<input type="text" class="cT" value="' + (cmd.target || 'this') + '" placeholder="this / player / event id" style="width:120px;"></div>' +
+        '<div class="row">' + lbl('X') + '<input type="number" class="cX" value="' + (cmd.x | 0) + '" style="width:50px;">' + lbl('Y') + '<input type="number" class="cY" value="' + (cmd.y | 0) + '" style="width:50px;">' +
+        lbl('Facing') + '<select class="cD"><option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select></div>';
+      body.querySelector('.cT').addEventListener('change', function () { cmd.target = this.value.trim(); });
+      body.querySelector('.cX').addEventListener('change', function () { cmd.x = parseInt(this.value, 10) || 0; });
+      body.querySelector('.cY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
+      var sd = body.querySelector('.cD'); sd.value = cmd.dir || 'retain'; sd.addEventListener('change', function () { cmd.dir = this.value; });
+    } else if (cmd.type === 'transparency') {
+      body.innerHTML = '<div class="row">' + lbl('Player') + '<select class="cOn"><option value="true">Transparent (hidden)</option><option value="false">Visible</option></select></div>';
+      body.querySelector('.cOn').value = (cmd.on === false) ? 'false' : 'true';
+      body.querySelector('.cOn').addEventListener('change', function () { cmd.on = (this.value === 'true'); });
+    } else if (cmd.type === 'change_level' || cmd.type === 'change_exp') {
+      var isLv = cmd.type === 'change_level';
+      body.innerHTML = '<div class="row">' + lbl(isLv ? 'Level' : 'EXP') +
+        '<select class="cOp"><option value="+">+</option><option value="-">−</option>' + (isLv ? '<option value="=">=</option>' : '') + '</select>' +
+        '<input type="number" class="cAmt" value="' + ((cmd.amount | 0) || (isLv ? 1 : 50)) + '" style="width:70px;"></div>';
+      var op = body.querySelector('.cOp'); op.value = cmd.op || '+'; op.addEventListener('change', function () { cmd.op = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = parseInt(this.value, 10) || 0; });
+    } else if (cmd.type === 'select_item') {
+      body.innerHTML = '<div class="row">' + lbl('Prompt') + '<input type="text" class="cP" value="' + (cmd.prompt || 'Select an item') + '" style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('Pocket') + '<input type="text" class="cPk" value="' + (cmd.pocket || 'items') + '" style="width:90px;">' + lbl('→ Var #') + '<input type="text" class="cV" value="' + (cmd.variable || '1') + '" style="width:46px;"></div>' +
+        '<div style="font-size:9px;color:#888;">Sets the variable to the chosen item id (and #_id). 0/empty if cancelled.</div>';
+      body.querySelector('.cP').addEventListener('change', function () { cmd.prompt = this.value; });
+      body.querySelector('.cPk').addEventListener('change', function () { cmd.pocket = this.value.trim() || 'items'; });
+      body.querySelector('.cV').addEventListener('change', function () { cmd.variable = this.value; });
+    } else if (cmd.type === 'erase_event' || cmd.type === 'openmenu' || cmd.type === 'opensave' || cmd.type === 'gameover' || cmd.type === 'totitle' || cmd.type === 'recover_all') {
+      var notes = { erase_event: 'Removes THIS event for the rest of the map session.', openmenu: 'Opens the start/pause menu.', opensave: 'Saves the game to the current slot.', gameover: 'Plays the Game Over fanfare and returns to the title.', totitle: 'Returns to the title screen.', recover_all: 'Fully restores HP / MP / Stamina and clears Exposure.' };
+      body.innerHTML = '<div style="font-size:10px;color:#aaa;">' + (notes[cmd.type] || '') + ' No parameters.</div>';
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
