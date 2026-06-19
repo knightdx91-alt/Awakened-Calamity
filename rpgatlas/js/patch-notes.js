@@ -1,0 +1,310 @@
+/* RPGAtlas - patch-notes.js
+   Keep newest entries first. See AGENTS.md for the update policy. */
+"use strict";
+
+export const PATCH_NOTES = [
+  {
+    date: "June 19, 2026",
+    title: "HD-2D Height Extrusion",
+    summary: "Elevation painted with the map editor's Height tool now renders as raised blocks with shaded cliff faces in the HD-2D view, instead of being ignored.",
+    items: [
+      "Tiles with a non-zero height paint as raised platforms — the tile's own art lifts into a top, with a shaded south-facing wall showing the exposed step over lower terrain.",
+      "Taller terrain correctly hides what stands behind it, and characters pass in front of or behind elevation based on where their feet are.",
+      "Block height scales with the painted 0–9 value (about a third of a tile per step), so stepped ridges, plateaus, and pillars read as real depth.",
+      "Replaces the previous placeholder that simply nudged the overhead layer up by a few pixels and otherwise discarded the height layer at render time.",
+    ],
+  },
+  {
+    date: "June 19, 2026",
+    title: "Fixed Message Windows in Exported Games",
+    summary: "Standalone HTML/EXE exports now load the message system correctly, so Show Text boxes and other dialog work in exported games.",
+    items: [
+      "The standalone export now ships runtime/messages.js as a regular script (matching the editor and playtest), instead of an unused import map that left createMessageSystem undefined.",
+      "Added a continuous-integration test workflow and an npm test script so the full test suite runs automatically on every change.",
+    ],
+  },
+  {
+    date: "June 18, 2026",
+    title: "Reusable Common Events",
+    summary: "The Database now includes Common Events for reusable command sequences, explicit calls, and switch-controlled automatic processing.",
+    items: [
+      "Added Database -> Common Events with Name, Trigger, Activation switch, and the full event-command list editor.",
+      "Added the Call Common Event command to event content lists and game.callCommonEvent(id) to the Script API.",
+      "Common Events support None, Autorun, and Parallel triggers, with optional switch gating for automatic execution.",
+      "Recursive common-event calls are safely skipped to prevent an immediate infinite call loop.",
+    ],
+  },
+  {
+    date: "June 18, 2026",
+    title: "Custom Window Colors",
+    summary: "Projects can now set a shared window color for Show Text boxes, menus, and battle information panels from the System tab.",
+    items: [
+      "Added a Window color picker beside the existing font size and opacity settings in Database -> System.",
+      "The selected color is applied to message boxes, speaker-name labels, standard menus, and battle log and party panels.",
+      "Existing projects receive the original dark-blue window color automatically, while custom colors persist through saves and exports.",
+    ],
+  },
+  {
+    date: "June 18, 2026",
+    title: "Remappable Map Attack Prompts",
+    summary: "Map action combat and its guidance now consistently use the remappable Attack action instead of assuming the default J key.",
+    items: [
+      "Map sword attacks are covered by a regression test that verifies a replacement Attack binding works and the old key no longer triggers it.",
+      "The Action Combat editor hint now points authors to the remappable Attack action and the \\input[attack] message prompt.",
+      "Action Combat and message text-code documentation now show input-aware attack instructions for keyboard and gamepad players.",
+    ],
+  },
+  {
+    date: "June 17, 2026",
+    title: "Options: Audio Mixer & Game Settings",
+    summary: "The in-game Options menu is now a full settings screen with separate volume sliders and gameplay/accessibility toggles.",
+    items: [
+      "Independent Master, Music, and Sound Effects volume sliders replace the old single Music on/off toggle.",
+      "New Text Speed setting (Slow / Normal / Fast / Instant) controls how quickly message text reveals.",
+      "New Dash setting: Hold to run, Toggle to latch running on/off, or Always On.",
+      "New Screen Shake setting (Off / Reduced / Full) scales combat and event camera shake.",
+      "Adjust any option with the mouse (click the arrows, or click along a volume bar), keyboard, or gamepad; settings persist per game.",
+    ],
+  },
+  {
+    date: "June 16, 2026",
+    title: "Quest Editor Validation Warnings",
+    summary: "The Quests database tab now warns authors about broken quest references and other common setup mistakes while editing.",
+    items: [
+      "Quest warnings now flag missing next quests, duplicate follow-up links, and self-referencing quest chains.",
+      "Objective warnings catch missing enemies, missing fetch items, and invalid turn-in map or event targets.",
+      "Requirement and failure warnings catch missing referenced quests, troops, enemies, and quest lock/unlock targets.",
+    ],
+  },
+   {
+     date: "June 17, 2026",
+     title: "Gamepad Support & Remappable Controls",
+     summary: "Full gamepad support with a unified keyboard/gamepad input layer, in-game and in-editor rebinding, and input-prompt glyphs you can drop into messages.",
+     items: [
+       "Play with a gamepad: movement, Confirm/Cancel, dash, and attack map to the W3C Standard Gamepad, including left-stick movement with a configurable stick deadzone.",
+       "In-game Options -> Controls lets players rebind keyboard and gamepad inputs, with conflict detection and a guard that stops Confirm/Cancel from being left unbound.",
+       "The in-game Controls menu now shows the same procedural glyphs as the editor, auto-skinned to the controller in your hands, instead of plain text labels.",
+       "New dedicated \"Controls\" tab in the editor sets the default key/gamepad bindings a new player starts with, shown as button/key glyphs (no more console snippet).",
+       "Gamepad glyphs auto-detect the player's controller and relabel for Xbox (A/B/X/Y), PlayStation (Cross/Circle/Square/Triangle), and Nintendo Switch (B/A/Y/X); the editor Controls tab has a per-brand preview.",
+       "Distinct procedural icons for the D-Pad, analog stick, and stick-clicks (L3/R3), so on-screen directions no longer all look the same.",
+       "New \\input[action] message code shows the glyph for a bound control (e.g. \"Press \\input[ok] to continue\"), matching keyboard or gamepad to the device in use when the message opens.",
+       "Show Text and Show Choices now include a built-in \"Text codes\" reference, so you can recall every code (including \\input[...]) without leaving the message editor.",
+       "Input-prompt glyphs are generated procedurally, so they need no extra art and carry into standalone exports automatically.",
+     ],
+   },
+   {
+     date: "June 16, 2026",
+     title: "Map Action Combat",
+     summary: "Events can now become Zelda-style map enemies that take sword damage, flash, knock back, and update kill quests on defeat.",
+     items: [
+       "Added an Action Combat section to event pages for enabling map enemies, choosing an enemy, and tuning HP, touch damage, knockback, invulnerability frames, and defeat self-switches.",
+       "Press J during map play to swing the player's sword with a directional hit collider.",
+       "Sword hits damage each enemy once per swing, show slash and damage feedback, and apply tile knockback when space is available.",
+       "Defeated action-combat enemies erase or flip their configured self-switch and count toward matching Kill quest objectives.",
+     ],
+   },
+   {
+     date: "June 15, 2026",
+     title: "Abandoned Quest Tracking",
+     summary: "The Journal now separates abandoned quests from failed ones so players can review dropped quests independently.",
+     items: [
+       "Added an Abandoned Quests tab to the Journal.",
+       "Player-abandoned quests now use their own abandoned state instead of being mixed into Failed Quests.",
+       "Quest status pickers now include abandoned for page conditions and quest prerequisites.",
+     ],
+   },
+   {
+     date: "June 15, 2026",
+     title: "Split-Panel Quest Journal",
+     summary: "The in-game Journal now opens as a full-size split panel with quest browsing on the left and live details on the right.",
+     items: [
+       "Replaced the old Journal popup flow with a dedicated full-screen-style panel.",
+       "Browse Active, Completed, and Failed quests from tabs across the top of the Journal.",
+       "See the selected quest's title, description, objectives, and failure outcome in a persistent detail pane.",
+       "Opening the Journal now hides the party panel so the quest screen has room to breathe.",
+     ],
+   },
+   {
+     date: "June 15, 2026",
+     title: "Built-In Quest System",
+     summary: "Added a built-in quest framework with editor tools, runtime tracking, objective progress, branching outcomes, and an in-game Journal.",
+     items: [
+       "New Database -> Quests tab for creating and editing quests, objectives, rewards, prerequisites, failure rules, and follow-up quest chains.",
+       "Added Event, Kill, and Fetch objectives with progress tracking, optional fetch item turn-in consumption, and objective-aware event page conditions.",
+       "New event commands: Start Quest, Complete Quest, Fail Quest, Advance Quest Objective, and Set Quest Objective Progress.",
+       "Added an in-game Journal with Active, Completed, and Failed quest lists, objective progress display, outcome text, and optional quest abandonment.",
+       "Quest rewards now support XP, gold, and items, with save/load support, restart/abandon policies, branching failures, and automatic follow-up quest unlocking.",
+     ],
+   },
+  {
+    date: "June 14, 2026",
+    title: "Event editor: 3-pane layout + live command inspector",
+    summary:
+      "Reorganized the event editor into a three-pane workspace and added an inline inspector that edits the selected command without opening a dialog.",
+    items: [
+      "Event editor now uses a 3-pane layout: Conditions, Appearance, and Behaviour on the left; the command list in the center; and a command inspector on the right.",
+      "The Conditions section shows an \"N active\" badge when page conditions are set.",
+      "Single-click a Show Text command to edit its speaker, face, and message live in the right-hand inspector; double-click any command to open the full editor dialog as before.",
+      "Command list is easier to scan with alternating row shading and a running command count next to the \"Commands\" heading.",
+      "Event name and page tabs moved into a single header bar; the map position now sits in the footer beside OK / Cancel.",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "Lighting polish: smoother lights, shadows disabled",
+    summary:
+      "Improve radial light visuals and temporarily disable shadow generation while debugging.",
+    items: [
+      "Smoothed radial gradient for more natural light falloff (less burnt centers).",
+      "Removed the ambient overlay sprite in favor of a single ambient background color.",
+      "Temporarily disabled per-tile shadow generation to prevent visual artifacts.",
+      "Fixed PIXI v8 compatibility: string blend modes and linear scaleMode usage.",
+      "Credits: Kiro (Dirgefall Studio) — PIXI integration and lighting polish",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "PIXI v8 HD-2D Lighting System",
+    summary:
+      "Replaced basic circle-based light rendering with a GPU-efficient radial gradient light map for PIXI v8.",
+    items: [
+      "Lights now use radial gradient sprites with smooth falloff instead of hard-edged circles.",
+      "Ambient darkness overlay darkens unlit areas; lights pierce through via ADD blend mode.",
+      "Fixed TILE size mismatch (32 to 48) for correct sprite and light positioning.",
+      "Camera zoom is now applied to the PIXI scene container.",
+      "Light sprites are pooled and reused each frame (zero GC pressure).",
+      "Editor GLRender alias added for HD-2D preview compatibility.",
+      "Credits: Kiro (Dirgefall Studio) — PIXI integration and lighting polish",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "Desktop App (Tauri)",
+    summary: "RPGAtlas can now be packaged as a lightweight cross-platform desktop application using the system WebView, alongside the existing local-server build.",
+    items: [
+      "Added a Tauri wrapper (src-tauri/) that runs the editor in a native window on Windows, macOS, and Linux.",
+      "RPGAtlas-Desktop.exe opens the editor directly in the desktop app; the original RPGAtlas.exe still opens it in your browser.",
+      "Playtest opens in its own dedicated desktop window instead of a browser tab.",
+      "Project export uses a native Save dialog when running as a desktop app.",
+      "Build with: npm install, then npm run dev (live) or npm run build (installer). Requires the Rust toolchain.",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "Name & Manage Event Pages",
+    summary: "Name an event's pages and reorder, duplicate, or jump between them by drag, right-click menu, or number keys.",
+    items: [
+      "Name a page: double-click its tab (or right-click → Rename) to label it, e.g. “Greeting” instead of “Page 3”. Clear the name to return to the default.",
+      "Drag a page tab left or right to reorder it.",
+      "Right-click a page tab for Add page, Rename, Move, Copy, Paste, and Delete.",
+      "Copy a page and paste it — within an event or into another event — as a full duplicate.",
+      "Press 1–9 to jump straight to that page.",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "Undo, Redo & Delete-Key for Event Commands",
+    summary: "The event editor gains its own undo/redo and Delete-key shortcuts — conveniences RPG Maker never offered inside event editing.",
+    items: [
+      "Undo and redo adding, editing, deleting, moving, copy/cut/paste, and drag-reordering of commands, including multi-selected blocks and commands nested inside If/Choices branches.",
+      "Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes — anywhere in the event editor, not only when the list is focused.",
+      "Each event page keeps its own command history, so undo never disturbs another page or your page condition/appearance settings.",
+      "Press Delete to remove the selected command(s) from the Commands list — and Ctrl+Z brings them back.",
+      "Press Delete to remove the highlighted page, or use the − button; pages that still hold commands ask to confirm first.",
+      "Command history lasts while the event editor is open; clicking OK still commits the whole event as a single undo step on the map.",
+    ],
+  },
+  {
+    date: "June 14, 2026",
+    title: "Multilingual Editor Interface",
+    summary: "Added a persistent interface-language module so creators can use the editor chrome in English, Spanish, French, or German.",
+    items: [
+      "Added Help → Interface Language for switching languages without reloading the editor.",
+      "Translated the main menus, toolbar labels, map sidebar, status text, and common dialog controls.",
+      "Language selection follows the browser by default, is saved locally, and never changes project-authored names or content.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Smoother Movement",
+    summary: "Reworked the play-test movement loop so walking is fluid and runs at a consistent speed on every display.",
+    items: [
+      "Removed the brief pause that occurred at each tile during grid movement, for both the player and NPCs.",
+      "Game logic now runs on a fixed timestep, so movement speed is identical on 60 Hz, 120 Hz, and high-refresh screens (no more fast-forward on fast monitors).",
+      "Added frame interpolation so motion stays smooth on high-refresh displays.",
+      "Event 'Wait' and camera-zoom timing is now frame-rate independent, matching real time even when the frame rate dips.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Select Multiple Event Commands",
+    summary: "Shift+click a range of commands in the event editor and copy, cut, paste, delete, move, or drag them as one block.",
+    items: [
+      "Click a command, then Shift+click another to select the whole run between them.",
+      "Copy/Cut/Paste/Delete and the ↑/↓ buttons act on the entire selection at once.",
+      "Drag a selected block to a new spot, including into another branch.",
+      "Selection stays within one branch level; selecting across an If/Choices carries the whole block along.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Copy & Paste Event Commands",
+    summary: "Copy, cut, and paste commands in the event editor — within an event or from one event to another.",
+    items: [
+      "Select a command and use Ctrl+C / Ctrl+X / Ctrl+V (or the Copy/Cut/Paste buttons) in the Commands list.",
+      "Paste works across events, so you can copy a command in one event and paste it into another.",
+      "Container commands (If / Choices) copy with everything nested inside them.",
+      "Right-click a command for a menu with all the list actions (add, edit, cut, copy, paste, move, delete).",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Drag-to-Reorder Event Commands",
+    summary: "Reorder commands in the event editor by dragging them, not just the ↑/↓ buttons.",
+    items: [
+      "Click and drag a command in the Commands list to move it anywhere in the event.",
+      "Drag commands into or out of If/Choices branches, not just within a single list.",
+      "A drop line shows where the command will land; the ↑/↓ buttons still work too, and now keep the command selected so you can tap them repeatedly.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Cinematic and Control Event Command Expansion",
+    summary: "Added new visual effects commands and advanced branching controls to map events.",
+    items: [
+      "Shake Screen - shakes the game viewport horizontally and vertically in both 2D and HD-2D modes.",
+      "Flash Screen - overlays a fading color overlay for thunder strikes, hit impacts, or magical bursts.",
+      "Change Weather - triggers map weather changes visually without requiring JavaScript Script blocks.",
+      "Actor Conditional Branch - checks party membership and specific weapon/armor equipment in event branches.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Faster Event Command Navigation",
+    summary: "Increased the Add Command menu from 12 to 24 buttons per page and added direct numbered page tabs.",
+    items: [
+      "Each Event Command page now displays up to 24 buttons.",
+      "Page tabs appear above the command grid for one-click access without cycling through pages.",
+      "Saved custom command buttons and +Add New remain at the end of the picker.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Patch Notes",
+    summary: "Added an easily digestible Patch Notes menu under Help so players and creators can review feature updates.",
+    items: [
+      "Patch notes are shown newest-first and older entries remain available by scrolling.",
+      "Added a project instruction requiring future AI-assisted features and major changes to include a short patch note.",
+    ],
+  },
+  {
+    date: "June 13, 2026",
+    title: "Event Command Expansion",
+    summary: "Expanded Event Commands into multiple pages with 12 buttons per page and the ability to add reusable event buttons on demand.",
+    items: [
+      "Camera Zoom - zoom the player camera in or out immediately or over time.",
+      "+Add New - create project-saved JavaScript command buttons for reusable event flow and scene-management tasks.",
+      "Saved command buttons can be inserted with one click, or edited and deleted with right-click.",
+    ],
+  },
+];
