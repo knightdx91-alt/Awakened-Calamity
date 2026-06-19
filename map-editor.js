@@ -1733,9 +1733,16 @@
       body.innerHTML = '<div class="row">' + lbl('Affinity') + '<input type="text" class="cV" value="' + (cmd.value || '') + '" style="flex:1;min-width:0;" placeholder="ember / tide / stone / untethered…"></div>';
       body.querySelector('.cV').addEventListener('change', function () { cmd.value = this.value.trim(); });
     } else if (cmd.type === 'appearance') {
-      body.innerHTML = '<div class="row">' + lbl('Sheet') + '<input type="text" class="cS" value="' + (cmd.sheet || 'rtp/Actor1.png') + '" style="width:130px;">' + lbl('Char') + '<input type="number" class="cC" min="0" max="7" value="' + (cmd.char | 0) + '" style="width:46px;"></div>';
+      body.innerHTML = '<div class="row"><label class="lbl"><input type="checkbox" class="cPick"> Picker (live preview + Confirm)</label></div>' +
+        '<div class="row">' + lbl('Sheet') + '<input type="text" class="cS" value="' + (cmd.sheet || 'rtp/Actor1.png') + '" style="width:130px;"></div>' +
+        '<div class="row cCharRow">' + lbl('Char') + '<input type="number" class="cC" min="0" max="7" value="' + (cmd.char | 0) + '" style="width:46px;"></div>' +
+        '<div class="row cCharsRow" style="display:none;">' + lbl('Chars') + '<input type="text" class="cChars" value="' + ((cmd.chars || [0,1,2,3,4,5,6,7]).join(',')) + '" style="width:140px;" placeholder="0,1,2,3..."></div>';
+      var pk = body.querySelector('.cPick'); pk.checked = !!cmd.pick;
+      function syncRows() { body.querySelector('.cCharRow').style.display = cmd.pick ? 'none' : ''; body.querySelector('.cCharsRow').style.display = cmd.pick ? '' : 'none'; }
+      pk.addEventListener('change', function () { cmd.pick = this.checked; syncRows(); }); syncRows();
       body.querySelector('.cS').addEventListener('change', function () { cmd.sheet = this.value.trim(); });
       body.querySelector('.cC').addEventListener('change', function () { cmd.char = parseInt(this.value, 10) || 0; });
+      body.querySelector('.cChars').addEventListener('change', function () { cmd.chars = this.value.split(',').map(function (s) { return parseInt(s, 10) || 0; }); });
     } else if (cmd.type === 'finalize_creation') {
       body.innerHTML = '<div class="row">' + lbl('Class id') + '<input type="text" class="cI" value="' + (cmd.classId || '') + '" style="flex:1;min-width:0;" placeholder="warrior / rogue / cleric…"></div>';
       body.querySelector('.cI').addEventListener('change', function () { cmd.classId = this.value.trim(); });

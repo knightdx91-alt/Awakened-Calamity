@@ -578,6 +578,42 @@
     // ── Appearance: crop one character (3×4 frames) out of an Actor charset (4×2
     // characters) into a standalone player sprite — the same crop the creation
     // screen does, exposed for the event-driven creation flow. ──
+    // Interactive appearance picker: shows a LIVE preview of each candidate sprite
+    // (cropped + scaled) with ◄ ► to browse and a CONFIRM button, so you see your
+    // character before locking it in. Resolves with the chosen char index.
+    function _appearancePicker(sheet, chars) {
+        chars = (chars && chars.length) ? chars : [0, 1, 2, 3, 4, 5, 6, 7];
+        return new Promise(function (res) {
+            var f = 32, idx = 0, img = new Image();
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#0a0e1a;border:2px solid #00ccff;border-radius:10px;padding:18px 20px;text-align:center;color:#cfe;font:10px "Press Start 2P",monospace;min-width:240px;';
+            inner.innerHTML = '<div style="margin-bottom:12px;line-height:1.6;">Choose your form</div>' +
+                '<div style="display:flex;align-items:center;justify-content:center;gap:14px;">' +
+                '<button class="apPrev" style="font:14px monospace;background:#16263a;color:#7fe0ff;border:1px solid #2a4656;border-radius:6px;padding:8px 12px;cursor:pointer;">◄</button>' +
+                '<canvas class="apCv" width="96" height="128" style="image-rendering:pixelated;background:#04111c;border:1px solid #2a4656;border-radius:6px;width:96px;height:128px;"></canvas>' +
+                '<button class="apNext" style="font:14px monospace;background:#16263a;color:#7fe0ff;border:1px solid #2a4656;border-radius:6px;padding:8px 12px;cursor:pointer;">►</button>' +
+                '</div>' +
+                '<div class="apIdx" style="margin:10px 0;color:#8aa;font-size:8px;"></div>' +
+                '<button class="apOk" style="font:9px "Press Start 2P",monospace;padding:8px 18px;background:#00ccff;color:#001;border:0;border-radius:6px;cursor:pointer;">CONFIRM</button>';
+            box.appendChild(inner); document.body.appendChild(box);
+            var cv = inner.querySelector('.apCv'), cx = cv.getContext('2d');
+            function draw() {
+                cx.imageSmoothingEnabled = false; cx.clearRect(0, 0, cv.width, cv.height);
+                if (!img.complete || !img.naturalWidth) return;
+                var ci = chars[idx], bc = (ci % 4) * 3, br = Math.floor(ci / 4) * 4;
+                // down-facing standing frame (middle column), scaled 3x into the canvas
+                cx.drawImage(img, (bc + 1) * f, (br + 0) * f, f, f, 16, 16, 64, 96);
+                inner.querySelector('.apIdx').textContent = 'Form ' + (idx + 1) + ' / ' + chars.length;
+            }
+            img.onload = draw; img.onerror = function () {}; img.src = 'data/sprites/' + sheet + '?b=' + (window.__BUILD__ || '0');
+            inner.querySelector('.apPrev').addEventListener('click', function () { idx = (idx - 1 + chars.length) % chars.length; draw(); });
+            inner.querySelector('.apNext').addEventListener('click', function () { idx = (idx + 1) % chars.length; draw(); });
+            inner.querySelector('.apOk').addEventListener('click', function () { box.remove(); res(chars[idx]); });
+            draw();
+        });
+    }
     function _setAppearance(sheet, charIdx) {
         return new Promise(function (res) {
             var f = 32, img = new Image();
@@ -1280,7 +1316,13 @@
             // Event-driven creation building blocks (RPG-Maker style: Name Input +
             // Show Choices). Used by the `character_creation` common event.
             case 'affinity': if (GameSave.state && GameSave.state.player) { GameSave.state.player.affinity = c.value || c.affinity || 'untethered'; if (GameSave.markDirty) GameSave.markDirty(); } break;
-            case 'appearance': await _setAppearance(c.sheet || 'rtp/Actor1.png', c.char | 0); break;
+            case 'appearance': {
+                var apSheet = c.sheet || 'rtp/Actor1.png';
+                // pick:true → interactive picker w/ live preview + Confirm; else direct set.
+                var apChar = (c.pick) ? await _appearancePicker(apSheet, c.chars) : (c.char | 0);
+                await _setAppearance(apSheet, apChar);
+                break;
+            }
             case 'finalize_creation': await _finalizeCreation(c.classId || c.class || 'warrior'); break;
             case 'timer': {
                 if (c.op === 'stop') { _timer.running = false; }

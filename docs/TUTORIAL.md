@@ -48,6 +48,8 @@ Edit the questions/options in `common_events.json` → `character_creation`.
 - **`name_input`** — RPG Maker Name Input Processing → `player.name`.
 - **`affinity {value}`** — sets `player.affinity` (ids in `affinities.json`).
 - **`appearance {sheet,char}`** — crops one Actor-charset character into the player sprite.
+  With `pick:true` (+ optional `chars:[...]`) it opens a **visual picker** (live preview, ◄ ►
+  browse, CONFIRM) so you see the sprite before locking it in — what the creation flow uses.
 - **`finalize_creation {classId}`** — sets the class fresh (+skills), a System designation, and
   seeds progression (the coordinated writes the old screen's Confirm did).
 - Prefer the polished DOM screen instead? Make `character_creation` a single

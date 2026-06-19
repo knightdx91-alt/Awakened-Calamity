@@ -32,13 +32,8 @@
         { "label": "Umbral (shadow, the unseen)", "then": [ { "type": "affinity", "value": "umbral" } ] },
         { "label": "Untethered (no alignment)", "then": [ { "type": "affinity", "value": "untethered" } ] }
       ] },
-      { "type": "text", "text": "SYSTEM: Rendering your form." },
-      { "type": "choice", "prompt": "Your appearance?", "options": [
-        { "label": "Look I", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 0 } ] },
-        { "label": "Look II", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 1 } ] },
-        { "label": "Look III", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 4 } ] },
-        { "label": "Look IV", "then": [ { "type": "appearance", "sheet": "rtp/Actor1.png", "char": 5 } ] }
-      ] },
+      { "type": "text", "text": "SYSTEM: Rendering your form. Choose the shape you will wear." },
+      { "type": "appearance", "pick": true, "sheet": "rtp/Actor1.png", "chars": [0, 1, 2, 3, 4, 5, 6, 7] },
       { "type": "text", "text": "SYSTEM: Assigning your Classification. This defines your kit, [name]." },
       { "type": "choice", "prompt": "Your starting Class?", "options": [
         { "label": "Warrior (sturdy melee)", "then": [ { "type": "finalize_creation", "classId": "warrior" } ] },
