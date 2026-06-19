@@ -1274,6 +1274,8 @@
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
+    // run loop (roguelite descent)
+    ['descend', '⛰️ Descend (run loop)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
     ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'], ['hurt', '🗡️ Hurt (trap)'], ['surveil', '👁️ Surveil (+Surveillance)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
@@ -1311,6 +1313,9 @@
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
       case 'system': return { type: 'system' };
+      case 'descend': return { type: 'descend', start: true, tethered: true, seed: null };
+      case 'relic': return { type: 'relic', count: 3, guaranteed: '' };
+      case 'meta': return { type: 'meta' };
       case 'grantclass': return { type: 'grantclass', classId: '', unlockOnly: false };
       case 'grantspec': return { type: 'grantspec', specId: '' };
       case 'grantskill': return { type: 'grantskill', skill: '' };
@@ -1815,6 +1820,27 @@
       body.querySelector('.cY').addEventListener('change', function () { cmd.y = parseInt(this.value, 10) || 0; });
       body.querySelector('.cInfo').value = cmd.info || 'collision'; body.querySelector('.cInfo').addEventListener('change', function () { cmd.info = this.value; });
       body.querySelector('.cV').addEventListener('change', function () { cmd.variable = this.value; });
+    } else if (cmd.type === 'descend') {
+      body.innerHTML = '<div class="row">' + lbl('Action') +
+        '<select class="cStart"><option value="start">Start a NEW run (floor 1)</option><option value="deeper">Go DEEPER (next floor / boss → clear)</option></select></div>' +
+        '<div class="row cTethRow">' + lbl('Tethered') +
+        '<select class="cTeth"><option value="true">Tethered — System catches you (Surveillance ↑)</option><option value="false">Untethered — death is real (off-grid)</option></select></div>' +
+        '<div class="row cSeedRow">' + lbl('Seed') + '<input type="number" class="cSeed" value="' + (cmd.seed == null ? '' : (cmd.seed | 0)) + '" placeholder="random" style="width:120px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Start = begin a fresh descent; Deeper = continue an active run (used by StairsDown). Seed blank = random (honors the run_seed_in variable if set).</div>';
+      var dStart = body.querySelector('.cStart'); dStart.value = (cmd.start === false) ? 'deeper' : 'start';
+      function dToggle() { var s = dStart.value === 'start'; body.querySelector('.cTethRow').style.display = s ? '' : 'none'; body.querySelector('.cSeedRow').style.display = s ? '' : 'none'; }
+      dStart.addEventListener('change', function () { cmd.start = (this.value === 'start'); dToggle(); }); dToggle();
+      body.querySelector('.cTeth').value = (cmd.tethered === false) ? 'false' : 'true';
+      body.querySelector('.cTeth').addEventListener('change', function () { cmd.tethered = (this.value === 'true'); });
+      body.querySelector('.cSeed').addEventListener('change', function () { cmd.seed = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
+    } else if (cmd.type === 'relic') {
+      body.innerHTML = '<div class="row">' + lbl('Choices') + '<input type="number" class="cCount" min="1" max="6" value="' + ((cmd.count | 0) || 3) + '" style="width:50px;"></div>' +
+        '<div class="row">' + lbl('Guaranteed') + '<input type="text" class="cGuar" value="' + (cmd.guaranteed || '') + '" placeholder="relic id (optional)" style="width:140px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Offer a choice of N seeded relics, OR force one specific relic by id (Guaranteed). Active descent only.</div>';
+      body.querySelector('.cCount').addEventListener('change', function () { cmd.count = parseInt(this.value, 10) || 3; });
+      body.querySelector('.cGuar').addEventListener('change', function () { cmd.guaranteed = this.value.trim(); });
+    } else if (cmd.type === 'meta') {
+      body.innerHTML = '<div style="font-size:10px;color:#aaa;">Opens the Remembrance (meta-progression) menu — spend Memory Fragments on permanent unlocks. No parameters.</div>';
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).

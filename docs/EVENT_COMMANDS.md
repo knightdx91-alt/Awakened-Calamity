@@ -35,6 +35,23 @@ common event built from these.
 **Variables/state** — `switch`, `selfswitch`, `variable`, `input_number` (→ variable),
 `timer` (start/stop; shows MM:SS), `location_info` (collision/walkable/region/event → variable).
 
+## Run loop (roguelite descent) — authorable in event blocks
+These drive the descent loop entirely from editable event commands (no hardcoded JS flow), so
+the Fracture gate, stairs, relic caches, and the Remembrance NPC are all just event blocks:
+- **`descend`** — the one descent action. Params: `start` (true = begin a NEW run at floor 1;
+  false = go DEEPER on the active run — past the boss this CLEARS the run), `tethered`
+  (true = System catches you, Surveillance climbs; false = untethered/off-grid, death is real),
+  `seed` (optional explicit run seed; blank = random, and honors the `run_seed_in` variable a
+  replay board can set). The DescentGate's Tethered/Untethered choice calls `descend start:true`;
+  generated StairsDown call `descend` (start:false) to go deeper.
+- **`relic`** — offer relics from a cache. Params: `count` (how many seeded choices to present,
+  default 3) OR `guaranteed` (a relic id to force-grant instead of offering a choice). Active
+  descent only. Placed one-per-floor by the generator (`RelicCache`).
+- **`meta`** — open the **Remembrance** menu (spend Memory Fragments on permanent unlocks). No
+  params. Put it on a hub NPC.
+
+All three are first-class commands in the map editor (palette + forms), like any other command.
+
 ## Common-event triggers
 A `common_events.json` entry may carry `trigger` + optional `switch` (omit = always on):
 - **`autorun`** — runs BLOCKING (pauses the player, like a cutscene) while its switch is ON;
