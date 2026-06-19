@@ -33,20 +33,36 @@ boots headless with 0 errors). Details in `docs/ONBOARDING_DESIGN.md` STATUS 202
 - **Still open from onboarding:** #3 zone/sign the hub + wire 2–3 interiors; #5 the Board shows the
   run's SHAPE (needs the run/act composer, generator roadmap).
 
+## ✅ DONE 2026-06-19 — Hub redesign: zoned + signed Dawnhearth, Inn wired (onboarding #3)
+Made Dawnhearth read like a control room (all event-data, no retiling; both maps boot headless
+with 0 errors):
+- **Zoned the 5 stations** out of the 6-tile blob into functional zones: THE CRYSTAL (System hub,
+  north @28,18), THE BOARD (notices, east @40,24), THE FRACTURE (DescentGate, south @30,34) with the
+  Replay Slate beside it @32,34, THE STILL PLACE (Remembrance, southwest @20,34). Each station's
+  examine text now leads with a ❖ ZONE NAME ❖ header (legible on interaction).
+- **Directory signpost** (`PlazaDirectory` @10,18 by the spawn/Mira) = a "you are here" board
+  listing all five zones + the Inn — the single biggest legibility win.
+- **THE INFIRMARY**: new healer NPC **Sister Wenna** (@22,20, People5 face) — full heal at no
+  Surveillance cost (the off-grid alternative to the System's paid Restore).
+- **Wired the Inn** (the one real interior): Door12 → `DawnhearthInn` (transfer); the Inn's Exit
+  transfers back; added an **Innkeeper** + a **RestBed** (choice → full heal + fade — a rest point).
+- **Blanked the 13 facade doors diegetically** — each locked door now says WHY in-world (audits,
+  the taken, reassigned property, Joran's watched house), not a flat "The door is locked."
+Still open from onboarding: #5 the Board shows the run's SHAPE (needs the run/act composer below).
+
 ## 🔴 NEXT SESSION — PRIORITY LIST (updated 2026-06-19)
-Ordered by bang-for-buck. (#1 inert-skills + #2 reactive-NPCs/replay-board DONE — see above.)
-1. **Hub redesign — zone + sign Dawnhearth, wire interiors (onboarding #3).** Spatially zone the
-   plaza by function (THE FRACTURE/CRYSTAL/STILL PLACE/BOARD/INFIRMARY), sign each, spread them out,
-   wire 2–3 real interiors (Inn/Mira's Hearth/Infirmary) and blank the facade doors diegetically.
+Ordered by bang-for-buck. (#1 inert-skills, #2 reactive-NPCs/replay-board, hub redesign DONE.)
+1. **Generator roadmap — port mapgen to JS for runtime floors (`docs/GENERATOR_ROADMAP.md`).** Then
+   biome system + run/act composer. The composer also unlocks onboarding #5 (legible run shape).
 2. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
    author more dilemma-axis and build-defining relics. (Pool is at 24 now.)
 3. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;
    combat RNG still uses live-timing seeds, so battles aren't frame-identical — derive the battle
    seed from `run.seed + floor + encounterIdx` for full replay if desired.
-4. **Generator roadmap** (`docs/GENERATOR_ROADMAP.md`): port mapgen to JS for runtime floors, biome
-   system, run/act composer. Bigger lift — schedule deliberately.
-5. **Shipping blockers (not yet):** original art to replace EULA-gated RTP; human playtest of the
-   untethered difficulty curve (sims say it's brutal-by-design — needs a human read).
+4. **Shipping blockers (not yet):** original art to replace EULA-gated RTP; human playtest of the
+   untethered difficulty curve (sims say it's brutal-by-design — needs a human read; the new
+   `sim_run` death-cause histogram says it's an attrition/scaling problem, deaths front-loaded
+   floors 1–2 — the player-vs-enemy growth gap is the lever).
 
 ## ✅ DONE 2026-06-19 — Combat feel + relics + reproducible seeds
 Short polish session (all pushed to `main`, headless/node-verified):

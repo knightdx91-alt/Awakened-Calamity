@@ -35,7 +35,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "A home, shutters drawn. Someone inside coughs and goes quiet. Not yours to open."
     }
    ]
   },
@@ -59,7 +59,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Locked. A System sigil glows on the frame — “AUDIT IN PROGRESS. DO NOT ENTER.”"
     }
    ]
   },
@@ -83,7 +83,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Barred from the inside. You hear a family eating supper. You leave them to it."
     }
    ]
   },
@@ -107,7 +107,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "A workshop, cold and dark. The owner was Collected three cycles back; no one reopened it."
     }
    ]
   },
@@ -131,7 +131,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "A storefront, closed. The hours posted on the door are written in a hand that keeps changing."
     }
    ]
   },
@@ -155,7 +155,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Locked tight. Chalked on the wood, half-scrubbed: “they came at night.”"
     }
    ]
   },
@@ -179,7 +179,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Someone’s home. Through the curtain you see them flinch at every chime of the System."
     }
    ]
   },
@@ -203,7 +203,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "A cellar door, padlocked. Off-grid supplies, the kind the Vanguard frowns on. Not today."
     }
    ]
   },
@@ -227,7 +227,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Sealed with System tape. The kind they use on the houses of the taken."
     }
    ]
   },
@@ -251,7 +251,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Locked. A child’s drawing is pinned to it — a stick figure, and a tall thing with no face."
     }
    ]
   },
@@ -275,7 +275,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Bolted. A notice: “PROPERTY REASSIGNED BY THE SYSTEM. AWAITING NEW SUBJECT.”"
     }
    ]
   },
@@ -299,7 +299,14 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "The Dawnhearth Inn. Warm light, low voices. A place to rest between descents."
+    },
+    {
+     "type": "transfer",
+     "map": "DawnhearthInn",
+     "x": 13,
+     "y": 14,
+     "dir": "up"
     }
    ]
   },
@@ -323,7 +330,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "The Ashlab annex. A keypad blinks red. You don’t have clearance — yet."
     }
    ]
   },
@@ -347,7 +354,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "The door is locked."
+     "text": "Joran’s house. Still locked, still watched. Lys won’t walk past this side of the plaza."
     }
    ]
   },
@@ -355,7 +362,7 @@
    "id": 15,
    "name": "SystemHub",
    "x": 28,
-   "y": 28,
+   "y": 18,
    "graphic": {
     "sprite": "Crystal",
     "file": "rtp/Crystal.png",
@@ -371,7 +378,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "A System Hub crystal hangs in the air, humming.\nInterface with the System?"
+     "text": "❖ THE CRYSTAL — the System’s hub ❖\nA System Hub crystal hangs in the air, humming.\nInterface with the System?"
     },
     {
      "type": "system"
@@ -402,7 +409,7 @@
         },
         {
          "type": "text",
-         "text": "SYSTEM: Catalogued. The Calamity stirs in the dark below Dawnhearth. Descend, [designation], and clear it \u2014 and be rewarded."
+         "text": "SYSTEM: Catalogued. The Calamity stirs in the dark below Dawnhearth. Descend, [designation], and clear it — and be rewarded."
         }
        ]
       }
@@ -458,7 +465,7 @@
        "then": [
         {
          "type": "text",
-         "text": "\u2026You're back. Of course you are. They always come back \u2014 the System makes sure of it.",
+         "text": "…You're back. Of course you are. They always come back — the System makes sure of it.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -474,7 +481,7 @@
         },
         {
          "type": "text",
-         "text": "That's the cycle. The System loops us \u2014 wipes us, wakes us, sends us down again. Most never notice. You're starting to.",
+         "text": "That's the cycle. The System loops us — wipes us, wakes us, sends us down again. Most never notice. You're starting to.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -495,7 +502,7 @@
         },
         {
          "type": "text",
-         "text": "Hold onto what you bring back. The still place by the square \u2014 the Remembrance \u2014 lets you keep it. Each cycle, remember a little more. That's how we break this. Now go \u2014 descend again.",
+         "text": "Hold onto what you bring back. The still place by the square — the Remembrance — lets you keep it. Each cycle, remember a little more. That's how we break this. Now go — descend again.",
          "face": {
           "sheet": "People1",
           "index": 0
@@ -514,7 +521,7 @@
          "then": [
           {
            "type": "text",
-           "text": "Now the hard part, Awakened. There's a fracture below the plaza \u2014 the way DOWN. That's what we do here: we descend.",
+           "text": "Now the hard part, Awakened. There's a fracture below the plaza — the way DOWN. That's what we do here: we descend.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -522,7 +529,7 @@
           },
           {
            "type": "text",
-           "text": "Down there the System will offer to keep you alive no matter what. Go TETHERED and it won't let you die \u2014 but it watches, and watches, until there's not much 'you' left to watch.",
+           "text": "Down there the System will offer to keep you alive no matter what. Go TETHERED and it won't let you die — but it watches, and watches, until there's not much 'you' left to watch.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -530,7 +537,7 @@
           },
           {
            "type": "text",
-           "text": "Go UNTETHERED and it lets go. Death is real then. But you stay yourself, and you remember. Lys's brother chose that. \u2026Choose at the fracture. Then come back \u2014 if you come back.",
+           "text": "Go UNTETHERED and it lets go. Death is real then. But you stay yourself, and you remember. Lys's brother chose that. …Choose at the fracture. Then come back — if you come back.",
            "face": {
             "sheet": "People1",
             "index": 0
@@ -549,7 +556,7 @@
            "then": [
             {
              "type": "text",
-             "text": "The crystal's right there in the plaza. It only takes a moment \u2014 and it always takes something. Go on.",
+             "text": "The crystal's right there in the plaza. It only takes a moment — and it always takes something. Go on.",
              "face": {
               "sheet": "People1",
               "index": 0
@@ -559,7 +566,7 @@
            "else": [
             {
              "type": "text",
-             "text": "Easy, now. You just Awakened \u2014 the System pulled you up out of the dark, same as everyone in Dawnhearth.",
+             "text": "Easy, now. You just Awakened — the System pulled you up out of the dark, same as everyone in Dawnhearth.",
              "face": {
               "sheet": "People1",
               "index": 0
@@ -575,7 +582,7 @@
             },
             {
              "type": "text",
-             "text": "It'll offer you the world. Take what you need\u2026 but every favor it does you, it watches a little closer. Mind your Surveillance.",
+             "text": "It'll offer you the world. Take what you need… but every favor it does you, it watches a little closer. Mind your Surveillance.",
              "face": {
               "sheet": "People1",
               "index": 0
@@ -583,7 +590,7 @@
             },
             {
              "type": "text",
-             "text": "Go on \u2014 touch the crystal in the plaza and let it 'welcome' you properly. Then come back to me.",
+             "text": "Go on — touch the crystal in the plaza and let it 'welcome' you properly. Then come back to me.",
              "face": {
               "sheet": "People1",
               "index": 0
@@ -625,7 +632,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "A System-twisted emberling snarls \u2014 a taste of what waits below. Cut your teeth?"
+     "text": "A System-twisted emberling snarls — a taste of what waits below. Cut your teeth?"
     },
     {
      "type": "choice",
@@ -665,8 +672,8 @@
   {
    "id": 18,
    "name": "NoticeBoard",
-   "x": 24,
-   "y": 28,
+   "x": 40,
+   "y": 24,
    "graphic": {
     "sprite": "NoticeBoard",
     "file": "rtp/NoticeBoard.png",
@@ -682,11 +689,11 @@
    "commands": [
     {
      "type": "text",
-     "text": "NOTICE \u2014 By order of the Vanguard: any soul who abandons the System\u2019s protection forfeits its aid. The Untethered are not to be sheltered."
+     "text": "❖ THE BOARD — notices & bounties ❖\nNOTICE — By order of the Vanguard: any soul who abandons the System’s protection forfeits its aid. The Untethered are not to be sheltered."
     },
     {
      "type": "text",
-     "text": "Scratched underneath, in a shaking hand: \u201cThey took Joran for going off-grid. He only wanted to be left alone.\u201d"
+     "text": "Scratched underneath, in a shaking hand: “They took Joran for going off-grid. He only wanted to be left alone.”"
     }
    ]
   },
@@ -790,7 +797,7 @@
    "id": 23,
    "name": "DescentGate",
    "x": 30,
-   "y": 30,
+   "y": 34,
    "graphic": {
     "sprite": "Crystal",
     "file": "rtp/Crystal.png",
@@ -806,7 +813,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "A fracture in the air hums where the System thins \u2014 a way DOWN, into the dark beneath Dawnhearth."
+     "text": "❖ THE FRACTURE — the way DOWN ❖\nA fracture in the air hums where the System thins — a way DOWN, into the dark beneath Dawnhearth."
     },
     {
      "type": "choice",
@@ -817,7 +824,7 @@
        "then": [
         {
          "type": "text",
-         "text": "You keep the System close. It will not let you die down there \u2014 and it will never stop watching. (Surveillance climbs toward Collection.)"
+         "text": "You keep the System close. It will not let you die down there — and it will never stop watching. (Surveillance climbs toward Collection.)"
         },
         {
          "type": "descend",
@@ -831,7 +838,7 @@
        "then": [
         {
          "type": "text",
-         "text": "You cut the tether. No hand will catch you \u2014 death is real. But the System loses its grip, and you stay yourself. (The off-grid path.)"
+         "text": "You cut the tether. No hand will catch you — death is real. But the System loses its grip, and you stay yourself. (The off-grid path.)"
         },
         {
          "type": "descend",
@@ -856,8 +863,8 @@
   {
    "id": 24,
    "name": "Remembrance",
-   "x": 26,
-   "y": 30,
+   "x": 20,
+   "y": 34,
    "graphic": {
     "sprite": "Crystal",
     "file": "rtp/Crystal.png",
@@ -873,7 +880,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "A still place where the cycle's edges show through. Here, what you carried back from the dark can be remembered."
+     "text": "❖ THE STILL PLACE — the Remembrance ❖\nA still place where the cycle's edges show through. Here, what you carried back from the dark can be remembered."
     },
     {
      "type": "meta"
@@ -884,7 +891,7 @@
    "id": 25,
    "name": "ReplaySeedBoard",
    "x": 32,
-   "y": 28,
+   "y": 34,
    "graphic": {
     "sprite": "NoticeBoard",
     "file": "rtp/NoticeBoard.png",
@@ -915,12 +922,23 @@
         },
         {
          "type": "conditional",
-         "cond": { "kind": "variable", "id": "run_seed_in", "op": ">", "value": 0 },
+         "cond": {
+          "kind": "variable",
+          "id": "run_seed_in",
+          "op": ">",
+          "value": 0
+         },
          "then": [
-          { "type": "text", "text": "Pinned. Your next descent will re-grow the same layout from seed [v:run_seed_in]." }
+          {
+           "type": "text",
+           "text": "Pinned. Your next descent will re-grow the same layout from seed [v:run_seed_in]."
+          }
          ],
          "else": [
-          { "type": "text", "text": "There's no last seed to replay yet — descend once, then come back to pin its shape." }
+          {
+           "type": "text",
+           "text": "There's no last seed to replay yet — descend once, then come back to pin its shape."
+          }
          ]
         }
        ]
@@ -934,14 +952,25 @@
          "digits": 10,
          "variable": "run_seed_in"
         },
-        { "type": "text", "text": "Pinned. Next descent uses seed [v:run_seed_in]  (0 = fresh, random)." }
+        {
+         "type": "text",
+         "text": "Pinned. Next descent uses seed [v:run_seed_in]  (0 = fresh, random)."
+        }
        ]
       },
       {
        "label": "Clear — descend on a fresh seed",
        "then": [
-        { "type": "variable", "id": "run_seed_in", "op": "=", "value": 0 },
-        { "type": "text", "text": "Cleared. Your next descent rolls a brand-new layout." }
+        {
+         "type": "variable",
+         "id": "run_seed_in",
+         "op": "=",
+         "value": 0
+        },
+        {
+         "type": "text",
+         "text": "Cleared. Your next descent rolls a brand-new layout."
+        }
        ]
       },
       {
@@ -949,6 +978,90 @@
        "then": []
       }
      ]
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "name": "PlazaDirectory",
+   "x": 10,
+   "y": 18,
+   "graphic": {
+    "sprite": "NoticeBoard",
+    "file": "rtp/NoticeBoard.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "DAWNHEARTH — PLAZA DIRECTORY"
+    },
+    {
+     "type": "text",
+     "text": "❖ THE CRYSTAL (north) — the System’s hub: supplies, services, classifications."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE FRACTURE (south) — the way down. Tethered or untethered. Beside it, the Replay Slate."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE STILL PLACE (southwest) — the Remembrance: spend what you carried back."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE BOARD (east) — notices & bounties.   ❖ THE INFIRMARY (northwest) — Sister Wenna heals."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE INN (south gate) — rest between descents."
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "name": "SisterWenna",
+   "x": 22,
+   "y": 20,
+   "graphic": {
+    "sprite": "People5",
+    "file": "rtp/People5.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "❖ THE INFIRMARY ❖\nSister Wenna looks up from her poultices. “Hurt? Sit. The System would charge your Surveillance for this — I won’t.”",
+     "face": {
+      "sheet": "People5",
+      "index": 0
+     }
+    },
+    {
+     "type": "heal",
+     "what": "all"
+    },
+    {
+     "type": "text",
+     "text": "“There. Whole again — and the System none the wiser. Go careful down there.”",
+     "face": {
+      "sheet": "People5",
+      "index": 0
+     }
     }
    ]
   }
