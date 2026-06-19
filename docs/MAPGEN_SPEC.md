@@ -1,3 +1,7 @@
+> **Consolidated:** the procgen roadmap/queue + technique toolkit + quality bar now live in
+> **`GENERATOR_ROADMAP.md`** (the master doc). This file is the **detailed per-map-type
+> appendix** it references — read it for the concrete rules of a specific map type.
+
 # MAPGEN_SPEC — Generator definition for every map type
 
 Status: **design spec** (2026-06-17). Defines how `tools/mapgen.py` (town/route/forest)

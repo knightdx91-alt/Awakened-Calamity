@@ -1,3 +1,7 @@
+> **Consolidated:** the actionable parts of this are folded into the "Mapping quality bar"
+> section of **`GENERATOR_ROADMAP.md`** (the master procgen doc). This file is the full source
+> notes it draws from.
+
 # Mapping Principles — reference notes
 
 Distilled from the RPG Maker forum thread *"How to learn how to create good maps"*
