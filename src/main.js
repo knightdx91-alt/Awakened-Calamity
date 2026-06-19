@@ -952,6 +952,24 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_biomesDb = j); })
             .catch(function () { return (_biomesDb = {}); });
     }
+    var _actsDb = null;
+    function _loadActs() {
+        if (_actsDb) return Promise.resolve(_actsDb);
+        return fetch('data/systems/acts.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_actsDb = j); })
+            .catch(function () { return (_actsDb = null); });
+    }
+    // Compose the run's act (paced node sequence) from its seed — replay-safe.
+    function _composeAct(run) {
+        if (!window.GameAct || !run) return null;
+        var len = (_runDb && _runDb.maxDepth) || 4;
+        return GameAct.compose(run.seed >>> 0, len, _actsDb || GameAct.DEFAULT_CFG);
+    }
+    // The act node for the current floor (its `gen` modifiers tune generation).
+    function _floorNode(run) {
+        if (!window.GameAct || !run || !run.act) return null;
+        return GameAct.nodeFor(run.act, run.floor | 0);
+    }
     // Pick the biome def for this run: run.run.biome override → run.json `biome` →
     // biomes._meta.default → first non-meta biome. Returns null (→ generator default).
     function _runBiome(run) {
@@ -970,9 +988,10 @@
         var boss = (run.floor | 0) >= maxDepth;
         var tier = Math.max(1, Math.min(3, Math.ceil((run.floor | 0) * 3 / maxDepth)));
         var fseed = (((run.seed >>> 0) + (run.floor | 0) * 0x9E3779B1) >>> 0) || 1;
+        var node = _floorNode(run);
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
             maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened',
-            creatures: _creaturesDb, biome: _runBiome(run) });
+            creatures: _creaturesDb, biome: _runBiome(run), node: node ? node.gen : null });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
@@ -997,6 +1016,10 @@
         GameRun.start(st.run, _runDb, _seed, { tethered: c.tethered !== false });
         st.run.seed = _seed;                       // pin the masked seed we surface
         if (window.GameEventState) GameEventState.setVar('run_seed', _seed);
+        // Compose the paced act (node sequence) from the seed → replay-safe, and
+        // surface its shape as a token the hub Board / descent can show (#4 / onboarding #5).
+        await _loadActs();
+        st.run.act = _composeAct(st.run);
         await _loadMetaDb();
         _grantStartItems();                        // meta boon: begin runs with kit
         if (GameSave.markDirty) GameSave.markDirty();
@@ -1241,7 +1264,19 @@
             .replace(/\[designation\]/g, p.designation || 'SUBJECT')
             // [v:id] = a game variable value (RPG Maker's \V[n]); [s:id] = ON/OFF switch
             .replace(/\[v:([^\]]+)\]/g, function (_, id) { return ES ? String(ES.getVar(id.trim())) : '0'; })
-            .replace(/\[s:([^\]]+)\]/g, function (_, id) { return (ES && ES.getSwitch(id.trim())) ? 'ON' : 'OFF'; });
+            .replace(/\[s:([^\]]+)\]/g, function (_, id) { return (ES && ES.getSwitch(id.trim())) ? 'ON' : 'OFF'; })
+            // [act] = the current run's paced act as a glyph map (▸ on this floor);
+            // [floorlabel] = this floor's act-node label (act composer #4).
+            .replace(/\[act\]/g, function () {
+                var r = window.GameSave && GameSave.state && GameSave.state.run;
+                return (window.GameAct && r && r.act) ? GameAct.glyphMap(r.act, r.floor | 0) : '';
+            })
+            .replace(/\[floorlabel\]/g, function () {
+                var r = window.GameSave && GameSave.state && GameSave.state.run;
+                if (!window.GameAct || !r || !r.act) return '';
+                var n = GameAct.nodeFor(r.act, r.floor | 0);
+                return n ? (n.glyph + ' ' + n.label) : '';
+            });
     }
     async function runCmd(c, ctx) {
         switch (c.type) {

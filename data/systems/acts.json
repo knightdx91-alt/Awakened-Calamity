@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "doc": "ACT composer (generator roadmap #4). A run is no longer a flat pool of identical floors — GameAct.compose(seed, length, cfg) lays out a PACED act of typed nodes (monster → elite → treasure → rest → boss), Slay-the-Spire style. The descent stores the composed act on run.act; main.js _genFloor reads the node for the current floor and passes its `gen` modifiers into GameMapGen.generateFloor (encounter density, rest campfire, elite/treasure guarantees). Last node is always the boss. Pure + seeded → replay-safe. Edit the weights/pacing/glyphs here (RPG-Maker-style data) — no code change.",
+    "default": true
+  },
+  "nodeTypes": {
+    "monster": { "label": "Hostile floor", "glyph": "⚔", "gen": {} },
+    "elite":   { "label": "Elite den",     "glyph": "★", "gen": { "elite": true, "encounterMult": 1.15, "levelBonus": 1, "guaranteedRelic": true } },
+    "treasure":{ "label": "Treasure vault","glyph": "✦", "gen": { "encounterMult": 0.3, "treasure": true, "guaranteedRelic": true } },
+    "rest":    { "label": "Refuge",         "glyph": "☾", "gen": { "encounterMult": 0, "rest": true } },
+    "boss":    { "label": "Alpha lair",     "glyph": "𝕭", "gen": {} }
+  },
+  "pacing": {
+    "firstNode": "monster",
+    "restBeforeBoss": true,
+    "weights": { "monster": 5, "elite": 3, "treasure": 2, "rest": 2 },
+    "minSpacing": { "elite": 2, "treasure": 2, "rest": 2 }
+  }
+}

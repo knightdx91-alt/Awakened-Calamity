@@ -261,6 +261,19 @@
                 else: body.concat([{ type: 'selfswitch', letter: 'A', value: true }]) }] });
     };
 
+    // A REST node's refuge: a campfire that fully heals once (act composer #4).
+    Builder.prototype.placeCampfire = function (x, y) {
+        this.setp(x, y, GID.goldpile, false);
+        this.events.push({ x: x, y: y, name: 'Campfire', trigger: 'action', through: false,
+            graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
+            commands: [{ type: 'conditional', cond: { kind: 'selfswitch', letter: 'A', value: true },
+                then: [{ type: 'text', text: 'The embers have burned to ash.' }],
+                else: [{ type: 'text', text: 'A guttering fire in a pocket of stillness — the System’s eye slips past here.' },
+                    { type: 'heal', what: 'all' },
+                    { type: 'text', text: 'You rest. Your wounds close.' },
+                    { type: 'selfswitch', letter: 'A', value: true }] }] });
+    };
+
     // ── orchestration (mirror of gen_dungeon) ─────────────────────────────────
     function generateFloor(opts) {
         opts = opts || {};
@@ -269,6 +282,9 @@
         var region = opts.region || 'awakened';
         var creatures = opts.creatures || null;
         var bio = resolveBiome(opts.biome);
+        var node = opts.node || {};               // act-composer node gen modifiers (#4)
+        var encMult = node.encounterMult != null ? node.encounterMult : 1;
+        var lvlBonus = node.levelBonus | 0;
         var rng = mkRng(opts.seed);
         var b = new Builder(w, h, rng, bio.floorTile);
 
@@ -299,7 +315,9 @@
         b.setp(ex, ey, GID.stairs, false);
         b.events.push({ x: ex, y: ey, name: 'Entrance', trigger: 'action', through: false,
             graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
-            commands: [{ type: 'text', text: 'Worn stairs lead back up to the surface.' }] });
+            commands: [{ type: 'text', text: 'Worn stairs lead back up to the surface.' },
+                // legible run shape (act composer #4 / onboarding #5): glyph map + this floor
+                { type: 'text', text: 'DESCENT:  [act]\nHere:  [floorlabel]' }] });
 
         var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
         // The deepest room holds either the way DOWN (normal floor → descend to the
@@ -329,25 +347,39 @@
                         else: [{ type: 'gendungeon' }] }] });
         }
 
-        // roaming encounters in body rooms, scaled by depth
+        // roaming encounters in body rooms, scaled by depth. The act node tunes
+        // density (encMult: rest=0/treasure=0.3/elite≥1) and enemy level (lvlBonus).
         var body = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha; });
         var maxd = rooms.reduce(function (m, r) { return Math.max(m, far(r)); }, 1) || 1;
         var sprites = ['Monster1', 'Monster3'];
+        var encRate = bio.encounterRate * encMult;
         for (var r1 = 0; r1 < body.length; r1++) {
-            if (rng.random() < bio.encounterRate) {
-                var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + ((depth * 2 + rng.random()) | 0));
+            if (rng.random() < encRate) {
+                var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + lvlBonus + ((depth * 2 + rng.random()) | 0));
                 var sf = b._roomFloor(body[r1]);
                 if (sf[0] !== null) b.placeMonster(sf[0], sf[1], rng.choice(pool), lvl, rng.choice(sprites), creatures);
             }
         }
-        // chests reward the deep / dead-end rooms
-        var loot = body.slice().sort(function (a, c) { return far(c) - far(a); }).slice(0, 1 + tier);
+        // ELITE node: a guaranteed tougher roamer in the deepest body room.
+        if (node.elite && body.length) {
+            var eroom = body.slice().sort(function (a, c) { return far(c) - far(a); })[0];
+            var ef = b._roomFloor(eroom);
+            if (ef[0] !== null) b.placeMonster(ef[0], ef[1], rng.choice(pool), Math.max(2, tier + lvlBonus + 2), 'Monster2', creatures);
+        }
+        // REST node: no extra loot churn — a campfire refuge instead (placed below).
+        // chests reward the deep / dead-end rooms (treasure node = extra chest).
+        var chestN = 1 + tier + (node.treasure ? 1 : 0);
+        var loot = body.slice().sort(function (a, c) { return far(c) - far(a); }).slice(0, chestN);
         for (var l = 0; l < loot.length; l++) {
             var cf = b._roomFloor(loot[l], true, true);
             if (cf[0] !== null) b.placeChest(cf[0], cf[1], rng.randint(40, 80) * (1 + ((far(loot[l]) / maxd * 2) | 0)), rng.choice([null, 'potion', 'bandage', 'ration', 'ether']));
         }
-        // one relic cache in the deepest body room (the run-reward layer)
+        // relic cache in the deepest body room (run-reward layer). Elite/treasure
+        // nodes guarantee a second cache (richer reward for the harder/lucky floor).
         if (loot.length) { var rf = b._roomFloor(loot[0], true, true); if (rf[0] !== null) b.placeRelicCache(rf[0], rf[1], 3); }
+        if (node.guaranteedRelic && loot.length > 1) { var rf2 = b._roomFloor(loot[1], true, true); if (rf2[0] !== null) b.placeRelicCache(rf2[0], rf2[1], 3); }
+        // REST node: a campfire refuge (full heal once) in a body room.
+        if (node.rest && body.length) { var rr = b._roomFloor(body[(body.length / 2) | 0] || body[0]); if (rr[0] !== null) b.placeCampfire(rr[0], rr[1]); }
         // hidden hazards in open floor cells
         var walkCells = [];
         for (var ci = 0; ci < w * h; ci++) {
@@ -359,7 +391,8 @@
         }
         rng.shuffle(walkCells);
         var sensorW = bio.hazard.sensorWeight != null ? bio.hazard.sensorWeight : 0.4;
-        for (var tt = 0; tt < 3 + tier && tt < walkCells.length; tt++) b.placeTrap(walkCells[tt][0], walkCells[tt][1], rng.random() < sensorW ? 'sensor' : 'spike', bio.hazard);
+        var trapN = node.rest ? 0 : (3 + tier);     // a refuge has no hazards
+        for (var tt = 0; tt < trapN && tt < walkCells.length; tt++) b.placeTrap(walkCells[tt][0], walkCells[tt][1], rng.random() < sensorW ? 'sensor' : 'spike', bio.hazard);
         // pillars in big halls + light clutter
         for (var rp = 0; rp < rooms.length; rp++) {
             var room = rooms[rp];

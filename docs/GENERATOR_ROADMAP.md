@@ -83,9 +83,19 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    *Original spec: one biome def per region = palette + autotile set + prop tables + enemy roster +
    hazard + mini-boss, so Verdara/Halveth/Calderra/Vael read as different places (not recolors).*
 
-4. **Run/act composer (Slay-the-Spire map model).** Compose floors into a PACED act —
-   normal → elite → treasure → rest → boss — instead of a flat pool. Pacing is where roguelite
-   runs get their shape; also unlocks onboarding #5 (legible run shape on the Board).
+4. **Run/act composer (Slay-the-Spire map model).** ✅ DONE (2026-06-19) — `src/systems/act.js`
+   (`GameAct.compose(seed, length, cfg)`, pure/seeded) lays out a descent as a PACED sequence of
+   typed nodes (monster → elite → treasure → rest → boss) instead of a flat pool. Pacing rules
+   (data in `data/systems/acts.json`): boss last, monster first, a rest before the boss, weighted
+   middle with per-type **min spacing** (no back-to-back elites/rests). Each node carries `gen`
+   modifiers that tune `GameMapGen.generateFloor` (`opts.node`): **rest** = no hazards + a campfire
+   refuge (full heal once) + no roamers; **elite** = +level + a guaranteed extra roamer + a 2nd
+   relic cache; **treasure** = sparse enemies + extra chest + 2nd relic cache. `main.js` composes
+   the act at `_runStart` (stored on `run.act`, replay-safe) and reads the node per floor in
+   `_genFloor`. The shape is surfaced via `[act]` (glyph map w/ a ▸ cursor) + `[floorlabel]` text
+   tokens (shown when examining a floor's Entrance) — onboarding #5's legible run shape.
+   `tools/test_act.mjs` = 13 checks; `test_mapgen.mjs` grew to 22 (added biome + act-node checks).
+   **Next:** a proper hub **Board** widget rendering `[act]` before descent (vs. only in-dungeon).
 
 5. **Data-driven templates / recipes (`MAPGEN_SPEC §3`).** Author intent in JSON
    (`{biome, anchors, enemy_table, hazard, hook}`); the generator fills detail. Enables hybrid

@@ -120,5 +120,37 @@ for (const bio of [calderra, vael, biomes.halveth, biomes.verdara]) {
 }
 check('all biome floors stay fully reachable', bioReach);
 
+// ── ACT-node generation modifiers (generator roadmap #4) ───────────────────
+// REST node: no hazards + a campfire refuge, no roamers.
+let restOk = true;
+for (let s = 0; s < 12; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 600 + s, tier: 2, creatures, node: { encounterMult: 0, rest: true } });
+  const names = m.events.map(e => e.name);
+  if (names.includes('Trap')) restOk = false;
+  if (names.includes('Roamer')) restOk = false;
+  if (!names.includes('Campfire')) restOk = false;
+}
+check('rest node: campfire refuge, no traps, no roamers', restOk);
+// ELITE node: a guaranteed extra roamer + a second relic cache.
+let eliteOk = true;
+for (let s = 0; s < 12; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 700 + s, tier: 2, creatures, node: { elite: true, encounterMult: 1.15, levelBonus: 1, guaranteedRelic: true } });
+  const roamers = m.events.filter(e => e.name === 'Roamer').length;
+  const caches = m.events.filter(e => e.name === 'RelicCache').length;
+  if (roamers < 1 || caches < 2) eliteOk = false;
+}
+check('elite node: guaranteed roamer + second relic cache', eliteOk);
+// TREASURE node: a guaranteed relic cache + extra chest, sparse enemies.
+let treaOk = true;
+for (let s = 0; s < 12; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 800 + s, tier: 2, creatures, node: { encounterMult: 0.3, treasure: true, guaranteedRelic: true } });
+  if (m.events.filter(e => e.name === 'RelicCache').length < 2) treaOk = false;
+}
+check('treasure node: second relic cache', treaOk);
+// no node → unchanged default floor (traps present, single relic cache)
+const { map: dm } = GameMapGen.generateFloor({ seed: 900, tier: 2, creatures });
+check('no node → default floor (has traps, one relic cache)',
+  dm.events.some(e => e.name === 'Trap') && dm.events.filter(e => e.name === 'RelicCache').length === 1);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);
