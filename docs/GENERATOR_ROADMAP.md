@@ -39,15 +39,17 @@ pick one** (e.g. random-walk for shape, then cellular-automata to smooth). Ranke
 |---|---|---|---|
 | **Cellular Automata** | organic cave/ruins | new `caveFill(region)`: seed ~45% random floor, run 4–5 smoothing passes; existing `ensureConnected` stitches caverns | 🟢 **highest ROI, ~30 LOC** |
 | **Drunkard's Walk / Random Walkers** | meandering organic passages (bigger "brush" = wider) | random-walk variant of `carveCorridor` toward target | 🟢 **tiny, ~15 LOC** |
-| **Rooms & Corridors (Room Accretion)** | structured rooms, connected | what we have now (`carveRect`+`carveCorridor`) | ✅ DONE (only this) |
-| **Set Pieces / Prefabs** | hand-authored quality rooms (boss arena, vault, pillar hall); QA-able | tile+event stamp templates placed onto `walk[]`/`over[]`/`events[]` | 🟡 **medium effort, high quality payoff** |
+| **Rooms & Corridors (random placement)** | scattered rooms, connected | what we have now (`carveRect`+`carveCorridor`, reject-on-overlap, repair) | ✅ DONE (only this) |
+| **Binary Space Partitioning (BSP)** | structured, evenly-distributed rooms; no overlap & connected *by construction*; naturally varied sizes | recursive split → room per leaf → connect siblings up the tree; fills `walk[]`; the "right way" to do the rectangular style | 🟢 **structural upgrade to the rooms style; pairs with CA in `mixed`** |
+| **Set Pieces / Prefabs** | hand-authored quality rooms (boss arena, vault, pillar hall); QA-able | tile+event stamp templates placed onto `walk[]`/`over[]`/`events[]`; **BSP leaves are natural prefab slots** | 🟡 **medium effort, high quality payoff** |
 | **Graph / Component ("legos")** | room segments w/ connection points, sector algo guarantees connectivity | alt to "carve then repair"; lower marginal value (we already guarantee connectivity) | 🔴 defer |
 | **Wave Function Collapse (WFC)** | flexible tiling from adjacency rules | needs a curated tileset-adjacency ruleset — heavy | 🔴 defer |
 
-**Plan = combine:** keep rooms-and-corridors as the skeleton, add **CA caves** as an alternate/
-blended floor type (`style: 'cave' | 'rooms' | 'mixed'` on `generateFloor`), use **drunkard's
-walk** for organic links, drop in **prefabs** for set-pieces. A floor can be *both* (room block +
-cave wing) — which also fixes the "huge empty square room" failure mode.
+**Plan = combine:** upgrade the rectangular style to **BSP** (evenly-distributed, non-overlapping,
+connected by construction), add **CA caves** as an organic alternate, use **drunkard's walk** for
+organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms' | 'bsp' | 'cave' |
+'mixed'` on `generateFloor`. A `mixed` floor can be a **BSP room block + a CA cave wing** (the
+"combine techniques" consensus), which also fixes the "huge empty square room" failure mode.
 
 ---
 
@@ -63,10 +65,11 @@ cave wing) — which also fixes the "huge empty square room" failure mode.
    `run.json runtimeGen` is on (pool kept as fallback); `_purgeRunFloors` clears reused `RunGenF*`
    names. `tools/test_mapgen.mjs` = 12 checks; browser-verified.
 
-2. **Room-shape variety — START HERE (procgen toolkit above).** Add `caveFill` (cellular
-   automata) + drunkard's-walk corridors + big pillared halls / merged-blocked rooms, behind a
-   `style` option on `generateFloor`. Biggest visual-variety win for the least code; slots into
-   the existing Builder; headless-testable via `tools/test_mapgen.mjs` (assert caves stay
+2. **Room-shape variety — START HERE (procgen toolkit above).** Deliver `style: 'rooms' | 'bsp'
+   | 'cave' | 'mixed'` on `generateFloor`: **BSP** (structured rectangular rooms, connected by
+   construction) + `caveFill` (cellular automata) + drunkard's-walk corridors + big pillared
+   halls / merged-blocked rooms. Biggest visual-variety win for the least code; slots into the
+   existing Builder; headless-testable via `tools/test_mapgen.mjs` (assert every style stays
    connected). *(Was #5; promoted — cheapest high-impact change, unblocks the rest. `MAPGEN_SPEC §6`.)*
 
 3. **Biome system.** One biome def per region = palette + autotile set + prop tables + **enemy
