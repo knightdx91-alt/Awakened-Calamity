@@ -30,12 +30,26 @@
             over: false, winner: null, surveillance: 0, _sumN: 0,
         };
         for (const d of actorDefs) { state.actors[d.id] = _mkActor(db, d); state.order.push(d.id); }
+        // Party auras (passive partyBuff skills like Rally Aura) radiate to the
+        // whole side: sum each side's auras once and fold into every ally's
+        // sideAura* (a persistent, always-on atk/def bonus applied in _damage).
+        for (const side of ['player', 'enemy']) {
+            const team = state.order.map(id => state.actors[id]).filter(a => a.side === side);
+            const atk = team.reduce((s, a) => s + (a.auraAtk || 0), 0);
+            const def = team.reduce((s, a) => s + (a.auraDef || 0), 0);
+            for (const a of team) { a.sideAuraAtk = atk; a.sideAuraDef = def; }
+        }
         return state;
     }
 
     // Build one actor, folding passive + reactive skills into traits up front.
     function _mkActor(db, d) {
         let maxHp = d.stats.hp, defBonus = 0, evadeChance = 0, critChance = 0, counterChance = 0;
+        // folded passive traits (engine-honored auras): affinity-skill damage,
+        // healing-done boost, bonus max MP pool, summon-stat boost, party atk/def
+        // auras (applied side-wide in createBattle), and the guard-ally redirect.
+        let affinityPowerBonus = 0, healBoost = 0, mpBonusFrac = 0, summonBonus = 0;
+        let auraAtk = 0, auraDef = 0, guardChance = 0;
         const actives = [];
         for (const sid of (d.loadout || [])) {
             const sk = db.skills[sid]; if (!sk) continue;
@@ -45,9 +59,15 @@
                 else if (e.type === 'def')    defBonus += e.amount;
                 else if (e.type === 'evade')  evadeChance += e.amount;
                 else if (e.type === 'critUp') critChance += e.amount;
+                else if (e.type === 'affinityPower') affinityPowerBonus += (e.amount || 0);
+                else if (e.type === 'healBoost')     healBoost += (e.amount || 0);
+                else if (e.type === 'resourceRegen') mpBonusFrac += (e.amount || 0);
+                else if (e.type === 'creatureBuff' || e.type === 'summonPower') summonBonus += (e.amount || 0);
+                else if (e.type === 'partyBuff') { if (e.tag === 'defense') auraDef += (e.amount || 0); else auraAtk += (e.amount || 0); }
             } else if (sk.kind === 'reactive') {
                 if (e.type === 'counter') counterChance += (e.chance || 0);
                 else if (e.type === 'evade') evadeChance += (e.chance || 0);
+                else if (e.type === 'guardAlly') guardChance += (e.amount || 0);
             } else if (sk.kind === 'active') {
                 actives.push(sid);
             }
@@ -63,7 +83,7 @@
         const lifesteal = b.lifesteal || 0, thorns = b.thorns || 0;
         // Resource pools: MP fuels magical (affinity) skills, SP (stamina) fuels
         // physical ones. Defaults if the build doesn't specify.
-        const maxMp = (d.stats.mp != null) ? d.stats.mp : 30;
+        const maxMp = Math.round(((d.stats.mp != null) ? d.stats.mp : 30) * (1 + mpBonusFrac));
         const maxSp = (d.stats.sp != null) ? d.stats.sp : 100;
         return {
             id: d.id, side: d.side, name: d.name, affinity: d.affinity || null, ai: !!d.ai,
@@ -71,6 +91,7 @@
             atk: d.stats.atk, def: d.stats.def, speed: d.stats.speed,
             hp: maxHp, maxHp, mp: maxMp, maxMp, sp: maxSp, maxSp, tempo: 0, hasActed: false,
             defBonus, evadeChance, critChance, counterChance, lifesteal, thorns,
+            affinityPowerBonus, healBoost, summonBonus, auraAtk, auraDef, guardChance, sideAuraAtk: 0, sideAuraDef: 0,
             // timed statuses (all decrement on this actor's own turn)
             defBuff: 0, defBuffTurns: 0, atkBuff: 0, atkBuffTurns: 0,
             speedMod: 0, speedModTurns: 0, markMult: 0, markTurns: 0,
@@ -136,7 +157,7 @@
         const eff = sk.effect || {};
 
         if (eff.type === 'heal') {
-            const heal = Math.round(a.maxHp * eff.amount);
+            const heal = Math.round(a.maxHp * eff.amount * (1 + (a.healBoost || 0)));
             a.hp = Math.min(a.maxHp, a.hp + heal);
             log(state, 'heal', { actor: a.id, skill: action.skillId, amount: heal, hp: a.hp });
         } else if (eff.type === 'defUp') {
@@ -170,8 +191,21 @@
     // Damaging skill: primary target (+AoE splash), then riders + counter.
     function _attack(state, db, a, sk, action) {
         const eff = sk.effect || {};
-        const primary = state.actors[action.targetId];
+        let primary = state.actors[action.targetId];
         if (!primary) return;
+        // Intercept (guardAlly): a living ally of the target with a guard trait may
+        // throw themselves in front of a single-target hit, redirecting it onto
+        // themselves. Only for single-target (not AoE), and not for self-guard.
+        if (eff.type !== 'aoe' && primary.hp > 0) {
+            const guardians = aliveOnSide(state, primary.side)
+                .filter(g => g.id !== primary.id && (g.guardChance || 0) > 0);
+            for (const g of guardians) {
+                if (RNG.next(state.rng) < g.guardChance) {
+                    log(state, 'guard', { actor: g.id, protect: primary.id });
+                    primary = g; break;
+                }
+            }
+        }
         const targets = [primary];
         if (eff.type === 'aoe') {
             for (const o of aliveOnSide(state, oppSide(a.side))) if (o.id !== primary.id) targets.push(o);
@@ -196,11 +230,13 @@
 
     function _damage(state, atk, def, sk, splash) {
         if (def.evadeChance && RNG.next(state.rng) < def.evadeChance) return { dmg: 0, evaded: true };
-        const effAtk = atk.atk * (1 + (atk.atkBuff || 0));
-        const effDef = Math.max(1, (def.def * (1 + (def.defBuff || 0) + (def.defBonus || 0))) * (1 - (def.sundered || 0)));
+        const effAtk = atk.atk * (1 + (atk.atkBuff || 0) + (atk.sideAuraAtk || 0));
+        const effDef = Math.max(1, (def.def * (1 + (def.defBuff || 0) + (def.defBonus || 0) + (def.sideAuraDef || 0))) * (1 - (def.sundered || 0)));
         let base = (effAtk * sk.power) * (effAtk / (effAtk + effDef)) * (splash || 1);
         const am = affinityMult(state.chart, sk.affinity || atk.affinity, def.affinity);
         base *= am;
+        // Affinity Focus etc.: passive boost to the bearer's affinity-skill damage.
+        if (sk.affinity && atk.affinityPowerBonus) base *= (1 + atk.affinityPowerBonus);
         const e = sk.effect || {};
         if (e.type === 'bonusVsUnaware' && !def.hasActed) base *= (1 + (e.amount || 0));
         base *= (1 + (def.markMult || 0));
@@ -233,11 +269,13 @@
 
     function _summon(state, db, summoner, sk) {
         const id = 'sum' + (++state._sumN);
+        const sb = 1 + (summoner.summonBonus || 0);   // Pack Sense / Twin Mount boost the summon
+        const hp = Math.round(25 * sb);
         state.actors[id] = {
             id, side: summoner.side, name: 'Turret', affinity: summoner.affinity, ai: true, summon: true,
             battler: 'rtp/Puppet.png',   // construct ally art
-            atk: Math.max(6, Math.round(summoner.atk * 0.6)), def: 10, speed: 50,
-            hp: 25, maxHp: 25, tempo: 0, hasActed: false,
+            atk: Math.max(6, Math.round(summoner.atk * 0.6 * sb)), def: Math.round(10 * sb), speed: 50,
+            hp, maxHp: hp, tempo: 0, hasActed: false,
             defBonus: 0, evadeChance: 0, critChance: 0, counterChance: 0,
             defBuff: 0, defBuffTurns: 0, atkBuff: 0, atkBuffTurns: 0, speedMod: 0, speedModTurns: 0,
             markMult: 0, markTurns: 0, sundered: 0, sunderTurns: 0, taunting: 0, dot: [],

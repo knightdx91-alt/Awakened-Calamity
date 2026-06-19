@@ -2,25 +2,37 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
-## 🔴 NEXT SESSION — PRIORITY LIST (set 2026-06-19)
-Ordered by bang-for-buck. Items 1–2 are the meaty ones; 3+ are smaller/optional.
-1. **Wire the inert skills (~99/192).** Most non-launch classes grant skills the combat core
-   ignores (no `power` and no engine-honored `effect.type`). Audit `skills.json`, map each to an
-   existing effect (dmg / heal / slow / mark / sunder / toxin / taunt / buff / summon / def-up) or
-   add the few missing effect handlers in `combat.js`. Goal: 0 globally-inert combat skills, so every
-   class's FIGHT menu is real. (Launch 12 already clean.)
-2. **Hub redesign + reactive NPCs (onboarding #3–4 from `docs/ONBOARDING_DESIGN.md`).** Dawnhearth
+## ✅ DONE 2026-06-19 — Inert combat skills wired (priority #1: 0 inert combat skills remain)
+Audited `skills.json` (193 entries): real inert combat skills went **22 → 0** (the 9 still-"inert"
+passives are all genuine NON-combat lifestyle hooks — exposureResist/craftQuality/repGain/bindChance/
+yield/detect — correct to be out-of-battle). All node-verified (`test_effects.mjs` now 21 checks, all
+suites green, `validate_design` still ✅ MECHANICALLY SOUND):
+- **Data retags (active skills → engine-honored effects)** in `skills.json`: `soul_tether`/
+  `monster_lore` `mark`→`markTarget`; `rouse` `influence`→`partyBuff`(atk); `rally_beasts`
+  `creatureBuff`→`partyBuff`(atk); `ward` `exposureShield`→`partyBuff`(defense); `beast_call`
+  `creatureAssist`→`summon`. These map to types the FIGHT-menu filter already shows.
+- **New engine handlers in `combat.js`** (folded as actor traits in `_mkActor`): passive
+  `affinityPower` (boosts the bearer's affinity-skill damage in `_damage`), `healBoost` (boosts heal
+  done), `resourceRegen` (enlarges the MP pool — no in-battle regen by design), `creatureBuff`/
+  `summonPower` (scale summon stats in `_summon`), `partyBuff` aura (Rally Aura — summed side-wide in
+  `createBattle` into `sideAura{Atk,Def}`, applied in `_damage`); reactive `guardAlly` (**Intercept**
+  now really redirects a single-target hit onto the guardian in `_attack`).
+- Updated the `_meta` note in `skills.json` to list the full honored-effect set.
+
+## 🔴 NEXT SESSION — PRIORITY LIST (updated 2026-06-19)
+Ordered by bang-for-buck. (#1 inert-skills DONE this session — see above.)
+1. **Hub redesign + reactive NPCs (onboarding #3–4 from `docs/ONBOARDING_DESIGN.md`).** Dawnhearth
    should react to run state: NPCs comment on your deepest floor / Surveillance tier / clears; the
    Remembrance + System crystal more legible; a "replay seed" board (uses the new `run_seed`/
    `run_seed_in` vars — see below) so players can re-run a layout.
-3. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
+2. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
    author more dilemma-axis and build-defining relics. (Pool is at 24 now.)
-4. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;
+3. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;
    combat RNG still uses live-timing seeds, so battles aren't frame-identical — derive the battle
    seed from `run.seed + floor + encounterIdx` for full replay if desired.
-5. **Generator roadmap** (`docs/GENERATOR_ROADMAP.md`): port mapgen to JS for runtime floors, biome
+4. **Generator roadmap** (`docs/GENERATOR_ROADMAP.md`): port mapgen to JS for runtime floors, biome
    system, run/act composer. Bigger lift — schedule deliberately.
-6. **Shipping blockers (not yet):** original art to replace EULA-gated RTP; human playtest of the
+5. **Shipping blockers (not yet):** original art to replace EULA-gated RTP; human playtest of the
    untethered difficulty curve (sims say it's brutal-by-design — needs a human read).
 
 ## ✅ DONE 2026-06-19 — Combat feel + relics + reproducible seeds
