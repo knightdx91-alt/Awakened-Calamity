@@ -37,13 +37,29 @@ common event built from these.
 
 ## Run loop (roguelite descent) — authorable in event blocks
 These drive the descent loop entirely from editable event commands (no hardcoded JS flow), so
-the Fracture gate, stairs, relic caches, and the Remembrance NPC are all just event blocks:
-- **`descend`** — the one descent action. Params: `start` (true = begin a NEW run at floor 1;
-  false = go DEEPER on the active run — past the boss this CLEARS the run), `tethered`
-  (true = System catches you, Surveillance climbs; false = untethered/off-grid, death is real),
-  `seed` (optional explicit run seed; blank = random, and honors the `run_seed_in` variable a
-  replay board can set). The DescentGate's Tethered/Untethered choice calls `descend start:true`;
-  generated StairsDown call `descend` (start:false) to go deeper.
+the Fracture gate, stairs, relic caches, and the Remembrance NPC are all just event blocks.
+
+**Fine-grained primitives (compose your own descent, RPG-Maker style):**
+- **`run`** — manage run STATE only. `op`:
+  - `start` — begin a fresh run at floor 1. Params: `tethered` (true = System catches you,
+    Surveillance climbs; false = untethered/off-grid, death is real), `seed` (optional explicit
+    seed; blank = random, honors the `run_seed_in` variable a replay board can set).
+  - `deeper` — advance one floor. Past the boss floor this sets `run.cleared`.
+  - `end` — finish the run (carry-over to meta). Param: `reason` (`cleared`/`died`/`collected`).
+- **`gendungeon`** — generate the CURRENT floor (from `run.seed + run.floor`) and transfer the
+  player onto it (pool fallback when runtime-gen is off). The "transfer to a generated map" step.
+- **`conditional` kind `run`** — branch on run state. `check`: `cleared` / `active` / `boss`
+  (current floor is the boss floor) / `floor` (+ `op` + `value`, e.g. floor >= 3).
+
+Typical authored flow (what the DescentGate + generated StairsDown now use):
+```
+# gate:           run(start, tethered) → gendungeon
+# stairs/Alpha:   run(deeper) → conditional(run cleared) ? run(end, cleared) : gendungeon
+```
+
+**Convenience macro:**
+- **`descend`** — `run start`+`gendungeon` (or `run deeper` + clear/gendungeon) in one command.
+  Params: `start`, `tethered`, `seed`. Use when you don't need the granular steps.
 - **`relic`** — offer relics from a cache. Params: `count` (how many seeded choices to present,
   default 3) OR `guaranteed` (a relic id to force-grant instead of offering a choice). Active
   descent only. Placed one-per-floor by the generator (`RelicCache`).

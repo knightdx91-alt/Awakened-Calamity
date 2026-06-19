@@ -1274,8 +1274,9 @@
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
-    // run loop (roguelite descent)
-    ['descend', '⛰️ Descend (run loop)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
+    // run loop (roguelite descent) — fine-grained primitives + the descend macro
+    ['run', '🏔️ Run (start/deeper/end)'], ['gendungeon', '🗺️ Generate+Enter Floor'],
+    ['descend', '⛰️ Descend (macro)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
     ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'], ['hurt', '🗡️ Hurt (trap)'], ['surveil', '👁️ Surveil (+Surveillance)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
@@ -1313,6 +1314,8 @@
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
       case 'system': return { type: 'system' };
+      case 'run': return { type: 'run', op: 'start', tethered: true, seed: null, reason: 'cleared' };
+      case 'gendungeon': return { type: 'gendungeon' };
       case 'descend': return { type: 'descend', start: true, tethered: true, seed: null };
       case 'relic': return { type: 'relic', count: 3, guaranteed: '' };
       case 'meta': return { type: 'meta' };
@@ -1474,11 +1477,12 @@
       if (!cmd.cond) cmd.cond = { kind: 'switch', id: '1', value: true };
       var cr = el('div', 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;');
       cr.innerHTML = lbl('If') +
-        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option></select>' +
+        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option><option value="run">Run</option></select>' +
         '<span class="cParams"></span>';
       cr.querySelector('.cKind').value = cmd.cond.kind;
       cr.querySelector('.cKind').addEventListener('change', function () {
         if (this.value === 'quest') cmd.cond = { kind: 'quest', id: '', check: 'active', stage: 0 };
+        else if (this.value === 'run') cmd.cond = { kind: 'run', check: 'cleared', op: '>=', value: 1 };
         else cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true };
         renderEventPanel();
       });
@@ -1502,6 +1506,14 @@
         kqs.style.display = (cmd.cond.check === 'stage') ? '' : 'none';
         kqc.addEventListener('change', function () { cmd.cond.check = this.value; kqs.style.display = this.value === 'stage' ? '' : 'none'; });
         kqs.addEventListener('change', function () { cmd.cond.stage = parseInt(this.value, 10) || 0; });
+      } else if (cmd.cond.kind === 'run') {
+        cp.innerHTML = '<select class="kRc"><option value="cleared">Cleared</option><option value="active">Active</option><option value="boss">On boss floor</option><option value="floor">Floor</option></select> ' +
+          '<span class="kRf" style="display:none;"><select class="kOp"><option>&gt;=</option><option>==</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;"></span>';
+        var krc = cp.querySelector('.kRc'), krf = cp.querySelector('.kRf');
+        krc.value = cmd.cond.check || 'cleared'; krf.style.display = (cmd.cond.check === 'floor') ? '' : 'none';
+        krc.addEventListener('change', function () { cmd.cond.check = this.value; krf.style.display = this.value === 'floor' ? '' : 'none'; });
+        var kro = cp.querySelector('.kOp'); kro.value = cmd.cond.op || '>='; kro.addEventListener('change', function () { cmd.cond.op = this.value; });
+        cp.querySelector('.kVal').addEventListener('change', function () { cmd.cond.value = parseInt(this.value, 10) || 0; });
       } else {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:36px;"> <select class="kOp"><option>==</option><option>&gt;=</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
         cp.querySelector('.kId').addEventListener('change', function () { cmd.cond.id = this.value; });
@@ -1841,6 +1853,24 @@
       body.querySelector('.cGuar').addEventListener('change', function () { cmd.guaranteed = this.value.trim(); });
     } else if (cmd.type === 'meta') {
       body.innerHTML = '<div style="font-size:10px;color:#aaa;">Opens the Remembrance (meta-progression) menu — spend Memory Fragments on permanent unlocks. No parameters.</div>';
+    } else if (cmd.type === 'run') {
+      body.innerHTML = '<div class="row">' + lbl('Op') +
+        '<select class="cOp"><option value="start">Start — begin a fresh run (floor 1)</option><option value="deeper">Deeper — advance one floor (sets cleared past boss)</option><option value="end">End — finish the run (carry to meta)</option></select></div>' +
+        '<div class="row cTethRow">' + lbl('Tethered') +
+        '<select class="cTeth"><option value="true">Tethered (Surveillance ↑)</option><option value="false">Untethered (death is real)</option></select></div>' +
+        '<div class="row cSeedRow">' + lbl('Seed') + '<input type="number" class="cSeed" value="' + (cmd.seed == null ? '' : (cmd.seed | 0)) + '" placeholder="random" style="width:120px;"></div>' +
+        '<div class="row cReasonRow">' + lbl('Reason') + '<select class="cReason"><option value="cleared">cleared</option><option value="died">died</option><option value="collected">collected</option></select></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Fine-grained: pair <b>Start</b>/<b>Deeper</b> with a <b>Generate+Enter Floor</b> command. Use a Conditional (kind: run → cleared) after Deeper to decide End vs. Generate.</div>';
+      var rOp = body.querySelector('.cOp'); rOp.value = cmd.op || 'start';
+      function rToggle() { var o = rOp.value; body.querySelector('.cTethRow').style.display = o === 'start' ? '' : 'none'; body.querySelector('.cSeedRow').style.display = o === 'start' ? '' : 'none'; body.querySelector('.cReasonRow').style.display = o === 'end' ? '' : 'none'; }
+      rOp.addEventListener('change', function () { cmd.op = this.value; rToggle(); }); rToggle();
+      body.querySelector('.cTeth').value = (cmd.tethered === false) ? 'false' : 'true';
+      body.querySelector('.cTeth').addEventListener('change', function () { cmd.tethered = (this.value === 'true'); });
+      body.querySelector('.cSeed').addEventListener('change', function () { cmd.seed = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
+      body.querySelector('.cReason').value = cmd.reason || 'cleared';
+      body.querySelector('.cReason').addEventListener('change', function () { cmd.reason = this.value; });
+    } else if (cmd.type === 'gendungeon') {
+      body.innerHTML = '<div style="font-size:10px;color:#aaa;">Generates the CURRENT run floor (from run.seed + floor) and transfers the player onto it. Pool fallback when runtime-gen is off. Use after a <b>Run: Start/Deeper</b>.</div>';
     }
   }
   // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).

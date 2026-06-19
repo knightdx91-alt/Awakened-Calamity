@@ -449,6 +449,17 @@
             var qs = (window.GameSave && GameSave.state && GameSave.state.quests) || {};
             return window.GameQuests ? GameQuests.check(qs, _questDbCache || {}, cond.id, cond.check || 'active', cond.stage) : false;
         }
+        if (cond.kind === 'run') {
+            var run = (window.GameSave && GameSave.state && GameSave.state.run) || {};
+            switch (cond.check || 'active') {
+                case 'active':  return !!run.active;
+                case 'cleared': return !!run.cleared;
+                case 'boss':    return window.GameRun ? GameRun.isBossFloor(run, _runDb || {}) : false;
+                case 'floor':   { var fv = run.floor | 0, ft = cond.value | 0;
+                    switch (cond.op) { case '>=': return fv >= ft; case '<=': return fv <= ft; case '>': return fv > ft; case '<': return fv < ft; case '!=': return fv !== ft; default: return fv === ft; } }
+                default: return !!run.active;
+            }
+        }
         if (!ES) return true;
         if (cond.kind === 'switch') return ES.getSwitch(cond.id) === (cond.value !== false);
         if (cond.kind === 'selfswitch') return ES.getSelf(ctx.mapName, ctx.evId, cond.letter || 'A') === (cond.value !== false);
@@ -895,6 +906,53 @@
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
             maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened', creatures: _creaturesDb });
     }
+
+    // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
+    // The descent flow is built from these so it's authorable in event blocks:
+    //   `run start`  → begin a fresh run (seed/relics/start-kit), at floor 1
+    //   `run deeper` → advance one floor (past the boss this sets run.cleared)
+    //   `run end`    → end the run (carry-over to meta) with a reason
+    //   `gendungeon` → generate + ENTER the current floor (the "transfer" to the
+    //                  generated map; pool fallback when runtimeGen is off)
+    // `descend` (below) is now just a convenience macro composed of these.
+    async function _runStart(c) {
+        c = c || {};
+        var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
+        await _loadRunDb();
+        _purgeRunFloors();                         // fresh descent: chests refill, no stale state
+        // Reproducible runs: honor an explicit seed (c.seed, or the `run_seed_in`
+        // variable a replay board can set), else roll one. Positive 31-bit so it
+        // round-trips through the integer variable store for display/sharing.
+        var _seedIn = (c.seed != null) ? (c.seed | 0)
+            : (window.GameEventState ? (GameEventState.getVar('run_seed_in') | 0) : 0);
+        var _seed = ((_seedIn > 0 ? _seedIn : ((Math.random() * 0x7fffffff) >>> 0)) & 0x7fffffff) || 1;
+        GameRun.start(st.run, _runDb, _seed, { tethered: c.tethered !== false });
+        st.run.seed = _seed;                       // pin the masked seed we surface
+        if (window.GameEventState) GameEventState.setVar('run_seed', _seed);
+        await _loadMetaDb();
+        _grantStartItems();                        // meta boon: begin runs with kit
+        if (GameSave.markDirty) GameSave.markDirty();
+    }
+    async function _runDeeper() {
+        var st = GameSave.state; st.run = st.run || {};
+        await _loadRunDb();
+        var d = GameRun.descend(st.run, _runDb);    // advances floor; sets run.cleared past boss
+        if (GameSave.markDirty) GameSave.markDirty();
+        return d;
+    }
+    // Generate + enter the current floor (or the pooled map when runtimeGen is off).
+    async function _enterGenFloor() {
+        var st = GameSave.state; st.run = st.run || {};
+        await _loadRunDb();
+        if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
+        else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
+    }
+    async function _runOp(c) {
+        var op = (c && c.op) || 'start';
+        if (op === 'start') return _runStart(c);
+        if (op === 'deeper') return _runDeeper();
+        if (op === 'end') return _endRun((c && c.reason) || 'cleared');
+    }
     function _loadCorrupt() {
         if (_corruptDb) return Promise.resolve(_corruptDb);
         return fetch('data/systems/corruption.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
@@ -1326,32 +1384,20 @@
             case 'battle': { var _br = await _battle(c); await _runReact(_br); break; }
             case 'meta': await _metaMenu(); break;
             case 'relic': await _grantRelic(c); break;
+            // Fine-grained run-loop primitives (compose your own descent in events):
+            case 'run': await _runOp(c); break;            // op: start | deeper | end
+            case 'gendungeon': await _enterGenFloor(); break;  // generate + enter current floor
+            // Convenience macro: `descend` = run start/deeper + gendungeon (clear past boss).
             case 'descend': {
-                var st = GameSave.state; st.run = st.run || {}; st.meta = st.meta || {};
+                var st = GameSave.state; st.run = st.run || {};
                 await _loadRunDb();
                 if (c.start || !GameRun.active(st.run)) {
-                    _purgeRunFloors();                     // fresh descent: chests refill, no stale state
-                    // Reproducible runs: honor an explicit seed (c.seed, or the
-                    // `run_seed_in` variable a "replay seed" board can set), else
-                    // roll one. Kept in a positive 31-bit range so it round-trips
-                    // through the integer variable store cleanly for display/sharing.
-                    var _seedIn = (c.seed != null) ? (c.seed | 0)
-                        : (window.GameEventState ? (GameEventState.getVar('run_seed_in') | 0) : 0);
-                    var _seed = ((_seedIn > 0 ? _seedIn : ((Math.random() * 0x7fffffff) >>> 0)) & 0x7fffffff) || 1;
-                    GameRun.start(st.run, _runDb, _seed, { tethered: c.tethered !== false });
-                    st.run.seed = _seed;                   // pin the masked seed we surface
-                    if (window.GameEventState) GameEventState.setVar('run_seed', _seed);
-                    await _loadMetaDb();
-                    _grantStartItems();                    // meta boon: begin runs with kit
-                    if (GameSave.markDirty) GameSave.markDirty();
-                    if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
-                    else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
+                    await _runStart(c);
+                    await _enterGenFloor();
                 } else {
-                    var d = GameRun.descend(st.run, _runDb);
-                    if (GameSave.markDirty) GameSave.markDirty();
-                    if (d.cleared) await _endRun('cleared');
-                    else if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
-                    else await _enterMap(d.map, 'awakened', null, null);
+                    var d = await _runDeeper();
+                    if (d && d.cleared) await _endRun('cleared');
+                    else await _enterGenFloor();
                 }
                 break;
             }

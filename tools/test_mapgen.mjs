@@ -57,9 +57,13 @@ for (let s = 0; s < 30; s++) {
   if (!names.includes('Entrance')) hadEntrance = false;
   if (boss) { if (!names.includes('Alpha')) hadBoss = false; }
   else { if (!names.includes('StairsDown')) hadStairs = false; }
-  // the way deeper must run a `descend` (boss: after the battle; floor: the stairs)
+  // the way deeper runs the fine-grained run loop: `run deeper` + a gendungeon/end
+  // branch (boss: after the battle; floor: the stairs).
   const deep = map.events.find(e => e.name === (boss ? 'Alpha' : 'StairsDown'));
-  if (!deep || !deep.commands.some(c => c.type === 'descend')) descendOk = false;
+  const runsDeeper = deep && deep.commands.some(c => c.type === 'run' && c.op === 'deeper');
+  const hasBranch = deep && deep.commands.some(c => c.type === 'gendungeon' ||
+    (c.type === 'conditional' && JSON.stringify(c).includes('gendungeon')));
+  if (!runsDeeper || !hasBranch) descendOk = false;
   if (!names.includes('RelicCache')) hadRelic = false;
   if (!names.some(n => n === 'Roamer')) hadRoamer = false;
   // every interactable event must be reachable (no walled-off boss/loot)
@@ -69,7 +73,7 @@ check('collision/metatiles/overlay sized + spawn walkable', collOk);
 check('every floor has an Entrance', hadEntrance);
 check('normal floors have StairsDown', hadStairs);
 check('boss floors have an Alpha', hadBoss);
-check('the way deeper runs a descend command', descendOk);
+check('the way deeper runs the run-loop (run deeper + gendungeon/end)', descendOk);
 check('every floor has a RelicCache', hadRelic);
 check('floors spawn roaming encounters', hadRoamer);
 check('all events reachable from spawn (no soft-lock)', allReach);

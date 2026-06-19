@@ -279,12 +279,22 @@
                 graphic: { sprite: 'Monster2', file: 'rtp/Monster2.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
                 commands: [{ type: 'text', text: 'The Alpha uncoils from the dark — far larger than its kin.' },
                     { type: 'battle', enemies: [{ key: bossKey, level: bossLvl }] },
-                    { type: 'text', text: 'The Alpha falls. The dungeon goes still.' }, { type: 'despawn' }, { type: 'descend' }] });
+                    { type: 'text', text: 'The Alpha falls. The dungeon goes still.' }, { type: 'despawn' },
+                    // fine-grained run loop: advance, then clear (past boss) vs. enter next
+                    { type: 'run', op: 'deeper' },
+                    { type: 'conditional', cond: { kind: 'run', check: 'cleared' },
+                        then: [{ type: 'run', op: 'end', reason: 'cleared' }],
+                        else: [{ type: 'gendungeon' }] }] });
         } else {
             b.setp(ax, ay, GID.stairs, false);
             b.events.push({ x: ax, y: ay, name: 'StairsDown', trigger: 'action', through: false,
                 graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
-                commands: [{ type: 'text', text: 'Stairs spiral deeper into the dark.' }, { type: 'descend' }] });
+                commands: [{ type: 'text', text: 'Stairs spiral deeper into the dark.' },
+                    // fine-grained run loop: advance one floor, then clear vs. enter next
+                    { type: 'run', op: 'deeper' },
+                    { type: 'conditional', cond: { kind: 'run', check: 'cleared' },
+                        then: [{ type: 'run', op: 'end', reason: 'cleared' }],
+                        else: [{ type: 'gendungeon' }] }] });
         }
 
         // roaming encounters in body rooms, scaled by depth
