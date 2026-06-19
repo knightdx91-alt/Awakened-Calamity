@@ -12,6 +12,18 @@
       "text": [
         "You've got the look now — the one they all get, right before I stop seeing them around.",
         "When you wake up somewhere familiar and can't say how you got there… come find me. If I'm still here." ] },
+    { "id": "collected_before", "priority": 30, "once": true, "when": { "collections": ">=1" },
+      "text": [
+        "Ah. There it is. You went and got yourself Collected, didn't you — the morning folded over and started again.",
+        "You don't remember it. Nobody does but me. I felt the whole town blink and forget. Round and round, child." ] },
+    { "id": "cycles_deep", "priority": 24, "when": { "runs": ">=3" },
+      "text": [
+        "How many times is it now? I've lost the count — and so have you, that's the cruelty of it.",
+        "Every descent, you come back a little thinner. Like the System keeps the parts of you it likes." ] },
+    { "id": "deep_climb", "priority": 26, "once": true, "when": { "deepest": ">=4" },
+      "text": [
+        "You've gone deep. Deeper than most of the bright young things who pass through here.",
+        "The dark down there remembers your face even when you can't. Mind it doesn't start remembering it better than you do." ] },
     { "id": "idle", "priority": 0, "when": {},
       "text": [ "Round and round. Feels like round and round, doesn't it." ] }
   ]

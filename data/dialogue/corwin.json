@@ -41,6 +41,35 @@
       ]
     },
     {
+      "id": "untethered_flag",
+      "priority": 26,
+      "once": true,
+      "when": { "untethered": ">=1" },
+      "text": [
+        "There's a report on my desk, Subject. You descended untethered. Off the System's protection, by choice.",
+        "That's noted now. Permanently. I'd remind you what we do with the ones who make a habit of it — but you've read the board."
+      ]
+    },
+    {
+      "id": "untethered_repeat",
+      "priority": 30,
+      "when": { "untethered": ">=3" },
+      "text": [
+        "Three times off-grid. Four. You're not a lapse anymore, Subject — you're a pattern.",
+        "Patterns get escalated. I'm telling you this as a warning, not a threat. …I'd rather it stayed a warning."
+      ]
+    },
+    {
+      "id": "collected_cold",
+      "priority": 24,
+      "once": true,
+      "when": { "collections": ">=1" },
+      "text": [
+        "The System Collected you and set you back at the start. Most would call that mercy. Efficient. Clean.",
+        "I've stopped being sure which of us it's really protecting."
+      ]
+    },
+    {
       "id": "idle",
       "priority": 0,
       "when": {},

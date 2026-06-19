@@ -18,6 +18,12 @@
         "Joran would've hated what you're becoming. …I'm sorry. I just — I can't lose another one to it." ] },
     { "id": "ally", "priority": 15, "when": { "quest": { "awakening": "done" }, "surveillance": "<40" },
       "text": [ "You went off-grid for that fight and came back yourself. Maybe you're the one who finally remembers. Find the others, Awakened." ] },
+    { "id": "proud_untethered", "priority": 29, "once": true, "when": { "untethered": ">=1", "surveillance": "<50" },
+      "text": [
+        "You went down untethered. No System hand to catch you, no number climbing — just you, in the dark, refusing it.",
+        "That's what Joran did. That's what they took him for. …Thank you. For proving it can be done." ] },
+    { "id": "untethered_veteran", "priority": 20, "when": { "untethered": ">=3" },
+      "text": [ "Off-grid again and again, and still here. You're not just surviving it — you're defying it. Joran would be walking taller next to you." ] },
     { "id": "idle", "priority": 0, "when": {},
       "text": [ "Be careful what you owe the System. My brother wasn't." ] }
   ]

@@ -47,6 +47,15 @@
       else if (key === 'flag') { for (var fk in v) if (!!(ctx.flags && ctx.flags[fk]) !== !!v[fk]) return false; }
       else if (key === 'map') { if (ctx.map !== v) return false; }
       else if (key === 'biome') { if (ctx.biome !== v) return false; }
+      // run-state reactivity (Hades "they remember your runs"): how deep you've
+      // gone, how many clears/collections/untethered runs, lifetime Surveillance.
+      else if (key === 'deepest') { if (!cmp(ctx.deepest | 0, v)) return false; }
+      else if (key === 'clears') { if (!cmp(ctx.clears | 0, v)) return false; }
+      else if (key === 'runs') { if (!cmp(ctx.runs | 0, v)) return false; }
+      else if (key === 'collections') { if (!cmp(ctx.collections | 0, v)) return false; }
+      else if (key === 'untethered') { if (!cmp(ctx.untethered | 0, v)) return false; }
+      else if (key === 'lifeSurv') { if (!cmp(ctx.lifeSurv | 0, v)) return false; }
+      else if (key === 'ending') { if (ctx.ending !== v) return false; }
     }
     return true;
   }

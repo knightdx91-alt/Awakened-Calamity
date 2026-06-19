@@ -19,12 +19,25 @@ suites green, `validate_design` still ✅ MECHANICALLY SOUND):
   now really redirects a single-target hit onto the guardian in `_attack`).
 - Updated the `_meta` note in `skills.json` to list the full honored-effect set.
 
+## ✅ DONE 2026-06-19 — Reactive NPCs + replay-seed board (priority #2, partial)
+Hub reactivity + the replay board are in (onboarding #4 + the replay-seed ask). Node-verified
+(10 reactive picks resolve, opening unaffected, suites green, `validate_design` ✅; Dawnhearth
+boots headless with 0 errors). Details in `docs/ONBOARDING_DESIGN.md` STATUS 2026-06-19:
+- **NPCs react to run-state** via GameVoice: `_voiceCtx` (`main.js`) now carries `deepest`/`clears`/
+  `runs`/`collections`/`untethered`/`lifeSurv`/`ending`; `whenMatches` (`dialogue_gen.js`) gained
+  the matching `when` keys; authored run-aware lines into all 5 speakers (`data/dialogue/*.json`),
+  milestones `once`-gated so they fire then fall back to live Surveillance reactivity.
+- **Replay-seed board** — new `ReplaySeedBoard` event in `Dawnhearth.json` (@32,28 by the gate)
+  shows/pins `run_seed`/`run_seed_in` (replay last / enter by hand / clear); descend already honors
+  `run_seed_in`, so a pinned seed re-grows the same floors + relic caches.
+- **Still open from onboarding:** #3 zone/sign the hub + wire 2–3 interiors; #5 the Board shows the
+  run's SHAPE (needs the run/act composer, generator roadmap).
+
 ## 🔴 NEXT SESSION — PRIORITY LIST (updated 2026-06-19)
-Ordered by bang-for-buck. (#1 inert-skills DONE this session — see above.)
-1. **Hub redesign + reactive NPCs (onboarding #3–4 from `docs/ONBOARDING_DESIGN.md`).** Dawnhearth
-   should react to run state: NPCs comment on your deepest floor / Surveillance tier / clears; the
-   Remembrance + System crystal more legible; a "replay seed" board (uses the new `run_seed`/
-   `run_seed_in` vars — see below) so players can re-run a layout.
+Ordered by bang-for-buck. (#1 inert-skills + #2 reactive-NPCs/replay-board DONE — see above.)
+1. **Hub redesign — zone + sign Dawnhearth, wire interiors (onboarding #3).** Spatially zone the
+   plaza by function (THE FRACTURE/CRYSTAL/STILL PLACE/BOARD/INFIRMARY), sign each, spread them out,
+   wire 2–3 real interiors (Inn/Mira's Hearth/Infirmary) and blank the facade doors diegetically.
 2. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
    author more dilemma-axis and build-defining relics. (Pool is at 24 now.)
 3. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;

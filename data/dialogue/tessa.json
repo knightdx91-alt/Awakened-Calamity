@@ -13,6 +13,12 @@
       "text": [
         "Don't— don't stand so close to me. They Audit the ones near the high numbers.",
         "You used to flinch when it spoke. You don't anymore. That's how it starts." ] },
+    { "id": "collected_terror", "priority": 34, "once": true, "when": { "collections": ">=1" },
+      "text": [
+        "I saw your number max out. I saw the System reach in and— and then the morning just… reset. Like it never happened.",
+        "But it happened. I remember the feeling, the lurch. It Collected you. It can do that. It can just decide you're done." ] },
+    { "id": "life_high", "priority": 22, "when": { "lifeSurv": ">=300" },
+      "text": [ "Across all of it, all the cycles — the System knows you so completely now. There's almost no part of you it hasn't catalogued. How do you stand it?" ] },
     { "id": "idle", "priority": 0, "when": {},
       "text": [ "Keep your head down. Keep your number low." ] }
   ]

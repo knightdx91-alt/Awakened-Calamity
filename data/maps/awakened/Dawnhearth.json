@@ -879,6 +879,78 @@
      "type": "meta"
     }
    ]
+  },
+  {
+   "id": 25,
+   "name": "ReplaySeedBoard",
+   "x": 32,
+   "y": 28,
+   "graphic": {
+    "sprite": "NoticeBoard",
+    "file": "rtp/NoticeBoard.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "THE REPLAY SLATE — the System pins the SHAPE of a descent here. The same seed grows the same floors and relic caches.\nLast descent's seed: [v:run_seed]\nPinned for next descent: [v:run_seed_in]  (0 = fresh, random)"
+    },
+    {
+     "type": "choice",
+     "prompt": "Set the seed for your next descent?",
+     "options": [
+      {
+       "label": "Replay last descent's layout",
+       "then": [
+        {
+         "type": "script",
+         "code": "$.setVar('run_seed_in', $.getVar('run_seed')|0)"
+        },
+        {
+         "type": "conditional",
+         "cond": { "kind": "variable", "id": "run_seed_in", "op": ">", "value": 0 },
+         "then": [
+          { "type": "text", "text": "Pinned. Your next descent will re-grow the same layout from seed [v:run_seed_in]." }
+         ],
+         "else": [
+          { "type": "text", "text": "There's no last seed to replay yet — descend once, then come back to pin its shape." }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Enter a seed by hand",
+       "then": [
+        {
+         "type": "input_number",
+         "prompt": "Enter a seed (1+; 0 = fresh)",
+         "digits": 10,
+         "variable": "run_seed_in"
+        },
+        { "type": "text", "text": "Pinned. Next descent uses seed [v:run_seed_in]  (0 = fresh, random)." }
+       ]
+      },
+      {
+       "label": "Clear — descend on a fresh seed",
+       "then": [
+        { "type": "variable", "id": "run_seed_in", "op": "=", "value": 0 },
+        { "type": "text", "text": "Cleared. Your next descent rolls a brand-new layout." }
+       ]
+      },
+      {
+       "label": "Never mind",
+       "then": []
+      }
+     ]
+    }
+   ]
   }
  ]
 }

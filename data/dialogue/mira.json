@@ -18,6 +18,16 @@
         "Be careful. The more it helps, the harder it gets to remember you ever did anything alone." ] },
     { "id": "done_low", "priority": 10, "when": { "quest": { "awakening": "done" }, "surveillance": "<60" },
       "text": [ "You're finding your feet, and you're still yourself. That's rarer than it sounds." ] },
+    { "id": "first_clear", "priority": 32, "once": true, "when": { "clears": ">=1" },
+      "text": [
+        "You went all the way down and came back up. You cleared it, Awakened.",
+        "I'll keep your seat warm by the fire. That's one cycle closer to out — I have to believe that's how this ends." ] },
+    { "id": "clears_many", "priority": 18, "when": { "clears": ">=3" },
+      "text": [ "Three descents cleared and you still know your own name. Whatever you're doing down there — keep doing it." ] },
+    { "id": "deep_worry", "priority": 28, "once": true, "when": { "deepest": ">=5" },
+      "text": [
+        "You're going so deep now. I see the deep on you when you come back, like cold water that won't dry.",
+        "Come home each time. Promise me you'll come home — not just your body. You." ] },
     { "id": "idle", "priority": 0, "when": {},
       "text": [ "Stay sharp out there. The System always is." ] }
   ]

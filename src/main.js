@@ -409,8 +409,13 @@
     }
     function _voiceCtx(id) {
         var s = (window.GameSave && GameSave.state) || {}; var vs = _voiceState(id);
+        var m = s.meta || {};
         return { quests: s.quests || {}, surveillance: (s.survival && s.survival.surveillance) | 0,
-                 meet: vs.meet | 0, said: vs.said || {}, flags: s.flags || {}, map: window._mapName };
+                 meet: vs.meet | 0, said: vs.said || {}, flags: s.flags || {}, map: window._mapName,
+                 // run-state so NPCs react Hades-style to how your runs have gone
+                 deepest: m.deepest | 0, clears: m.clears | 0, runs: m.runs | 0,
+                 collections: m.collections | 0, untethered: m.untetheredRuns | 0,
+                 lifeSurv: m.lifetimeSurveillance | 0, ending: m.endingTier || null };
     }
     function _voiceRecord(id, picked) {
         var vs = _voiceState(id); vs.meet = (vs.meet | 0) + 1;

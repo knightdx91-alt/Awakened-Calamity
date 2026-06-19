@@ -141,3 +141,25 @@ active descent. The cold-open names Surveillance as the price of help.
 Switches: `taught_combat/levelup/relic/save/meta`. Browser-verified; suites green;
 validate_design still ✅ MECHANICALLY SOUND. **Remaining: #3 zone/sign the hub + wire interiors,
 #4 reactive NPCs, #5 the Board shows the run shape.**
+
+## STATUS — #4 REACTIVE NPCs + REPLAY-SEED BOARD (2026-06-19)
+**#4 NPCs react to run-state (Hades "they remember your runs").** GameVoice's context
+(`_voiceCtx` in `main.js`) now carries meta run-state — `deepest`, `clears`, `runs`,
+`collections`, `untethered`, `lifeSurv`, `ending` — and `GameVoice.whenMatches`
+(`dialogue_gen.js`) gained matching numeric `when` keys. Authored run-aware lines into all 5
+speakers (`data/dialogue/*.json`), milestone acknowledgements marked `once` so they fire then
+fall back to the live Surveillance reactivity:
+- **Old Bram** — `collected_before` (collections≥1), `cycles_deep` (runs≥3), `deep_climb` (deepest≥4).
+- **Mira** — `first_clear` (clears≥1), `clears_many` (≥3), `deep_worry` (deepest≥5).
+- **Lys** — `proud_untethered` (untethered≥1 & clean), `untethered_veteran` (≥3).
+- **Corwin** — `untethered_flag` (≥1), `untethered_repeat` (≥3), `collected_cold` (collections≥1).
+- **Tessa** — `collected_terror` (collections≥1), `life_high` (lifeSurv≥300).
+Opening beats unaffected (all gated to imply post-run state). Node-verified: 10 reactive picks
+resolve, opening greet still fires, determinism/once-gating hold.
+**Replay-seed board (priority-list ask).** New `ReplaySeedBoard` event in `Dawnhearth.json`
+(@32,28, by the DescentGate) reads/writes the existing `run_seed`/`run_seed_in` vars: shows the
+last descent's seed + the pinned seed via `[v:]` tokens, and a choice to **replay last layout**
+(script copies `run_seed`→`run_seed_in`), **enter a seed by hand** (`input_number`→`run_seed_in`),
+or **clear** (fresh). The descend command already honors `run_seed_in`, so a pinned seed
+re-grows the same floors + relic caches. Dawnhearth boots headless with 0 errors.
+**Remaining: #3 zone/sign the hub + wire interiors, #5 the Board shows the run shape.**
