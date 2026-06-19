@@ -266,7 +266,39 @@ window.GameHUD = (function () {
         et.appendChild(_expoFill); _expoTag.appendChild(_expoLbl); _expoTag.appendChild(et);
         _metersEl.appendChild(_expoTag);
 
+        // Surveillance — the System's leash. Shown ONLY during an active descent so
+        // the player can always see how close they are to Collection (the bad reset).
+        _survTag = document.createElement('div');
+        _survTag.style.cssText =
+            'display:none;align-items:center;gap:4px;width:108px;background:' + OS.scrim +
+            ';border:1px solid #18b8c8;border-radius:4px;padding:2px 4px;box-shadow:' + OS.glow + ';';
+        var sl = document.createElement('span');
+        sl.textContent = 'SURV'; sl.style.cssText = 'font-size:5px;color:#80e8ff;width:14px;';
+        var st = document.createElement('div');
+        st.style.cssText = 'flex:1;height:5px;background:rgba(0,0,0,0.55);border-radius:3px;overflow:hidden;';
+        _survFill = document.createElement('div');
+        _survFill.style.cssText = 'width:0%;height:100%;background:#18b8c8;transition:width .2s ease;';
+        _survNum = document.createElement('span');
+        _survNum.style.cssText = 'font-size:5px;color:#80e8ff;min-width:16px;text-align:right;';
+        st.appendChild(_survFill); _survTag.appendChild(sl); _survTag.appendChild(st); _survTag.appendChild(_survNum);
+        _metersEl.appendChild(_survTag);
+
         overlay.appendChild(_metersEl);
+    }
+    var _survTag = null, _survFill = null, _survNum = null;
+    // Update the run Surveillance bar (active descents only).
+    function _renderSurveillance() {
+        if (!_survTag) return;
+        var st = window.GameSave && GameSave.state;
+        var run = st && st.run;
+        if (!run || !run.active) { _survTag.style.display = 'none'; return; }
+        var thr = (window._corruptDb && window._corruptDb.collectionThreshold) || 300;
+        var v = run.surveillance | 0, frac = Math.min(1, v / thr), near = frac >= 0.75;
+        _survTag.style.display = 'flex';
+        _survFill.style.width = (frac * 100) + '%';
+        _survFill.style.background = near ? '#e02818' : '#18b8c8';
+        _survTag.style.borderColor = near ? '#e02818' : '#18b8c8';
+        _survNum.textContent = v + '/' + thr;
     }
 
     // Public: set vitals/survival (0-100). Persists in save.survival.
@@ -326,6 +358,7 @@ window.GameHUD = (function () {
         } else {
             _expoTag.style.display = 'none';
         }
+        _renderSurveillance();
     }
 
     function init(map, player) {

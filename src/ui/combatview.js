@@ -211,9 +211,20 @@
         if (!active) return;
         var dt = ts - lastTs; lastTs = ts;
         // The System offers a lethal save — pause everything and let the player CHOOSE.
+        // The FIRST time ever, this is the keystone teaching beat: spell out the whole
+        // dilemma (Surveillance → Collection → the bad ending).
         if (state && state.pendingSave && mode !== 'save') {
             var add = state.pendingSave.nextSurv || 0;
-            currentMsg = '⟁ THE SYSTEM closes its hand around you.   [A] ACCEPT — live (Surveillance +' + add + ')   ·   [B] REFUSE — die';
+            var taught = root.GameEventState && GameEventState.getSwitch('taught_save');
+            if (!taught) {
+                currentMsg = '⟁ THE SYSTEM reaches into the killing blow. Here is the bargain beneath everything:\n'
+                    + 'ACCEPT and you live — but SURVEILLANCE climbs (+' + add + '). Watch the bar above. If it ever fills, the System COLLECTS you: the run ends and you are reclaimed — the worst ending.\n'
+                    + 'REFUSE and you die now — but you wake clean, remembering more.\n'
+                    + '[A] ACCEPT — live   ·   [B] REFUSE — die';
+                if (root.GameEventState) GameEventState.setSwitch('taught_save', true);
+            } else {
+                currentMsg = '⟁ THE SYSTEM closes its hand around you.   [A] ACCEPT — live (Surveillance +' + add + ')   ·   [B] REFUSE — die';
+            }
             mode = 'save'; _render();
             rafId = requestAnimationFrame(_loop); return;
         }
@@ -321,6 +332,7 @@
     }
 
     function _chooseAction() {
+        if (root.GameEventState) GameEventState.setSwitch('taught_combat', true);   // first action taken
         var act = ACTIONS[actionCursor];
         if (act === 'FIGHT') { mode = 'menu'; cursor = 0; _render(); }
         else if (act === 'ITEM') {
@@ -451,6 +463,11 @@
             if (lvlEvents.length) {
                 var pts = lvlEvents.reduce(function (s, e) { return s + e.points; }, 0);
                 msg += '   ⤴ LEVEL UP → Lv' + prog.level + ' (+' + pts + ' pts)';
+                // First level-up ever: teach where points go.
+                if (root.GameEventState && !GameEventState.getSwitch('taught_levelup')) {
+                    msg += '\n(You grew stronger. Spend attribute points on the STATUS screen to shape your build.)';
+                    GameEventState.setSwitch('taught_levelup', true);
+                }
             }
         } else { msg = state.winner === 'enemy' ? 'You were overcome…' : 'The fight ends.'; }
         currentMsg = msg + '   (Surv ' + state.surveillance + ')  — press A';
@@ -473,6 +490,7 @@
         els.root = r;
         els.enemies = r.querySelector('#cv-enemies'); els.players = r.querySelector('#cv-players');
         els.iv = r.querySelector('#cv-system .cv-iv span'); els.surv = r.querySelector('#cv-surv');
+        els.system = r.querySelector('#cv-system');
         els.msg = r.querySelector('#cv-msg'); els.menu = r.querySelector('#cv-menu');
         // RTP battleback: wall layer as the backdrop (cover) + floor layer tiled
         // along the bottom — the classic RM battle scene composite.
@@ -573,12 +591,20 @@
     function _render() {
         if (!els.root) return;
         state.order.forEach(function (id) { _updateCard(state.actors[id]); });
-        els.iv.style.width = Math.min(1, (state._ivTempo || 0) / state.tuning.tempoMax) * 100 + '%';
-        els.surv.textContent = 'Surveillance ' + state.surveillance;
+        // The System bar = your LEASH: CUMULATIVE Surveillance filling toward Collection.
+        // At max the System reclaims you (run over, bad ending). Shows run-level total
+        // (what you carried in + what you've leaned this fight) so it matches the HUD.
+        var runBase = (root.GameSave && root.GameSave.state && root.GameSave.state.run && root.GameSave.state.run.surveillance) | 0;
+        var thr = runBase + ((state.collectBudget != null) ? state.collectBudget : 300);
+        var cur = runBase + (state.surveillance | 0);
+        var frac = Math.min(1, cur / thr), near = frac >= 0.75;
+        els.iv.style.width = (frac * 100) + '%';
+        els.system && els.system.classList.toggle('cv-iv-near', near);
+        els.surv.textContent = 'SURVEILLANCE ' + cur + ' / ' + thr + (near ? '  ⚠ COLLECTION NEAR' : '');
         els.msg.textContent =
             (mode === 'target') ? (targetMode === 'item' ? 'Use on who?  ◄ ►   (B: back)' : 'Choose target  ◄ ►   (B: back)')
             : (mode === 'item') ? 'Choose item  ▲ ▼   (B: back)'
-            : (mode === 'action') ? 'Your move.'
+            : (mode === 'action') ? ((root.GameEventState && !GameEventState.getSwitch('taught_combat')) ? 'Your move. The gauge fills with your speed; full = you act, then it empties. FIGHT to act · ITEM for supplies · RUN to flee.' : 'Your move.')
             : currentMsg;
 
         var actor = state.actors[pendingActorId];
@@ -652,7 +678,8 @@
         // SYSTEM surveillance meter — a slim bar across the TOP of the battle.
         '.cv-system{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 10px;background:rgba(2,12,18,0.8);border-bottom:1px solid #18b8c8;}' +
         '.cv-sys-label{font-size:8px;letter-spacing:3px;color:#80d0e8;flex:0 0 auto;}' +
-        '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);} .cv-system .cv-bar{flex:1 1 auto;max-width:240px;margin:0;border-color:#0a3038;}' +
+        '.cv-iv span{background:linear-gradient(#5fe0f0,#18b8c8);transition:width 200ms;} .cv-system .cv-bar{flex:1 1 auto;max-width:240px;margin:0;border-color:#0a3038;}' +
+        '.cv-iv-near .cv-iv span{background:linear-gradient(#ff8060,#e02818);} .cv-iv-near .cv-surv,.cv-iv-near .cv-sys-label{color:#ff8a6a;}' +
         '.cv-surv{font-size:8px;color:#80d0e8;flex:0 0 auto;}' +
         // Bottom UI (message + menu) overlays the lower field so it always has
         // room on the cramped GBA screen instead of being squeezed by flex.

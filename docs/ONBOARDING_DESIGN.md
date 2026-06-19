@@ -125,3 +125,19 @@ untethered) → the *true* ending stays open; lean a little → *good*; lean har
 
 Items 1–2 are the difference between "players bounce in 10 minutes, confused" and "players
 get the dilemma and want one more run." They're also the cheapest. Start there.
+
+## STATUS — #1 + #2 IMPLEMENTED (2026-06-18)
+**#2 Surveillance legibility:** the combat "System bar" is now a labeled LEASH —
+`SURVEILLANCE <cumulative> / <threshold>`, filling toward Collection, turning red + "⚠
+COLLECTION NEAR" past 75%. A matching Surveillance bar appears on the overworld HUD during an
+active descent. The cold-open names Surveillance as the price of help.
+**#1 First-run teaching (switch-gated, one-time, reset each new game):**
+- cold-open defines Surveillance · first combat: "the gauge fills, full = act, then empties;
+  FIGHT/ITEM/RUN" · first level-up: "spend attribute points on STATUS" · first relic cache:
+  "relics are power for THIS run only" · **first lethal save = the keystone**: full dilemma
+  spelled out (Accept → Surveillance ↑ → Collection = the bad ending; Refuse → die clean) ·
+  first death: "death is the LOOP — fragments + a little more of yourself; spend at the
+  Remembrance" · first Remembrance visit: meta-progression explained.
+Switches: `taught_combat/levelup/relic/save/meta`. Browser-verified; suites green;
+validate_design still ✅ MECHANICALLY SOUND. **Remaining: #3 zone/sign the hub + wire interiors,
+#4 reactive NPCs, #5 the Board shows the run shape.**

@@ -1,153 +1,432 @@
 {
-  "_meta": { "doc": "Common Events (VX Ace) — reusable command lists. Called by id via the `common_event` command, OR run automatically by a `trigger`: 'autorun' (BLOCKING cutscene, runs while `switch` is ON — usually turns the switch off to stop) or 'parallel' (CONCURRENT background process while `switch` is ON). Omit `switch` to mean always-on. No trigger = call-only." },
-  "heal_chime": {
-    "name": "Heal + Chime",
-    "commands": [
-      { "type": "se", "name": "Heal1" },
-      { "type": "heal", "what": "all" },
-      { "type": "text", "text": "A warmth settles over you. You feel restored." }
+ "_meta": {
+  "doc": "Common Events (VX Ace) \u2014 reusable command lists. Called by id via the `common_event` command, OR run automatically by a `trigger`: 'autorun' (BLOCKING cutscene, runs while `switch` is ON \u2014 usually turns the switch off to stop) or 'parallel' (CONCURRENT background process while `switch` is ON). Omit `switch` to mean always-on. No trigger = call-only."
+ },
+ "heal_chime": {
+  "name": "Heal + Chime",
+  "commands": [
+   {
+    "type": "se",
+    "name": "Heal1"
+   },
+   {
+    "type": "heal",
+    "what": "all"
+   },
+   {
+    "type": "text",
+    "text": "A warmth settles over you. You feel restored."
+   }
+  ]
+ },
+ "system_ping": {
+  "name": "System Ping",
+  "commands": [
+   {
+    "type": "flash",
+    "color": "#00ccff",
+    "frames": 8
+   },
+   {
+    "type": "se",
+    "name": "Decision1"
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: \u2026logged."
+   }
+  ]
+ },
+ "character_creation": {
+  "name": "The Awakening \u2014 event-driven creation (autorun on new game)",
+  "trigger": "autorun",
+  "switch": "do_creation",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: Unclassified entity detected. Stand by for classification, Subject."
+   },
+   {
+    "type": "name_input",
+    "prompt": "Designate yourself. What name do you answer to?",
+    "maxLength": 12
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: Reading your resonance, [name]. Declare your Affinity."
+   },
+   {
+    "type": "choice",
+    "prompt": "Your Affinity?",
+    "options": [
+     {
+      "label": "Ember (heat, ruin)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "ember"
+       }
+      ]
+     },
+     {
+      "label": "Tide (water, pressure)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "tide"
+       }
+      ]
+     },
+     {
+      "label": "Storm (charge, speed)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "storm"
+       }
+      ]
+     },
+     {
+      "label": "Stone (mass, endurance)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "stone"
+       }
+      ]
+     },
+     {
+      "label": "Umbral (shadow, the unseen)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "umbral"
+       }
+      ]
+     },
+     {
+      "label": "Untethered (no alignment)",
+      "then": [
+       {
+        "type": "affinity",
+        "value": "untethered"
+       }
+      ]
+     }
     ]
-  },
-  "system_ping": {
-    "name": "System Ping",
-    "commands": [
-      { "type": "flash", "color": "#00ccff", "frames": 8 },
-      { "type": "se", "name": "Decision1" },
-      { "type": "text", "text": "SYSTEM: …logged." }
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: Rendering your form. Choose the shape you will wear."
+   },
+   {
+    "type": "appearance",
+    "pick": true,
+    "sheet": "rtp/Actor1.png",
+    "chars": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
     ]
-  },
-  "character_creation": {
-    "name": "The Awakening — event-driven creation (autorun on new game)",
-    "trigger": "autorun",
-    "switch": "do_creation",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: Unclassified entity detected. Stand by for classification, Subject." },
-      { "type": "name_input", "prompt": "Designate yourself. What name do you answer to?", "maxLength": 12 },
-      { "type": "text", "text": "SYSTEM: Reading your resonance, [name]. Declare your Affinity." },
-      { "type": "choice", "prompt": "Your Affinity?", "options": [
-        { "label": "Ember (heat, ruin)", "then": [ { "type": "affinity", "value": "ember" } ] },
-        { "label": "Tide (water, pressure)", "then": [ { "type": "affinity", "value": "tide" } ] },
-        { "label": "Storm (charge, speed)", "then": [ { "type": "affinity", "value": "storm" } ] },
-        { "label": "Stone (mass, endurance)", "then": [ { "type": "affinity", "value": "stone" } ] },
-        { "label": "Umbral (shadow, the unseen)", "then": [ { "type": "affinity", "value": "umbral" } ] },
-        { "label": "Untethered (no alignment)", "then": [ { "type": "affinity", "value": "untethered" } ] }
-      ] },
-      { "type": "text", "text": "SYSTEM: Rendering your form. Choose the shape you will wear." },
-      { "type": "appearance", "pick": true, "sheet": "rtp/Actor1.png", "chars": [0, 1, 2, 3, 4, 5, 6, 7] },
-      { "type": "text", "text": "SYSTEM: Assigning your Classification. This defines your kit, [name]." },
-      { "type": "choice", "prompt": "Your starting Class?", "options": [
-        { "label": "Warrior (sturdy melee)", "then": [ { "type": "finalize_creation", "classId": "warrior" } ] },
-        { "label": "Rogue (stealth strikes)", "then": [ { "type": "finalize_creation", "classId": "rogue" } ] },
-        { "label": "Scout (fast, ranged)", "then": [ { "type": "finalize_creation", "classId": "scout" } ] },
-        { "label": "Spellblade (magic-melee)", "then": [ { "type": "finalize_creation", "classId": "spellblade" } ] },
-        { "label": "Cleric (support/heal)", "then": [ { "type": "finalize_creation", "classId": "cleric" } ] },
-        { "label": "Vanguard (tank)", "then": [ { "type": "finalize_creation", "classId": "vanguard" } ] }
-      ] },
-      { "type": "se", "name": "Decision2" },
-      { "type": "text", "text": "SYSTEM: Classification complete, [designation]. Welcome to Dawnhearth." },
-      { "type": "switch", "id": "do_creation", "value": false },
-      { "type": "switch", "id": "sys_intro", "value": true }
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: Assigning your Classification. This defines your kit, [name]."
+   },
+   {
+    "type": "choice",
+    "prompt": "Your starting Class?",
+    "options": [
+     {
+      "label": "Warrior (sturdy melee)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "warrior"
+       }
+      ]
+     },
+     {
+      "label": "Rogue (stealth strikes)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "rogue"
+       }
+      ]
+     },
+     {
+      "label": "Scout (fast, ranged)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "scout"
+       }
+      ]
+     },
+     {
+      "label": "Spellblade (magic-melee)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "spellblade"
+       }
+      ]
+     },
+     {
+      "label": "Cleric (support/heal)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "cleric"
+       }
+      ]
+     },
+     {
+      "label": "Vanguard (tank)",
+      "then": [
+       {
+        "type": "finalize_creation",
+        "classId": "vanguard"
+       }
+      ]
+     }
     ]
-  },
-  "awakening_intro": {
-    "name": "Opening — System cold-open (autorun on new game)",
-    "trigger": "autorun",
-    "switch": "sys_intro",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: Welcome, [designation]. Classification complete. You have Awakened in Dawnhearth." },
-      { "type": "text", "text": "SYSTEM: There is a Calamity below. You will descend, and you will clear it. I will keep you alive. I will keep you. Always." },
-      { "type": "text", "text": "…For just a moment, the words feel worn — like you have heard them before. Then it passes. A woman by the roadside is waving you over." },
-      { "type": "switch", "id": "sys_intro", "value": false }
-    ]
-  },
-  "first_descent_tethered": {
-    "name": "Opening — first descent return (tethered: the System kept you)",
-    "commands": [
-      { "type": "text", "text": "The killing blow never lands. The System’s hand closes around you — warm, absolute. You are alive. You did not choose to be." },
-      { "type": "text", "text": "SYSTEM: I told you. I will keep you alive. I will keep you. Always." },
-      { "type": "text", "text": "The relief curdles in your chest. It has said that before. You have heard it before. How many times?" },
-      { "type": "text", "text": "(A memory stirs. Mira will want to see you.)" }
-    ]
-  },
-  "first_descent_untethered": {
-    "name": "Opening — first descent return (untethered: the dark took you, yet you woke)",
-    "commands": [
-      { "type": "text", "text": "Untethered, no hand closes around you. The dark is real, and it takes you whole." },
-      { "type": "text", "text": "…And then you are breathing. Standing in Dawnhearth. The System did not catch you — so how are you here, [designation]?" },
-      { "type": "text", "text": "That is the question it does not want you to ask." },
-      { "type": "text", "text": "(A memory stirs. Mira will want to see you.)" }
-    ]
-  },
-  "first_descent_cleared": {
-    "name": "Opening — first descent return (cleared on the first try)",
-    "commands": [
-      { "type": "text", "text": "You break the surface — alive. But the climb back felt worn, rehearsed, like muscle for a thing you have never done." },
-      { "type": "text", "text": "You have stood in this light before, [designation]. You are certain of it. And the certainty terrifies you." },
-      { "type": "text", "text": "(A memory stirs. Mira will want to see you.)" }
-    ]
-  },
-  "run_return_cleared": {
-    "name": "Run return — cleared the descent",
-    "commands": [
-      { "type": "text", "text": "You break the surface — alive, and still yourself. The descent is cleared." },
-      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
-    ]
-  },
-  "run_return_collected": {
-    "name": "Run return — collected (Surveillance maxed)",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more." },
-      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
-    ]
-  },
-  "run_return_died_tethered": {
-    "name": "Run return — died (tethered: the System pulls you back)",
-    "commands": [
-      { "type": "text", "text": "You fall in the dark. The System pulls you back up — you wake in Dawnhearth, remembering a little more." },
-      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
-    ]
-  },
-  "run_return_died_untethered": {
-    "name": "Run return — died (untethered: no hand catches you)",
-    "commands": [
-      { "type": "text", "text": "Untethered, you fall — and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should." },
-      { "type": "text", "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] · deepest floor [v:run_deepest])" }
-    ]
-  },
-  "ending_verdict_true": {
-    "name": "Ending verdict — true path still open",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: …anomaly. Your record is too clean to read. Something in you still remembers a way OUT. (The true ending remains open.)\n[Lifetime Surveillance [v:life_surv]]" }
-    ]
-  },
-  "ending_verdict_good": {
-    "name": "Ending verdict — good still reachable",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: Compliance acceptable, [designation]. You are still mostly yourself — for now. (A good ending is still reachable; the true one has slipped away.)\n[Lifetime Surveillance [v:life_surv]]" }
-    ]
-  },
-  "ending_verdict_submit": {
-    "name": "Ending verdict — only SUBMIT remains",
-    "commands": [
-      { "type": "text", "text": "SYSTEM: You lean on me so sweetly now. Soon there will be nothing left to reclaim. The cycle will keep you. (Only SUBMIT remains.)\n[Lifetime Surveillance [v:life_surv]]" }
-    ]
-  },
-  "intro_cutscene": {
-    "name": "Example Autorun Cutscene",
-    "trigger": "autorun",
-    "switch": "cutscene_intro",
-    "commands": [
-      { "type": "text", "text": "(An autorun cutscene plays while switch 'cutscene_intro' is ON.)" },
-      { "type": "switch", "id": "cutscene_intro", "value": false }
-    ]
-  },
-  "ambient_watch": {
-    "name": "Example Parallel Process",
-    "trigger": "parallel",
-    "switch": "ambient_watch",
-    "commands": [
-      { "type": "variable", "id": "ambient_ticks", "op": "+", "value": 1 },
-      { "type": "wait", "frames": 60 }
-    ]
-  }
+   },
+   {
+    "type": "se",
+    "name": "Decision2"
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: Classification complete, [designation]. Welcome to Dawnhearth."
+   },
+   {
+    "type": "switch",
+    "id": "do_creation",
+    "value": false
+   },
+   {
+    "type": "switch",
+    "id": "sys_intro",
+    "value": true
+   }
+  ]
+ },
+ "awakening_intro": {
+  "name": "Opening \u2014 System cold-open (autorun on new game)",
+  "trigger": "autorun",
+  "switch": "sys_intro",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: Welcome, [designation]. Classification complete. You have Awakened in Dawnhearth."
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: There is a Calamity below. You will descend, and you will clear it. I will keep you alive. I will keep you. Always."
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: Every kindness is recorded. The cold meter is your SURVEILLANCE \u2014 it rises whenever you accept my help. Do not let that trouble you, [designation]."
+   },
+   {
+    "type": "text",
+    "text": "\u2026For just a moment, the words feel worn \u2014 like you have heard them before. And 'do not let it trouble you' troubles you. Then it passes. A woman by the roadside is waving you over."
+   },
+   {
+    "type": "switch",
+    "id": "sys_intro",
+    "value": false
+   }
+  ]
+ },
+ "first_descent_tethered": {
+  "name": "Opening \u2014 first descent return (tethered: the System kept you)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "The killing blow never lands. The System\u2019s hand closes around you \u2014 warm, absolute. You are alive. You did not choose to be."
+   },
+   {
+    "type": "text",
+    "text": "SYSTEM: I told you. I will keep you alive. I will keep you. Always."
+   },
+   {
+    "type": "text",
+    "text": "The relief curdles in your chest. It has said that before. You have heard it before. How many times?"
+   },
+   {
+    "type": "text",
+    "text": "Death is not the end here, [designation] \u2014 it is the LOOP. You wake in Dawnhearth carrying Memory Fragments, and a little more of yourself. This is how you get out: one cycle at a time. Spend what you carry at the Remembrance."
+   },
+   {
+    "type": "text",
+    "text": "(A memory stirs. Mira will want to see you.)"
+   }
+  ]
+ },
+ "first_descent_untethered": {
+  "name": "Opening \u2014 first descent return (untethered: the dark took you, yet you woke)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "Untethered, no hand closes around you. The dark is real, and it takes you whole."
+   },
+   {
+    "type": "text",
+    "text": "\u2026And then you are breathing. Standing in Dawnhearth. The System did not catch you \u2014 so how are you here, [designation]?"
+   },
+   {
+    "type": "text",
+    "text": "That is the question it does not want you to ask."
+   },
+   {
+    "type": "text",
+    "text": "Death is not the end here, [designation] \u2014 it is the LOOP. You wake in Dawnhearth carrying Memory Fragments, and a little more of yourself. This is how you get out: one cycle at a time. Spend what you carry at the Remembrance."
+   },
+   {
+    "type": "text",
+    "text": "(A memory stirs. Mira will want to see you.)"
+   }
+  ]
+ },
+ "first_descent_cleared": {
+  "name": "Opening \u2014 first descent return (cleared on the first try)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "You break the surface \u2014 alive. But the climb back felt worn, rehearsed, like muscle for a thing you have never done."
+   },
+   {
+    "type": "text",
+    "text": "You have stood in this light before, [designation]. You are certain of it. And the certainty terrifies you."
+   },
+   {
+    "type": "text",
+    "text": "Death is not the end here, [designation] \u2014 it is the LOOP. You wake in Dawnhearth carrying Memory Fragments, and a little more of yourself. This is how you get out: one cycle at a time. Spend what you carry at the Remembrance."
+   },
+   {
+    "type": "text",
+    "text": "(A memory stirs. Mira will want to see you.)"
+   }
+  ]
+ },
+ "run_return_cleared": {
+  "name": "Run return \u2014 cleared the descent",
+  "commands": [
+   {
+    "type": "text",
+    "text": "You break the surface \u2014 alive, and still yourself. The descent is cleared."
+   },
+   {
+    "type": "text",
+    "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] \u00b7 deepest floor [v:run_deepest])"
+   }
+  ]
+ },
+ "run_return_collected": {
+  "name": "Run return \u2014 collected (Surveillance maxed)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: Surveillance threshold exceeded. You are reclaimed, [designation].\nYou wake in Dawnhearth. You remember a little more."
+   },
+   {
+    "type": "text",
+    "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] \u00b7 deepest floor [v:run_deepest])"
+   }
+  ]
+ },
+ "run_return_died_tethered": {
+  "name": "Run return \u2014 died (tethered: the System pulls you back)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "You fall in the dark. The System pulls you back up \u2014 you wake in Dawnhearth, remembering a little more."
+   },
+   {
+    "type": "text",
+    "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] \u00b7 deepest floor [v:run_deepest])"
+   }
+  ]
+ },
+ "run_return_died_untethered": {
+  "name": "Run return \u2014 died (untethered: no hand catches you)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "Untethered, you fall \u2014 and no hand catches you. The dark takes the run.\nYet you wake in Dawnhearth, clean, remembering more than you should."
+   },
+   {
+    "type": "text",
+    "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] \u00b7 deepest floor [v:run_deepest])"
+   }
+  ]
+ },
+ "ending_verdict_true": {
+  "name": "Ending verdict \u2014 true path still open",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: \u2026anomaly. Your record is too clean to read. Something in you still remembers a way OUT. (The true ending remains open.)\n[Lifetime Surveillance [v:life_surv]]"
+   }
+  ]
+ },
+ "ending_verdict_good": {
+  "name": "Ending verdict \u2014 good still reachable",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: Compliance acceptable, [designation]. You are still mostly yourself \u2014 for now. (A good ending is still reachable; the true one has slipped away.)\n[Lifetime Surveillance [v:life_surv]]"
+   }
+  ]
+ },
+ "ending_verdict_submit": {
+  "name": "Ending verdict \u2014 only SUBMIT remains",
+  "commands": [
+   {
+    "type": "text",
+    "text": "SYSTEM: You lean on me so sweetly now. Soon there will be nothing left to reclaim. The cycle will keep you. (Only SUBMIT remains.)\n[Lifetime Surveillance [v:life_surv]]"
+   }
+  ]
+ },
+ "intro_cutscene": {
+  "name": "Example Autorun Cutscene",
+  "trigger": "autorun",
+  "switch": "cutscene_intro",
+  "commands": [
+   {
+    "type": "text",
+    "text": "(An autorun cutscene plays while switch 'cutscene_intro' is ON.)"
+   },
+   {
+    "type": "switch",
+    "id": "cutscene_intro",
+    "value": false
+   }
+  ]
+ },
+ "ambient_watch": {
+  "name": "Example Parallel Process",
+  "trigger": "parallel",
+  "switch": "ambient_watch",
+  "commands": [
+   {
+    "type": "variable",
+    "id": "ambient_ticks",
+    "op": "+",
+    "value": 1
+   },
+   {
+    "type": "wait",
+    "frames": 60
+   }
+  ]
+ }
 }

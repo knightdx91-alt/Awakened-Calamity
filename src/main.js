@@ -937,6 +937,12 @@
         await _loadMetaDb();
         var st = GameSave.state; st.meta = st.meta || { fragments: 0, unlocks: [] };
         st.meta.unlocks = st.meta.unlocks || [];
+        // First visit ever: teach meta-progression (the thing that carries across deaths).
+        if (ES && !ES.getSwitch('taught_meta')) {
+            await _say('The still place hums. This is the REMEMBRANCE — where the loop loosens its grip.');
+            await _say('Memory Fragments are the one thing the System cannot wipe. Spend them here on PERMANENT unlocks that carry across every death — more HP, starting Potions, a longer leash. This is how each cycle leaves you stronger than the last.');
+            ES.setSwitch('taught_meta', true);
+        }
         while (true) {
             var avail = GameMeta.available(window._metaDb, st.meta);
             await _say('Memory Fragments: ' + (st.meta.fragments | 0) + '   ·   Remembered: ' + (st.meta.unlocks.length));
@@ -978,6 +984,12 @@
         var rng = (function (s) { return function () { s |= 0; s = (s + 0x6D2B79F5) | 0; var t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })(seed);
         var choices = GameRelics.roll(_relicsDb, rng, n, st.run.relics);
         if (!choices.length) { await _say('Nothing here you do not already carry.'); return; }
+        // First relic ever: teach what relics are.
+        if (ES && !ES.getSwitch('taught_relic')) {
+            await _say('A cache hums with System residue. Inside: a RELIC.');
+            await _say('Relics are power for THIS descent only — they make each run play differently, and they are lost when the run ends. Choose how you want to fight.');
+            ES.setSwitch('taught_relic', true);
+        }
         await _say('A cache hums with System residue — choose one to carry.');
         var labels = choices.map(function (r) { return r.name + ' [' + r.tier + '] — ' + r.desc; });
         labels.push('Leave it');
