@@ -1300,7 +1300,16 @@
                 await _loadRunDb();
                 if (c.start || !GameRun.active(st.run)) {
                     _purgeRunFloors();                     // fresh descent: chests refill, no stale state
-                    GameRun.start(st.run, _runDb, (Math.random() * 0xffffffff) >>> 0, { tethered: c.tethered !== false });
+                    // Reproducible runs: honor an explicit seed (c.seed, or the
+                    // `run_seed_in` variable a "replay seed" board can set), else
+                    // roll one. Kept in a positive 31-bit range so it round-trips
+                    // through the integer variable store cleanly for display/sharing.
+                    var _seedIn = (c.seed != null) ? (c.seed | 0)
+                        : (root.GameEventState ? (GameEventState.getVar('run_seed_in') | 0) : 0);
+                    var _seed = ((_seedIn > 0 ? _seedIn : ((Math.random() * 0x7fffffff) >>> 0)) & 0x7fffffff) || 1;
+                    GameRun.start(st.run, _runDb, _seed, { tethered: c.tethered !== false });
+                    st.run.seed = _seed;                   // pin the masked seed we surface
+                    if (root.GameEventState) GameEventState.setVar('run_seed', _seed);
                     await _loadMetaDb();
                     _grantStartItems();                    // meta boon: begin runs with kit
                     if (GameSave.markDirty) GameSave.markDirty();
