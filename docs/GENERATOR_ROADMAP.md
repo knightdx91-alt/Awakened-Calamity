@@ -75,9 +75,15 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    the map, carves one room per leaf, and connects siblings on the unwind (CONNECTED BY
    CONSTRUCTION) + a few loop edges. `generateFloor` takes a `style` selector — `'rooms'` (random
    scatter) / `'bsp'` (structured) / `'mixed'` (per-floor pick, default); `biome.style` can pin it.
-   `tools/test_mapgen.mjs` = 28 checks (every style reachable + places the gameplay layer + bsp
-   deterministic). Browser-verified a generated verdara floor renders with 0 errors.
-   **Still TODO:** drunkard's-walk corridors + deliberate merged/blocked rooms. *`MAPGEN_SPEC §6`.*
+   **Drunkard's-walk corridors DONE (2026-06-19):** `Builder.carveDrunkard` carves organic winding
+   tunnels (biased random walk, guaranteed arrival); `biome.windiness` (default 0.3) sets the chance
+   a connection winds vs. a clean L. A new **hard reachability guarantee** `ensureCollisionConnected`
+   runs last — if the finalized collision map still splits (e.g. a series of props on a 1-wide windy
+   corridor that `repairPropConnectivity` can't fix), it CARVES through to reconnect. So every layout
+   style + max windiness + all-cave stays fully reachable. `tools/test_mapgen.mjs` = 29 checks.
+   Browser-verified a generated verdara floor renders with 0 errors.
+   **Still TODO (optional):** deliberate merged/blocked rooms (big rooms broken by interior walls).
+   *`MAPGEN_SPEC §6`.*
 
 3. **Biome system.** ✅ DONE (2026-06-19) — `data/systems/biomes.json` (4 biomes: verdara/
    calderra/halveth/vael) drives each generated floor's **palette** (base floor tile via the

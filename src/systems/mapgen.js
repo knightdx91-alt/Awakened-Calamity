@@ -47,7 +47,8 @@
             sensorText: 'A System sigil flares underfoot — it has logged your position.', sensorSurveil: 12 },
         encounterRate: 0.75,
         caveChance: 0.4,
-        style: 'mixed'
+        style: 'mixed',
+        windiness: 0.3
     };
     function resolveBiome(biome) {
         if (!biome || typeof biome !== 'object') return DEFAULT_BIOME;
@@ -60,7 +61,8 @@
             hazard: biome.hazard || DEFAULT_BIOME.hazard,
             encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate,
             caveChance: biome.caveChance != null ? biome.caveChance : DEFAULT_BIOME.caveChance,
-            style: biome.style || DEFAULT_BIOME.style
+            style: biome.style || DEFAULT_BIOME.style,
+            windiness: biome.windiness != null ? biome.windiness : DEFAULT_BIOME.windiness
         };
     }
 
@@ -167,6 +169,30 @@
         while (x !== x1) { for (w = 0; w < width; w++) this._mark(x, y + w); x += x1 > x ? 1 : -1; }
         while (y !== y1) { for (w = 0; w < width; w++) this._mark(x + w, y); y += y1 > y ? 1 : -1; }
         this._mark(x1, y1);
+    };
+    // DRUNKARD'S-WALK corridor (generator roadmap #5): an organic winding tunnel
+    // that biases toward the target but wanders, for cave-like passages instead of
+    // clean L-corridors. Guaranteed to ARRIVE (finishes with a straight L-run), so
+    // connectivity holds. Used probabilistically alongside carveCorridor.
+    Builder.prototype.carveDrunkard = function (x0, y0, x1, y1, bias) {
+        bias = bias != null ? bias : 0.62;
+        var x = x0, y = y0, steps = 0, max = (Math.abs(x1 - x0) + Math.abs(y1 - y0)) * 4 + 20;
+        this._mark(x, y);
+        while ((x !== x1 || y !== y1) && steps < max) {
+            steps++;
+            var towardX = x1 > x ? 1 : (x1 < x ? -1 : 0), towardY = y1 > y ? 1 : (y1 < y ? -1 : 0);
+            if (this.rng.random() < bias && (towardX || towardY)) {
+                // step toward the target (pick an axis that still needs progress)
+                if (towardX && (!towardY || this.rng.random() < 0.5)) x += towardX; else y += towardY;
+            } else {
+                // wander
+                if (this.rng.random() < 0.5) x += this.rng.random() < 0.5 ? 1 : -1; else y += this.rng.random() < 0.5 ? 1 : -1;
+                x = Math.max(1, Math.min(this.W - 2, x)); y = Math.max(1, Math.min(this.H - 2, y));
+            }
+            this._mark(x, y);
+        }
+        // guarantee arrival with a clean finish
+        this.carveCorridor(x, y, x1, y1, 1);
     };
     Builder.prototype.setp = function (x, y, gid, block) {
         if (this.inb(x, y)) { this.over[y * this.W + x] = gid; this.coll[y * this.W + x] = block ? 1 : 0; }
@@ -292,6 +318,41 @@
             if (!removed) return;
         }
     };
+    // HARD reachability GUARANTEE (catches what repairProp can't — e.g. a series of
+    // props on a 1-wide winding corridor, or stray cave pockets): if the COLLISION
+    // map still has >1 component, CARVE an L-line (clearing walls + props) from each
+    // stray component to the largest one. Runs last; mirrors ensureConnected but on
+    // the finalized collision map so every event is reachable for every layout style.
+    Builder.prototype.ensureCollisionConnected = function () {
+        var W = this.W, H = this.H, self = this;
+        function comps() {
+            var seen = new Array(W * H).fill(false), out = [];
+            for (var s = 0; s < W * H; s++) {
+                if (seen[s] || self.coll[s]) continue;
+                var comp = [], stack = [s]; seen[s] = true;
+                while (stack.length) {
+                    var i = stack.pop(); comp.push(i); var x = i % W, y = (i / W) | 0, nb = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                    for (var k = 0; k < 4; k++) { var nx = x + nb[k][0], ny = y + nb[k][1]; if (nx >= 0 && nx < W && ny >= 0 && ny < H) { var j = ny * W + nx; if (!seen[j] && !self.coll[j]) { seen[j] = true; stack.push(j); } } }
+                }
+                out.push(comp);
+            }
+            return out;
+        }
+        function centroid(comp) {
+            var sx = 0, sy = 0; for (var a = 0; a < comp.length; a++) { sx += comp[a] % W; sy += (comp[a] / W) | 0; }
+            sx = (sx / comp.length) | 0; sy = (sy / comp.length) | 0;
+            return comp.reduce(function (best, i) { var bx = best % W, by = (best / W) | 0, ix = i % W, iy = (i / W) | 0; return ((ix - sx) * (ix - sx) + (iy - sy) * (iy - sy)) < ((bx - sx) * (bx - sx) + (by - sy) * (by - sy)) ? i : best; });
+        }
+        function clear(x, y) { if (self.inb(x, y) && x > 0 && x < W - 1 && y > 0 && y < H - 1) { var i = y * W + x; self.coll[i] = 0; self.over[i] = -1; self.walk[i] = true; } }
+        function carveLine(x0, y0, x1, y1) { var x = x0, y = y0; while (x !== x1) { clear(x, y); x += x1 > x ? 1 : -1; } while (y !== y1) { clear(x, y); y += y1 > y ? 1 : -1; } clear(x1, y1); }
+        var guard = 0, cs = comps();
+        while (cs.length > 1 && guard < 40) {
+            guard++; cs.sort(function (a, b) { return b.length - a.length; });
+            var mc = centroid(cs[0]), mx = mc % W, my = (mc / W) | 0;
+            for (var c = 1; c < cs.length; c++) { var cc = centroid(cs[c]); carveLine(cc % W, (cc / W) | 0, mx, my); }
+            cs = comps();
+        }
+    };
 
     // ── event builders (ported one-for-one from the Python) ───────────────────
     function chestGfx() { return { sprite: 'Chest', file: 'rtp/Chest.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false }; }
@@ -365,11 +426,18 @@
         var style = opts.style || bio.style || 'mixed';
         if (style === 'mixed') style = rng.random() < 0.5 ? 'bsp' : 'rooms';
         var rooms = [], i;
+        // windiness: chance a connection is an organic drunkard's walk vs a clean
+        // L-corridor (#5). biome.windiness biases it (default 0.3).
+        var windiness = bio.windiness != null ? bio.windiness : 0.3;
+        var connect = function (ax, ay, bx, by, wdt) {
+            if (rng.random() < windiness) b.carveDrunkard(ax, ay, bx, by);
+            else b.carveCorridor(ax, ay, bx, by, wdt || 1);
+        };
         if (style === 'bsp') {
             rooms = b.bspRooms(rng, caveChance, 3 + (tier >= 2 ? 1 : 0));
             rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
             // a few extra loop edges so it isn't a pure tree (more interesting routes)
-            for (var le = 0; le < 1 + tier; le++) if (rooms.length >= 3) { var pe = rng.sample(rooms, 2); b.carveCorridor(pe[0][0], pe[0][1], pe[1][0], pe[1][1], 1); }
+            for (var le = 0; le < 1 + tier; le++) if (rooms.length >= 3) { var pe = rng.sample(rooms, 2); connect(pe[0][0], pe[0][1], pe[1][0], pe[1][1], 1); }
         } else {
             var attempts = 0, targetRooms = 6 + tier * 2;
             while (rooms.length < targetRooms && attempts < targetRooms * 12) {
@@ -383,8 +451,8 @@
                 rooms.push(b.carveRoomAt(rx, ry, rw, rh, caveChance));
             }
             rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
-            for (i = 1; i < rooms.length; i++) b.carveCorridor(rooms[i - 1][0], rooms[i - 1][1], rooms[i][0], rooms[i][1], rng.choice([1, 2]));
-            for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); b.carveCorridor(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
+            for (i = 1; i < rooms.length; i++) connect(rooms[i - 1][0], rooms[i - 1][1], rooms[i][0], rooms[i][1], rng.choice([1, 2]));
+            for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); connect(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
         }
         b.ensureConnected();
         b.finalizeWalls();
@@ -494,6 +562,7 @@
             b.scatterInRooms(pgid, (prop.count | 0) + (bp === 0 ? tier : 0), !!prop.block);
         }
         b.repairPropConnectivity();
+        b.ensureCollisionConnected();               // hard reachability guarantee (all styles)
 
         return assemble(b, name, region);
     }

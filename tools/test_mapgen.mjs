@@ -195,5 +195,16 @@ check('bsp layout differs from random rooms', bspDiffers);
 const bsp2 = GameMapGen.generateFloor({ seed: 4242, tier: 2, creatures, style: 'bsp' });
 check('bsp is deterministic (same seed → identical)', JSON.stringify(bsp) === JSON.stringify(bsp2));
 
+// ── DRUNKARD'S-WALK corridors (#5): max windiness + caves must stay reachable ──
+let windyReach = true;
+for (let s = 0; s < 24; s++) {
+  for (const style of ['rooms', 'bsp']) {
+    const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 5200 + s, tier: 3, style, biome: { caveChance: 1, windiness: 1 } });
+    const set = reachable(l, m.start.x, m.start.y);
+    for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) windyReach = false;
+  }
+}
+check('max-windiness all-cave floors stay fully reachable (all styles)', windyReach);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);
