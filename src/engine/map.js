@@ -35,6 +35,7 @@ window.GameMap = (function () {
     let mapHeight        = DEFAULT_SIZE;
     let _nameIndex       = null;   // MAP_CONST -> filename, loaded from kanto_index.json
     let _region          = 'kanto';
+    const _injectedLayouts = {};   // id -> layout JSON for RUNTIME-generated maps (GameMapGen)
 
     // ---------------------------------------------------------------
     // Index loading
@@ -75,12 +76,32 @@ window.GameMap = (function () {
         mapHeight = Math.max(DEFAULT_SIZE, maxY + 4);
     }
 
+    // Load the tileset behavior table for the current layout (so isWalkable can
+    // honor water/cave behaviors). Shared by fetched + injected layouts.
+    async function _loadTilesetBehaviors() {
+        tilesetBehaviors = null;
+        const tilesetName = layoutData && layoutData.tileset;
+        if (!tilesetName) { window._dbgTileset = 'no-tileset'; return; }
+        try {
+            const tresp = await fetch(`data/tilesets/${tilesetName}.json`, { cache: 'no-cache' });
+            if (tresp.ok) { const tj = await tresp.json(); tilesetBehaviors = tj.behaviors || null; window._dbgTileset = tilesetName + ':' + (tilesetBehaviors ? tilesetBehaviors.length : 'null'); }
+            else { window._dbgTileset = tilesetName + ':HTTP' + tresp.status; }
+        } catch (e) { window._dbgTileset = tilesetName + ':ERR'; }
+    }
+
     async function _loadLayout(data) {
         const layoutId = data.layout;
         tilesetBehaviors = null;
         if (!layoutId) {
             layoutData = null;
             _fallbackSize(data);
+            return;
+        }
+        // RUNTIME-generated layout (injected by GameMapGen) — use it instead of fetch.
+        if (_injectedLayouts[layoutId]) {
+            layoutData = _injectedLayouts[layoutId];
+            mapWidth = layoutData.width; mapHeight = layoutData.height;
+            await _loadTilesetBehaviors();
             return;
         }
         // Layouts live in region subdirectories for non-Kanto regions.
@@ -125,6 +146,20 @@ window.GameMap = (function () {
     // ---------------------------------------------------------------
     // Loading
     // ---------------------------------------------------------------
+
+    /** Load a RUNTIME-generated floor (GameMapGen.generateFloor → {map, layout}),
+     *  registering its layout in-memory so no fetch is needed. */
+    async function loadGenerated(gen, region) {
+        region = region || _region || 'awakened';
+        if (region !== _region || !_nameIndex) await init(region);
+        _region = region;
+        _encounterData = null; _encounterMapId = null; _encounterPromise = null;
+        _injectedLayouts[gen.layout.id] = gen.layout;
+        current = gen.map;
+        await _loadLayout(current);
+        console.log(`[Map] Loaded GENERATED ${gen.map.name} (${mapWidth}x${mapHeight})`);
+        return current;
+    }
 
     /** Load by filename (e.g. "PalletTown"). Region defaults to 'kanto'. */
     async function load(mapName, region) {
@@ -382,6 +417,7 @@ window.GameMap = (function () {
         REGIONS,
         init,
         load,
+        loadGenerated,
         loadById,
         resolveWarp,
         getConnectionAt,

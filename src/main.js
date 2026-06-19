@@ -290,7 +290,9 @@
     }
     async function _enterMap(map, region, x, y) {
         currentRegion = region || currentRegion;
-        await GameMap.load(map, currentRegion);
+        // map may be a name (fetch) OR a runtime-generated {map,layout} (inject).
+        if (map && typeof map === 'object' && map.map && map.layout) await GameMap.loadGenerated(map, currentRegion);
+        else await GameMap.load(map, currentRegion);
         window._mapName = (GameMap.current && GameMap.current.name) || map;
         window._mapLoaded = true;
         window._currentMapType = (GameMap.current && GameMap.current.map_type) || '';
@@ -866,12 +868,30 @@
     }
 
     // ---- run loop (GameRun) ----
-    var _runDb = null, _corruptDb = null;
+    var _runDb = null, _corruptDb = null, _creaturesDb = null;
     function _loadRunDb() {
         if (_runDb) return Promise.resolve(_runDb);
         return fetch('data/systems/run.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
             .then(function (r) { return r.json(); }).then(function (j) { return (_runDb = j); })
             .catch(function () { return (_runDb = { maxDepth: 4, floorPool: [], bossPool: [] }); });
+    }
+    function _loadCreatures() {
+        if (_creaturesDb) return Promise.resolve(_creaturesDb);
+        return fetch('data/systems/creatures.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_creaturesDb = j); })
+            .catch(function () { return (_creaturesDb = {}); });
+    }
+    // Runtime floor generation is ON when GameMapGen is present and run.json doesn't
+    // opt out. A fresh floor is grown per descent from run.seed + floor (so a shared
+    // seed reproduces the whole descent), tier ramping with depth, boss on the last.
+    function _runtimeGen() { return !!(window.GameMapGen && _runDb && _runDb.runtimeGen !== false); }
+    function _genFloor(run) {
+        var maxDepth = (_runDb && _runDb.maxDepth) || 4;
+        var boss = (run.floor | 0) >= maxDepth;
+        var tier = Math.max(1, Math.min(3, Math.ceil((run.floor | 0) * 3 / maxDepth)));
+        var fseed = (((run.seed >>> 0) + (run.floor | 0) * 0x9E3779B1) >>> 0) || 1;
+        return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
+            maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened', creatures: _creaturesDb });
     }
     function _loadCorrupt() {
         if (_corruptDb) return Promise.resolve(_corruptDb);
@@ -925,6 +945,10 @@
     function _purgeRunFloors() {
         if (!ES || !ES.clearMaps || !_runDb) return;
         var pool = (_runDb.floorPool || []).concat(_runDb.bossPool || []);
+        // runtime-generated floors reuse the names RunGenF1..RunGenF<maxDepth> across
+        // runs — purge their per-floor event state too (so chests refill each run).
+        var maxDepth = (_runDb.maxDepth | 0) || 4;
+        for (var f = 1; f <= maxDepth; f++) pool.push('RunGenF' + f, 'MAP_RUNGENF' + f);
         var n = ES.clearMaps(pool);
         if (ES.clearSwitchPrefix) ES.clearSwitchPrefix('gate_');   // reset lever/cache puzzles each run
         if (n) console.log('[Run] purged ephemeral floor state for', pool.length, 'maps (', n, 'self-switches )');
@@ -1318,11 +1342,13 @@
                     await _loadMetaDb();
                     _grantStartItems();                    // meta boon: begin runs with kit
                     if (GameSave.markDirty) GameSave.markDirty();
-                    await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
+                    if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
+                    else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
                 } else {
                     var d = GameRun.descend(st.run, _runDb);
                     if (GameSave.markDirty) GameSave.markDirty();
                     if (d.cleared) await _endRun('cleared');
+                    else if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
                     else await _enterMap(d.map, 'awakened', null, null);
                 }
                 break;

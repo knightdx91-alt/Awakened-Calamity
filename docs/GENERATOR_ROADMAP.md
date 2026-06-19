@@ -6,10 +6,17 @@ procedural content read as a real, varied world instead of recolored rectangles.
 
 Priority order:
 
-1. **Port `mapgen` to JS for RUNTIME generation.** Floors are baked offline (Python)
-   and reused from a fixed pool of ~6 — so every run repeats the same layouts. Porting
-   the carve/scatter logic to JS lets the engine generate a fresh floor per descent.
-   Biggest single generator win.
+1. ✅ **DONE 2026-06-19 — Port `mapgen` to JS for RUNTIME generation.** `src/systems/mapgen.js`
+   (`GameMapGen`, pure/deterministic) ports the Python dungeon path: seeded room/corridor carve,
+   reachability guarantee (ensureConnected + repairPropConnectivity), 9-slice walls + side-view
+   north faces (baked `dun_props` gids), and the gameplay layer (Entrance, StairsDown/Alpha boss,
+   roamers, chests, relic cache, traps). Floor-kind aware: normal floors get a StairsDown(`descend`),
+   the last floor an Alpha(battle→despawn→descend). Engine injection via `GameMap.loadGenerated`
+   (in-memory layout, no fetch); the descent (`main.js`) grows a fresh floor per descent from
+   `run.seed + floor` (tier ramps with depth) when `run.json runtimeGen` is on (pool kept as
+   fallback); `_purgeRunFloors` clears the reused `RunGenF*` names so chests refill each run.
+   `tools/test_mapgen.mjs` = 12 checks (determinism / reachability / events); browser-verified a
+   generated floor loads + renders (walls, faces, props, events) with 0 real errors.
 
 2. **Biome system.** One biome def per region = palette + autotile set + prop tables +
    **enemy roster** + hazard + mini-boss, driving every floor archetype so

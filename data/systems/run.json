@@ -1,4 +1,4 @@
-{ "_meta":{"doc":"Run-loop config: a 4-floor descent (3 floors + boss) through a biome pool. floorPool/bossPool are committed generated dungeons the GameRun controller cycles by seed."},
-  "maxDepth": 4, "biome": "verdara",
+{ "_meta":{"doc":"Run-loop config: a 4-floor descent (3 floors + boss). With runtimeGen ON, GameMapGen grows a FRESH floor per descent from run.seed+floor (a shared seed reproduces the descent). floorPool/bossPool are the pre-baked fallback used when runtimeGen is off or GameMapGen is unavailable."},
+  "maxDepth": 4, "biome": "verdara", "runtimeGen": true,
   "floorPool": ["RunFloorA","RunFloorB","RunFloorC","RunFloorD","RunFloorE","RunFloorF"],
   "bossPool": ["RunBoss1","RunBoss2"] }

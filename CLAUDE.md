@@ -50,10 +50,25 @@ with 0 errors):
   the taken, reassigned property, Joran's watched house), not a flat "The door is locked."
 Still open from onboarding: #5 the Board shows the run's SHAPE (needs the run/act composer below).
 
+## ✅ DONE 2026-06-19 — Runtime floor generation (generator roadmap #1)
+The engine now grows a FRESH dungeon floor per descent instead of reusing the 6-map pool.
+`src/systems/mapgen.js` (`GameMapGen`, pure/deterministic) ports the Python dungeon generator:
+seeded room/corridor carve, reachability guarantee, 9-slice walls + side-view north faces (baked
+`dun_props` gids), and the full gameplay layer (Entrance, StairsDown/Alpha boss, roamers, chests,
+relic cache, traps). Engine injection via new `GameMap.loadGenerated` (in-memory layout, no fetch);
+`main.js` descent grows a floor from `run.seed + floor` (tier ramps with depth) when `run.json
+runtimeGen:true` (the baked pool stays as fallback); `_purgeRunFloors` clears the reused `RunGenF*`
+names so chests refill each run. Same seed → identical descent (replay-safe, pairs with the Replay
+Slate). `tools/test_mapgen.mjs` = 12 checks; browser-verified a generated floor loads + renders
+cleanly. Details in `docs/GENERATOR_ROADMAP.md`.
+
 ## 🔴 NEXT SESSION — PRIORITY LIST (updated 2026-06-19)
-Ordered by bang-for-buck. (#1 inert-skills, #2 reactive-NPCs/replay-board, hub redesign DONE.)
-1. **Generator roadmap — port mapgen to JS for runtime floors (`docs/GENERATOR_ROADMAP.md`).** Then
-   biome system + run/act composer. The composer also unlocks onboarding #5 (legible run shape).
+Ordered by bang-for-buck. (#1 inert-skills, reactive-NPCs/replay-board, hub redesign, runtime
+mapgen all DONE.)
+1. **Generator roadmap #2–3 — biome system + run/act composer (`docs/GENERATOR_ROADMAP.md`).** One
+   biome def per region (palette + tileset + enemy roster + hazard) so floors read as different
+   places; then a Slay-the-Spire act composer (normal→elite→treasure→rest→boss). The composer also
+   unlocks onboarding #5 (legible run shape). Now sits on the runtime generator just landed.
 2. **Expand relics further (24 → ~40) + the relic editor command.** Pure data + a small editor form;
    author more dilemma-axis and build-defining relics. (Pool is at 24 now.)
 3. **Tier XP review / run-seed full determinism.** Floor + relic rolls are seed-reproducible now;
