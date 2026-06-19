@@ -30,6 +30,36 @@
     var T3 = ['gargoyle_sentry', 'lamia_binder', 'ogre_breaker', 'wraith', 'scorpion_stalker', 'vampire_thrall'];
     var BOSSES = ['veinmother', 'cinder_tyrant', 'hollow_warden', 'drowned_choir', 'unmade_echo'];
 
+    // ── BIOME (generator roadmap #3) ──────────────────────────────────────────
+    // A biome def (data/systems/biomes.json) drives a floor's palette (base floor
+    // tile), prop tables, enemy roster, boss pool and hazard mix. DEFAULT mirrors
+    // the historical hardcoded behavior so an absent biome changes nothing.
+    var DEFAULT_BIOME = {
+        floorTile: 0,
+        props: [
+            { gid: 'crystal', count: 4, block: true },
+            { gid: 'rockpile', count: 6, block: true },
+            { gid: 'bones', count: 4, block: false }
+        ],
+        enemyTiers: { 1: T1, 2: T2, 3: T3 },
+        bosses: BOSSES,
+        hazard: { sensorWeight: 0.4, spikeText: 'Spikes erupt from the floor!', spikeDmg: 16,
+            sensorText: 'A System sigil flares underfoot — it has logged your position.', sensorSurveil: 12 },
+        encounterRate: 0.75
+    };
+    function resolveBiome(biome) {
+        if (!biome || typeof biome !== 'object') return DEFAULT_BIOME;
+        var et = biome.enemyTiers || DEFAULT_BIOME.enemyTiers;
+        return {
+            floorTile: biome.floorTile != null ? (biome.floorTile | 0) : DEFAULT_BIOME.floorTile,
+            props: (biome.props && biome.props.length) ? biome.props : DEFAULT_BIOME.props,
+            enemyTiers: { 1: et[1] || et['1'] || T1, 2: et[2] || et['2'] || T2, 3: et[3] || et['3'] || T3 },
+            bosses: (biome.bosses && biome.bosses.length) ? biome.bosses : DEFAULT_BIOME.bosses,
+            hazard: biome.hazard || DEFAULT_BIOME.hazard,
+            encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate
+        };
+    }
+
     // ── seeded RNG helpers (mulberry32 via GameRNG), Python-random-shaped API ──
     function mkRng(seed) {
         var st = RNG.create(((seed | 0) || 1) >>> 0);
@@ -44,13 +74,13 @@
     }
 
     // ── the builder (mirror of IndoorBuilder, dungeon-only) ───────────────────
-    function Builder(w, h, rng) {
+    function Builder(w, h, rng, floorTile) {
         this.W = w; this.H = h; this.rng = rng;
         var n = w * h;
         this.walk = new Array(n).fill(false);     // carved (passable) cells
         this.over = new Array(n).fill(-1);        // overlay gid (-1 = none)
         this.coll = new Array(n).fill(1);         // 1 = solid until carved
-        this.meta = new Array(n).fill(0);         // flat floor tile 0 everywhere
+        this.meta = new Array(n).fill(floorTile | 0); // biome base floor tile
         this.events = [];
     }
     Builder.prototype.inb = function (x, y) { return x >= 0 && x < this.W && y >= 0 && y < this.H; };
@@ -221,10 +251,11 @@
         this.events.push({ x: x, y: y, name: 'RelicCache', trigger: 'action', through: false, graphic: chestGfx(),
             commands: [{ type: 'relic', count: count || 3 }] });
     };
-    Builder.prototype.placeTrap = function (x, y, kind) {
+    Builder.prototype.placeTrap = function (x, y, kind, hz) {
+        hz = hz || {};
         var body = kind === 'sensor'
-            ? [{ type: 'text', text: 'A System sigil flares underfoot — it has logged your position.' }, { type: 'surveil', amount: 12 }]
-            : [{ type: 'text', text: 'Spikes erupt from the floor!' }, { type: 'hurt', what: 'hp', amount: 16 }];
+            ? [{ type: 'text', text: hz.sensorText || 'A System sigil flares underfoot — it has logged your position.' }, { type: 'surveil', amount: hz.sensorSurveil != null ? hz.sensorSurveil : 12 }]
+            : [{ type: 'text', text: hz.spikeText || 'Spikes erupt from the floor!' }, { type: 'hurt', what: 'hp', amount: hz.spikeDmg != null ? hz.spikeDmg : 16 }];
         this.events.push({ x: x, y: y, name: 'Trap', trigger: 'touch', through: true, graphic: { sprite: '', file: '', single: true },
             commands: [{ type: 'conditional', cond: { kind: 'selfswitch', letter: 'A', value: true }, then: [],
                 else: body.concat([{ type: 'selfswitch', letter: 'A', value: true }]) }] });
@@ -237,8 +268,9 @@
         var name = opts.name || ('RunGen' + (opts.seed | 0));
         var region = opts.region || 'awakened';
         var creatures = opts.creatures || null;
+        var bio = resolveBiome(opts.biome);
         var rng = mkRng(opts.seed);
-        var b = new Builder(w, h, rng);
+        var b = new Builder(w, h, rng, bio.floorTile);
 
         // scatter non-overlapping rooms, chain + loop with corridors
         var rooms = [], attempts = 0, targetRooms = 6 + tier * 2;
@@ -269,12 +301,12 @@
             graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
             commands: [{ type: 'text', text: 'Worn stairs lead back up to the surface.' }] });
 
-        var pool = (tier <= 1 ? T1 : tier === 2 ? T2 : T3).concat(tier >= 2 ? T1 : []);
+        var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
         // The deepest room holds either the way DOWN (normal floor → descend to the
         // next) or the ALPHA boss (boss floor → battle, then descend = run cleared).
         var boss = opts.kind === 'boss';
         if (boss) {
-            var bossKey = opts.boss || rng.choice(BOSSES), bossLvl = 2 + tier * 2;
+            var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = 2 + tier * 2;
             b.events.push({ x: ax, y: ay, name: 'Alpha', trigger: 'action', through: false,
                 graphic: { sprite: 'Monster2', file: 'rtp/Monster2.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
                 commands: [{ type: 'text', text: 'The Alpha uncoils from the dark — far larger than its kin.' },
@@ -302,7 +334,7 @@
         var maxd = rooms.reduce(function (m, r) { return Math.max(m, far(r)); }, 1) || 1;
         var sprites = ['Monster1', 'Monster3'];
         for (var r1 = 0; r1 < body.length; r1++) {
-            if (rng.random() < 0.75) {
+            if (rng.random() < bio.encounterRate) {
                 var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + ((depth * 2 + rng.random()) | 0));
                 var sf = b._roomFloor(body[r1]);
                 if (sf[0] !== null) b.placeMonster(sf[0], sf[1], rng.choice(pool), lvl, rng.choice(sprites), creatures);
@@ -326,7 +358,8 @@
             }
         }
         rng.shuffle(walkCells);
-        for (var tt = 0; tt < 3 + tier && tt < walkCells.length; tt++) b.placeTrap(walkCells[tt][0], walkCells[tt][1], rng.random() < 0.4 ? 'sensor' : 'spike');
+        var sensorW = bio.hazard.sensorWeight != null ? bio.hazard.sensorWeight : 0.4;
+        for (var tt = 0; tt < 3 + tier && tt < walkCells.length; tt++) b.placeTrap(walkCells[tt][0], walkCells[tt][1], rng.random() < sensorW ? 'sensor' : 'spike', bio.hazard);
         // pillars in big halls + light clutter
         for (var rp = 0; rp < rooms.length; rp++) {
             var room = rooms[rp];
@@ -338,9 +371,12 @@
                 }
             }
         }
-        b.scatterInRooms(GID.crystal, 4 + tier, true);
-        b.scatterInRooms(GID.rockpile, 6, true);
-        b.scatterInRooms(GID.bones, 4, false);
+        for (var bp = 0; bp < bio.props.length; bp++) {
+            var prop = bio.props[bp], pgid = GID[prop.gid];
+            if (pgid == null) continue;
+            // first prop type gets a small depth bump (tier) like the old crystal scatter
+            b.scatterInRooms(pgid, (prop.count | 0) + (bp === 0 ? tier : 0), !!prop.block);
+        }
         b.repairPropConnectivity();
 
         return assemble(b, name, region);

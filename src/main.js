@@ -945,6 +945,22 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_creaturesDb = j); })
             .catch(function () { return (_creaturesDb = {}); });
     }
+    var _biomesDb = null;
+    function _loadBiomes() {
+        if (_biomesDb) return Promise.resolve(_biomesDb);
+        return fetch('data/systems/biomes.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_biomesDb = j); })
+            .catch(function () { return (_biomesDb = {}); });
+    }
+    // Pick the biome def for this run: run.run.biome override → run.json `biome` →
+    // biomes._meta.default → first non-meta biome. Returns null (→ generator default).
+    function _runBiome(run) {
+        var db = _biomesDb; if (!db) return null;
+        var id = (run && run.biome) || (_runDb && _runDb.biome) || (db._meta && db._meta.default);
+        if (id && db[id]) return db[id];
+        for (var k in db) if (k !== '_meta' && db.hasOwnProperty(k)) return db[k];
+        return null;
+    }
     // Runtime floor generation is ON when GameMapGen is present and run.json doesn't
     // opt out. A fresh floor is grown per descent from run.seed + floor (so a shared
     // seed reproduces the whole descent), tier ramping with depth, boss on the last.
@@ -955,7 +971,8 @@
         var tier = Math.max(1, Math.min(3, Math.ceil((run.floor | 0) * 3 / maxDepth)));
         var fseed = (((run.seed >>> 0) + (run.floor | 0) * 0x9E3779B1) >>> 0) || 1;
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
-            maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened', creatures: _creaturesDb });
+            maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened',
+            creatures: _creaturesDb, biome: _runBiome(run) });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
@@ -995,7 +1012,7 @@
     async function _enterGenFloor() {
         var st = GameSave.state; st.run = st.run || {};
         await _loadRunDb();
-        if (_runtimeGen()) { await _loadCreatures(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
+        if (_runtimeGen()) { await _loadCreatures(); await _loadBiomes(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
         else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
     }
     async function _runOp(c) {

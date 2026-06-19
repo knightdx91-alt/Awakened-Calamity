@@ -83,5 +83,42 @@ const { map, layout } = GameMapGen.generateFloor({ seed: 1, tier: 1, creatures }
 check('layout has tileset + overlay_tileset', layout.tileset === 'rtp_dungeon_ground' && layout.overlay_tileset === 'dun_props');
 check('map references its layout + has a start', map.layout === layout.id && !!map.start);
 
+// ── BIOME system (generator roadmap #3) ────────────────────────────────────
+let biomes = {}; try { biomes = JSON.parse(readFileSync(`${ROOT}/data/systems/biomes.json`)); } catch {}
+const calderra = biomes.calderra, vael = biomes.vael;
+// biome floorTile drives the base floor metatile (palette)
+const camp = GameMapGen.generateFloor({ seed: 7, tier: 2, creatures, biome: calderra });
+const vmap = GameMapGen.generateFloor({ seed: 7, tier: 2, creatures, biome: vael });
+check('biome sets the base floor tile (palette)',
+  camp.layout.metatiles[0] === calderra.floorTile && vmap.layout.metatiles[0] === vael.floorTile &&
+  calderra.floorTile !== vael.floorTile);
+// biome bosses come from the biome pool
+const cb = GameMapGen.generateFloor({ seed: 3, tier: 3, kind: 'boss', creatures, biome: calderra });
+const alpha = cb.map.events.find(e => e.name === 'Alpha');
+const bossKey = alpha.commands.find(c => c.type === 'battle').enemies[0].key;
+check('boss drawn from the biome pool', calderra.bosses.includes(bossKey), bossKey);
+// biome enemy roster — roamers come from the biome's tier list
+const camp2 = GameMapGen.generateFloor({ seed: 5, tier: 1, creatures, biome: calderra });
+const roamerKeys = camp2.map.events.filter(e => e.name === 'Roamer')
+  .map(e => e.commands.find(c => c.type === 'battle').enemies[0].key);
+const allInRoster = roamerKeys.every(k => calderra.enemyTiers['1'].includes(k));
+check('roamers drawn from the biome roster', roamerKeys.length > 0 && allInRoster);
+// biome hazard text is wired into traps
+const trap = camp.map.events.find(e => e.name === 'Trap');
+const trapStr = JSON.stringify(trap);
+check('biome hazard text wired into traps',
+  trapStr.includes(calderra.hazard.spikeText) || trapStr.includes(calderra.hazard.sensorText));
+// no biome → default behavior unchanged (still generates a valid floor)
+const dflt = GameMapGen.generateFloor({ seed: 9, tier: 1, creatures });
+check('no biome → default floor still valid', dflt.layout.metatiles[0] === 0 && !!dflt.map.start);
+// biome floors still fully reachable
+let bioReach = true;
+for (const bio of [calderra, vael, biomes.halveth, biomes.verdara]) {
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 21, tier: 2, creatures, biome: bio });
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) bioReach = false;
+}
+check('all biome floors stay fully reachable', bioReach);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

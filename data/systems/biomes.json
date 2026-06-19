@@ -1,0 +1,102 @@
+{
+  "_meta": {
+    "doc": "BIOME definitions (generator roadmap #3). One biome def per region drives a generated dungeon floor's PALETTE (base floor tile + prop tables), ENEMY ROSTER (tier-banded), BOSS pool, and HAZARD mix — so Verdara/Halveth/Calderra/Vael read as different PLACES, not recolors. Consumed by src/systems/mapgen.js (GameMapGen.generateFloor reads opts.biome) and selected in main.js from run.json's `biome`. floorTile indexes the rtp_dungeon_ground autotile fills (dirt_cave=0, grass_maze=1, rock_cave=2, crystal=3). Prop `gid` names map to data/tilesets/dun_props.gid.json. Add a biome here + set run.json `biome` to use it — no code change needed (RPG-Maker-style data-driven).",
+    "default": "verdara"
+  },
+  "verdara": {
+    "name": "The Hollow Vein",
+    "desc": "Overgrown root-tunnels beneath the green Reach — System-twisted fauna in mossy dark.",
+    "floorTile": 1,
+    "props": [
+      { "gid": "crystal", "count": 5, "block": true },
+      { "gid": "rockpile", "count": 6, "block": true },
+      { "gid": "bones", "count": 4, "block": false }
+    ],
+    "enemyTiers": {
+      "1": ["emberling", "thornwolf", "husk_rat", "cave_crawler"],
+      "2": ["bramblewight", "voltspine", "cinder_hound", "thornwolf"],
+      "3": ["ogre_breaker", "lamia_binder", "scorpion_stalker", "bramblewight"]
+    },
+    "bosses": ["veinmother", "hollow_warden"],
+    "hazard": {
+      "sensorWeight": 0.4,
+      "spikeText": "Spikes erupt from the floor!",
+      "spikeDmg": 16,
+      "sensorText": "A System sigil flares underfoot — it has logged your position.",
+      "sensorSurveil": 12
+    },
+    "encounterRate": 0.75
+  },
+  "calderra": {
+    "name": "The Cinder Reach",
+    "desc": "Magma-veined volcanic galleries — ash falls, embers drift, the air sears.",
+    "floorTile": 0,
+    "props": [
+      { "gid": "rockpile", "count": 7, "block": true },
+      { "gid": "barrel", "count": 4, "block": true },
+      { "gid": "bones", "count": 5, "block": false }
+    ],
+    "enemyTiers": {
+      "1": ["ash_imp", "emberling", "cinder_hound", "husk_rat"],
+      "2": ["cinder_hound", "voltspine", "ash_imp", "bonepicker"],
+      "3": ["ogre_breaker", "gargoyle_sentry", "vampire_thrall", "cinder_hound"]
+    },
+    "bosses": ["cinder_tyrant", "unmade_echo"],
+    "hazard": {
+      "sensorWeight": 0.3,
+      "spikeText": "A jet of magma bursts up through a fissure!",
+      "spikeDmg": 20,
+      "sensorText": "A System sigil flares in the cinders — it has logged your position.",
+      "sensorSurveil": 12
+    },
+    "encounterRate": 0.8
+  },
+  "halveth": {
+    "name": "The Frostmarrow",
+    "desc": "Frozen ossuary-caves under Halveth — pale bone, blue rime, the cold that watches.",
+    "floorTile": 2,
+    "props": [
+      { "gid": "grave", "count": 5, "block": false },
+      { "gid": "bones", "count": 6, "block": false },
+      { "gid": "rockpile", "count": 5, "block": true }
+    ],
+    "enemyTiers": {
+      "1": ["frost_shade", "husk_rat", "bonepicker", "cave_crawler"],
+      "2": ["frost_shade", "bonepicker", "wraith", "voltspine"],
+      "3": ["wraith", "vampire_thrall", "gargoyle_sentry", "lamia_binder"]
+    },
+    "bosses": ["hollow_warden", "unmade_echo"],
+    "hazard": {
+      "sensorWeight": 0.45,
+      "spikeText": "Ice shards stab up from the rimed floor!",
+      "spikeDmg": 16,
+      "sensorText": "A frost-sigil flares underfoot — the System has logged your position.",
+      "sensorSurveil": 12
+    },
+    "encounterRate": 0.7
+  },
+  "vael": {
+    "name": "The Drowned Choir",
+    "desc": "Flooded crystal-caverns of Vael — black water, singing stone, sahagin in the deep.",
+    "floorTile": 3,
+    "props": [
+      { "gid": "crystal", "count": 6, "block": true },
+      { "gid": "crystal2", "count": 4, "block": true },
+      { "gid": "bones", "count": 4, "block": false }
+    ],
+    "enemyTiers": {
+      "1": ["mire_slime", "sahagin_raider", "husk_rat", "cave_crawler"],
+      "2": ["sahagin_raider", "frost_shade", "mire_slime", "voltspine"],
+      "3": ["lamia_binder", "wraith", "scorpion_stalker", "sahagin_raider"]
+    },
+    "bosses": ["drowned_choir", "veinmother"],
+    "hazard": {
+      "sensorWeight": 0.5,
+      "spikeText": "The flooded floor gives way — barbed coral tears at you!",
+      "spikeDmg": 16,
+      "sensorText": "A drowned sigil pulses in the water — the System has logged your position.",
+      "sensorSurveil": 12
+    },
+    "encounterRate": 0.75
+  }
+}

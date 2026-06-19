@@ -72,10 +72,16 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    existing Builder; headless-testable via `tools/test_mapgen.mjs` (assert every style stays
    connected). *(Was #5; promoted — cheapest high-impact change, unblocks the rest. `MAPGEN_SPEC §6`.)*
 
-3. **Biome system.** One biome def per region = palette + autotile set + prop tables + **enemy
-   roster** + hazard + mini-boss, driving every floor archetype so Verdara/Halveth/Calderra/Vael
-   read as different places (not recolors). Pairs with #2: a biome picks which room-shape mix +
-   prop tables to use. Spec in `MAPGEN_SPEC.md`.
+3. **Biome system.** ✅ DONE (2026-06-19) — `data/systems/biomes.json` (4 biomes: verdara/
+   calderra/halveth/vael) drives each generated floor's **palette** (base floor tile via the
+   `rtp_dungeon_ground` autotile fills), **prop tables**, tier-banded **enemy roster**, **boss
+   pool**, **hazard mix** (trap text/dmg/surveil + sensor weight) and encounter rate.
+   `GameMapGen.generateFloor` reads `opts.biome`; `main.js` selects it from `run.run.biome` →
+   `run.json` `biome` → `biomes._meta.default`. Absent biome → unchanged default behavior.
+   `tools/test_mapgen.mjs` = 18 checks (palette/boss/roster/hazard/reachability). **Next (deeper):**
+   per-biome **tileset/wall set** (not just floor tile) + biome-driven room-shape mix once #2 lands.
+   *Original spec: one biome def per region = palette + autotile set + prop tables + enemy roster +
+   hazard + mini-boss, so Verdara/Halveth/Calderra/Vael read as different places (not recolors).*
 
 4. **Run/act composer (Slay-the-Spire map model).** Compose floors into a PACED act —
    normal → elite → treasure → rest → boss — instead of a flat pool. Pacing is where roguelite
