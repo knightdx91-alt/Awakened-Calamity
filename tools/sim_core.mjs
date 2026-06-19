@@ -108,3 +108,28 @@ export function runFight(db, GC, playerDef, enemyDefs, seed, opts = {}) {
 export function classIds(db) {
   return Object.keys(db.classes).filter((k) => k !== '_meta' && db.classes[k] && db.classes[k].statProfile);
 }
+
+// ── tier-aware encounter selection (the roster has `tier` + role:'boss') ──
+// Regular (non-boss) creatures, and the boss roster.
+export function regularCreatures(db) {
+  return Object.keys(db.creatures).filter((k) => k !== '_meta' && k !== 'dummy'
+    && db.creatures[k].stats && (db.creatures[k].role !== 'boss'));
+}
+export function bossCreatures(db) {
+  return Object.keys(db.creatures).filter((k) => k !== '_meta' && db.creatures[k].stats && db.creatures[k].role === 'boss');
+}
+// Pick a creature appropriate for a floor: tier ramps with depth (1 early → 3 deep),
+// occasionally one tier below for variety. Falls back to any regular creature.
+export function pickFloorEnemy(db, rng, floor, maxDepth) {
+  const frac = maxDepth > 1 ? (floor - 1) / (maxDepth - 1) : 0;
+  let tier = frac < 0.34 ? 1 : frac < 0.7 ? 2 : 3;
+  if (tier > 1 && rng() < 0.3) tier -= 1;               // some easier mixed in
+  const reg = regularCreatures(db);
+  let pool = reg.filter((k) => (db.creatures[k].tier || 1) === tier);
+  if (!pool.length) pool = reg;
+  return pool[Math.floor(rng() * pool.length) % pool.length];
+}
+export function pickBoss(db, rng) {
+  const b = bossCreatures(db);
+  return b.length ? b[Math.floor(rng() * b.length) % b.length] : 'thornwolf';
+}

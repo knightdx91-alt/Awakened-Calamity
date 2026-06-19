@@ -439,16 +439,21 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
                      "graphic": {"sprite": "Other3", "file": "rtp/Other3.png",
                                  "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
                      "commands": [{"type": "text", "text": "Worn stairs lead back up to the surface."}]})
-    # the Alpha = a real boss encounter (a tougher creature, level-scaled)
-    boss_key = rng.choice(["thornwolf", "emberling"])
+    # Enemy roster (data/systems/creatures.json), banded by tier so floors vary.
+    T1 = ["emberling", "thornwolf", "husk_rat", "mire_slime", "ash_imp", "cave_crawler"]
+    T2 = ["bramblewight", "frost_shade", "voltspine", "bonepicker", "sahagin_raider", "cinder_hound"]
+    T3 = ["gargoyle_sentry", "lamia_binder", "ogre_breaker", "wraith", "scorpion_stalker", "vampire_thrall"]
+    BOSSES = ["veinmother", "cinder_tyrant", "hollow_warden", "drowned_choir", "unmade_echo"]
+    enemy_pool = (T1 if tier <= 1 else T2 if tier == 2 else T3) + (T1 if tier >= 2 else [])
+    # the Alpha = a real named boss (single, level-scaled)
+    boss_key = rng.choice(BOSSES)
     boss_lvl = 2 + tier * 2
     b.events.append({"x": ax, "y": ay, "name": "Alpha", "trigger": "action", "through": False,
                      "graphic": {"sprite": "Monster2", "file": "rtp/Monster2.png",
                                  "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
                      "commands": [
                          {"type": "text", "text": "The Alpha uncoils from the dark — far larger than its kin."},
-                         {"type": "battle", "enemies": [{"key": boss_key, "level": boss_lvl},
-                                                        {"key": boss_key, "level": max(1, boss_lvl - 2)}]},
+                         {"type": "battle", "enemies": [{"key": boss_key, "level": boss_lvl}]},
                          {"type": "text", "text": "The Alpha falls. The dungeon goes still."},
                          {"type": "despawn"}]})
 
@@ -461,7 +466,7 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
         if rng.random() < 0.75:
             depth = far(r) / maxd                    # 0 near entrance .. 1 deep
             lvl = max(1, tier + int(depth * 2 + rng.random()))
-            key = "thornwolf" if depth > 0.5 and rng.random() < 0.6 else "emberling"
+            key = rng.choice(enemy_pool)
             sx, sy = b._room_floor(r)
             if sx is not None:
                 b.place_monster(sx, sy, key, lvl, sprite=rng.choice(sprites))

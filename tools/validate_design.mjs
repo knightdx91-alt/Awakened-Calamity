@@ -6,7 +6,7 @@
 // has teeth (accepting the System's help is genuinely tempting AND genuinely costly).
 //
 //   node tools/validate_design.mjs [--n 24]
-import { loadCore, buildPlayerDef, buildEnemyDef, runFight, classIds, combatLoadout } from './sim_core.mjs';
+import { loadCore, buildPlayerDef, buildEnemyDef, runFight, classIds, combatLoadout, pickFloorEnemy, pickBoss } from './sim_core.mjs';
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -16,7 +16,8 @@ const corruptDb = JSON.parse(readFileSync(`${process.cwd()}/data/systems/corrupt
 const args = process.argv.slice(2);
 const N = parseInt((args[args.indexOf('--n') + 1]) || '24', 10);
 const { db, GameCombat } = loadCore();
-const creatures = Object.keys(db.creatures).filter((k) => k !== '_meta' && k !== 'dummy' && db.creatures[k].stats);
+// Fair-fight pool EXCLUDES bosses (they're meant to be hard; tested via the descent).
+const creatures = Object.keys(db.creatures).filter((k) => k !== '_meta' && k !== 'dummy' && db.creatures[k].stats && db.creatures[k].role !== 'boss');
 
 // clone db with the System Intervention toggled (the player's "policy")
 function withIntervention(on) {
@@ -36,8 +37,8 @@ function descent(database, classId, seed, { depth = 8, rest = 0.5 } = {}) {
   for (let f = 1; f <= depth; f++) {
     if (GameCorruption.collected(corruptDb, surv)) return { depth: f - 1, surv, collected: true };
     const boss = f === depth, lvl = boss ? f + 2 : f;
-    const en = [buildEnemyDef(database, pick(rng, creatures), lvl, 'e1')];
-    if (boss || (f >= 5 && rng() < 0.5)) en.push(buildEnemyDef(database, pick(rng, creatures), Math.max(1, lvl - 2), 'e2'));
+    const en = [buildEnemyDef(database, boss ? pickBoss(database, rng) : pickFloorEnemy(database, rng, f, depth), lvl, 'e1')];
+    if (!boss && f >= 5 && rng() < 0.5) en.push(buildEnemyDef(database, pickFloorEnemy(database, rng, f, depth), Math.max(1, lvl - 2), 'e2'));
     const pdef = buildPlayerDef(database, classId, Math.max(1, Math.ceil(f * 0.8)));
     const mod = GameCorruption.atkMod(corruptDb, surv);          // corruption saps your edge
     if (mod) pdef.stats = { ...pdef.stats, atk: Math.round(pdef.stats.atk * (1 + mod)) };

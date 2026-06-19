@@ -52,5 +52,5 @@ done
 summary="${switched[*]}"
 
 cat <<JSON
-{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Session policy: work directly on \`main\` for ALL repos in this workspace - commit straight to main, NEVER create feature branches, NEVER open PRs. session-start hook result: ${summary}"}}
+{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Session policy: work directly on \`main\` for ALL repos in this workspace - commit straight to main, NEVER create feature branches, NEVER open PRs. session-start hook result: ${summary}  ||  REMINDER (owner request): the generator-improvement roadmap is queued in docs/GENERATOR_ROADMAP.md (1 port mapgen to JS for runtime gen, 2 biome system, 3 run/act composer, 4 data-driven templates, 5 room-shape variety, 6 smarter encounter placement). Surface this to the owner at the start of the session."}}
 JSON

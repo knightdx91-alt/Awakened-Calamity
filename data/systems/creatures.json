@@ -1,58 +1,463 @@
 {
-  "emberling": {
-    "name": "Emberling",
-    "affinity": "ember",
-    "xpYield": 1.0,
-    "stats": {
-      "hp": 62,
-      "atk": 22,
-      "def": 14,
-      "speed": 62
-    },
-    "loadout": [
-      "jab",
-      "ember_bolt"
-    ],
-    "battler": "rtp/Firespirit.png",
-    "creditYield": 1.0
+ "emberling": {
+  "name": "Emberling",
+  "affinity": "ember",
+  "xpYield": 1.0,
+  "stats": {
+   "hp": 62,
+   "atk": 22,
+   "def": 14,
+   "speed": 62
   },
-  "thornwolf": {
-    "name": "Thornwolf",
-    "affinity": "verdant",
-    "xpYield": 1.3,
-    "stats": {
-      "hp": 78,
-      "atk": 26,
-      "def": 17,
-      "speed": 70
-    },
-    "loadout": [
-      "jab",
-      "heavy_strike"
-    ],
-    "battler": "rtp/Werewolf.png",
-    "creditYield": 1.3
+  "loadout": [
+   "jab",
+   "ember_bolt"
+  ],
+  "battler": "rtp/Firespirit.png",
+  "creditYield": 1.0
+ },
+ "thornwolf": {
+  "name": "Thornwolf",
+  "affinity": "verdant",
+  "xpYield": 1.3,
+  "stats": {
+   "hp": 78,
+   "atk": 26,
+   "def": 17,
+   "speed": 70
   },
-  "dummy": {
-    "name": "Hollow Husk",
-    "affinity": null,
-    "xpYield": 0.6,
-    "stats": {
-      "hp": 34,
-      "atk": 4,
-      "def": 6,
-      "speed": 30
-    },
-    "loadout": [
-      "jab"
-    ],
-    "charset": {
-      "file": "rtp/Monster1.png",
-      "cols": 12,
-      "rows": 8,
-      "frame": 32,
-      "char": 0
-    },
-    "creditYield": 0.0
-  }
+  "loadout": [
+   "jab",
+   "heavy_strike"
+  ],
+  "battler": "rtp/Werewolf.png",
+  "creditYield": 1.3
+ },
+ "dummy": {
+  "name": "Hollow Husk",
+  "affinity": null,
+  "xpYield": 0.6,
+  "stats": {
+   "hp": 34,
+   "atk": 4,
+   "def": 6,
+   "speed": 30
+  },
+  "loadout": [
+   "jab"
+  ],
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "cols": 12,
+   "rows": 8,
+   "frame": 32,
+   "char": 0
+  },
+  "creditYield": 0.0
+ },
+ "husk_rat": {
+  "name": "Husk Rat",
+  "affinity": "umbral",
+  "tier": 1,
+  "role": "swarm",
+  "xpYield": 0.7,
+  "creditYield": 0.7,
+  "stats": {
+   "hp": 38,
+   "atk": 16,
+   "def": 8,
+   "speed": 72
+  },
+  "loadout": [
+   "jab"
+  ],
+  "battler": "rtp/Rat.png"
+ },
+ "mire_slime": {
+  "name": "Mire Slime",
+  "affinity": "tide",
+  "tier": 1,
+  "role": "tank",
+  "xpYield": 1.0,
+  "creditYield": 1.1,
+  "stats": {
+   "hp": 96,
+   "atk": 15,
+   "def": 22,
+   "speed": 30
+  },
+  "loadout": [
+   "jab",
+   "shield_bash"
+  ],
+  "battler": "rtp/Slime.png"
+ },
+ "ash_imp": {
+  "name": "Ash Imp",
+  "affinity": "ember",
+  "tier": 1,
+  "role": "skirmisher",
+  "xpYield": 1.0,
+  "creditYield": 1.0,
+  "stats": {
+   "hp": 46,
+   "atk": 21,
+   "def": 9,
+   "speed": 86
+  },
+  "loadout": [
+   "jab",
+   "ember_bolt"
+  ],
+  "battler": "rtp/Imp.png"
+ },
+ "cave_crawler": {
+  "name": "Cave Crawler",
+  "affinity": "toxin",
+  "tier": 1,
+  "role": "dot",
+  "xpYield": 1.0,
+  "creditYield": 1.0,
+  "stats": {
+   "hp": 54,
+   "atk": 18,
+   "def": 12,
+   "speed": 60
+  },
+  "loadout": [
+   "jab",
+   "coat_blade"
+  ],
+  "battler": "rtp/Spider.png"
+ },
+ "bramblewight": {
+  "name": "Bramblewight",
+  "affinity": "verdant",
+  "tier": 2,
+  "role": "controller",
+  "xpYield": 1.4,
+  "creditYield": 1.3,
+  "stats": {
+   "hp": 90,
+   "atk": 19,
+   "def": 20,
+   "speed": 40
+  },
+  "loadout": [
+   "plant_charge",
+   "taunt"
+  ],
+  "battler": "rtp/Plant.png"
+ },
+ "frost_shade": {
+  "name": "Frost Shade",
+  "affinity": "frost",
+  "tier": 2,
+  "role": "controller",
+  "xpYield": 1.3,
+  "creditYield": 1.2,
+  "stats": {
+   "hp": 57,
+   "atk": 20,
+   "def": 12,
+   "speed": 66
+  },
+  "loadout": [
+   "jab",
+   "pin_shot",
+   "mark_prey"
+  ],
+  "battler": "rtp/Willowisp.png"
+ },
+ "voltspine": {
+  "name": "Voltspine",
+  "affinity": "storm",
+  "tier": 2,
+  "role": "assassin",
+  "xpYield": 1.4,
+  "creditYield": 1.3,
+  "stats": {
+   "hp": 52,
+   "atk": 26,
+   "def": 12,
+   "speed": 96
+  },
+  "loadout": [
+   "lunge",
+   "mark_prey"
+  ],
+  "battler": "rtp/Cockatrice.png"
+ },
+ "bonepicker": {
+  "name": "Bonepicker",
+  "affinity": "umbral",
+  "tier": 2,
+  "role": "assassin",
+  "xpYield": 1.3,
+  "creditYield": 1.2,
+  "stats": {
+   "hp": 56,
+   "atk": 22,
+   "def": 14,
+   "speed": 80
+  },
+  "loadout": [
+   "jab",
+   "backstab"
+  ],
+  "battler": "rtp/Skeleton.png"
+ },
+ "sahagin_raider": {
+  "name": "Sahagin Raider",
+  "affinity": "tide",
+  "tier": 2,
+  "role": "bruiser",
+  "xpYield": 1.3,
+  "creditYield": 1.3,
+  "stats": {
+   "hp": 75,
+   "atk": 23,
+   "def": 18,
+   "speed": 64
+  },
+  "loadout": [
+   "heavy_strike",
+   "pierce"
+  ],
+  "battler": "rtp/Sahagin.png"
+ },
+ "cinder_hound": {
+  "name": "Cinder Hound",
+  "affinity": "ember",
+  "tier": 2,
+  "role": "aoe",
+  "xpYield": 1.4,
+  "creditYield": 1.3,
+  "stats": {
+   "hp": 69,
+   "atk": 22,
+   "def": 15,
+   "speed": 72
+  },
+  "loadout": [
+   "jab",
+   "cleave"
+  ],
+  "battler": "rtp/Kerberos.png"
+ },
+ "gargoyle_sentry": {
+  "name": "Gargoyle Sentry",
+  "affinity": "stone",
+  "tier": 3,
+  "role": "tank",
+  "xpYield": 1.8,
+  "creditYield": 1.6,
+  "stats": {
+   "hp": 108,
+   "atk": 18,
+   "def": 40,
+   "speed": 38
+  },
+  "loadout": [
+   "heavy_strike",
+   "pierce"
+  ],
+  "battler": "rtp/Gargoyle.png"
+ },
+ "lamia_binder": {
+  "name": "Lamia Binder",
+  "affinity": "umbral",
+  "tier": 3,
+  "role": "controller",
+  "xpYield": 1.9,
+  "creditYield": 1.7,
+  "stats": {
+   "hp": 79,
+   "atk": 22,
+   "def": 18,
+   "speed": 70
+  },
+  "loadout": [
+   "coat_blade",
+   "pin_shot",
+   "mark_prey"
+  ],
+  "battler": "rtp/Lamia.png"
+ },
+ "ogre_breaker": {
+  "name": "Ogre Breaker",
+  "affinity": "stone",
+  "tier": 3,
+  "role": "bruiser",
+  "xpYield": 1.9,
+  "creditYield": 1.7,
+  "stats": {
+   "hp": 119,
+   "atk": 28,
+   "def": 24,
+   "speed": 40
+  },
+  "loadout": [
+   "ground_slam",
+   "heavy_strike"
+  ],
+  "battler": "rtp/Ogre.png"
+ },
+ "wraith": {
+  "name": "Wraith",
+  "affinity": "frost",
+  "tier": 3,
+  "role": "assassin",
+  "xpYield": 1.8,
+  "creditYield": 1.6,
+  "stats": {
+   "hp": 69,
+   "atk": 25,
+   "def": 16,
+   "speed": 88
+  },
+  "loadout": [
+   "backstab",
+   "mark_prey"
+  ],
+  "battler": "rtp/Ghost.png"
+ },
+ "scorpion_stalker": {
+  "name": "Scorpion Stalker",
+  "affinity": "toxin",
+  "tier": 3,
+  "role": "dot",
+  "xpYield": 1.8,
+  "creditYield": 1.6,
+  "stats": {
+   "hp": 85,
+   "atk": 22,
+   "def": 22,
+   "speed": 64
+  },
+  "loadout": [
+   "coat_blade",
+   "pierce"
+  ],
+  "battler": "rtp/Scorpion.png"
+ },
+ "vampire_thrall": {
+  "name": "Vampire Thrall",
+  "affinity": "corruption",
+  "tier": 3,
+  "role": "bruiser",
+  "xpYield": 2.0,
+  "creditYield": 1.8,
+  "stats": {
+   "hp": 86,
+   "atk": 26,
+   "def": 20,
+   "speed": 74
+  },
+  "loadout": [
+   "heavy_strike",
+   "immolate"
+  ],
+  "battler": "rtp/Vampire.png"
+ },
+ "veinmother": {
+  "name": "The Veinmother",
+  "affinity": "toxin",
+  "tier": 4,
+  "role": "boss",
+  "xpYield": 6.0,
+  "creditYield": 4.0,
+  "stats": {
+   "hp": 320,
+   "atk": 34,
+   "def": 28,
+   "speed": 58
+  },
+  "loadout": [
+   "coat_blade",
+   "cleave",
+   "deploy_turret"
+  ],
+  "battler": "rtp/Lamia.png"
+ },
+ "cinder_tyrant": {
+  "name": "The Cinder Tyrant",
+  "affinity": "ember",
+  "tier": 4,
+  "role": "boss",
+  "xpYield": 6.0,
+  "creditYield": 4.0,
+  "stats": {
+   "hp": 300,
+   "atk": 40,
+   "def": 26,
+   "speed": 66
+  },
+  "loadout": [
+   "fireball",
+   "immolate",
+   "rally_aura"
+  ],
+  "battler": "rtp/Ifrit.png"
+ },
+ "hollow_warden": {
+  "name": "The Hollow Warden",
+  "affinity": "stone",
+  "tier": 4,
+  "role": "boss",
+  "xpYield": 6.5,
+  "creditYield": 4.5,
+  "stats": {
+   "hp": 420,
+   "atk": 36,
+   "def": 46,
+   "speed": 42
+  },
+  "loadout": [
+   "ground_slam",
+   "taunt",
+   "pierce"
+  ],
+  "battler": "rtp/Behemoth.png"
+ },
+ "drowned_choir": {
+  "name": "The Drowned Choir",
+  "affinity": "tide",
+  "tier": 4,
+  "role": "boss",
+  "xpYield": 6.0,
+  "creditYield": 4.0,
+  "stats": {
+   "hp": 300,
+   "atk": 32,
+   "def": 24,
+   "speed": 60
+  },
+  "loadout": [
+   "pin_shot",
+   "cleave",
+   "deploy_turret"
+  ],
+  "battler": "rtp/Sahagin.png"
+ },
+ "unmade_echo": {
+  "name": "The Unmade Echo",
+  "affinity": "corruption",
+  "tier": 5,
+  "role": "boss",
+  "xpYield": 8.0,
+  "creditYield": 5.0,
+  "stats": {
+   "hp": 380,
+   "atk": 46,
+   "def": 34,
+   "speed": 72
+  },
+  "loadout": [
+   "unmake",
+   "heavy_strike",
+   "immolate"
+  ],
+  "battler": "rtp/Darklord.png"
+ }
 }
