@@ -325,19 +325,33 @@
         GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
         GameMap.loadEncounterData(currentRegion);
     }
+    // Full-screen black cover to hide the boot/previous map while the next map
+    // loads (title → New Game / Continue have an async fetch gap that would
+    // otherwise flash the old map). Returns a remover.
+    function _blackout() {
+        var d = document.createElement('div');
+        d.id = 'ac-blackout';
+        d.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;pointer-events:none;';
+        document.body.appendChild(d);
+        return function () { if (d && d.parentNode) d.parentNode.removeChild(d); };
+    }
     async function _continueGame() {
-        var slot = _firstSlotIndex();
-        if (slot < 0) { _newGame(); return; }
-        GameSave.load(slot);
-        var loc = (GameSave.state && GameSave.state.currentLocation) || {};
-        await _enterMap(loc.mapName || 'Dawnhearth', loc.region || 'awakened', loc.x, loc.y);
-        console.log('[Main] Continued slot', slot, '→', window._mapName);
+        var unblock = _blackout();
+        try {
+            var slot = _firstSlotIndex();
+            if (slot < 0) { unblock(); _newGame(); return; }
+            GameSave.load(slot);
+            var loc = (GameSave.state && GameSave.state.currentLocation) || {};
+            await _enterMap(loc.mapName || 'Dawnhearth', loc.region || 'awakened', loc.x, loc.y);
+            console.log('[Main] Continued slot', slot, '→', window._mapName);
+        } finally { requestAnimationFrame(function () { requestAnimationFrame(unblock); }); }
     }
     function _newGame() {
         if (window.GameSave) {
             GameSave.state = GameSave.DEFAULT_SLOT_DATA();
             GameSave.currentSlot = 0;
         }
+        var unblock = _blackout();   // hide the boot map during the async load (no flash)
         var finish = async function () {
             // New-game behavior is DATA (data/systems/system.json → newGame), the
             // RPG-Maker "System tab > Starting Position" analogue — change it without
@@ -368,7 +382,9 @@
             if (window.GameEventState) { GameEventState.reset(); if (useCreation && ng.creationSwitch) GameEventState.setSwitch(ng.creationSwitch, true); }
             console.log('[Main] New game →', firstMap, useCreation ? '(creation stage)' : '(direct start)');
         };
-        finish();
+        // Release the black cover only after the new map has painted (double rAF),
+        // so the boot/previous map is never visible during the transition.
+        finish().finally(function () { requestAnimationFrame(function () { requestAnimationFrame(unblock); }); });
     }
 
     // Compare the running build to the deployed version.txt; if a newer build is

@@ -428,6 +428,18 @@ architecture, map system, save system) and is still the best reference for how t
 `src/` code behaves — the code here is the same code.
 
 ## CRITICAL RULES
+- **🎮 BUILD IT LIKE RPG MAKER — OWNER DIRECTIVE (highest priority for new features).**
+  The owner wants **as much as possible to be authorable/editable BY THEM without touching code** —
+  i.e. **data + editable event blocks** (the map-editor event commands, `data/systems/*.json`,
+  `common_events.json`), exactly like RPG Maker. When building or changing ANY feature:
+  1. Prefer **editable event commands** (register them in BOTH the engine `runCmd` AND the
+     map-editor palette + forms) and **data files** over hardcoded JS flow.
+  2. Decompose monolithic behaviors into **fine-grained, composable commands** (e.g. the descent
+     loop = `run` start/deeper/end + `gendungeon` + a `conditional` kind, not one fat `descend`).
+  3. Game-wide settings go in a **System config** (`data/systems/system.json`, the RM "System
+     tab" analogue) — e.g. the new-game start position — so the owner changes them without code.
+  4. **If something genuinely CANNOT be made data/event-driven, STOP and TELL THE OWNER why**
+     (don't silently hardcode it). Default to data; escalate the exceptions.
 - **Branch: `main` ONLY.** All work and pushes go straight to `main`. **No feature branches,
   no PRs** (the owner confirmed: while we work on main, a PR would just be merging main into
   itself). Push directly.
