@@ -2,6 +2,41 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## 📌 SESSION WRAP — 2026-06-19 (big session; all pushed to `main`)
+Five things shipped this session (each has its own detailed ✅ DONE block below):
+1. **Wired the inert combat skills** — `skills.json` real inert combat skills 22 → 0; every class's
+   FIGHT menu is now real (data retags + new `combat.js` trait handlers). `commit` early in session.
+2. **Reactive run-state NPCs + replay-seed board** — GameVoice NPCs react to deepest/clears/
+   collections/untethered/lifeSurv; a `ReplaySeedBoard` in Dawnhearth pins `run_seed`/`run_seed_in`.
+3. **sim_run enjoyability metrics** — critical-choices/run + death-cause + death-by-floor histograms
+   (`--untethered` honest read vs tethered `--collect` budget). Finding: untethered brutality is an
+   **attrition/scaling** problem, deaths front-loaded floors 1–2 → the player-vs-enemy growth gap is
+   the tuning lever.
+4. **Hub redesign** — Dawnhearth zoned + signed (CRYSTAL/BOARD/FRACTURE+Replay Slate/STILL PLACE),
+   directory signpost, Infirmary healer (Sister Wenna), Inn wired (Door12↔DawnhearthInn + Innkeeper
+   + RestBed), 13 facade doors blanked diegetically. Onboarding #3 done.
+5. **Runtime floor generation (generator roadmap #1)** — `src/systems/mapgen.js` (`GameMapGen`, pure)
+   grows a fresh dungeon floor per descent from `run.seed+floor`; `GameMap.loadGenerated` injection;
+   browser-verified render. Same seed → identical descent (replay-safe).
+
+### ▶ STILL TO GO (next sessions, priority order)
+- **Generator roadmap #2 — biome system** (HIGHEST ROI next): one biome def per region = palette +
+  tileset + enemy roster + hazard + mini-boss, so floors read as different places. Now sits on the
+  runtime generator. (Then #3 run/act composer — also unlocks onboarding #5 legible run shape;
+  #5 cellular-automata cave rooms for organic shape; #4 prefab/template rooms for set-pieces.)
+- **Difficulty tuning pass** — use the new `sim_run` histograms: close the player-vs-enemy growth
+  gap (deaths cluster floors 1–2, mostly "outleveled"). Needs a human playtest to confirm feel.
+- **Expand relics (24 → ~40) + relic editor command.**
+- **Tier XP review / full battle-seed determinism** (derive battle seed from run.seed+floor+encIdx).
+- **Onboarding #5** — the Board shows the run's SHAPE (Slay-the-Spire act map; needs the composer).
+- **Shipping blockers** — original art to replace EULA-gated RTP; human playtest of the curve.
+- **Carried-over threads** (older, still open): Pixel-Fantasy autotile bakes; World Area Bible
+  (spec locked, region-by-region); interior wall-face look + room sectioning/furniture; Master tier
+  content (6 → ~50); survival systems → gameplay (Stamina/Exposure/Bind); cloud-saves → CF Worker.
+- **Note on research:** this env's **egress policy blocks reddit.com** (and similar) — to pull
+  Reddit/forum content either loosen the environment's network policy (allowlist reddit domains) or
+  paste the content into chat. `example.com`/GitHub/raw.githubusercontent are reachable.
+
 ## ✅ DONE 2026-06-19 — Inert combat skills wired (priority #1: 0 inert combat skills remain)
 Audited `skills.json` (193 entries): real inert combat skills went **22 → 0** (the 9 still-"inert"
 passives are all genuine NON-combat lifestyle hooks — exposureResist/craftQuality/repGain/bindChance/
