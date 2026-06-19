@@ -2068,6 +2068,7 @@
         eventAt: function (x, y) { return _eventAt(x, y); },
         fireEvent: function (ev) { return runEvent(ev); },
         fireEventAt: function (x, y) { var e = _eventAt(x, y); return e ? runEvent(e) : Promise.resolve(); },
+        startRun: async function (c) { await _runStart(c || { tethered: true, seed: 12345 }); await _enterGenFloor(); return GameSave.state.run; },
         run: function () { return window.GameSave && GameSave.state && GameSave.state.run; },
         meta: function () { return window.GameSave && GameSave.state && GameSave.state.meta; },
         mapName: function () { return GameMap.current && GameMap.current.name; },

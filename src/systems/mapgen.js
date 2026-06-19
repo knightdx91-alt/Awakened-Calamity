@@ -46,7 +46,8 @@
         hazard: { sensorWeight: 0.4, spikeText: 'Spikes erupt from the floor!', spikeDmg: 16,
             sensorText: 'A System sigil flares underfoot — it has logged your position.', sensorSurveil: 12 },
         encounterRate: 0.75,
-        caveChance: 0.4
+        caveChance: 0.4,
+        style: 'mixed'
     };
     function resolveBiome(biome) {
         if (!biome || typeof biome !== 'object') return DEFAULT_BIOME;
@@ -58,7 +59,8 @@
             bosses: (biome.bosses && biome.bosses.length) ? biome.bosses : DEFAULT_BIOME.bosses,
             hazard: biome.hazard || DEFAULT_BIOME.hazard,
             encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate,
-            caveChance: biome.caveChance != null ? biome.caveChance : DEFAULT_BIOME.caveChance
+            caveChance: biome.caveChance != null ? biome.caveChance : DEFAULT_BIOME.caveChance,
+            style: biome.style || DEFAULT_BIOME.style
         };
     }
 
@@ -126,6 +128,39 @@
         // force a connected core at the room centre so the chain corridor lands on floor
         var ccx = (rx0 + rx1) >> 1, ccy = (ry0 + ry1) >> 1;
         for (var py = -1; py <= 1; py++) for (var px = -1; px <= 1; px++) this._mark(ccx + px, ccy + py);
+    };
+    // carve a single room (rect or organic cave) honoring caveChance; returns [cx,cy,rw,rh]
+    Builder.prototype.carveRoomAt = function (rx, ry, rw, rh, caveChance) {
+        if (this.rng.random() < (caveChance != null ? caveChance : 0.4)) this.carveCaveRoom(rx, ry, rx + rw, ry + rh);
+        else this.carveRect(rx, ry, rx + rw, ry + rh);
+        return [rx + (rw / 2 | 0), ry + (rh / 2 | 0), rw, rh];
+    };
+    // BSP STRUCTURED LAYOUT (generator roadmap #5): recursively partition the map,
+    // carve one room per leaf, and connect sibling partitions on the unwind so the
+    // floor is CONNECTED BY CONSTRUCTION (structured rooms vs. the random scatter).
+    // Returns the rooms[] array (same shape the orchestration expects).
+    Builder.prototype.bspRooms = function (rng, caveChance, depthLimit) {
+        var self = this, MIN = 9, rooms = [];
+        function build(x, y, w, h, depth) {
+            var canH = w >= MIN * 2, canV = h >= MIN * 2;
+            if (depth >= depthLimit || (!canH && !canV) || (rng.random() < 0.2 && depth > 1)) {
+                // leaf: carve a room inside the partition with a 1-tile pad
+                var rw = Math.max(5, Math.min(9, w - 3)), rh = Math.max(4, Math.min(7, h - 3));
+                var rx = x + 1 + rng.randint(0, Math.max(0, w - 2 - rw));
+                var ry = y + 1 + rng.randint(0, Math.max(0, h - 2 - rh));
+                var room = self.carveRoomAt(rx, ry, rw, rh, caveChance); rooms.push(room);
+                return room;
+            }
+            var horiz = (canH && canV) ? (rng.random() < 0.5) : canH;
+            var ra, rb;
+            if (horiz) { var cw = rng.randint(MIN, w - MIN); ra = build(x, y, cw, h, depth + 1); rb = build(x + cw, y, w - cw, h, depth + 1); }
+            else { var ch = rng.randint(MIN, h - MIN); ra = build(x, y, w, ch, depth + 1); rb = build(x, y + ch, w, h - ch, depth + 1); }
+            // connect the two children's representative rooms (L-corridor)
+            self.carveCorridor(ra[0], ra[1], rb[0], rb[1], 1);
+            return ra;
+        }
+        build(2, 2, this.W - 4, this.H - 4, 0);
+        return rooms;
     };
     Builder.prototype.carveCorridor = function (x0, y0, x1, y1, width) {
         width = width || 1; var x = x0, y = y0, w;
@@ -323,26 +358,34 @@
         var rng = mkRng(opts.seed);
         var b = new Builder(w, h, rng, bio.floorTile);
 
-        // scatter non-overlapping rooms, chain + loop with corridors
-        var rooms = [], attempts = 0, targetRooms = 6 + tier * 2;
-        while (rooms.length < targetRooms && attempts < targetRooms * 12) {
-            attempts++;
-            var rw = rng.randint(5, 9), rh = rng.randint(4, 7);
-            var rx = rng.randint(2, w - rw - 2), ry = rng.randint(2, h - rh - 2);
-            var cx = rx + (rw / 2 | 0), cy = ry + (rh / 2 | 0);
-            var clash = false;
-            for (var q = 0; q < rooms.length; q++) if (Math.abs(cx - rooms[q][0]) < rw && Math.abs(cy - rooms[q][1]) < rh) { clash = true; break; }
-            if (clash) continue;
-            // ROOM-SHAPE VARIETY (#5): some rooms are organic CA caves, the rest are
-            // rectangular halls. biome.caveChance biases the mix (default ~0.4).
-            var caveChance = bio.caveChance != null ? bio.caveChance : 0.4;
-            if (rng.random() < caveChance) b.carveCaveRoom(rx, ry, rx + rw, ry + rh);
-            else b.carveRect(rx, ry, rx + rw, ry + rh);
-            rooms.push([cx, cy, rw, rh]);
+        // LAYOUT STYLE (generator roadmap #5): 'rooms' = random non-overlapping
+        // scatter (chained corridors); 'bsp' = recursive partition (connected by
+        // construction); 'mixed' = pick per floor. biome.style can pin it.
+        var caveChance = bio.caveChance != null ? bio.caveChance : 0.4;
+        var style = opts.style || bio.style || 'mixed';
+        if (style === 'mixed') style = rng.random() < 0.5 ? 'bsp' : 'rooms';
+        var rooms = [], i;
+        if (style === 'bsp') {
+            rooms = b.bspRooms(rng, caveChance, 3 + (tier >= 2 ? 1 : 0));
+            rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
+            // a few extra loop edges so it isn't a pure tree (more interesting routes)
+            for (var le = 0; le < 1 + tier; le++) if (rooms.length >= 3) { var pe = rng.sample(rooms, 2); b.carveCorridor(pe[0][0], pe[0][1], pe[1][0], pe[1][1], 1); }
+        } else {
+            var attempts = 0, targetRooms = 6 + tier * 2;
+            while (rooms.length < targetRooms && attempts < targetRooms * 12) {
+                attempts++;
+                var rw = rng.randint(5, 9), rh = rng.randint(4, 7);
+                var rx = rng.randint(2, w - rw - 2), ry = rng.randint(2, h - rh - 2);
+                var cx = rx + (rw / 2 | 0), cy = ry + (rh / 2 | 0);
+                var clash = false;
+                for (var q = 0; q < rooms.length; q++) if (Math.abs(cx - rooms[q][0]) < rw && Math.abs(cy - rooms[q][1]) < rh) { clash = true; break; }
+                if (clash) continue;
+                rooms.push(b.carveRoomAt(rx, ry, rw, rh, caveChance));
+            }
+            rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
+            for (i = 1; i < rooms.length; i++) b.carveCorridor(rooms[i - 1][0], rooms[i - 1][1], rooms[i][0], rooms[i][1], rng.choice([1, 2]));
+            for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); b.carveCorridor(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
         }
-        rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
-        for (var i = 1; i < rooms.length; i++) b.carveCorridor(rooms[i - 1][0], rooms[i - 1][1], rooms[i][0], rooms[i][1], rng.choice([1, 2]));
-        for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); b.carveCorridor(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
         b.ensureConnected();
         b.finalizeWalls();
         b.renderNorthFaces();

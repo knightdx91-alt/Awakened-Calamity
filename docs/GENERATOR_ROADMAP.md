@@ -71,8 +71,13 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    (verdara .5 / calderra .35 / halveth .45 / vael .6), so floors mix rectangular halls + caves.
    Reachability still GUARANTEED (`ensureConnected` + `repairPropConnectivity`); `tools/test_mapgen.mjs`
    asserts all-cave floors stay fully reachable + that caves change the floor shape. Big pillared halls
-   already exist (rooms ≥7×5). **Still TODO:** BSP structured layout + drunkard's-walk corridors +
-   merged/blocked rooms (a `style` selector). *`MAPGEN_SPEC §6`.*
+   already exist (rooms ≥7×5). **BSP DONE (2026-06-19):** `Builder.bspRooms` recursively partitions
+   the map, carves one room per leaf, and connects siblings on the unwind (CONNECTED BY
+   CONSTRUCTION) + a few loop edges. `generateFloor` takes a `style` selector — `'rooms'` (random
+   scatter) / `'bsp'` (structured) / `'mixed'` (per-floor pick, default); `biome.style` can pin it.
+   `tools/test_mapgen.mjs` = 28 checks (every style reachable + places the gameplay layer + bsp
+   deterministic). Browser-verified a generated verdara floor renders with 0 errors.
+   **Still TODO:** drunkard's-walk corridors + deliberate merged/blocked rooms. *`MAPGEN_SPEC §6`.*
 
 3. **Biome system.** ✅ DONE (2026-06-19) — `data/systems/biomes.json` (4 biomes: verdara/
    calderra/halveth/vael) drives each generated floor's **palette** (base floor tile via the

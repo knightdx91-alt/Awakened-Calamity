@@ -172,5 +172,28 @@ caveOrganic = wc(rectRun.layout) !== wc(caveRun.layout);
 check('all-cave floors stay fully reachable', caveReach);
 check('cave rooms change the floor shape (organic vs rect)', caveOrganic);
 
+// ── LAYOUT STYLE: BSP structured layout (generator roadmap #5) ─────────────
+// Every style must stay fully reachable and place the full gameplay layer.
+let styleReach = true, styleLayer = true, bspDiffers = false;
+for (const style of ['rooms', 'bsp']) {
+  for (let s = 0; s < 16; s++) {
+    const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 3300 + s, tier: 2, creatures, style });
+    const set = reachable(l, m.start.x, m.start.y);
+    for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) styleReach = false;
+    const names = m.events.map(e => e.name);
+    if (!names.includes('Entrance') || !names.includes('RelicCache')) styleLayer = false;
+  }
+}
+check('every layout style stays fully reachable', styleReach);
+check('every layout style places the gameplay layer', styleLayer);
+// bsp vs rooms from the same seed should differ (distinct layout algorithms)
+const rms = GameMapGen.generateFloor({ seed: 4242, tier: 2, creatures, style: 'rooms' });
+const bsp = GameMapGen.generateFloor({ seed: 4242, tier: 2, creatures, style: 'bsp' });
+bspDiffers = JSON.stringify(rms.layout.collision) !== JSON.stringify(bsp.layout.collision);
+check('bsp layout differs from random rooms', bspDiffers);
+// bsp determinism
+const bsp2 = GameMapGen.generateFloor({ seed: 4242, tier: 2, creatures, style: 'bsp' });
+check('bsp is deterministic (same seed → identical)', JSON.stringify(bsp) === JSON.stringify(bsp2));
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);
