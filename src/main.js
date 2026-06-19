@@ -921,6 +921,7 @@
         if (!ES || !ES.clearMaps || !_runDb) return;
         var pool = (_runDb.floorPool || []).concat(_runDb.bossPool || []);
         var n = ES.clearMaps(pool);
+        if (ES.clearSwitchPrefix) ES.clearSwitchPrefix('gate_');   // reset lever/cache puzzles each run
         if (n) console.log('[Run] purged ephemeral floor state for', pool.length, 'maps (', n, 'self-switches )');
     }
     function _grantStartItems() {
@@ -1253,6 +1254,31 @@
                     if (window.GameSave) GameSave.markDirty();
                     if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv);
                     if (window.GameAudio) GameAudio.playSE('Heal1');
+                }
+                break;
+            }
+            case 'hurt': {
+                // Trap / hazard: drain persistent vitals (HP/MP/SP %). c.amount points.
+                var sth2 = window.GameSave && GameSave.state;
+                if (sth2) {
+                    var sv2 = sth2.survival || (sth2.survival = { surveillance: 0, stamina: 100, exposure: 0, hp: 100, mana: 100 });
+                    var dmg = Math.max(0, c.amount | 0) || 15;
+                    var key = c.what === 'mp' ? 'mana' : c.what === 'sp' ? 'stamina' : 'hp';
+                    sv2[key] = Math.max(1, (sv2[key] || 100) - dmg);   // traps don't kill outright
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameHUD && GameHUD.setMeters) GameHUD.setMeters(sv2);
+                    if (window.GameAudio) GameAudio.playSE(c.se || 'Damage4');
+                    await _shake({ power: 5, frames: 12 });
+                }
+                break;
+            }
+            case 'surveil': {
+                // The System notices you (a sensor/sigil hazard): raise run Surveillance.
+                var st3 = window.GameSave && GameSave.state;
+                if (st3 && st3.run && st3.run.active) {
+                    st3.run.surveillance = (st3.run.surveillance | 0) + (Math.max(0, c.amount | 0) || 10);
+                    if (window.GameSave) GameSave.markDirty();
+                    if (window.GameAudio) GameAudio.playSE(c.se || 'Buzzer1');
                 }
                 break;
             }

@@ -1275,7 +1275,7 @@
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
-    ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'],
+    ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'], ['hurt', '🗡️ Hurt (trap)'], ['surveil', '👁️ Surveil (+Surveillance)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
     ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event'],
@@ -1316,6 +1316,8 @@
       case 'grantskill': return { type: 'grantskill', skill: '' };
       case 'quest': return { type: 'quest', op: 'start', id: '', stage: 0 };
       case 'heal': return { type: 'heal', what: 'all', amount: null };
+      case 'hurt': return { type: 'hurt', what: 'hp', amount: 15 };
+      case 'surveil': return { type: 'surveil', amount: 10 };
       case 'fade': return { type: 'fade', mode: 'out', color: '#000000', frames: 30 };
       case 'shake': return { type: 'shake', power: 5, frames: 30 };
       case 'label': return { type: 'label', label: '' };
@@ -1687,6 +1689,17 @@
       body.querySelector('.cWhat').value = cmd.what || 'all';
       body.querySelector('.cWhat').addEventListener('change', function () { cmd.what = this.value; });
       body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
+    } else if (cmd.type === 'hurt') {
+      body.innerHTML = '<div class="row">' + lbl('Drain') +
+        '<select class="cWhat"><option value="hp">HP</option><option value="mp">MP</option><option value="sp">Stamina</option></select>' +
+        lbl('Amount %') + '<input type="number" class="cAmt" min="1" max="100" value="' + (cmd.amount || 15) + '" style="width:60px;"></div>';
+      body.querySelector('.cWhat').value = cmd.what || 'hp';
+      body.querySelector('.cWhat').addEventListener('change', function () { cmd.what = this.value; });
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = parseInt(this.value, 10) || 15; });
+    } else if (cmd.type === 'surveil') {
+      body.innerHTML = '<div class="row">' + lbl('Surveillance +') + '<input type="number" class="cAmt" min="1" value="' + (cmd.amount || 10) + '" style="width:60px;"></div>' +
+        '<div style="font-size:9px;color:#888;">the System notices you (active descent only)</div>';
+      body.querySelector('.cAmt').addEventListener('change', function () { cmd.amount = parseInt(this.value, 10) || 10; });
     } else if (cmd.type === 'fade') {
       body.innerHTML = '<div class="row">' + lbl('Fade') +
         '<select class="cMode"><option value="out">Out (to color)</option><option value="in">In (clear)</option></select></div>' +

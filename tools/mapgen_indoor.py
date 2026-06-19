@@ -266,6 +266,53 @@ class IndoorBuilder:
                         "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
             "commands": [{"type": "relic", "count": count}]})
 
+    def place_trap(self, x, y, kind="spike"):
+        """A hidden floor hazard (touch-triggered, steppable so it never blocks a
+        path). One-shot via self-switch A so it doesn't spam. spike = HP drain;
+        sensor = the System notices you (+Surveillance)."""
+        if kind == "sensor":
+            body = [{"type": "text", "text": "A System sigil flares underfoot — it has logged your position."},
+                    {"type": "surveil", "amount": 12}]
+        else:
+            body = [{"type": "text", "text": "Spikes erupt from the floor!"},
+                    {"type": "hurt", "what": "hp", "amount": 16}]
+        self.events.append({
+            "x": x, "y": y, "name": "Trap", "trigger": "touch", "through": True,
+            "graphic": {"sprite": "", "file": "", "single": True},
+            "commands": [{
+                "type": "conditional",
+                "cond": {"kind": "selfswitch", "letter": "A", "value": True},
+                "then": [],
+                "else": body + [{"type": "selfswitch", "letter": "A", "value": True}]}]})
+
+    def place_lever(self, x, y, switch_id):
+        """A lever the player pulls (action) to flip a named switch — opens a sealed
+        cache elsewhere. The puzzle: find the lever, then claim the reward."""
+        self.setp(x, y, "lever", block=True)
+        self.events.append({
+            "x": x, "y": y, "name": "Lever", "trigger": "action", "through": False,
+            "graphic": {"sprite": "Switch1", "file": "rtp/Switch1.png",
+                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "commands": [
+                {"type": "se", "name": "Switch1"},
+                {"type": "switch", "id": switch_id, "value": True},
+                {"type": "text", "text": "The lever grinds down. Somewhere in the dark, stone slides open."}]})
+
+    def place_sealed_cache(self, x, y, switch_id, count=3):
+        """A relic cache SEALED until its switch (a lever elsewhere) is thrown. Does
+        not block any path — it's a locked OPTIONAL reward, so reachability is safe."""
+        self.setp(x, y, "crate", block=True)
+        self.events.append({
+            "x": x, "y": y, "name": "SealedCache", "trigger": "action", "through": False,
+            "graphic": {"sprite": "Chest", "file": "rtp/Chest.png",
+                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "commands": [{
+                "type": "conditional",
+                "cond": {"kind": "switch", "id": switch_id, "value": True},
+                "then": [{"type": "text", "text": "The seal is broken — the cache opens."},
+                         {"type": "relic", "count": count}],
+                "else": [{"type": "text", "text": "A sealed cache. A mechanism elsewhere holds it shut — find the lever."}]}]})
+
     def place_chest(self, x, y, money=0, item=None, pocket="items"):
         """A ONE-TIME loot chest: the loot is gated behind self-switch A so it can
         only be claimed once. After opening, it reads as empty (the self-switch
@@ -499,6 +546,27 @@ def gen_dungeon(name, w=48, h=48, seed=4, region="awakened", tier=1, hazard=""):
         rx, ry = b._room_floor(rr, away_from_events=True, open_only=True)
         if rx is not None:
             b.place_relic_cache(rx, ry, count=3)
+
+    # ── HAZARDS: hidden traps scattered in walkable cells (steppable, never block a
+    # path). Count scales with depth/tier; mix spikes + System sensors. ──
+    walk_cells = [(i % b.W, i // b.W) for i in range(b.W * b.H)
+                  if b.walk[i] and not b.coll[i] and b.over[i] == -1
+                  and not any(e["x"] == i % b.W and e["y"] == i // b.W for e in b.events)]
+    rng.shuffle(walk_cells)
+    n_traps = 3 + tier
+    for (tx, ty) in walk_cells[:n_traps]:
+        b.place_trap(tx, ty, kind=("sensor" if rng.random() < 0.4 else "spike"))
+
+    # ── PUZZLE: a lever in one room opens a SEALED relic cache in another (optional
+    # reward; neither blocks the critical path). ──
+    if len(body_rooms) >= 2:
+        sw = "gate_" + name.lower()
+        lr, gr = body_rooms[-1], loot_rooms[-1] if loot_rooms else body_rooms[0]
+        lx, ly = b._room_floor(lr, away_from_events=True, open_only=True)
+        gx, gy = b._room_floor(gr, away_from_events=True, open_only=True)
+        if lx is not None and gx is not None and (lx, ly) != (gx, gy):
+            b.place_lever(lx, ly, sw)
+            b.place_sealed_cache(gx, gy, sw, count=3)
 
     # props: pillars line big halls; clutter scattered (kept lighter now)
     for (cx, cy, rw, rh) in rooms:
