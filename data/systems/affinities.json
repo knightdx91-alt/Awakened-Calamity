@@ -1,5 +1,76 @@
 {
-  "list": ["ember","tide","verdant","storm","stone","frost","toxin","umbral","lumen","corruption","untethered"],
-  "_note": "Effectiveness chart is a DESIGN decision (DESIGN.md §2) — TBD. Empty chart = all neutral (x1.0).",
-  "chart": {}
+ "list": [
+  "ember",
+  "tide",
+  "verdant",
+  "storm",
+  "stone",
+  "frost",
+  "toxin",
+  "umbral",
+  "lumen",
+  "corruption",
+  "untethered"
+ ],
+ "_note": "Effectiveness chart (Pokemon-style). chart[attackerAffinity][defenderAffinity] = damage x. 1.5 = super effective, 0.66 = resisted, missing = 1.0 neutral. Untethered is neutral both ways.",
+ "chart": {
+  "ember": {
+   "verdant": 1.5,
+   "frost": 1.5,
+   "tide": 0.66,
+   "stone": 0.66
+  },
+  "tide": {
+   "ember": 1.5,
+   "stone": 1.5,
+   "verdant": 0.66,
+   "storm": 0.66
+  },
+  "verdant": {
+   "tide": 1.5,
+   "stone": 1.5,
+   "ember": 0.66,
+   "frost": 0.66,
+   "toxin": 0.66
+  },
+  "storm": {
+   "tide": 1.5,
+   "frost": 1.5,
+   "stone": 0.66,
+   "verdant": 0.66
+  },
+  "stone": {
+   "storm": 1.5,
+   "ember": 1.5,
+   "tide": 0.66,
+   "verdant": 0.66
+  },
+  "frost": {
+   "verdant": 1.5,
+   "storm": 1.5,
+   "ember": 0.66,
+   "stone": 0.66
+  },
+  "toxin": {
+   "verdant": 1.5,
+   "tide": 1.5,
+   "stone": 0.66,
+   "lumen": 0.66
+  },
+  "umbral": {
+   "toxin": 1.5,
+   "storm": 1.5,
+   "lumen": 0.66
+  },
+  "lumen": {
+   "umbral": 1.5,
+   "corruption": 1.5,
+   "stone": 0.66
+  },
+  "corruption": {
+   "stone": 1.5,
+   "verdant": 1.5,
+   "lumen": 0.66
+  }
+ }
 }

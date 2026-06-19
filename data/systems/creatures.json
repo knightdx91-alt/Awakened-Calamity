@@ -74,7 +74,7 @@
    "hp": 38,
    "atk": 16,
    "def": 8,
-   "speed": 72
+   "speed": 70
   },
   "loadout": [
    "jab"
@@ -121,7 +121,7 @@
    "hp": 46,
    "atk": 21,
    "def": 9,
-   "speed": 86
+   "speed": 80
   },
   "loadout": [
    "jab",
@@ -218,7 +218,7 @@
    "hp": 52,
    "atk": 26,
    "def": 12,
-   "speed": 96
+   "speed": 82
   },
   "loadout": [
    "lunge",
@@ -242,7 +242,7 @@
    "hp": 56,
    "atk": 22,
    "def": 14,
-   "speed": 80
+   "speed": 76
   },
   "loadout": [
    "jab",
@@ -387,7 +387,7 @@
    "hp": 69,
    "atk": 25,
    "def": 16,
-   "speed": 88
+   "speed": 80
   },
   "loadout": [
    "backstab",

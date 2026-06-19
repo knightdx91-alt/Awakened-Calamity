@@ -43,7 +43,7 @@
     }
 
     var BUILD = (root.__BUILD__ || 'dev');
-    var MS_PER_STEP = 45;
+    var MS_PER_STEP = 30;   // real-time bar tick (lower = snappier; view-only, no balance change)
 
     // ---- data -------------------------------------------------------------
     function fetchJSON(p) { return fetch(p + '?b=' + BUILD, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('fetch ' + p + ' ' + r.status); return r.json(); }); }
@@ -268,7 +268,8 @@
         var nm = function (id) { return state.actors[id] ? state.actors[id].name : id; };
         var sk = function (id) { return (db.skills[id] && db.skills[id].name) || id; };
         switch (e.type) {
-            case 'hit': return nm(e.actor) + ' — ' + sk(e.skill) + (e.crit ? ' CRIT' : '') + ' → ' + nm(e.target) + ' ' + e.dmg;
+            case 'hit': return nm(e.actor) + ' — ' + sk(e.skill) + (e.crit ? ' CRIT' : '') + ' → ' + nm(e.target) + ' ' + e.dmg
+                + (e.aff === 'super' ? '  ⚡SUPER EFFECTIVE!' : e.aff === 'resist' ? '  …resisted' : '');
             case 'heal': return nm(e.actor) + ' — ' + sk(e.skill) + ' +' + e.amount + ' HP';
             case 'buff': return nm(e.actor) + ' braced (defense up)';
             case 'partybuff': return nm(e.actor) + ' rallied the party (' + e.kind + ' up)';

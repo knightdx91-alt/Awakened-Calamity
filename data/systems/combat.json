@@ -1,19 +1,19 @@
 {
-  "tempoMax": 1000,
-  "tickStep": 25,
-  "mode": "pause_on_act",
-  "variance": [
-    0.85,
-    1.0
-  ],
-  "intervention": {
-    "enabled": true,
-    "speed": 30,
-    "surveillancePerHelp": 4,
-    "helpThreshold": 0.35,
-    "heal": 0.18,
-    "lethalSave": true,
-    "saveTo": 0.3,
-    "surveillancePerSave": 10
-  }
+ "tempoMax": 1000,
+ "tickStep": 32,
+ "mode": "pause_on_act",
+ "variance": [
+  0.85,
+  1.0
+ ],
+ "intervention": {
+  "enabled": true,
+  "speed": 30,
+  "surveillancePerHelp": 4,
+  "helpThreshold": 0.35,
+  "heal": 0.18,
+  "lethalSave": true,
+  "saveTo": 0.3,
+  "surveillancePerSave": 10
+ }
 }

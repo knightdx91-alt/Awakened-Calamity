@@ -183,7 +183,7 @@
             if (r.evaded) { log(state, 'miss', { actor: a.id, skill: action.skillId, target: t.id }); continue; }
             t.hp = Math.max(0, t.hp - r.dmg);
             _guardLethal(state, t);
-            log(state, 'hit', { actor: a.id, skill: action.skillId, target: t.id, dmg: r.dmg, crit: r.crit, targetHp: t.hp });
+            log(state, 'hit', { actor: a.id, skill: action.skillId, target: t.id, dmg: r.dmg, crit: r.crit, aff: r.aff, targetHp: t.hp });
             // relic/gear bonuses: lifesteal heals the attacker; thorns reflect to it
             if (a.lifesteal && a.hp > 0) { const h = Math.round(r.dmg * a.lifesteal); if (h > 0) { a.hp = Math.min(a.maxHp, a.hp + h); log(state, 'lifesteal', { actor: a.id, amount: h, hp: a.hp }); } }
             if (t.thorns && a.hp > 0) { const tn = Math.max(1, Math.round(r.dmg * t.thorns)); a.hp = Math.max(0, a.hp - tn); _guardLethal(state, a); log(state, 'thorns', { actor: t.id, target: a.id, dmg: tn, targetHp: a.hp }); }
@@ -199,7 +199,8 @@
         const effAtk = atk.atk * (1 + (atk.atkBuff || 0));
         const effDef = Math.max(1, (def.def * (1 + (def.defBuff || 0) + (def.defBonus || 0))) * (1 - (def.sundered || 0)));
         let base = (effAtk * sk.power) * (effAtk / (effAtk + effDef)) * (splash || 1);
-        base *= affinityMult(state.chart, sk.affinity || atk.affinity, def.affinity);
+        const am = affinityMult(state.chart, sk.affinity || atk.affinity, def.affinity);
+        base *= am;
         const e = sk.effect || {};
         if (e.type === 'bonusVsUnaware' && !def.hasActed) base *= (1 + (e.amount || 0));
         base *= (1 + (def.markMult || 0));
@@ -207,7 +208,8 @@
         const critCh = (atk.critChance || 0) + (e.type === 'critUp' ? (e.amount || 0) : 0);
         if (critCh && RNG.next(state.rng) < critCh) { base *= 1.5; crit = true; }
         const [vmin, vmax] = state.tuning.variance;
-        return { dmg: Math.max(1, Math.round(base * RNG.range(state.rng, vmin, vmax))), evaded: false, crit };
+        // aff: 'super' (>1) / 'resist' (<1) / null — for the combat log's effectiveness cue
+        return { dmg: Math.max(1, Math.round(base * RNG.range(state.rng, vmin, vmax))), evaded: false, crit, aff: am > 1.05 ? 'super' : am < 0.95 ? 'resist' : null };
     }
 
     // Non-damaging or rider status onto a target.
