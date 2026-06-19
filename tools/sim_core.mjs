@@ -91,7 +91,12 @@ export function runFight(db, GC, playerDef, enemyDefs, seed, opts = {}) {
   let turns = 0;
   while (!state.over && turns < 1000) {
     const ready = GC.advanceToReady(state);
-    if (ready === null) break;
+    if (ready === null) {
+      // A lethal-save offer pauses combat; the bot's policy decides. Default =
+      // ACCEPT (the leaning bot — the tethered read). opts.refuseSaves models refusal.
+      if (state.pendingSave && GC.resolveSave) { GC.resolveSave(state, !opts.refuseSaves); continue; }
+      break;
+    }
     const me = state.actors[ready];
     const action = me.side === 'enemy' ? GC.enemyAction(state, db, ready) : playerPolicy(db, GC, state, me);
     GC.act(state, db, action);

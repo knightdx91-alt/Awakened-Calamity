@@ -2,6 +2,24 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-18 — Combat feel pass: tempo reset, save-as-CHOICE, sprite fixes
+Owner-requested battle changes (all browser-verified, suites green, validate_design still
+✅ MECHANICALLY SOUND):
+- **Tempo resets to 0 on ANY action** (Mega Man Battle Network style) — `combat.js act()` sets
+  `a.tempo = 0` instead of subtracting the skill's tempoCost (cost no longer carries over).
+- **System help is now a DELIBERATE CHOICE, and the free multi-heal is GONE.** Removed the periodic
+  emergency auto-heal entirely. The lethal save no longer auto-revives — `_guardLethal` sets
+  `state.pendingSave` and the fight PAUSES; the view shows **[A] ACCEPT — live (Surveillance ↑N) /
+  [B] REFUSE — die**. New `GameCombat.resolveSave(state, accept)`; `step()`/`advanceToReady()` pause
+  on `pendingSave`; sims auto-accept (the leaning bot). Dying is real and tense now (curve clear
+  17%→5%). Only the Subject (p1) is offered the save.
+- **Player battle sprite now matches the chosen appearance** — `_buildPlayerSprite` honored only
+  `ov.file` but creation writes a cropped `ov.dataUrl`; now uses either.
+- **Each creature has its OWN roaming sprite** (was a generic Monster1 for all): creatures gained a
+  `charset {file,char,charCols}`; the renderer now offsets to the right character block in a
+  multi-char monster sheet; `migrate_roamer_sprites.py` + `mapgen_indoor.place_monster` set roamers
+  from the creature's charset (battle keeps the detailed `battler`).
+
 ## ✅ DONE 2026-06-18 — Character creation is now an EVENT flow (RPG-Maker style)
 New game now runs the **autorun common event `character_creation`** (switch `do_creation`, set by
 `_newGame` instead of launching the DOM screen): Name Input → Show Choices (Affinity / Appearance /

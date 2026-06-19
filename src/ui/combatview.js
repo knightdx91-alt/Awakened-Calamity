@@ -25,7 +25,10 @@
     // The player's chosen overworld charset (editor picker) or a default RTP hero.
     function _buildPlayerSprite() {
         var ov = null; try { ov = JSON.parse(localStorage.getItem('ac_player_sprite') || 'null'); } catch (e) {}
-        if (ov && ov.file && ov.frame_w) return { src: 'data/sprites/' + ov.file, cols: ov.cols, rows: ov.rows, fw: ov.frame_w, fh: ov.frame_h, char: 0 };
+        // The chosen appearance is stored either as a cropped dataUrl (creation) or a
+        // charset file ref. Honour BOTH so the battle sprite matches the overworld one.
+        if (ov && ov.frame_w && (ov.dataUrl || ov.file))
+            return { src: ov.dataUrl ? ov.dataUrl : ('data/sprites/' + ov.file), cols: ov.cols || 3, rows: ov.rows || 4, fw: ov.frame_w, fh: ov.frame_h, char: 0 };
         return { src: 'data/sprites/rtp/Actor1.png', cols: 12, rows: 8, fw: 32, fh: 32, char: 0 };
     }
     // A scaled, cropped standing frame of a charset. dir: 0=down 1=left 2=right 3=up.
@@ -207,6 +210,13 @@
     function _loop(ts) {
         if (!active) return;
         var dt = ts - lastTs; lastTs = ts;
+        // The System offers a lethal save — pause everything and let the player CHOOSE.
+        if (state && state.pendingSave && mode !== 'save') {
+            var add = state.pendingSave.nextSurv || 0;
+            currentMsg = '⟁ THE SYSTEM closes its hand around you.   [A] ACCEPT — live (Surveillance +' + add + ')   ·   [B] REFUSE — die';
+            mode = 'save'; _render();
+            rafId = requestAnimationFrame(_loop); return;
+        }
         if (mode === 'ticking') {
             acc += dt; var guard = 300;
             while (acc >= MS_PER_STEP && mode === 'ticking' && guard-- > 0) {
@@ -258,7 +268,12 @@
             case 'counter': return nm(e.actor) + ' counters! ' + e.dmg;
             case 'miss': return nm(e.target) + ' evaded';
             case 'down': return nm(e.actor) + ' went down!';
-            case 'intervention': return '⟁ THE SYSTEM intervened — +' + e.heal + ' HP. Surveillance ' + e.surveillance;
+            case 'intervention':
+                if (e.kind === 'offer') return '⟁ THE SYSTEM reaches for you…';
+                if (e.kind === 'lethal_save') return '⟁ THE SYSTEM caught you — revived. Surveillance ' + e.surveillance;
+                if (e.kind === 'refused') return 'You refuse its hand. The dark takes you.';
+                if (e.kind === 'collected') return '⟁ COLLECTED. The System reclaims you.';
+                return '⟁ THE SYSTEM intervened. Surveillance ' + e.surveillance;
             default: return '';
         }
     }
@@ -267,6 +282,17 @@
     function consumeInput(jp) {
         if (!active) return;
         if (awaitingClose) { if (jp.a || jp.b || jp.start) _teardown(); return; }
+        // The lethal-save dilemma: A accepts (live, Surveillance ↑), B refuses (die).
+        if (mode === 'save') {
+            if (jp.a || jp.b) {
+                var before = state.log.length;
+                root.GameCombat.resolveSave(state, !!jp.a);   // A = accept, B = refuse
+                _flush(before);
+                if (root.GameAudio) GameAudio.playSE(jp.a ? 'Recovery' : 'Collapse4');
+                mode = state.over ? 'over' : 'beat'; waitUntil = _now() + 700; _render();
+            }
+            return;
+        }
         if (mode === 'action') {
             if (jp.up)   { actionCursor = (actionCursor - 1 + ACTIONS.length) % ACTIONS.length; _render(); }
             if (jp.down) { actionCursor = (actionCursor + 1) % ACTIONS.length; _render(); }

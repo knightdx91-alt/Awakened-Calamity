@@ -83,6 +83,7 @@
     // Returns the id of an actor whose Tempo filled, or null (also sets over).
     function step(state) {
         if (state.over) return null;
+        if (state.pendingSave) return null;            // paused: awaiting the player's save choice
         const max = state.tuning.tempoMax, sz = state.tuning.tickStep;
         const p = aliveOnSide(state, 'player').length, e = aliveOnSide(state, 'enemy').length;
         if (p === 0 || e === 0) { state.over = true; state.winner = e === 0 ? 'player' : 'enemy'; return null; }
@@ -100,7 +101,7 @@
     function advanceToReady(state) {
         if (state.over) return null;
         let guard = 100000;
-        while (guard-- > 0) { const id = step(state); if (state.over) return null; if (id) return id; }
+        while (guard-- > 0) { if (state.pendingSave) return null; const id = step(state); if (state.over) return null; if (id) return id; }
         return null;
     }
 
@@ -128,7 +129,7 @@
         const sk = db.skills[action.skillId];
         if (!a || a.hp <= 0 || !sk) return state;
         _startTurn(state, a);                 // DoT + decrement this actor's timers
-        if (a.hp <= 0) { a.tempo -= sk.tempoCost; return state; }
+        if (a.hp <= 0) { a.tempo = 0; return state; }
         const cost = skillCost(sk);           // spend MP/SP (UI gates affordability)
         a.mp = Math.max(0, (a.mp || 0) - cost.mp);
         a.sp = Math.max(0, (a.sp || 0) - cost.sp);
@@ -162,7 +163,7 @@
 
         if (eff.type === 'selfCost') { a.hp = Math.max(1, a.hp - Math.round(a.maxHp * eff.amount)); }
         a.hasActed = true;
-        a.tempo -= sk.tempoCost;
+        a.tempo = 0;          // MMBN-style: acting empties the gauge fully (cost no longer carries over)
         return state;
     }
 
@@ -277,7 +278,8 @@
         if (state.tethered === false) return;          // UNTETHERED: the System won't catch you
         const iv = state.tuning.intervention;
         if (!iv || !iv.enabled || !iv.lethalSave) return;
-        if (!t || t.side !== 'player' || t.hp > 0) return;
+        if (!t || t.id !== 'p1' || t.hp > 0) return;   // the System only catches YOU (the Subject)
+        if (state.pendingSave) return;                 // already offering a save
         // COLLECTION: if leaning on the System has spent the run's whole budget,
         // it takes you on the spot instead of saving you again — the fight ends.
         if (state.collectBudget != null && state.surveillance >= state.collectBudget) {
@@ -285,28 +287,33 @@
             log(state, 'intervention', { kind: 'collected', actor: t.id, surveillance: state.surveillance });
             return;
         }
-        t.hp = Math.max(1, Math.round(t.maxHp * (iv.saveTo || 0.3)));
-        state._saves = (state._saves || 0) + 1;
-        state.surveillance += (iv.surveillancePerSave || 15) * state._saves; // escalates
-        log(state, 'intervention', { kind: 'lethal_save', actor: t.id, hp: t.hp, saves: state._saves, surveillance: state.surveillance });
+        // OFFER the save — the player must CHOOSE (resolveSave). The fight pauses
+        // until then; refusing means death. This is the dilemma with teeth.
+        state.pendingSave = { actorId: t.id, nextSurv: (iv.surveillancePerSave || 10) * ((state._saves || 0) + 1) };
+        log(state, 'intervention', { kind: 'offer', actor: t.id, surveillance: state.surveillance });
     }
 
-    // ---- intervention: the System as a third will -------------------------
-    function _interventionTick(state, step) {
-        if (state.tethered === false) return;          // UNTETHERED: no System help at all
+    // Resolve a pending System save: accept (revive at saveTo%, escalating
+    // Surveillance) or refuse (stay dead — the next step ends the fight as a loss).
+    function resolveSave(state, accept) {
+        const ps = state.pendingSave; if (!ps) return state;
+        state.pendingSave = null;
+        const t = state.actors[ps.actorId];
         const iv = state.tuning.intervention;
-        if (!iv || !iv.enabled) return;
-        state._ivTempo = (state._ivTempo || 0) + iv.speed * (step / 100);
-        if (state._ivTempo < state.tuning.tempoMax) return;
-        state._ivTempo = 0;
-        const hurt = aliveOnSide(state, 'player').find(a => a.hp / a.maxHp <= iv.helpThreshold);
-        if (hurt) {
-            const heal = Math.round(hurt.maxHp * 0.18);
-            hurt.hp = Math.min(hurt.maxHp, hurt.hp + heal);
-            state.surveillance += iv.surveillancePerHelp;
-            log(state, 'intervention', { kind: 'emergency_restore', actor: hurt.id, heal, surveillance: state.surveillance });
+        if (accept && t) {
+            t.hp = Math.max(1, Math.round(t.maxHp * (iv.saveTo || 0.3)));
+            state._saves = (state._saves || 0) + 1;
+            state.surveillance += (iv.surveillancePerSave || 10) * state._saves; // escalates
+            log(state, 'intervention', { kind: 'lethal_save', actor: t.id, hp: t.hp, saves: state._saves, surveillance: state.surveillance });
+        } else {
+            log(state, 'intervention', { kind: 'refused', actor: ps.actorId });
         }
+        return state;
     }
+
+    // The periodic auto-heal was removed: the ONLY System help is the lethal-save
+    // OFFER (a deliberate choice), so dying is real and tense.
+    function _interventionTick() { /* no-op — kept for the step() call site */ }
 
     // ---- deterministic enemy / AI-ally AI ---------------------------------
     function enemyAction(state, db, actorId) {
@@ -341,7 +348,7 @@
         return state;
     }
 
-    const GameCombat = { createBattle, step, advanceToReady, act, enemyAction, skillCost, canAfford, useItem };
+    const GameCombat = { createBattle, step, advanceToReady, act, enemyAction, skillCost, canAfford, useItem, resolveSave };
     root.GameCombat = GameCombat;
     if (typeof module !== 'undefined' && module.exports) module.exports = GameCombat;
 })(typeof window !== 'undefined' ? window : globalThis);

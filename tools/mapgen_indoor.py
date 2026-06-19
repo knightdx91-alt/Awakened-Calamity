@@ -34,6 +34,12 @@ def _validate_map(layout, mapobj, name):
         print("  [check] ✓ %s — spawn walkable, events reachable" % name)
     return not fails
 
+# Creature DB (for roamer overworld sprites = the creature's own charset).
+try:
+    CREATURES = json.load(open(os.path.join(ROOT, "data", "systems", "creatures.json")))
+except Exception:
+    CREATURES = {}
+
 # floor base tileset per scene (baked autotiles); we use flat tile 0 = floor.
 SCENE = {
     "dungeon": {"ground": "rtp_dungeon_ground", "a4": "rtp_dungeon_a4",
@@ -230,13 +236,20 @@ class IndoorBuilder:
     def place_monster(self, x, y, key, level, sprite="Monster1", name="Roamer", sight=5, speed=420):
         """A ROAMING creature (Radiant-Mythology style): it wanders the room and
         CHASES the player once they're within sight; contact starts a battle, then
-        it despawns. `behavior` drives the engine's roamer update; `touch` is the
-        contact fallback if the player walks into it."""
+        it despawns. The sprite is the CREATURE's own overworld charset (so the roamer
+        matches what you fight), falling back to a generic monster sheet."""
+        cs = (CREATURES.get(key) or {}).get("charset")
+        if cs:
+            gfx = {"sprite": key, "file": cs["file"], "frame_w": 32, "frame_h": 32,
+                   "cols": cs.get("charCols", 4) * 3, "rows": 8, "single": False,
+                   "char": cs.get("char", 0), "charCols": cs.get("charCols", 4)}
+        else:
+            gfx = {"sprite": sprite, "file": "rtp/%s.png" % sprite,
+                   "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False}
         self.events.append({
             "x": x, "y": y, "name": name, "trigger": "touch", "through": False,
             "behavior": {"type": "roam", "sight": sight, "speed": speed},
-            "graphic": {"sprite": sprite, "file": "rtp/%s.png" % sprite,
-                        "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": False},
+            "graphic": gfx,
             "commands": [
                 {"type": "text", "text": "A System-twisted creature lunges from the dark!"},
                 {"type": "battle", "enemies": [{"key": key, "level": level}]},

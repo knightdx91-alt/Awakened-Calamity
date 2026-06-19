@@ -326,7 +326,12 @@ window.GameRenderer = (function () {
                 const fw = ev.graphic.frame_w, fh = ev.graphic.frame_h;
                 const row = DIR_ROW[ev.dir] !== undefined ? DIR_ROW[ev.dir] : 0;
                 const dh = _rt * (fh / fw);
-                ctx.drawImage(img, 1 * fw, row * fh, fw, fh, ex, ey + _rt - dh, _rt, dh);
+                // Multi-character sheets (e.g. RTP Monster1 holds 8 monsters): offset
+                // to the right character block so each creature shows its OWN sprite.
+                const cpr = ev.graphic.charCols || 1;            // characters per row (4 for VX Ace monster sheets)
+                const ci = ev.graphic.char || 0;
+                const bx = (ci % cpr) * 3, by = ((ci / cpr) | 0) * 4;   // 3 frames × 4 dirs per character
+                ctx.drawImage(img, (bx + 1) * fw, (by + row) * fh, fw, fh, ex, ey + _rt - dh, _rt, dh);
             }
         }
 

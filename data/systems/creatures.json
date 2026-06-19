@@ -14,7 +14,12 @@
    "ember_bolt"
   ],
   "battler": "rtp/Firespirit.png",
-  "creditYield": 1.0
+  "creditYield": 1.0,
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 0,
+   "charCols": 4
+  }
  },
  "thornwolf": {
   "name": "Thornwolf",
@@ -31,7 +36,12 @@
    "heavy_strike"
   ],
   "battler": "rtp/Werewolf.png",
-  "creditYield": 1.3
+  "creditYield": 1.3,
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 1,
+   "charCols": 4
+  }
  },
  "dummy": {
   "name": "Hollow Husk",
@@ -48,10 +58,8 @@
   ],
   "charset": {
    "file": "rtp/Monster1.png",
-   "cols": 12,
-   "rows": 8,
-   "frame": 32,
-   "char": 0
+   "char": 7,
+   "charCols": 4
   },
   "creditYield": 0.0
  },
@@ -71,7 +79,12 @@
   "loadout": [
    "jab"
   ],
-  "battler": "rtp/Rat.png"
+  "battler": "rtp/Rat.png",
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 3,
+   "charCols": 4
+  }
  },
  "mire_slime": {
   "name": "Mire Slime",
@@ -90,7 +103,12 @@
    "jab",
    "shield_bash"
   ],
-  "battler": "rtp/Slime.png"
+  "battler": "rtp/Slime.png",
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 4,
+   "charCols": 4
+  }
  },
  "ash_imp": {
   "name": "Ash Imp",
@@ -109,7 +127,12 @@
    "jab",
    "ember_bolt"
   ],
-  "battler": "rtp/Imp.png"
+  "battler": "rtp/Imp.png",
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 5,
+   "charCols": 4
+  }
  },
  "cave_crawler": {
   "name": "Cave Crawler",
@@ -128,7 +151,12 @@
    "jab",
    "coat_blade"
   ],
-  "battler": "rtp/Spider.png"
+  "battler": "rtp/Spider.png",
+  "charset": {
+   "file": "rtp/Monster1.png",
+   "char": 6,
+   "charCols": 4
+  }
  },
  "bramblewight": {
   "name": "Bramblewight",
@@ -147,7 +175,12 @@
    "plant_charge",
    "taunt"
   ],
-  "battler": "rtp/Plant.png"
+  "battler": "rtp/Plant.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 0,
+   "charCols": 4
+  }
  },
  "frost_shade": {
   "name": "Frost Shade",
@@ -167,7 +200,12 @@
    "pin_shot",
    "mark_prey"
   ],
-  "battler": "rtp/Willowisp.png"
+  "battler": "rtp/Willowisp.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 1,
+   "charCols": 4
+  }
  },
  "voltspine": {
   "name": "Voltspine",
@@ -186,7 +224,12 @@
    "lunge",
    "mark_prey"
   ],
-  "battler": "rtp/Cockatrice.png"
+  "battler": "rtp/Cockatrice.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 2,
+   "charCols": 4
+  }
  },
  "bonepicker": {
   "name": "Bonepicker",
@@ -205,7 +248,12 @@
    "jab",
    "backstab"
   ],
-  "battler": "rtp/Skeleton.png"
+  "battler": "rtp/Skeleton.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 3,
+   "charCols": 4
+  }
  },
  "sahagin_raider": {
   "name": "Sahagin Raider",
@@ -224,7 +272,12 @@
    "heavy_strike",
    "pierce"
   ],
-  "battler": "rtp/Sahagin.png"
+  "battler": "rtp/Sahagin.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 4,
+   "charCols": 4
+  }
  },
  "cinder_hound": {
   "name": "Cinder Hound",
@@ -243,7 +296,12 @@
    "jab",
    "cleave"
   ],
-  "battler": "rtp/Kerberos.png"
+  "battler": "rtp/Kerberos.png",
+  "charset": {
+   "file": "rtp/Monster2.png",
+   "char": 5,
+   "charCols": 4
+  }
  },
  "gargoyle_sentry": {
   "name": "Gargoyle Sentry",
@@ -262,7 +320,12 @@
    "heavy_strike",
    "pierce"
   ],
-  "battler": "rtp/Gargoyle.png"
+  "battler": "rtp/Gargoyle.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 0,
+   "charCols": 4
+  }
  },
  "lamia_binder": {
   "name": "Lamia Binder",
@@ -282,7 +345,12 @@
    "pin_shot",
    "mark_prey"
   ],
-  "battler": "rtp/Lamia.png"
+  "battler": "rtp/Lamia.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 1,
+   "charCols": 4
+  }
  },
  "ogre_breaker": {
   "name": "Ogre Breaker",
@@ -301,7 +369,12 @@
    "ground_slam",
    "heavy_strike"
   ],
-  "battler": "rtp/Ogre.png"
+  "battler": "rtp/Ogre.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 2,
+   "charCols": 4
+  }
  },
  "wraith": {
   "name": "Wraith",
@@ -320,7 +393,12 @@
    "backstab",
    "mark_prey"
   ],
-  "battler": "rtp/Ghost.png"
+  "battler": "rtp/Ghost.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 3,
+   "charCols": 4
+  }
  },
  "scorpion_stalker": {
   "name": "Scorpion Stalker",
@@ -339,7 +417,12 @@
    "coat_blade",
    "pierce"
   ],
-  "battler": "rtp/Scorpion.png"
+  "battler": "rtp/Scorpion.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 4,
+   "charCols": 4
+  }
  },
  "vampire_thrall": {
   "name": "Vampire Thrall",
@@ -358,7 +441,12 @@
    "heavy_strike",
    "immolate"
   ],
-  "battler": "rtp/Vampire.png"
+  "battler": "rtp/Vampire.png",
+  "charset": {
+   "file": "rtp/Monster3.png",
+   "char": 5,
+   "charCols": 4
+  }
  },
  "veinmother": {
   "name": "The Veinmother",
@@ -378,7 +466,12 @@
    "cleave",
    "deploy_turret"
   ],
-  "battler": "rtp/Lamia.png"
+  "battler": "rtp/Lamia.png",
+  "charset": {
+   "file": "rtp/Evil.png",
+   "char": 0,
+   "charCols": 4
+  }
  },
  "cinder_tyrant": {
   "name": "The Cinder Tyrant",
@@ -398,7 +491,12 @@
    "immolate",
    "rally_aura"
   ],
-  "battler": "rtp/Ifrit.png"
+  "battler": "rtp/Ifrit.png",
+  "charset": {
+   "file": "rtp/Evil.png",
+   "char": 1,
+   "charCols": 4
+  }
  },
  "hollow_warden": {
   "name": "The Hollow Warden",
@@ -418,7 +516,12 @@
    "taunt",
    "pierce"
   ],
-  "battler": "rtp/Behemoth.png"
+  "battler": "rtp/Behemoth.png",
+  "charset": {
+   "file": "rtp/Evil.png",
+   "char": 2,
+   "charCols": 4
+  }
  },
  "drowned_choir": {
   "name": "The Drowned Choir",
@@ -438,7 +541,12 @@
    "cleave",
    "deploy_turret"
   ],
-  "battler": "rtp/Sahagin.png"
+  "battler": "rtp/Sahagin.png",
+  "charset": {
+   "file": "rtp/Evil.png",
+   "char": 3,
+   "charCols": 4
+  }
  },
  "unmade_echo": {
   "name": "The Unmade Echo",
@@ -458,6 +566,11 @@
    "heavy_strike",
    "immolate"
   ],
-  "battler": "rtp/Darklord.png"
+  "battler": "rtp/Darklord.png",
+  "charset": {
+   "file": "rtp/Evil.png",
+   "char": 4,
+   "charCols": 4
+  }
  }
 }
