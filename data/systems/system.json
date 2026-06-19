@@ -1,0 +1,13 @@
+{
+ "_meta": "RPG-Maker-style SYSTEM config. Edit this file (data, no code) to change new-game behavior. Mirrors RM's System tab > Starting Position. newGame.creationMap = an optional BLANK BLACK stage loaded FIRST where the character_creation autorun runs; it ENDS by transferring to the real start (a transfer command with useSystemStart:true reads startMap/startX/startY below). Set creationMap to \"\" to skip the creation stage and spawn straight at the start.",
+ "newGame": {
+  "region": "awakened",
+  "creationMap": "Void",
+  "creationSwitch": "do_creation",
+  "startMap": "Dawnhearth",
+  "startX": 8,
+  "startY": 18,
+  "startDir": "down",
+  "openingQuest": "awakening"
+ }
+}

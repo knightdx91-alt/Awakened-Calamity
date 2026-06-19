@@ -1460,10 +1460,16 @@
       body.querySelector('.cN').addEventListener('change', function () { cmd.name = this.value; });
     } else if (cmd.type === 'transfer') {
       body.innerHTML =
+        '<div class="row"><label style="font-size:10px;"><input type="checkbox" class="cmSys"' + (cmd.useSystemStart ? ' checked' : '') + '> Use System start (system.json → newGame)</label></div>' +
+        '<div class="cmManual">' +
         '<div class="row">' + lbl('Map') + '<select class="cmMap" style="flex:1;min-width:0;"></select></div>' +
         '<div class="row">' + lbl('X') + '<input type="number" class="cmX" value="' + (cmd.x || 0) + '" style="width:50px;">' + lbl('Y') + '<input type="number" class="cmY" value="' + (cmd.y || 0) + '" style="width:50px;"></div>' +
         '<div class="row">' + lbl('Facing') + '<select class="cmDir"><option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select>' +
-        '<button class="cmPick" title="Pick X,Y on the current map">📍 Pick…</button></div>';
+        '<button class="cmPick" title="Pick X,Y on the current map">📍 Pick…</button></div>' +
+        '</div>';
+      var cmSys = body.querySelector('.cmSys'), cmManual = body.querySelector('.cmManual');
+      function cmSysToggle() { cmManual.style.display = cmSys.checked ? 'none' : ''; }
+      cmSys.addEventListener('change', function () { cmd.useSystemStart = this.checked; if (!this.checked) delete cmd.useSystemStart; cmSysToggle(); }); cmSysToggle();
       var msel = body.querySelector('.cmMap');
       mapNameList().forEach(function (n) { var o = el('option', null, n); o.value = n; msel.appendChild(o); });
       if (cmd.map) msel.value = cmd.map; else cmd.map = msel.value;

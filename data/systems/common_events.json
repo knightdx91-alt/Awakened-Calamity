@@ -218,9 +218,7 @@
    },
    {
     "type": "transfer",
-    "map": "Dawnhearth",
-    "x": 8,
-    "y": 18,
+    "useSystemStart": true,
     "dir": "down"
    }
   ]

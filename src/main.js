@@ -230,6 +230,15 @@
         }
     }
     async function transitionToEventTransfer(cmd) {
+        // useSystemStart: resolve the destination from system.json → newGame (the
+        // RPG-Maker "Starting Position"). Lets the creation stage hand off to the
+        // configured start map without hardcoding it in the event.
+        if (cmd && cmd.useSystemStart) {
+            await _loadSystemCfg();
+            var ng = (_systemCfg && _systemCfg.newGame) || {};
+            cmd = { map: ng.startMap || cmd.map, x: ng.startX | 0, y: ng.startY | 0,
+                dir: cmd.dir && cmd.dir !== 'retain' ? cmd.dir : (ng.startDir || 'down'), _snap: true };
+        }
         if (_transitioning || !cmd || !cmd.map) return;
         _transitioning = true;
         try {
@@ -238,6 +247,7 @@
             window._currentMapType = (GameMap.current && GameMap.current.map_type) || "";
             player.x = Math.max(0, Math.min(cmd.x | 0, GameMap.width - 1));
             player.y = Math.max(0, Math.min(cmd.y | 0, GameMap.height - 1));
+            if (cmd._snap) { var wt = _findWalkable(player.x, player.y); player.x = wt.x; player.y = wt.y; }
             if (cmd.dir && cmd.dir !== 'retain') player.direction = cmd.dir;
             player.walkFrame = 0;
             _snapPlayer();
@@ -329,23 +339,34 @@
             GameSave.currentSlot = 0;
         }
         var finish = async function () {
-            // A fresh game opens on the VOID — a blank black stage map. The AUTORUN
-            // common event `character_creation` runs the whole Awakening there as
-            // editable event blocks (text / name_input / affinity / appearance /
-            // class), and ENDS with a `transfer` to Dawnhearth, then flips `sys_intro`
-            // (the cold-open). Everything is data in common_events.json — to use the
-            // polished DOM screen instead, make `character_creation` a single
-            // `{ "type": "creation" }` command, or change the start map back here.
-            await _enterMap('Void', 'awakened', null, null);
+            // New-game behavior is DATA (data/systems/system.json → newGame), the
+            // RPG-Maker "System tab > Starting Position" analogue — change it without
+            // touching code. A fresh game opens on `creationMap` (a blank black stage)
+            // where the AUTORUN `character_creation` common event runs the whole
+            // Awakening as editable event blocks, then transfers to `startMap`
+            // (the event's `transfer useSystemStart:true` reads it back from here).
+            // Set creationMap to "" to skip creation and spawn straight at startMap.
+            await _loadSystemCfg();
+            var ng = (_systemCfg && _systemCfg.newGame) || {};
+            var region = ng.region || 'awakened';
+            var firstMap = ng.creationMap || ng.startMap || 'Dawnhearth';
+            var useCreation = !!ng.creationMap;
+            await _enterMap(firstMap, region, null, null);
+            // Spawn straight-start (no creation stage) snaps to a walkable tile.
+            if (!useCreation && ng.startX != null) {
+                var ws = _findWalkable(ng.startX | 0, ng.startY | 0);
+                player.x = ws.x; player.y = ws.y; player.prevX = ws.x; player.prevY = ws.y; _snapPlayer();
+                GameCamera.update(player.x, player.y, GameMap.width, GameMap.height);
+            }
             if (window.GameSave && GameSave.state) {
-                GameSave.state.currentLocation = { region: 'awakened', mapName: 'Void', x: player.x, y: player.y };
-                if (GameSave.state.meta) GameSave.state.meta.currentMapName = 'Void';
+                GameSave.state.currentLocation = { region: region, mapName: firstMap, x: player.x, y: player.y };
+                if (GameSave.state.meta) GameSave.state.meta.currentMapName = firstMap;
                 // Kick off the opening quest (scripted beats advance it).
-                if (window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, 'awakening'); }
+                if (ng.openingQuest && window.GameQuests) { GameSave.state.quests = GameSave.state.quests || {}; GameQuests.start(GameSave.state.quests, ng.openingQuest); }
                 GameSave.save(0, GameSave.state);
             }
-            if (window.GameEventState) { GameEventState.reset(); GameEventState.setSwitch('do_creation', true); }
-            console.log('[Main] New game → Void (creation stage)');
+            if (window.GameEventState) { GameEventState.reset(); if (useCreation && ng.creationSwitch) GameEventState.setSwitch(ng.creationSwitch, true); }
+            console.log('[Main] New game →', firstMap, useCreation ? '(creation stage)' : '(direct start)');
         };
         finish();
     }
@@ -878,6 +899,17 @@
             GameCombatView.start(opts);
             if (!GameCombatView.isActive()) res(empty);
         });
+    }
+
+    // ---- System config (RPG-Maker "System" tab: new-game start position, etc.) ----
+    // Editable in data/systems/system.json — no code needed to change the start map.
+    var _systemCfg = null;
+    function _loadSystemCfg() {
+        if (_systemCfg) return Promise.resolve(_systemCfg);
+        return fetch('data/systems/system.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); })
+            .then(function (j) { return (window.GameSystemCfg = _systemCfg = j); })
+            .catch(function () { return (window.GameSystemCfg = _systemCfg = { newGame: { region: 'awakened', creationMap: 'Void', creationSwitch: 'do_creation', startMap: 'Dawnhearth', startX: 8, startY: 18, startDir: 'down', openingQuest: 'awakening' } }); });
     }
 
     // ---- run loop (GameRun) ----
