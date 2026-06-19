@@ -45,6 +45,13 @@
     var BUILD = (root.__BUILD__ || 'dev');
     var MS_PER_STEP = 30;   // real-time bar tick (lower = snappier; view-only, no balance change)
 
+    // Per-affinity impact SE (RTP). Physical (no affinity) falls back to a Blow.
+    var AFF_SE = {
+        ember: 'Fire2', tide: 'Water3', verdant: 'Wind3', storm: 'Thunder2',
+        stone: 'Earth2', frost: 'Ice2', toxin: 'Poison', umbral: 'Darkness2',
+        lumen: 'Saint5', corruption: 'Darkness5'
+    };
+
     // ---- data -------------------------------------------------------------
     function fetchJSON(p) { return fetch(p + '?b=' + BUILD, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('fetch ' + p + ' ' + r.status); return r.json(); }); }
     function loadDB() {
@@ -260,9 +267,69 @@
         var interv = false;
         for (var i = fromIndex; i < state.log.length; i++) {
             var e = state.log[i]; if (e.type === 'intervention') interv = true;
+            _juice(e);
             var line = _fmt(e); if (line) { logQueue.push(line); currentMsg = line; }
         }
         return interv;
+    }
+
+    // ---- JUICE (floating numbers, hit-flash, screenshake, impact SE) -------
+    // Presentation feedback only — reads the resolved log, changes no game state.
+    function _floatNum(id, text, cls) {
+        var c = cards[id]; if (!c) return;
+        var f = document.createElement('div');
+        f.className = 'cv-float ' + (cls || ''); f.textContent = text;
+        c.appendChild(f);
+        setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, 900);
+    }
+    function _flashCard(id, cls) {
+        var c = cards[id]; if (!c) return;
+        var spr = c.querySelector('.cv-sprite'); if (!spr) return;
+        spr.classList.remove(cls); void spr.offsetWidth; spr.classList.add(cls);
+        setTimeout(function () { spr.classList.remove(cls); }, 320);
+    }
+    function _shake(mag) {
+        if (!els.root) return;
+        var f = els.root.querySelector('.cv-field'); if (!f) return;
+        var cls = mag >= 2 ? 'cv-shake-big' : 'cv-shake';
+        f.classList.remove('cv-shake', 'cv-shake-big'); void f.offsetWidth; f.classList.add(cls);
+        setTimeout(function () { f.classList.remove(cls); }, 380);
+    }
+    function _seForHit(e) {
+        var sk = db.skills[e.skill] || {};
+        if (sk.affinity && AFF_SE[sk.affinity]) return AFF_SE[sk.affinity];
+        return e.crit ? 'Blow7' : 'Blow3';   // physical impact
+    }
+    function _juice(e) {
+        switch (e.type) {
+            case 'hit':
+                _floatNum(e.target, '-' + e.dmg + (e.crit ? '!' : ''),
+                    'dmg' + (e.crit ? ' crit' : '') + (e.aff === 'super' ? ' super' : e.aff === 'resist' ? ' resist' : ''));
+                _flashCard(e.target, 'cv-hitflash');
+                if (root.GameAudio) GameAudio.playSE(_seForHit(e));
+                _shake(e.crit || e.aff === 'super' ? 2 : 1);
+                break;
+            case 'heal':
+                _floatNum(e.target || e.actor, '+' + e.amount, 'heal');
+                _flashCard(e.target || e.actor, 'cv-healflash');
+                if (root.GameAudio) GameAudio.playSE('Heal2');
+                break;
+            case 'dot':
+                _floatNum(e.actor, '-' + e.dmg, 'dmg poison');
+                break;
+            case 'counter':
+                _floatNum(e.target, '-' + e.dmg, 'dmg');
+                _flashCard(e.target, 'cv-hitflash'); _shake(1);
+                if (root.GameAudio) GameAudio.playSE('Blow5');
+                break;
+            case 'miss':
+                _floatNum(e.target, 'MISS', 'miss');
+                if (root.GameAudio) GameAudio.playSE('Miss');
+                break;
+            case 'down':
+                if (root.GameAudio) GameAudio.playSE('Collapse1');
+                break;
+        }
     }
     function _fmt(e) {
         var nm = function (id) { return state.actors[id] ? state.actors[id].name : id; };
@@ -464,6 +531,7 @@
             if (lvlEvents.length) {
                 var pts = lvlEvents.reduce(function (s, e) { return s + e.points; }, 0);
                 msg += '   ⤴ LEVEL UP → Lv' + prog.level + ' (+' + pts + ' pts)';
+                if (root.GameAudio) GameAudio.playSE('Powerup');
                 // First level-up ever: teach where points go.
                 if (root.GameEventState && !GameEventState.getSwitch('taught_levelup')) {
                     msg += '\n(You grew stronger. Spend attribute points on the STATUS screen to shape your build.)';
@@ -691,7 +759,19 @@
         '.cv-opt{font-size:11px;padding:3px 6px;color:#c8d8e8;border-radius:2px;}' +
         '.cv-opt-dis{opacity:.4;}' +
         '.cv-opt.sel{background:rgba(24,184,200,0.18);color:#fff;}' +
-        '.cv-opt em{float:right;font-style:normal;color:#8aa0b4;font-size:9px;}';
+        '.cv-opt em{float:right;font-style:normal;color:#8aa0b4;font-size:9px;}' +
+        // --- JUICE: floating damage/heal numbers, hit-flash, screenshake ---
+        '.cv-float{position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:bold;font-family:"Courier New",monospace;pointer-events:none;z-index:8;white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;animation:cvFloat .9s ease-out forwards;}' +
+        '.cv-float.dmg{color:#ff6a4a;} .cv-float.dmg.crit{color:#ffd040;font-size:18px;} .cv-float.dmg.super{color:#ffe060;font-size:15px;} .cv-float.dmg.resist{color:#9aa8b4;font-size:11px;}' +
+        '.cv-float.dmg.poison{color:#c06ad8;} .cv-float.heal{color:#7bd66a;} .cv-float.miss{color:#cdddee;font-size:11px;font-style:italic;}' +
+        '@keyframes cvFloat{0%{opacity:0;}15%{opacity:1;}100%{transform:translateX(-50%) translateY(-30px);opacity:0;}}' +
+        '@keyframes cvHitFlash{0%{filter:brightness(2.6) saturate(.3) drop-shadow(0 0 4px #fff);}100%{filter:none;}}' +
+        '.cv-sprite.cv-hitflash{animation:cvHitFlash .3s ease-out;}' +
+        '@keyframes cvHealFlash{0%{filter:brightness(1.5) sepia(1) hue-rotate(55deg) saturate(2);}100%{filter:none;}}' +
+        '.cv-sprite.cv-healflash{animation:cvHealFlash .34s ease-out;}' +
+        '@keyframes cvShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-3px);}75%{transform:translateX(3px);}}' +
+        '@keyframes cvShakeBig{0%,100%{transform:translate(0,0);}20%{transform:translate(-5px,2px);}40%{transform:translate(5px,-2px);}60%{transform:translate(-4px,-1px);}80%{transform:translate(4px,1px);}}' +
+        '.cv-field.cv-shake{animation:cvShake .26s ease;} .cv-field.cv-shake-big{animation:cvShakeBig .38s ease;}';
         var st = document.createElement('style'); st.id = 'cv-style'; st.textContent = css; document.head.appendChild(st);
     }
 
