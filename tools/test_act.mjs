@@ -59,6 +59,12 @@ check('rest node disables encounters + flags rest', rest && rest.gen.encounterMu
 check('nodeFor clamps + returns the floor node', GameAct.nodeFor(act, 1).floor === 1 && GameAct.nodeFor(act, 999).floor === act.length);
 const gm = GameAct.glyphMap(act, 2);
 check('glyphMap marks the current floor with ▸', gm.includes('▸') && gm.split(' ').length === act.length);
+// fog-of-war: floors ahead hidden, boss always shown, current floor visible
+const fog = GameAct.fogMap(act, 2);
+const cells = fog.split(' ');
+check('fogMap hides floors ahead of the current one', cells[3].includes('?') && !cells[1].includes('?'));
+check('fogMap always reveals the boss (last node)', !cells[cells.length - 1].includes('?'));
+check('fogMap reveals the current floor + marks it', cells[1].includes('▸') && !cells[1].includes('?'));
 
 // degenerate length
 check('length 1 → single boss node', GameAct.compose(5, 1, cfg).length === 1 && GameAct.compose(5, 1, cfg)[0].type === 'boss');

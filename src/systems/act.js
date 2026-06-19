@@ -88,8 +88,20 @@
         if (!act || !act.length) return '';
         return act.map(function (n) { return (n.floor === (current | 0) ? '▸' : '') + n.glyph; }).join(' ');
     }
+    // FOG-OF-WAR map: reveal floors up to (and including) the current floor; hide
+    // everything ahead as '?' so the descent keeps its roguelike mystery. The boss
+    // (last node) is always shown — you always know a boss waits at the bottom.
+    function fogMap(act, current) {
+        if (!act || !act.length) return '';
+        var cur = current | 0, last = act.length;
+        return act.map(function (n) {
+            var seen = n.floor <= cur || n.floor === last;
+            var g = seen ? n.glyph : '?';
+            return (n.floor === cur ? '▸' : '') + g;
+        }).join(' ');
+    }
 
-    var GameAct = { compose: compose, nodeFor: nodeFor, glyphMap: glyphMap, DEFAULT_CFG: DEFAULT_CFG };
+    var GameAct = { compose: compose, nodeFor: nodeFor, glyphMap: glyphMap, fogMap: fogMap, DEFAULT_CFG: DEFAULT_CFG };
     root.GameAct = GameAct;
     if (typeof module !== 'undefined' && module.exports) module.exports = GameAct;
 })(typeof window !== 'undefined' ? window : globalThis);

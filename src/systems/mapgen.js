@@ -385,22 +385,22 @@
             commands: [{ type: 'text', text: 'A System-twisted creature lunges from the dark!' },
                 { type: 'battle', enemies: [{ key: key, level: level }] }, { type: 'despawn' }] });
     };
+    // A chest: examine once → grant loot → the chest VANISHES (despawn). The solid
+    // event blocks movement on its own, so no separate crate prop is needed; despawn
+    // leaves clean floor (and no lingering self-switch in localStorage).
     Builder.prototype.placeChest = function (x, y, money, item) {
         var loot = [], gained = [];
         if (money) { loot.push({ type: 'money', op: '+', amount: money }); gained.push(money + ' Cr'); }
         if (item) { loot.push({ type: 'item', op: '+', id: item, pocket: 'items', qty: 1 }); gained.push('a ' + item.replace(/_/g, ' ')); }
         loot.push({ type: 'text', text: 'You found ' + (gained.length ? gained.join(' and ') : 'nothing of use') + '.' });
-        loot.push({ type: 'selfswitch', letter: 'A', value: true });
-        this.setp(x, y, GID.crate, true);
+        loot.push({ type: 'despawn' });
         this.events.push({ x: x, y: y, name: 'Chest', trigger: 'action', through: false, graphic: chestGfx(),
-            commands: [{ type: 'conditional', cond: { kind: 'selfswitch', letter: 'A', value: true },
-                then: [{ type: 'text', text: 'The chest lies open and empty.' }],
-                else: [{ type: 'text', text: 'A weathered chest, half-buried in the dust.' }].concat(loot) }] });
+            commands: [{ type: 'text', text: 'A weathered chest, half-buried in the dust.' }].concat(loot) });
     };
+    // A relic cache: take the relic → the cache VANISHES.
     Builder.prototype.placeRelicCache = function (x, y, count) {
-        this.setp(x, y, GID.crate, true);
         this.events.push({ x: x, y: y, name: 'RelicCache', trigger: 'action', through: false, graphic: chestGfx(),
-            commands: [{ type: 'relic', count: count || 3 }] });
+            commands: [{ type: 'relic', count: count || 3 }, { type: 'despawn' }] });
     };
     Builder.prototype.placeTrap = function (x, y, kind, hz) {
         hz = hz || {};
@@ -489,8 +489,8 @@
         b.events.push({ x: ex, y: ey, name: 'Entrance', trigger: 'action', through: false,
             graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
             commands: [{ type: 'text', text: 'Worn stairs lead back up to the surface.' },
-                // legible run shape (act composer #4 / onboarding #5): glyph map + this floor
-                { type: 'text', text: 'DESCENT:  [act]\nHere:  [floorlabel]' }] });
+                // fog-of-war depth read (#4): floors seen so far + the boss; rest hidden
+                { type: 'text', text: 'DEPTH:  [act]\nHere:  [floorlabel]\n(What lies deeper is unknown.)' }] });
 
         var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
         // The deepest room holds either the way DOWN (normal floor → descend to the

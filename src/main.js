@@ -1265,11 +1265,12 @@
             // [v:id] = a game variable value (RPG Maker's \V[n]); [s:id] = ON/OFF switch
             .replace(/\[v:([^\]]+)\]/g, function (_, id) { return ES ? String(ES.getVar(id.trim())) : '0'; })
             .replace(/\[s:([^\]]+)\]/g, function (_, id) { return (ES && ES.getSwitch(id.trim())) ? 'ON' : 'OFF'; })
-            // [act] = the current run's paced act as a glyph map (▸ on this floor);
-            // [floorlabel] = this floor's act-node label (act composer #4).
+            // [act] = the current run's paced act as a FOG-OF-WAR glyph map (floors
+            // ahead hidden as '?', boss always shown) — keeps the descent's mystery;
+            // [floorlabel] = THIS floor's node label (you're standing in it).
             .replace(/\[act\]/g, function () {
                 var r = window.GameSave && GameSave.state && GameSave.state.run;
-                return (window.GameAct && r && r.act) ? GameAct.glyphMap(r.act, r.floor | 0) : '';
+                return (window.GameAct && r && r.act) ? GameAct.fogMap(r.act, r.floor | 0) : '';
             })
             .replace(/\[floorlabel\]/g, function () {
                 var r = window.GameSave && GameSave.state && GameSave.state.run;
