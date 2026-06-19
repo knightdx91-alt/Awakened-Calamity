@@ -152,5 +152,25 @@ const { map: dm } = GameMapGen.generateFloor({ seed: 900, tier: 2, creatures });
 check('no node → default floor (has traps, one relic cache)',
   dm.events.some(e => e.name === 'Trap') && dm.events.filter(e => e.name === 'RelicCache').length === 1);
 
+// ── ROOM-SHAPE VARIETY: CA cave rooms (generator roadmap #5) ───────────────
+// Forcing all-cave rooms must STILL stay fully reachable (ensureConnected +
+// repairPropConnectivity guarantee it) and must produce organic (non-rect) shape.
+let caveReach = true, caveOrganic = false;
+for (let s = 0; s < 20; s++) {
+  const bio = { caveChance: 1 };
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 1500 + s, tier: 2, creatures, biome: bio });
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) caveReach = false;
+  // organic = some interior walkable cell has a diagonal-only opening pattern not
+  // possible in a pure rectangle; cheap proxy: walkable count varies vs a rect run
+}
+// compare walkable counts: all-cave vs all-rect from the same seed should differ
+const rectRun = GameMapGen.generateFloor({ seed: 2024, tier: 2, creatures, biome: { caveChance: 0 } });
+const caveRun = GameMapGen.generateFloor({ seed: 2024, tier: 2, creatures, biome: { caveChance: 1 } });
+const wc = (lay) => lay.collision.reduce((n, c) => n + (c ? 0 : 1), 0);
+caveOrganic = wc(rectRun.layout) !== wc(caveRun.layout);
+check('all-cave floors stay fully reachable', caveReach);
+check('cave rooms change the floor shape (organic vs rect)', caveOrganic);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

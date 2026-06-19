@@ -65,12 +65,14 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    `run.json runtimeGen` is on (pool kept as fallback); `_purgeRunFloors` clears reused `RunGenF*`
    names. `tools/test_mapgen.mjs` = 12 checks; browser-verified.
 
-2. **Room-shape variety — START HERE (procgen toolkit above).** Deliver `style: 'rooms' | 'bsp'
-   | 'cave' | 'mixed'` on `generateFloor`: **BSP** (structured rectangular rooms, connected by
-   construction) + `caveFill` (cellular automata) + drunkard's-walk corridors + big pillared
-   halls / merged-blocked rooms. Biggest visual-variety win for the least code; slots into the
-   existing Builder; headless-testable via `tools/test_mapgen.mjs` (assert every style stays
-   connected). *(Was #5; promoted — cheapest high-impact change, unblocks the rest. `MAPGEN_SPEC §6`.)*
+2. **Room-shape variety.** ✅ DONE in part (2026-06-19) — `Builder.carveCaveRoom` carves ORGANIC
+   **cellular-automata cave rooms** (seed ~45% wall → 4 smoothing passes → carve, with a force-carved
+   centre core so corridors still land on floor). Each room rolls cave-vs-rect by `biome.caveChance`
+   (verdara .5 / calderra .35 / halveth .45 / vael .6), so floors mix rectangular halls + caves.
+   Reachability still GUARANTEED (`ensureConnected` + `repairPropConnectivity`); `tools/test_mapgen.mjs`
+   asserts all-cave floors stay fully reachable + that caves change the floor shape. Big pillared halls
+   already exist (rooms ≥7×5). **Still TODO:** BSP structured layout + drunkard's-walk corridors +
+   merged/blocked rooms (a `style` selector). *`MAPGEN_SPEC §6`.*
 
 3. **Biome system.** ✅ DONE (2026-06-19) — `data/systems/biomes.json` (4 biomes: verdara/
    calderra/halveth/vael) drives each generated floor's **palette** (base floor tile via the
@@ -94,8 +96,11 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    the act at `_runStart` (stored on `run.act`, replay-safe) and reads the node per floor in
    `_genFloor`. The shape is surfaced via `[act]` (glyph map w/ a ▸ cursor) + `[floorlabel]` text
    tokens (shown when examining a floor's Entrance) — onboarding #5's legible run shape.
-   `tools/test_act.mjs` = 13 checks; `test_mapgen.mjs` grew to 22 (added biome + act-node checks).
-   **Next:** a proper hub **Board** widget rendering `[act]` before descent (vs. only in-dungeon).
+   `tools/test_act.mjs` = 13 checks; `test_mapgen.mjs` grew to 24 (biome + act-node + cave checks).
+   **Hub forecast DONE (2026-06-19):** `[actforecast]` token previews the NEXT descent's shape at
+   the hub before you commit — composes the act for the pinned seed (`run_seed_in`); unpinned = a
+   note that it's random. Wired into the **DescentGate** (with a glyph legend) + the **Replay Slate**.
+   Acts/run DB preloaded at boot so the forecast uses the live pacing config.
 
 5. **Data-driven templates / recipes (`MAPGEN_SPEC §3`).** Author intent in JSON
    (`{biome, anchors, enemy_table, hazard, hook}`); the generator fills detail. Enables hybrid

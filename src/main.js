@@ -1276,6 +1276,16 @@
                 if (!window.GameAct || !r || !r.act) return '';
                 var n = GameAct.nodeFor(r.act, r.floor | 0);
                 return n ? (n.glyph + ' ' + n.label) : '';
+            })
+            // [actforecast] = the SHAPE of the NEXT descent, previewed at the hub
+            // before you commit. Composes the act for the pinned seed (run_seed_in);
+            // if unpinned (0 = random), the shape can't be known yet.
+            .replace(/\[actforecast\]/g, function () {
+                if (!window.GameAct) return '(unknown)';
+                var seed = ES ? (ES.getVar('run_seed_in') | 0) : 0;
+                if (seed <= 0) return '(unpinned — a fresh, random shape each descent)';
+                var len = (_runDb && _runDb.maxDepth) || 4;
+                return GameAct.glyphMap(GameAct.compose(seed >>> 0, len, _actsDb || GameAct.DEFAULT_CFG), 0);
             });
     }
     async function runCmd(c, ctx) {
@@ -1944,6 +1954,8 @@
             if (window.GameAudio) GameAudio.init();
             if (window.GameItems) GameItems.load();   // preload item DB (battle/menus)
             _loadQuestDb();   // preload so quest conditionals resolve
+            _loadActs();      // preload so the hub [actforecast] uses the live pacing cfg
+            _loadRunDb();     // preload so maxDepth/biome are known at the hub
 
             if (window.GameDialogue) GameDialogue.init();
 

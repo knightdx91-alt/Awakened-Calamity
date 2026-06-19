@@ -45,7 +45,8 @@
         bosses: BOSSES,
         hazard: { sensorWeight: 0.4, spikeText: 'Spikes erupt from the floor!', spikeDmg: 16,
             sensorText: 'A System sigil flares underfoot — it has logged your position.', sensorSurveil: 12 },
-        encounterRate: 0.75
+        encounterRate: 0.75,
+        caveChance: 0.4
     };
     function resolveBiome(biome) {
         if (!biome || typeof biome !== 'object') return DEFAULT_BIOME;
@@ -56,7 +57,8 @@
             enemyTiers: { 1: et[1] || et['1'] || T1, 2: et[2] || et['2'] || T2, 3: et[3] || et['3'] || T3 },
             bosses: (biome.bosses && biome.bosses.length) ? biome.bosses : DEFAULT_BIOME.bosses,
             hazard: biome.hazard || DEFAULT_BIOME.hazard,
-            encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate
+            encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate,
+            caveChance: biome.caveChance != null ? biome.caveChance : DEFAULT_BIOME.caveChance
         };
     }
 
@@ -91,6 +93,39 @@
     };
     Builder.prototype._mark = function (x, y) {
         if (this.inb(x, y) && x > 0 && x < this.W - 1 && y > 0 && y < this.H - 1) this.walk[y * this.W + x] = true;
+    };
+    // ROOM-SHAPE VARIETY (generator roadmap #5): carve an ORGANIC cave room with a
+    // cellular-automata blob inside the room's bounds (vs. the plain carveRect). The
+    // room center is force-carved so corridors still connect; ensureConnected +
+    // repairPropConnectivity guarantee reachability regardless of the CA outcome.
+    Builder.prototype.carveCaveRoom = function (x0, y0, x1, y1) {
+        var rx0 = Math.max(1, Math.min(x0, x1)), ry0 = Math.max(1, Math.min(y0, y1));
+        var rx1 = Math.min(this.W - 2, Math.max(x0, x1)), ry1 = Math.min(this.H - 2, Math.max(y0, y1));
+        var rw = rx1 - rx0 + 1, rh = ry1 - ry0 + 1;
+        if (rw < 3 || rh < 3) { this.carveRect(x0, y0, x1, y1); return; }
+        var grid = new Array(rw * rh), gx, gy;
+        // seed: ~45% wall, hard border wall
+        for (gy = 0; gy < rh; gy++) for (gx = 0; gx < rw; gx++)
+            grid[gy * rw + gx] = (gx === 0 || gy === 0 || gx === rw - 1 || gy === rh - 1) ? 1 : (this.rng.random() < 0.45 ? 1 : 0);
+        // smooth: a cell is wall if ≥5 of its 8 neighbours (border = wall) are walls
+        for (var it = 0; it < 4; it++) {
+            var nx = grid.slice();
+            for (gy = 1; gy < rh - 1; gy++) for (gx = 1; gx < rw - 1; gx++) {
+                var c = 0;
+                for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+                    if (!dx && !dy) continue;
+                    var ax = gx + dx, ay = gy + dy;
+                    if (ax < 0 || ay < 0 || ax >= rw || ay >= rh || grid[ay * rw + ax]) c++;
+                }
+                nx[gy * rw + gx] = c >= 5 ? 1 : 0;
+            }
+            grid = nx;
+        }
+        for (gy = 0; gy < rh; gy++) for (gx = 0; gx < rw; gx++)
+            if (!grid[gy * rw + gx]) this.walk[(ry0 + gy) * this.W + (rx0 + gx)] = true;
+        // force a connected core at the room centre so the chain corridor lands on floor
+        var ccx = (rx0 + rx1) >> 1, ccy = (ry0 + ry1) >> 1;
+        for (var py = -1; py <= 1; py++) for (var px = -1; px <= 1; px++) this._mark(ccx + px, ccy + py);
     };
     Builder.prototype.carveCorridor = function (x0, y0, x1, y1, width) {
         width = width || 1; var x = x0, y = y0, w;
@@ -298,7 +333,12 @@
             var clash = false;
             for (var q = 0; q < rooms.length; q++) if (Math.abs(cx - rooms[q][0]) < rw && Math.abs(cy - rooms[q][1]) < rh) { clash = true; break; }
             if (clash) continue;
-            b.carveRect(rx, ry, rx + rw, ry + rh); rooms.push([cx, cy, rw, rh]);
+            // ROOM-SHAPE VARIETY (#5): some rooms are organic CA caves, the rest are
+            // rectangular halls. biome.caveChance biases the mix (default ~0.4).
+            var caveChance = bio.caveChance != null ? bio.caveChance : 0.4;
+            if (rng.random() < caveChance) b.carveCaveRoom(rx, ry, rx + rw, ry + rh);
+            else b.carveRect(rx, ry, rx + rw, ry + rh);
+            rooms.push([cx, cy, rw, rh]);
         }
         rooms.sort(function (a, c) { return a[1] - c[1] || a[0] - c[0]; });
         for (var i = 1; i < rooms.length; i++) b.carveCorridor(rooms[i - 1][0], rooms[i - 1][1], rooms[i][0], rooms[i][1], rng.choice([1, 2]));

@@ -816,6 +816,10 @@
      "text": "\u2756 THE FRACTURE \u2014 the way DOWN \u2756\nA fracture in the air hums where the System thins \u2014 a way DOWN, into the dark beneath Dawnhearth."
     },
     {
+     "type": "text",
+     "text": "DESCENT FORECAST:  [actforecast]\n\u2694 fight  \u2605 elite  \u2726 treasure  \u263e refuge  \ud835\udd6d Alpha"
+    },
+    {
      "type": "choice",
      "prompt": "How will you descend?",
      "options": [
@@ -913,7 +917,7 @@
    "commands": [
     {
      "type": "text",
-     "text": "THE REPLAY SLATE \u2014 the System pins the SHAPE of a descent here. The same seed grows the same floors and relic caches.\nLast descent's seed: [v:run_seed]\nPinned for next descent: [v:run_seed_in]  (0 = fresh, random)"
+     "text": "THE REPLAY SLATE \u2014 the System pins the SHAPE of a descent here. The same seed grows the same floors and relic caches.\nLast descent's seed: [v:run_seed]\nPinned for next descent: [v:run_seed_in]  (0 = fresh, random)\nPinned shape:  [actforecast]"
     },
     {
      "type": "choice",

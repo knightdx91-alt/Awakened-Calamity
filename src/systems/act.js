@@ -30,13 +30,18 @@
         var st = RNG.create(((seed | 0) || 1) >>> 0);
         return { random: function () { return RNG.next(st); } };
     }
-    // weighted pick honoring per-type min spacing from the already-placed types
-    function pick(rng, weights, types, idx, minSpacing) {
+    // weighted pick honoring per-type min spacing, checking BOTH directions in the
+    // sequence (so a pre-placed forced node — e.g. the rest before the boss — still
+    // blocks a same-type neighbour within its spacing window).
+    function pick(rng, weights, types, seq, at, minSpacing) {
         var pool = [], i, t;
         for (i = 0; i < types.length; i++) {
             t = types[i]; var w = weights[t] || 0; if (w <= 0) continue;
             var sp = (minSpacing && minSpacing[t]) || 0, ok = true;
-            for (var b = 1; b <= sp; b++) if (idx.length - b >= 0 && idx[idx.length - b] === t) { ok = false; break; }
+            for (var b = 1; b <= sp && ok; b++) {
+                if (at - b >= 0 && seq[at - b] === t) ok = false;
+                if (at + b < seq.length && seq[at + b] === t) ok = false;
+            }
             if (ok) for (var k = 0; k < w; k++) pool.push(t);
         }
         if (!pool.length) return 'monster';
@@ -58,12 +63,11 @@
         if (length >= 1) seq[bossAt] = 'boss';
         if (length >= 2 && pacing.firstNode && nt[pacing.firstNode]) seq[0] = pacing.firstNode;
         if (length >= 3 && pacing.restBeforeBoss && nt.rest) seq[bossAt - 1] = 'rest';
-        // fill the rest, weighted with spacing (track placed sequence for spacing checks)
-        var placed = [];
+        // fill the gaps, weighted with spacing checked against the whole sequence
+        // (forced nodes already in place are respected in both directions)
         for (var i = 0; i < length; i++) {
-            if (seq[i]) { placed.push(seq[i]); continue; }
-            var t = pick(rng, pacing.weights || {}, middleTypes, placed, pacing.minSpacing);
-            seq[i] = t; placed.push(t);
+            if (seq[i]) continue;
+            seq[i] = pick(rng, pacing.weights || {}, middleTypes, seq, i, pacing.minSpacing);
         }
         // single-floor run = just a boss; guarantee at least one non-boss combat floor
         if (length === 1) seq[0] = 'boss';
