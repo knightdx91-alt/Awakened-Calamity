@@ -17,6 +17,14 @@
     { "id": "executioner",  "name": "Executioner's Mark","tier": "epic",   "icon": 0,  "desc": "+20% attack and +18% critical chance.", "effect": { "atkMult": 0.20, "crit": 0.18 } },
     { "id": "vampire_crown","name": "Vampire's Crown",   "tier": "epic",   "icon": 0,  "desc": "Lifesteal 22% and +15% attack.",      "effect": { "lifesteal": 0.22, "atkMult": 0.15 } },
     { "id": "leaded_veil",  "name": "Leaded Veil",       "tier": "epic",   "icon": 0,  "desc": "Collection threshold +60 this run (the System loses your trail).", "effect": { "collectionBonus": 60 } },
-    { "id": "juggernaut_core","name": "Juggernaut Core", "tier": "epic",   "icon": 0,  "desc": "+45% max HP, +25% defense, -10% speed.", "effect": { "hpMult": 0.45, "defMult": 0.25, "spdMult": -0.10 } }
+    { "id": "juggernaut_core","name": "Juggernaut Core", "tier": "epic",   "icon": 0,  "desc": "+45% max HP, +25% defense, -10% speed.", "effect": { "hpMult": 0.45, "defMult": 0.25, "spdMult": -0.10 } },
+    { "id": "barbed_vest",   "name": "Barbed Vest",       "tier": "common", "icon": 0,  "desc": "+8 flat defense.",                    "effect": { "defBonus": 8 } },
+    { "id": "gut_brace",     "name": "Gut Brace",         "tier": "common", "icon": 0,  "desc": "+12% max HP and +8% defense.",        "effect": { "hpMult": 0.12, "defMult": 0.08 } },
+    { "id": "duelist_glove", "name": "Duelist's Glove",   "tier": "common", "icon": 0,  "desc": "+10% attack and +8% speed.",          "effect": { "atkMult": 0.10, "spdMult": 0.08 } },
+    { "id": "thorn_buckler", "name": "Thorn Buckler",     "tier": "rare",   "icon": 0,  "desc": "Reflect 18% damage and +10% defense.","effect": { "thorns": 0.18, "defMult": 0.10 } },
+    { "id": "stalkers_cowl", "name": "Stalker's Cowl",    "tier": "rare",   "icon": 0,  "desc": "+15% crit and +12% evade.",           "effect": { "crit": 0.15, "evade": 0.12 } },
+    { "id": "bloodletter",   "name": "Bloodletter",       "tier": "rare",   "icon": 0,  "desc": "Lifesteal 16% but -8% defense.",      "effect": { "lifesteal": 0.16, "defMult": -0.08 } },
+    { "id": "deadmans_dial", "name": "Dead Man's Dial",   "tier": "epic",   "icon": 0,  "desc": "+25% attack, +20% speed, -15% max HP.","effect": { "atkMult": 0.25, "spdMult": 0.20, "hpMult": -0.15 } },
+    { "id": "null_shroud",   "name": "Null Shroud",       "tier": "epic",   "icon": 0,  "desc": "-50% Surveillance per save and Collection threshold +30.", "effect": { "survPerSaveMult": -0.50, "collectionBonus": 30 } }
   ]
 }
