@@ -4,6 +4,39 @@ Compiled from the simulators (`sim_balance`/`sim_run`/`sim_buildspace`/`sim_econ
 the validators (`mapcheck`/`content_lint`/`dashboard`), and the design harness
 (`validate_design`). Ordered by leverage. Re-run the tools after each fix to confirm.
 
+## ▶ RPG MAKER VX ACE PARITY — what we DON'T have yet (added 2026-06-19)
+Owner directive: build it like RPG Maker, editable in event/data blocks, or say why not.
+Full target spec + GUI details in **`docs/RPGMAKER_VXACE_UI.md`** (researched from official +
+Steam guides + the wiki). Gaps, ordered by value:
+
+**Editor UI (forms/windows we lack):**
+1. **Map Properties dialog** — ⭐ highest. Ours ≈ Name/W/H/Tileset/music. Missing: Display Name,
+   Scroll Type, Encounters list + Steps Average, Autoplay BGM/BGS, Specify Battleback, Disable
+   Dashing, Parallax (graphic/loop H-V/scroll X-Y/show-in-editor), Note. (Data-only fields wire
+   now; parallax/encounters/battleback need engine systems first — see below.)
+2. **Database window** — we have NO unified Database. VX Ace = 14 tabs (Actors/Classes/Skills/
+   Items/Weapons/Armors/Enemies/Troops/States/Animations/Tilesets/Common Events/System/Terms).
+   Ours is scattered `data/systems/*.json` with no editor UI.
+3. **Right-click map menu** — add **Quick Event Creation** (Transfer/Door/Inn/Treasure Chest) +
+   **Set Starting Position** (we have the data side in system.json; add the on-map setter).
+4. **Map tree extras** — Generate Dungeon!, Shift Map, Save as Image, copy/paste whole maps.
+5. **Tileset Passage/Tags editor** — paint ○/✕ passability, ladder, bush, counter, damage floor,
+   terrain tags per tile (we have collision only).
+6. **Tool windows** — Resource Manager, Sound Test, Character Generator (none exist).
+
+**Engine systems missing (block the above + VX Ace event commands):**
+- **Picture layer** → Show/Move/Rotate/Tint/Erase Picture.
+- **Equipment/gear system** → Change Weapons/Armors/Equipment + Equip menu.
+- **Multi-actor party / followers** → Formation, follower commands (we have `bonds`).
+- **Parallax rendering** → before Map-Properties parallax fields do anything.
+- **Step-based random encounters** → before the Encounters field does anything (we use roaming
+  touch-events).
+- **Per-map battleback**, **vehicles**, **generic Shop Processing**, **Movie playback**.
+- **Battle-scene commands** (Enemy Appear/Transform, Force Action, Change Enemy HP…) — N/A as-is;
+  our combat is the custom Tempo/Intervention engine, not the VX Ace battle scene.
+
+(See `docs/EVENT_COMMANDS.md` for the per-command "blocked + why" list.)
+
 ## P0 — core loop / keystone (DONE — verified in-engine 2026-06-18)
 - ✅ **System Intervention dilemma** — lethal-save (temptation) + Surveillance→Corruption
   collection (cost). Harness: ❌→🟡, ★ dilemma PASS. (combat.js, corruption.js/json)

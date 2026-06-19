@@ -2,6 +2,42 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## 📌 SESSION WRAP — 2026-06-19 (PART 2: RPG-Maker-ification + descent fixes; all on `main`)
+Owner directive locked in (CRITICAL RULES): **build it like RPG Maker — editable event/data
+blocks wherever possible; if something genuinely can't be data-driven, TELL the owner why, never
+a silent hardcode.** What shipped this part:
+1. **Vendored RPGAtlas** (`/rpgatlas/`, GPLv3, original FOSS RPG-maker engine/editor) as a
+   standalone hub tool — *mere aggregation*, walled off from our code (see `rpgatlas/VENDORED_NOTICE.md`).
+   Its `assets.js`/`sfx.js` are a clean-room model for procedural art/audio (our RTP-replacement gap).
+2. **Procgen roadmap consolidated** → `docs/GENERATOR_ROADMAP.md` is now the master (merged
+   MAPGEN_SPEC + mapping principles + the Reddit procgen toolkit: CA caves / drunkard's walk /
+   **BSP** / prefabs / WFC / graph, each mapped to our `Builder`). Quantum map-gen logged as REJECTED.
+   New refs: `docs/MAPPING_PRINCIPLES.md`. Next procgen step = room-shape variety (BSP+CA).
+3. **Descent BUG FIXED** — choosing Tethered/Untethered did nothing: `descend` referenced
+   undefined `root.GameEventState` → ReferenceError swallowed by the event runner's `catch`. Now
+   `window.GameEventState`; browser-verified descent loads a generated floor.
+4. **Run loop decomposed into fine-grained editable commands** (owner ask): `run` (start/deeper/
+   end) + `gendungeon` + `conditional kind:run`; `descend` is now a thin macro. Gate + generated
+   StairsDown/Alpha rewritten to the primitives. All in the map-editor palette+forms.
+5. **Character creation rebuilt RPG-Maker-style** — boots **directly onto a black `Void` map**
+   (new `void_black` tile, `hide_player` flag) where the `character_creation` autorun runs as
+   event blocks, then transfers to the start. **No transition/flash** (boot-onto-black, not a hack).
+6. **System config = data** (`data/systems/system.json`, RM "System tab" analogue): new-game
+   start map/x/y/creationMap, editable without code; `transfer useSystemStart:true` reads it.
+   Doc: `docs/SYSTEM_CONFIG.md`.
+7. **Added the wireable VX Ace event commands** (engine+editor+docs): `weather` (renderer
+   overlay), `setevloc`, `transparency`, `erase_event`, `openmenu`, `opensave`, `gameover`,
+   `totitle`, `recover_all`, `change_level`, `change_exp`, `select_item`. Blocked ones documented
+   with reasons in `docs/EVENT_COMMANDS.md`.
+8. **Researched the full VX Ace editor UI** → `docs/RPGMAKER_VXACE_UI.md` (menus, Map Properties
+   dialog, event editor, 14 Database tabs, right-click menus, etc.) + a **gap analysis**.
+
+### ▶ NEXT — RPG MAKER PARITY (what we DON'T have; tracked in `docs/FIX_LIST.md`)
+Highest value: **(1) Map Properties dialog** to the full VX Ace field set, then **(2) a Database
+window** (14 tabs). Plus right-click Quick Event Creation / Set Starting Position, map-tree extras,
+tileset passage editor, and the missing engine systems (picture layer, equipment, party/followers,
+parallax rendering, step-encounters) that unblock the rest. Full list in FIX_LIST.
+
 ## 📌 SESSION WRAP — 2026-06-19 (big session; all pushed to `main`)
 Five things shipped this session (each has its own detailed ✅ DONE block below):
 1. **Wired the inert combat skills** — `skills.json` real inert combat skills 22 → 0; every class's
