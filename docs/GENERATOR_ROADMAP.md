@@ -82,8 +82,10 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    corridor that `repairPropConnectivity` can't fix), it CARVES through to reconnect. So every layout
    style + max windiness + all-cave stays fully reachable. `tools/test_mapgen.mjs` = 29 checks.
    Browser-verified a generated verdara floor renders with 0 errors.
-   **Still TODO (optional):** deliberate merged/blocked rooms (big rooms broken by interior walls).
-   *`MAPGEN_SPEC §6`.*
+   **Room sectioning DONE (2026-06-19):** `Builder.divideRoom` breaks big rectangular halls with an
+   interior wall + a doorway gap (runs after `ensureConnected`, before `finalizeWalls`; protects a
+   1-cell centre core so events placed there stay open). **#5 is feature-complete** (CA caves + BSP +
+   style selector + drunkard corridors + sectioning, all reachability-guaranteed). *`MAPGEN_SPEC §6`.*
 
 3. **Biome system.** ✅ DONE (2026-06-19) — `data/systems/biomes.json` (4 biomes: verdara/
    calderra/halveth/vael) drives each generated floor's **palette** (base floor tile via the

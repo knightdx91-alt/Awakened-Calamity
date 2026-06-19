@@ -131,11 +131,31 @@
         var ccx = (rx0 + rx1) >> 1, ccy = (ry0 + ry1) >> 1;
         for (var py = -1; py <= 1; py++) for (var px = -1; px <= 1; px++) this._mark(ccx + px, ccy + py);
     };
-    // carve a single room (rect or organic cave) honoring caveChance; returns [cx,cy,rw,rh]
+    // carve a single room (rect or organic cave) honoring caveChance. Returns
+    // [cx,cy,rw,rh,isCave] — isCave lets the divider pass target only rect rooms.
     Builder.prototype.carveRoomAt = function (rx, ry, rw, rh, caveChance) {
-        if (this.rng.random() < (caveChance != null ? caveChance : 0.4)) this.carveCaveRoom(rx, ry, rx + rw, ry + rh);
+        var cave = this.rng.random() < (caveChance != null ? caveChance : 0.4);
+        if (cave) this.carveCaveRoom(rx, ry, rx + rw, ry + rh);
         else this.carveRect(rx, ry, rx + rw, ry + rh);
-        return [rx + (rw / 2 | 0), ry + (rh / 2 | 0), rw, rh];
+        return [rx + (rw / 2 | 0), ry + (rh / 2 | 0), rw, rh, cave];
+    };
+    // SECTIONING (generator roadmap #5): break a big RECTANGULAR hall with an
+    // interior wall that has a doorway gap — turns a featureless square into two
+    // connected sub-rooms. Must run AFTER ensureConnected, BEFORE finalizeWalls;
+    // the guaranteed gap + ensureCollisionConnected keep the floor reachable.
+    Builder.prototype.divideRoom = function (room) {
+        var cx = room[0], cy = room[1], rw = room[2], rh = room[3], isCave = room[4];
+        if (isCave || rw < 8 || rh < 6) return;     // only big rectangular halls
+        var vert = this.rng.random() < 0.5, self = this;
+        // keep a 1-cell core at the room centre open — events (stairs/boss/loot) sit there
+        function wallOff(x, y) { if (Math.abs(x - cx) <= 1 && Math.abs(y - cy) <= 1) return; if (self.inb(x, y) && x > 0 && x < self.W - 1 && y > 0 && y < self.H - 1) self.walk[y * self.W + x] = false; }
+        if (vert) {
+            var dx = cx + this.rng.randint(-1, 1), gap = cy + this.rng.randint(-((rh / 4) | 0), (rh / 4) | 0);
+            for (var y = cy - (rh / 2 | 0) + 1; y <= cy + (rh / 2 | 0) - 1; y++) if (y < gap - 1 || y > gap) wallOff(dx, y);
+        } else {
+            var dy = cy + this.rng.randint(-1, 1), gapx = cx + this.rng.randint(-((rw / 4) | 0), (rw / 4) | 0);
+            for (var x = cx - (rw / 2 | 0) + 1; x <= cx + (rw / 2 | 0) - 1; x++) if (x < gapx - 1 || x > gapx) wallOff(x, dy);
+        }
     };
     // BSP STRUCTURED LAYOUT (generator roadmap #5): recursively partition the map,
     // carve one room per leaf, and connect sibling partitions on the unwind so the
@@ -455,6 +475,8 @@
             for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); connect(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
         }
         b.ensureConnected();
+        // section big rectangular halls (#5) — some of them, for variety
+        for (var dv = 0; dv < rooms.length; dv++) if (rng.random() < 0.45) b.divideRoom(rooms[dv]);
         b.finalizeWalls();
         b.renderNorthFaces();
 
