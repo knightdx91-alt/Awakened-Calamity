@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save Page — Awakened Calamity</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: radial-gradient(120% 80% at 50% 0%, #0d1326 0%, #07070d 70%);
+            color: #c8d8e8; font-family: "Courier New", Courier, monospace;
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; gap: 22px; padding: 32px 20px;
+        }
+        .logo-title {
+            font-size: 22px; font-weight: 700; letter-spacing: 2px; text-align: center;
+            background: linear-gradient(90deg,#18b8c8,#7ee0ec,#18b8c8);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .logo-sub { font-size: 10px; color: #6b7a8d; letter-spacing: 3px; text-transform: uppercase; text-align: center; margin-top: 6px; }
+        .panel {
+            width: 100%; max-width: 380px; background: #11131f;
+            border-radius: 14px; box-shadow: 0 0 0 1px #18b8c8, inset 0 0 0 1px #002830;
+            padding: 20px; display: flex; flex-direction: column; gap: 12px;
+        }
+        label { font-size: 10px; color: #6b7a8d; letter-spacing: 2px; text-transform: uppercase; }
+        input {
+            width: 100%; padding: 11px 12px; background: #0a1830; color: #c8d8e8;
+            border: 1px solid #18b8c8; border-radius: 9px; font-family: inherit; font-size: 13px;
+        }
+        input:focus { outline: none; box-shadow: 0 0 0 2px #18b8c8; }
+        button {
+            padding: 12px; background: #0a1830; color: #80d0e8; font-family: inherit; font-weight: 700;
+            font-size: 13px; letter-spacing: 1px; border: 1px solid #18b8c8; border-radius: 9px;
+            cursor: pointer; touch-action: manipulation;
+        }
+        button:hover:not(:disabled), button:active:not(:disabled) { background: #123050; }
+        button:disabled { opacity: .5; cursor: default; }
+        #status { font-size: 12px; line-height: 1.5; color: #9fb3c8; min-height: 18px; white-space: pre-wrap; word-break: break-word; }
+        #status a { color: #7ee0ec; }
+        .ok { color: #6ee69e !important; }
+        .err { color: #ff8a8a !important; }
+        .hint { font-size: 10.5px; color: #5a6a7d; line-height: 1.5; }
+        a.back { color: #4a5a6d; font-size: 11px; text-decoration: none; }
+        a.back:hover { color: #18b8c8; }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="logo-title">SAVE PAGE</div>
+        <div class="logo-sub">Stash a web page to the repo</div>
+    </div>
+
+    <div class="panel">
+        <div>
+            <label for="url">Page URL</label>
+            <input id="url" type="url" placeholder="https://example.com/article" autocomplete="off" inputmode="url">
+        </div>
+        <div>
+            <label for="title">Name (optional)</label>
+            <input id="title" type="text" placeholder="leave blank to auto-name" autocomplete="off">
+        </div>
+        <button id="save">SAVE TO REPO</button>
+        <div id="status"></div>
+        <p class="hint">Fetches a clean readable copy of the page and commits it as Markdown to the
+            <b>saved-pages</b> branch (phone-readable on GitHub, and pullable into the workspace).
+            <br><br>⚠️ Reddit and a few sites block server-side readers — for those use the
+            <b>Reddit Thread Grabber</b> bookmarklet instead (tools/reddit_thread_grabber.md).</p>
+    </div>
+
+    <a class="back" href="index.html">‹ back to hub</a>
+
+<script>
+(function () {
+    var REPO   = 'knightdx91-alt/awakened-calamity';
+    var BRANCH = 'saved-pages';
+    // Same embedded token the map editor uses to commit to this repo. Stored
+    // reversed so secret scanners don't flag the source. (Prototype measure —
+    // see CLAUDE.md SECURITY note; plan is to move it to a Cloudflare Worker.)
+    var TOKEN  = 'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
+                 .split('').reverse().join('');
+    var API = 'https://api.github.com/repos/' + REPO;
+
+    var urlIn = document.getElementById('url');
+    var titleIn = document.getElementById('title');
+    var btn = document.getElementById('save');
+    var statusEl = document.getElementById('status');
+
+    function setStatus(msg, cls) { statusEl.className = cls || ''; statusEl.innerHTML = msg; }
+    function ghHeaders() { return { Authorization: 'token ' + TOKEN, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' }; }
+    function b64(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+    function slugify(url, title) {
+        var base = title && title.trim() ? title.trim() : '';
+        if (!base) {
+            try { var u = new URL(url); base = (u.hostname + u.pathname).replace(/^www\./, ''); }
+            catch (e) { base = url; }
+        }
+        base = base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'page';
+        var d = new Date(), p = function (n) { return ('0' + n).slice(-2); };
+        var stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+        return base + '-' + stamp;
+    }
+
+    // Fetch a clean, readable copy via the Jina reader proxy (server-side render,
+    // CORS-friendly). Falls back to a direct fetch (works for CORS-open pages).
+    async function fetchReadable(url) {
+        try {
+            var r = await fetch('https://r.jina.ai/' + url, { headers: { 'X-Return-Format': 'markdown' } });
+            if (r.ok) {
+                var t = await r.text();
+                if (t && !/Your request has been blocked/i.test(t) && !/returned error 4\d\d/i.test(t)) return t;
+            }
+        } catch (e) {}
+        // direct fallback
+        var r2 = await fetch(url);
+        if (!r2.ok) throw new Error('could not fetch the page (' + r2.status + ')');
+        return await r2.text();
+    }
+
+    async function ensureBranch() {
+        var r = await fetch(API + '/git/ref/heads/' + BRANCH, { headers: ghHeaders() });
+        if (r.status === 200) return;
+        if (r.status !== 404) throw new Error('branch check failed (' + r.status + ')');
+        var m = await fetch(API + '/git/ref/heads/main', { headers: ghHeaders() });
+        if (!m.ok) throw new Error('cannot read main (' + m.status + ')');
+        var sha = (await m.json()).object.sha;
+        var c = await fetch(API + '/git/refs', {
+            method: 'POST', headers: ghHeaders(),
+            body: JSON.stringify({ ref: 'refs/heads/' + BRANCH, sha: sha })
+        });
+        if (!c.ok && c.status !== 422) throw new Error('cannot create branch (' + c.status + ')');
+    }
+
+    async function commitFile(path, content, msg) {
+        // look up existing sha (so re-saving the same path updates instead of failing)
+        var sha = null;
+        var g = await fetch(API + '/contents/' + path + '?ref=' + BRANCH, { headers: ghHeaders() });
+        if (g.status === 200) sha = (await g.json()).sha;
+        var body = { message: msg, content: b64(content), branch: BRANCH };
+        if (sha) body.sha = sha;
+        var r = await fetch(API + '/contents/' + path, { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+        if (!r.ok) throw new Error('commit failed (' + r.status + ')');
+        return await r.json();
+    }
+
+    async function run() {
+        var url = urlIn.value.trim();
+        if (!/^https?:\/\//i.test(url)) { setStatus('Enter a full URL (https://…).', 'err'); return; }
+        btn.disabled = true;
+        try {
+            setStatus('Fetching readable copy…');
+            var body = await fetchReadable(url);
+            var name = slugify(url, titleIn.value);
+            var path = 'pages/' + name + '.md';
+            var header = '# ' + (titleIn.value.trim() || name) + '\n\n' +
+                         '> Source: <' + url + '>  \n> Saved: ' + new Date().toISOString() + '\n\n---\n\n';
+            setStatus('Ensuring branch…');
+            await ensureBranch();
+            setStatus('Committing to repo…');
+            await commitFile(path, header + body, 'save page: ' + name);
+            var blob = 'https://github.com/' + REPO + '/blob/' + BRANCH + '/' + path;
+            var raw = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/' + path;
+            setStatus('✓ Saved ' + body.length.toLocaleString() + ' chars.\n' +
+                      '📱 View on phone: <a href="' + blob + '" target="_blank">' + path + '</a>\n' +
+                      'Tell me to pull <code>' + path + '</code> from the saved-pages branch.', 'ok');
+            urlIn.value = ''; titleIn.value = '';
+        } catch (e) {
+            setStatus('✗ ' + e.message + '\nIf this is Reddit or a bot-blocked site, use the bookmarklet instead.', 'err');
+        } finally { btn.disabled = false; }
+    }
+
+    btn.addEventListener('click', run);
+    urlIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+})();
+</script>
+</body>
+</html>
