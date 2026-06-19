@@ -507,6 +507,12 @@
 
     function _finish() {
         _persistVitals();
+        // Outcome fanfare: a victory ME on a win, the game-over dirge on defeat
+        // (ducks BGM; flee/draw stay silent). Fires once at teardown of the fight.
+        if (root.GameAudio) {
+            if (state.winner === 'player') GameAudio.playME('Victory1');
+            else if (state.winner === 'enemy') GameAudio.playME('Gameover1');
+        }
         var msg;
         if (state.winner === 'player') {
             var totalXp = 0, lvlEvents = [], totalCr = 0;
