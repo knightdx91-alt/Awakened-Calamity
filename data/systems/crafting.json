@@ -1,34 +1,225 @@
 {
   "_meta": {
-    "doc": "CRAFTING / FORGE (consumes materials from loot). UPGRADE raises a gear instance's item-level (ilvl) by 1 — cost scales with the current ilvl and uses the slot's signature material + Credits. RECIPES forge a fresh base gear piece from materials. Pure logic in src/systems/crafting.js; UI in src/ui/forge.js (opened by the `forge` event command at the Dawnhearth Forge). Materials come from data/systems/loot.json.",
+    "doc": "CRAFTING / FORGE (consumes materials from loot). UPGRADE raises a gear instance's item-level (ilvl). RECIPES forge a fresh base gear piece from materials, but crafting is a SKILL: each recipe has a `discipline` (smithing/leatherwork/artificing/warding) and a `tier` (difficulty). Your per-discipline PROFICIENCY level (state.player.crafting[discipline]) sets the SUCCESS chance and the CRIT chance. A failed craft refunds part of the materials. A CRITICAL success yields a higher-tier item (`critUpgrade`) or, lacking one, a MASTERWORK (bonus ilvl). Crafting grants proficiency XP. Pure logic in src/systems/crafting.js. Materials from data/systems/loot.json.",
     "version": 1
   },
   "upgrade": {
-    "slotMaterial": { "weapon": "scrap_metal", "body": "beast_hide", "accessory": "crystal_shard", "hazard": "sigil_dust" },
+    "slotMaterial": {
+      "weapon": "scrap_metal",
+      "body": "beast_hide",
+      "accessory": "crystal_shard",
+      "hazard": "sigil_dust"
+    },
     "baseQty": 2,
     "qtyPerLevel": 0.6,
     "creditBase": 20,
     "creditPerLevel": 10
   },
   "recipes": [
-    { "id": "iron_sword",      "cost": { "scrap_metal": 5 },                  "credits": 60 },
-    { "id": "leather_cuirass", "cost": { "beast_hide": 5 },                   "credits": 60 },
-    { "id": "swift_anklet",    "cost": { "crystal_shard": 4 },                "credits": 70 },
-    { "id": "warded_cloak",    "cost": { "sigil_dust": 3, "beast_hide": 2 },  "credits": 90 },
-    { "id": "steel_axe",       "cost": { "scrap_metal": 9, "crystal_shard": 2 }, "credits": 180 },
-    { "id": "chain_hauberk",   "cost": { "beast_hide": 8, "scrap_metal": 4 },    "credits": 180 },
-
-    { "id": "bronze_spear",    "cost": { "scrap_metal": 5 },                     "credits": 60 },
-    { "id": "iron_mace",       "cost": { "scrap_metal": 6 },                     "credits": 70 },
-    { "id": "duelists_rapier", "cost": { "scrap_metal": 7, "crystal_shard": 3 }, "credits": 190 },
-    { "id": "war_robe",        "cost": { "beast_hide": 5 },                      "credits": 60 },
-    { "id": "scale_mail",      "cost": { "beast_hide": 6, "scrap_metal": 2 },    "credits": 80 },
-    { "id": "brigandine",      "cost": { "beast_hide": 7, "scrap_metal": 4 },    "credits": 190 },
-    { "id": "power_ring",      "cost": { "crystal_shard": 3 },                   "credits": 70 },
-    { "id": "guard_charm",     "cost": { "crystal_shard": 3 },                   "credits": 70 },
-    { "id": "vital_locket",    "cost": { "crystal_shard": 5, "beast_hide": 2 },  "credits": 180 },
-    { "id": "luck_pendant",    "cost": { "crystal_shard": 6 },                   "credits": 200 },
-    { "id": "smoke_mask",      "cost": { "sigil_dust": 2, "beast_hide": 2 },     "credits": 80 },
-    { "id": "grave_ward",      "cost": { "sigil_dust": 4, "crystal_shard": 2 },  "credits": 190 }
-  ]
+    {
+      "id": "iron_sword",
+      "cost": {
+        "scrap_metal": 5
+      },
+      "credits": 60,
+      "discipline": "smithing",
+      "tier": 1,
+      "critUpgrade": "steel_axe"
+    },
+    {
+      "id": "leather_cuirass",
+      "cost": {
+        "beast_hide": 5
+      },
+      "credits": 60,
+      "discipline": "leatherwork",
+      "tier": 1,
+      "critUpgrade": "brigandine"
+    },
+    {
+      "id": "swift_anklet",
+      "cost": {
+        "crystal_shard": 4
+      },
+      "credits": 70,
+      "discipline": "artificing",
+      "tier": 1,
+      "critUpgrade": "luck_pendant"
+    },
+    {
+      "id": "warded_cloak",
+      "cost": {
+        "sigil_dust": 3,
+        "beast_hide": 2
+      },
+      "credits": 90,
+      "discipline": "warding",
+      "tier": 2
+    },
+    {
+      "id": "steel_axe",
+      "cost": {
+        "scrap_metal": 9,
+        "crystal_shard": 2
+      },
+      "credits": 180,
+      "discipline": "smithing",
+      "tier": 2
+    },
+    {
+      "id": "chain_hauberk",
+      "cost": {
+        "beast_hide": 8,
+        "scrap_metal": 4
+      },
+      "credits": 180,
+      "discipline": "smithing",
+      "tier": 2
+    },
+    {
+      "id": "bronze_spear",
+      "cost": {
+        "scrap_metal": 5
+      },
+      "credits": 60,
+      "discipline": "smithing",
+      "tier": 1,
+      "critUpgrade": "duelists_rapier"
+    },
+    {
+      "id": "iron_mace",
+      "cost": {
+        "scrap_metal": 6
+      },
+      "credits": 70,
+      "discipline": "smithing",
+      "tier": 1,
+      "critUpgrade": "steel_axe"
+    },
+    {
+      "id": "duelists_rapier",
+      "cost": {
+        "scrap_metal": 7,
+        "crystal_shard": 3
+      },
+      "credits": 190,
+      "discipline": "smithing",
+      "tier": 2
+    },
+    {
+      "id": "war_robe",
+      "cost": {
+        "beast_hide": 5
+      },
+      "credits": 60,
+      "discipline": "leatherwork",
+      "tier": 1,
+      "critUpgrade": "brigandine"
+    },
+    {
+      "id": "scale_mail",
+      "cost": {
+        "beast_hide": 6,
+        "scrap_metal": 2
+      },
+      "credits": 80,
+      "discipline": "smithing",
+      "tier": 1,
+      "critUpgrade": "brigandine"
+    },
+    {
+      "id": "brigandine",
+      "cost": {
+        "beast_hide": 7,
+        "scrap_metal": 4
+      },
+      "credits": 190,
+      "discipline": "leatherwork",
+      "tier": 2
+    },
+    {
+      "id": "power_ring",
+      "cost": {
+        "crystal_shard": 3
+      },
+      "credits": 70,
+      "discipline": "artificing",
+      "tier": 1,
+      "critUpgrade": "vital_locket"
+    },
+    {
+      "id": "guard_charm",
+      "cost": {
+        "crystal_shard": 3
+      },
+      "credits": 70,
+      "discipline": "artificing",
+      "tier": 1,
+      "critUpgrade": "vital_locket"
+    },
+    {
+      "id": "vital_locket",
+      "cost": {
+        "crystal_shard": 5,
+        "beast_hide": 2
+      },
+      "credits": 180,
+      "discipline": "artificing",
+      "tier": 2
+    },
+    {
+      "id": "luck_pendant",
+      "cost": {
+        "crystal_shard": 6
+      },
+      "credits": 200,
+      "discipline": "artificing",
+      "tier": 2
+    },
+    {
+      "id": "smoke_mask",
+      "cost": {
+        "sigil_dust": 2,
+        "beast_hide": 2
+      },
+      "credits": 80,
+      "discipline": "warding",
+      "tier": 1,
+      "critUpgrade": "grave_ward"
+    },
+    {
+      "id": "grave_ward",
+      "cost": {
+        "sigil_dust": 4,
+        "crystal_shard": 2
+      },
+      "credits": 190,
+      "discipline": "warding",
+      "tier": 2
+    }
+  ],
+  "proficiency": {
+    "disciplines": [
+      "smithing",
+      "leatherwork",
+      "artificing",
+      "warding"
+    ],
+    "baseSuccess": 0.55,
+    "successPerLevel": 0.035,
+    "tierPenalty": 0.16,
+    "minSuccess": 0.05,
+    "maxSuccess": 0.99,
+    "critBase": 0.04,
+    "critPerLevel": 0.016,
+    "critTierPenalty": 0.02,
+    "maxCrit": 0.6,
+    "masterworkIlvl": 3,
+    "refundOnFail": 0.5,
+    "xpPerCraft": 12,
+    "xpPerFail": 4,
+    "xpBase": 100,
+    "xpPerLevel": 60,
+    "maxLevel": 20
+  }
 }

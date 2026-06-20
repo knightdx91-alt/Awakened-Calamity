@@ -910,27 +910,53 @@ window.GameStartMenu = (function () {
         if (window.GameAudio) GameAudio.playSE('Equip1');
         _render();
     }
-    // CRAFT: forge a fresh base gear piece from materials (enters the bag at ilvl 1).
+    // CRAFT: forge gear from materials. Crafting is a SKILL — each recipe shows its
+    // discipline + your level, the SUCCESS chance and the CRIT (higher-tier) chance.
     function _buildForgeCraft(el, ps, inv) {
         _matBar(el, inv);
-        var recipes = (window._craftDb && window._craftDb.recipes) || [];
+        var cfg = window._craftDb || {};
+        // proficiency summary
+        var pf = document.createElement('div'); pf.style.cssText = 'font-size:6px;color:' + _FR.blue + ';margin-bottom:6px;';
+        var discs = (cfg.proficiency && cfg.proficiency.disciplines) || [];
+        pf.textContent = discs.map(function (d) { return d.slice(0, 5) + ' L' + window.GameCrafting.profOf(ps, d); }).join('  ·  ');
+        el.appendChild(pf);
+        // forge result banner (set after a craft)
+        if (_forgeMsg) { var fm = document.createElement('div'); fm.style.cssText = 'font:7px "Press Start 2P";color:' + (_forgeCrit ? '#e8c860' : _FR.text) + ';text-align:center;margin-bottom:6px;'; fm.textContent = _forgeMsg; el.appendChild(fm); }
+        var recipes = cfg.recipes || [];
         recipes.forEach(function (rec) {
             var def = _gearDef(rec.id); if (!def) return;
             var cost = window.GameCrafting.recipeCost(rec);
             var afford = window.GameCrafting.canPay(inv, ps.money | 0, cost);
-            _gearRow(el, { id: rec.id, ilvl: 1 }, null,
-                (afford ? 'CRAFT:  ' : '✗ need:  ') + window.GameCrafting.costLine(cost, _matName),
-                afford ? function () { _craftGear(rec); } : null);
+            var lvl = window.GameCrafting.profOf(ps, rec.discipline || 'smithing');
+            var sC = Math.round(window.GameCrafting.successChance(lvl, rec.tier || 1, cfg) * 100);
+            var cC = Math.round(window.GameCrafting.critChance(lvl, rec.tier || 1, cfg) * 100);
+            var info = (afford ? '' : '✗ ') + window.GameCrafting.costLine(cost, _matName)
+                + '   |  ' + sC + '% craft · ' + cC + '%★' + (rec.critUpgrade ? ' →' + (_gearDef(rec.critUpgrade) || {}).name : '');
+            _gearRow(el, { id: rec.id, ilvl: 1 }, null, info, afford ? function () { _craftGear(rec); } : null);
         });
     }
+    var _forgeMsg = null, _forgeCrit = false;
     function _craftGear(rec) {
         var st = window.GameSave && GameSave.state; var ps = st.player, inv = st.inventory;
+        var cfg = window._craftDb || {};
         var cost = window.GameCrafting.recipeCost(rec);
-        if (!window.GameCrafting.pay(inv, ps, cost)) return;
-        if (!Array.isArray(inv.gear)) inv.gear = [];
-        inv.gear.push({ id: rec.id, ilvl: 1 });
+        if (!window.GameCrafting.pay(inv, ps, cost)) return;        // materials + Cr spent
+        var out = window.GameCrafting.attemptCraft(ps, rec, cfg, Math.random);
+        var prof = window.GameCrafting.gainProficiency(ps, out.discipline, out.success, cfg);
+        _forgeCrit = !!out.crit;
+        if (out.success) {
+            if (!Array.isArray(inv.gear)) inv.gear = [];
+            inv.gear.push({ id: out.resultId, ilvl: out.resultIlvl });
+            var nm = (_gearDef(out.resultId) || {}).name || out.resultId;
+            _forgeMsg = (out.crit ? '★ MASTERWORK! ' : 'Forged ') + nm + (out.resultIlvl > 1 ? ' (i' + out.resultIlvl + ')' : '')
+                + (prof.leveled ? '   ⤴ ' + out.discipline + ' L' + prof.level : '');
+            if (window.GameAudio) GameAudio.playSE(out.crit ? 'Saint3' : 'Equip1');
+        } else {
+            window.GameCrafting.refundMaterials(inv, cost, (cfg.proficiency && cfg.proficiency.refundOnFail) || 0.5);
+            _forgeMsg = 'The craft failed — some materials salvaged.' + (prof.leveled ? '  ⤴ ' + out.discipline + ' L' + prof.level : '');
+            if (window.GameAudio) GameAudio.playSE('Buzzer1');
+        }
         if (window.GameSave.markDirty) GameSave.markDirty();
-        if (window.GameAudio) GameAudio.playSE('Equip1');
         _render();
     }
     function _equipItem(idx) {
@@ -1554,7 +1580,7 @@ window.GameStartMenu = (function () {
         if (_battleBagCancel) { close(); return; }
         if (_battlePartyCancel) { close(); return; }
         if (page==='system' && _sysSub) { _sysSub=null; _render(); return; }  // sub-screen → services
-        if (page==='supplies' && _supPocket==='gear' && _gearMode!=='equip') { _gearMode='equip'; _subIdx=0; _render(); return; }  // forge tab → equip
+        if (page==='supplies' && _supPocket==='gear' && _gearMode!=='equip') { _gearMode='equip'; _forgeMsg=null; _subIdx=0; _render(); return; }  // forge tab → equip
         if (page==='supplies' && _supPocket) { _supPocket=null; _gearMode='equip'; _subIdx=0; _render(); return; }  // pocket → pocket list
         _sysSub=null; _supPocket=null;
         page='main'; _subIdx=0; _render();

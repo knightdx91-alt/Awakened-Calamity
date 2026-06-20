@@ -49,8 +49,70 @@
     return parts.join(' · ');
   }
 
+  // ── CRAFTING PROFICIENCY (a skill per discipline) ──────────────────────────
+  // Your level in a recipe's discipline sets its SUCCESS chance and CRIT chance.
+  // A crit yields a higher-tier item (recipe.critUpgrade) or a MASTERWORK (bonus
+  // ilvl). Crafting grants proficiency XP. State: player.crafting[discipline]={level,xp}.
+  function _pcfg(cfg) { return (cfg && cfg.proficiency) || {}; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function profOf(player, discipline) {
+    var c = (player && player.crafting && player.crafting[discipline]) || null;
+    return c ? Math.max(1, c.level | 0) : 1;
+  }
+  function successChance(level, tier, cfg) {
+    var p = _pcfg(cfg);
+    return clamp((p.baseSuccess != null ? p.baseSuccess : 0.55) + ((level | 0) - 1) * (p.successPerLevel || 0.035)
+      - ((tier | 0) - 1) * (p.tierPenalty || 0.16), p.minSuccess != null ? p.minSuccess : 0.05, p.maxSuccess != null ? p.maxSuccess : 0.99);
+  }
+  function critChance(level, tier, cfg) {
+    var p = _pcfg(cfg);
+    return clamp((p.critBase || 0.04) + ((level | 0) - 1) * (p.critPerLevel || 0.016)
+      - ((tier | 0) - 1) * (p.critTierPenalty || 0.02), 0, p.maxCrit != null ? p.maxCrit : 0.6);
+  }
+  // Resolve a craft attempt (pure). rng() in [0,1). Returns the outcome; the caller
+  // pays materials, applies refunds, grants the item, and awards proficiency XP.
+  //   { success, crit, resultId, resultIlvl, discipline, tier, sChance, cChance }
+  function attemptCraft(player, recipe, cfg, rng) {
+    rng = rng || Math.random;
+    var disc = recipe.discipline || 'smithing', tier = recipe.tier || 1, lvl = profOf(player, disc);
+    var sC = successChance(lvl, tier, cfg), cC = critChance(lvl, tier, cfg);
+    var out = { discipline: disc, tier: tier, level: lvl, sChance: sC, cChance: cC, success: false, crit: false, resultId: recipe.id, resultIlvl: 1 };
+    if (rng() >= sC) return out;                       // failed craft
+    out.success = true;
+    if (rng() < cC) {                                  // CRITICAL — a higher-tier item / masterwork
+      out.crit = true;
+      if (recipe.critUpgrade) out.resultId = recipe.critUpgrade;
+      else out.resultIlvl = 1 + ((_pcfg(cfg).masterworkIlvl | 0) || 3);
+    }
+    return out;
+  }
+  // Award proficiency XP for an attempt; returns { leveled, level } after any level-ups.
+  function gainProficiency(player, discipline, success, cfg) {
+    var p = _pcfg(cfg); player.crafting = player.crafting || {};
+    var c = player.crafting[discipline] || (player.crafting[discipline] = { level: 1, xp: 0 });
+    c.xp += success ? (p.xpPerCraft || 12) : (p.xpPerFail || 4);
+    var leveled = false, guard = 100, maxL = p.maxLevel || 20;
+    while (guard-- > 0 && c.level < maxL) {
+      var need = (p.xpBase || 100) + (p.xpPerLevel || 60) * (c.level - 1);
+      if (c.xp < need) break;
+      c.xp -= need; c.level += 1; leveled = true;
+    }
+    return { leveled: leveled, level: c.level };
+  }
+  // Refund a fraction of a cost's materials back to inventory (failed craft).
+  function refundMaterials(inv, cost, frac) {
+    if (!cost || !cost.materials) return;
+    inv.materials = inv.materials || {};
+    for (var k in cost.materials) {
+      var back = Math.floor((cost.materials[k] | 0) * (frac || 0));
+      if (back > 0) inv.materials[k] = (inv.materials[k] | 0) + back;
+    }
+  }
+
   var GameCrafting = { upgradeCost: upgradeCost, recipeById: recipeById, recipeCost: recipeCost,
-    canPay: canPay, pay: pay, costLine: costLine, matCount: matCount };
+    canPay: canPay, pay: pay, costLine: costLine, matCount: matCount,
+    profOf: profOf, successChance: successChance, critChance: critChance,
+    attemptCraft: attemptCraft, gainProficiency: gainProficiency, refundMaterials: refundMaterials };
   root.GameCrafting = GameCrafting;
   if (typeof module !== 'undefined' && module.exports) module.exports = GameCrafting;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -36,5 +36,39 @@ const rc = GC.recipeCost(rec);
 check('recipe cost = its materials + credits', rc.materials.scrap_metal === 5 && rc.credits === 60);
 check('costLine renders', GC.costLine(rc, (id) => id).includes('scrap_metal') && GC.costLine(rc).includes('Cr'));
 
+// ── PROFICIENCY: success + crit scale with level; crit yields a higher tier ──
+// default level (no state) = 1
+check('profOf defaults to 1', GC.profOf({}, 'smithing') === 1);
+// success chance rises with level, falls with tier
+const s_l1t1 = GC.successChance(1, 1, cfg), s_l10t1 = GC.successChance(10, 1, cfg), s_l1t2 = GC.successChance(1, 2, cfg);
+check('success rises with level', s_l10t1 > s_l1t1, `L1=${s_l1t1.toFixed(2)} L10=${s_l10t1.toFixed(2)}`);
+check('success falls with recipe tier', s_l1t2 < s_l1t1);
+// crit chance rises with level
+check('crit rises with level', GC.critChance(10, 1, cfg) > GC.critChance(1, 1, cfg));
+
+// attemptCraft outcomes are gated by the rolls (deterministic via injected rng)
+const ironRec = GC.recipeById(cfg, 'iron_sword');
+const failOut = GC.attemptCraft({}, ironRec, cfg, () => 0.999);   // first roll fails success
+check('high roll → failed craft', failOut.success === false);
+const plain = GC.attemptCraft({}, ironRec, cfg, () => 0.0);     // success + crit (0 < both)
+check('low rolls → success + crit', plain.success && plain.crit);
+check('crit upgrades to the higher-tier item', plain.resultId === ironRec.critUpgrade, plain.resultId);
+// a recipe WITHOUT critUpgrade → crit = masterwork (bonus ilvl)
+const axeRec = GC.recipeById(cfg, 'steel_axe');
+const mw = GC.attemptCraft({}, axeRec, cfg, () => 0.0);
+check('crit w/o upgrade → masterwork ilvl', mw.success && mw.crit && mw.resultId === 'steel_axe' && mw.resultIlvl > 1, 'i' + mw.resultIlvl);
+
+// proficiency XP accrues + levels up; higher level => higher success
+const player2 = {};
+let leveled = false;
+for (let i = 0; i < 50; i++) { const e = GC.gainProficiency(player2, 'smithing', true, cfg); if (e.leveled) leveled = true; }
+check('crafting grants proficiency + levels up', leveled && player2.crafting.smithing.level > 1, 'L' + player2.crafting.smithing.level);
+check('leveled smith has better odds', GC.successChance(player2.crafting.smithing.level, 1, cfg) > s_l1t1);
+
+// refund returns a fraction of materials on failure
+const inv2 = { materials: {} };
+GC.refundMaterials(inv2, { materials: { scrap_metal: 6 } }, 0.5);
+check('failed craft refunds half the materials', inv2.materials.scrap_metal === 3);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

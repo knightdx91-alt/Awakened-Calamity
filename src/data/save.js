@@ -72,7 +72,10 @@
                 ownedClasses: [],   // classes you can switch to for free
                 // Equipment slots (GameEquip). Weapons/armor/accessories/relics found
                 // as loot equip here; combat reads ONLY equipped pieces. One relic max.
-                equipment: { weapon: null, body: null, accessory: null, hazard: null }
+                equipment: { weapon: null, body: null, accessory: null, hazard: null },
+                // Crafting proficiency per discipline (GameCrafting): { <discipline>: {level,xp} }.
+                // Higher level → better craft success + crit (higher-tier) chance.
+                crafting: {}
             },
 
             // Unified progression (XP/level/attributes). createProgress() seeds it
