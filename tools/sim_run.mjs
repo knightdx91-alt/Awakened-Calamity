@@ -5,33 +5,67 @@
 // class how deep the bot gets and how often it completes — the difficulty-tuning
 // engine. Tells you if the curve is fair BEFORE a human plays.
 //
+// FAITHFUL to the live game in --endless mode: shared scaling (run.json), tier-
+// banded biome rosters, real XP leveling (GameProgression), and the EQUIPMENT +
+// LOOT economy (GameLoot/GameEquip) — relics are RARE equippable gear (one worn,
+// no stacking), so the bot's power = best-in-slot drops, not stacked relic buffs.
+//
 //   node tools/sim_run.mjs [--runs 50] [--depth 10] [--classes warrior,rogue,scout]
+//   node tools/sim_run.mjs --endless [--max 60] [--boss-every 5] [--untethered]
 import { loadCore, buildPlayerDef, buildEnemyDef, runFight, classIds } from './sim_core.mjs';
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 const _req = createRequire(import.meta.url);
+globalThis.GameRNG = globalThis.GameRNG || _req(`${process.cwd()}/src/systems/rng.js`);
 const GameProgression = _req(`${process.cwd()}/src/systems/progression.js`);
+const GameLoot = _req(`${process.cwd()}/src/systems/loot.js`);
+const GameEquip = _req(`${process.cwd()}/src/systems/equip.js`);
+const GameAct = _req(`${process.cwd()}/src/systems/act.js`);
 let RUNCFG = {}; try { RUNCFG = JSON.parse(readFileSync(`${process.cwd()}/data/systems/run.json`, 'utf8')); } catch {}
 const SCALING = RUNCFG.scaling || {};
 let BIOMES = {}; try { BIOMES = JSON.parse(readFileSync(`${process.cwd()}/data/systems/biomes.json`, 'utf8')); } catch {}
-let RELICS = []; try { RELICS = (JSON.parse(readFileSync(`${process.cwd()}/data/systems/relics.json`, 'utf8')).relics) || []; } catch {}
-// A run hands out relics (a cache every floor + a boss reward) — major player power
-// the sim MUST model or it badly under-reads the curve. Accumulate their effects and
-// apply to the player def (stat mults + the crit/evade/lifesteal/thorns/defBonus bundle).
-function grantRelic(acc, rng) {
-  if (!RELICS.length) return;
-  const e = RELICS[Math.floor(rng() * RELICS.length) % RELICS.length].effect || {};
-  for (const k of ['atkMult', 'hpMult', 'defMult', 'spdMult', 'crit', 'evade', 'lifesteal', 'thorns', 'defBonus'])
-    if (e[k] != null) acc[k] = (acc[k] || 0) + e[k];
+const GEAR = (() => { try { return JSON.parse(readFileSync(`${process.cwd()}/data/systems/gear.json`, 'utf8')); } catch { return { gear: [] }; } })();
+const RELICDB = (() => { try { return JSON.parse(readFileSync(`${process.cwd()}/data/systems/relics.json`, 'utf8')); } catch { return { relics: [] }; } })();
+const LOOTDB = (() => { try { return JSON.parse(readFileSync(`${process.cwd()}/data/systems/loot.json`, 'utf8')); } catch { return { tables: {} }; } })();
+let ACTCFG = GameAct.DEFAULT_CFG; try { ACTCFG = JSON.parse(readFileSync(`${process.cwd()}/data/systems/acts.json`, 'utf8')); } catch {}
+const EQUIP_DBS = { gear: GEAR, relics: RELICDB };
+
+// EQUIPMENT model — faithful to the game (src/systems/equip.js): relics are RARE
+// equippable gear, only ONE worn, bonuses ONLY from the 4 equipped slots (no
+// stacking). The bot greedily keeps best-in-slot. A rough power score ranks gear.
+function gearScore(def) {
+  const s = (def && (def.stats || def.effect)) || {};
+  return (s.atk || 0) * 2.2 + (s.def || 0) * 1.2 + (s.hp || 0) * 0.25 + (s.speed || 0) * 0.15
+    + (s.atkMult || 0) * 28 + (s.hpMult || 0) * 14 + (s.defMult || 0) * 10 + (s.spdMult || 0) * 8
+    + (s.crit || 0) * 35 + (s.evade || 0) * 25 + (s.lifesteal || 0) * 30 + (s.thorns || 0) * 12 + (s.defBonus || 0) * 1.2;
 }
-function applyRelics(def, acc) {
-  const s = def.stats;
-  s.atk = Math.max(1, Math.round(s.atk * (1 + (acc.atkMult || 0))));
-  s.hp = Math.max(1, Math.round(s.hp * (1 + (acc.hpMult || 0))));
-  s.def = Math.round((s.def || 0) * (1 + (acc.defMult || 0)));
-  if (s.speed != null) s.speed = Math.round(s.speed * (1 + (acc.spdMult || 0)));
-  def.bonuses = { crit: acc.crit || 0, evade: acc.evade || 0, lifesteal: acc.lifesteal || 0, thorns: acc.thorns || 0, defBonus: acc.defBonus || 0 };
+// Try to equip a dropped item if it beats what's worn (respects the single-relic rule).
+function considerEquip(player, id) {
+  const def = GameEquip.resolve(id, EQUIP_DBS); if (!def) return;
+  const slot = def.slot || 'accessory', eq = (player.equipment = player.equipment || {});
+  const cur = eq[slot] ? GameEquip.resolve(eq[slot], EQUIP_DBS) : null;
+  if (cur && gearScore(cur) >= gearScore(def)) return;              // keep the better worn piece
+  // a relic must beat the currently worn relic too (only one allowed)
+  if (def.rarity === 'relic') {
+    const rs = GameEquip.equippedRelicSlot(player, EQUIP_DBS);
+    if (rs && rs !== slot) { const wr = GameEquip.resolve(eq[rs], EQUIP_DBS); if (wr && gearScore(wr) >= gearScore(def)) return; }
+  }
+  GameEquip.equip(player, id, EQUIP_DBS);
+}
+// Apply equipped-gear bonuses to a player def (flat + mult + the trait bundle).
+function applyEquip(def, player) {
+  const ag = GameEquip.aggregate(player, EQUIP_DBS), s = def.stats;
+  s.atk = Math.max(1, Math.round((s.atk + ag.flat.atk) * (1 + ag.mult.atk)));
+  s.hp = Math.max(1, Math.round((s.hp + ag.flat.hp) * (1 + ag.mult.hp)));
+  s.def = Math.max(0, Math.round((s.def + ag.flat.def) * (1 + ag.mult.def)));
+  if (s.speed != null) s.speed = Math.max(1, Math.round((s.speed + ag.flat.speed) * (1 + ag.mult.spd)));
+  def.bonuses = { crit: ag.bonuses.crit, evade: ag.bonuses.evade, lifesteal: ag.bonuses.lifesteal, thorns: ag.bonuses.thorns, defBonus: ag.bonuses.defBonus };
   return def;
+}
+// Roll a loot table and feed any gear/relic to the equip logic (materials ignored).
+function rollLoot(player, table, seed) {
+  for (const g of GameLoot.roll(table, { loot: LOOTDB, gear: GEAR, relics: RELICDB }, seed))
+    if (g.pocket === 'gear') considerEquip(player, g.id);
 }
 // the sim must use the SAME tier-banded biome roster the generator does (mapgen
 // pool = tier band + a splash of tier-1 for tier≥2), or it wrongly spawns endgame
@@ -108,7 +142,15 @@ function simRun(classId, runSeed) {
   // and levels up, so whether they keep pace with the ramp emerges from the curve.
   const tierOf = (db.classes[classId] || {}).tier || 'basic';
   const prog = GameProgression.createProgress(tierOf, 1, db.progression);
-  const relicAcc = {};                              // accumulated relic power this run
+  const player = { equipment: {} };                 // equipped gear/relic (best-in-slot)
+  // act node per floor (so caches drop only on elite/treasure floors, like the game)
+  const nodeType = (floor) => {
+    if (!ENDLESS) return 'monster';
+    const actIdx = Math.floor((floor - 1) / BOSS_EVERY);
+    const act = GameAct.compose((((runSeed >>> 0) + actIdx * 0x9E3779B1) >>> 0) || 1, BOSS_EVERY, ACTCFG);
+    const n = GameAct.nodeFor(act, ((floor - 1) % BOSS_EVERY) + 1);
+    return n ? n.type : 'monster';
+  };
   for (let floor = 1; floor <= bottom; floor++) {
     // partial rest every 3rd floor (a camp): recover some vitals
     if (floor > 1 && floor % 3 === 1) { vit = { hp: Math.min(1, vit.hp + 0.35), mp: Math.min(1, vit.mp + 0.5), sp: Math.min(1, vit.sp + 0.5) }; }
@@ -139,18 +181,24 @@ function simRun(classId, runSeed) {
     else fightOpts.collectBudget = Math.max(0, COLLECT - cumSurv);
     const plvl = ENDLESS ? Math.max(1, prog.level) : Math.max(1, Math.ceil(floor * 0.8));
     let pdef = buildPlayerDef(db, classId, plvl);
-    if (ENDLESS) pdef = applyRelics(pdef, relicAcc);
+    if (ENDLESS) pdef = applyEquip(pdef, player);
     const r = runFight(db, GameCombat, pdef, enemies, runSeed * 31 + floor, fightOpts);
     // Each lethal-save OFFER is a real accept/refuse dilemma the player would face.
     choices += r.saves | 0;
     cumSurv += r.surveillance | 0;
     if (r.winner !== 'player' || r.collected) return { depth: floor - 1, died: true, cause: deathCause(r, entryHp), deathFloor: floor, choices };
-    // won: gain XP from the kills (level like the real game) + collect this floor's
-    // relic cache (and a boss reward), the run's other power axis.
+    // won: gain XP from kills + collect this floor's loot, faithful to the game —
+    // roamers drop materials (+rare gear); chests drop gear; caches appear ONLY on
+    // elite/treasure floors; bosses drop gear and (rarely) a relic. Best-in-slot kept.
     if (ENDLESS) {
       for (const e of enemies) GameProgression.gainFromKill(prog, { level: e.level || elv, xpYield: 1 }, db.progression);
-      grantRelic(relicAcc, rng);
-      if (isBoss) grantRelic(relicAcc, rng);
+      const node = nodeType(floor);
+      rollLoot(player, 'roamer', runSeed * 131 + floor * 17);                  // the floor's encounters
+      const chestN = 1 + Math.max(1, Math.min(3, 1 + Math.floor((floor - 1) / BOSS_EVERY))) + (node === 'treasure' ? 1 : 0);
+      for (let ci = 0; ci < chestN; ci++) rollLoot(player, 'chest', runSeed * 911 + floor * 53 + ci);
+      if (node === 'elite') rollLoot(player, 'elite', runSeed * 733 + floor * 23);
+      else if (node === 'treasure') rollLoot(player, 'cache', runSeed * 733 + floor * 23);
+      if (isBoss) rollLoot(player, 'boss', runSeed * 577 + floor * 13);
     }
     vit = { hp: Math.min(1, r.endVit.hp + REST), mp: Math.min(1, r.endVit.mp + REST), sp: Math.min(1, r.endVit.sp + REST) };
   }
