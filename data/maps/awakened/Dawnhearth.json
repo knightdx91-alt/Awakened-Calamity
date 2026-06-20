@@ -813,11 +813,11 @@
    "commands": [
     {
      "type": "text",
-     "text": "\u2756 THE FRACTURE \u2014 the way DOWN \u2756\nA fracture in the air hums where the System thins \u2014 a way DOWN, into the dark beneath Dawnhearth."
+     "text": "\u2756 THE FRACTURE \u2014 the way DOWN \u2756\nA fracture in the air hums where the System thins \u2014 a way DOWN, into the dark beneath Dawnhearth. It has no bottom. You go as deep as you can, and climb back out \u2014 or you don't."
     },
     {
      "type": "text",
-     "text": "DESCENT FORECAST:  [actforecast]\n\u2694 fight  \u2605 elite  \u2726 treasure  \u263e refuge  \ud835\udd6d Alpha"
+     "text": "Deepest reached: floor [best]\nAn Alpha guards every fifth floor; the dark only grows hungrier below.\n\u2694 fight  \u2605 elite  \u2726 treasure  \u263e refuge  \ud835\udd6d Alpha"
     },
     {
      "type": "choice",

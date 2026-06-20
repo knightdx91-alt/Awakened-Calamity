@@ -12,6 +12,12 @@ const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const RUNS = parseInt(opt('--runs', '50'), 10);
 const DEPTH = parseInt(opt('--depth', '10'), 10);
+// --endless: no fixed bottom — descend until death (or --max safety cap), an Alpha
+// every --boss-every floors, enemy level scaling with depth (the real endless config).
+// Reports how DEEP the bot gets + where deaths cluster, not a clear%.
+const ENDLESS = args.includes('--endless');
+const MAXFLOOR = parseInt(opt('--max', '60'), 10);
+const BOSS_EVERY = parseInt(opt('--boss-every', '5'), 10);
 // --rest = HP fraction recovered after EACH cleared fight (models the run's
 // recovery economy: potions / lifesteal relics / shrines). Tune this to find the
 // recovery rate that makes the descent fair.
@@ -48,11 +54,13 @@ function simRun(classId, runSeed) {
   let vit = { hp: 1, mp: 1, sp: 1 };
   let choices = 0;                                  // genuine trade-off moments this run
   let cumSurv = 0;                                  // cumulative Surveillance across the run
-  for (let floor = 1; floor <= DEPTH; floor++) {
+  const bottom = ENDLESS ? MAXFLOOR : DEPTH;
+  for (let floor = 1; floor <= bottom; floor++) {
     // partial rest every 3rd floor (a camp): recover some vitals
     if (floor > 1 && floor % 3 === 1) { vit = { hp: Math.min(1, vit.hp + 0.35), mp: Math.min(1, vit.mp + 0.5), sp: Math.min(1, vit.sp + 0.5) }; }
-    const isBoss = floor === DEPTH;
-    const lvl = isBoss ? floor + 2 : floor;
+    // endless: Alpha every BOSS_EVERY floors; enemy level scales with depth (depthBonus).
+    const isBoss = ENDLESS ? (floor % BOSS_EVERY === 0) : (floor === DEPTH);
+    const lvl = ENDLESS ? (floor + (isBoss ? 3 : 0)) : (isBoss ? floor + 2 : floor);
     const enemies = [];
     enemies.push(buildEnemyDef(db, pick(rng, creatures), lvl, 'e1'));
     if (isBoss || (floor >= 5 && rng() < 0.5)) enemies.push(buildEnemyDef(db, pick(rng, creatures), Math.max(1, lvl - 2), 'e2'));
@@ -69,7 +77,7 @@ function simRun(classId, runSeed) {
     if (r.winner !== 'player' || r.collected) return { depth: floor - 1, died: true, cause: deathCause(r, entryHp), deathFloor: floor, choices };
     vit = { hp: Math.min(1, r.endVit.hp + REST), mp: Math.min(1, r.endVit.mp + REST), sp: Math.min(1, r.endVit.sp + REST) };
   }
-  return { depth: DEPTH, died: false, choices };
+  return { depth: bottom, died: false, choices };   // survived to the (sim) bottom
 }
 
 let roster = classIds(db);
@@ -93,23 +101,36 @@ for (const cid of roster) {
   results.push({ cid, tier: db.classes[cid].tier, clear: cleared / RUNS, avg: sumDepth / RUNS, med: depths[Math.floor(RUNS / 2)], choices: sumChoices / RUNS });
 }
 
-// report (sorted by clear rate)
-results.sort((a, b) => a.clear - b.clear);
-console.log(`FULL-RUN BOT — ${roster.length} classes, ${RUNS} runs each, depth ${DEPTH} (boss on the last floor)`);
+// report (sorted by depth reached)
+results.sort((a, b) => (ENDLESS ? a.avg - b.avg : a.clear - b.clear));
+if (ENDLESS)
+  console.log(`ENDLESS BOT — ${roster.length} classes, ${RUNS} runs each, Alpha every ${BOSS_EVERY} floors, cap ${MAXFLOOR} (how DEEP you get is the score)`);
+else
+  console.log(`FULL-RUN BOT — ${roster.length} classes, ${RUNS} runs each, depth ${DEPTH} (boss on the last floor)`);
 console.log(`tether: ${UNTETHERED ? 'UNTETHERED (no saves, death is real — the honest skill read)' : `TETHERED (System catches you; Collection budget ${COLLECT})`}\n`);
-console.log('  class                tier         clear%  avgDepth  medDepth  choices/run');
+console.log('  class                tier      ' + (ENDLESS ? 'capped%  avgDeep  medDeep  choices/run' : ' clear%  avgDepth  medDepth  choices/run'));
 console.log('  ' + '-'.repeat(71));
 for (const r of results) {
   console.log('  ' + r.cid.padEnd(20) + (r.tier || '?').padEnd(13)
     + (r.clear * 100).toFixed(0).padStart(5) + '%   ' + r.avg.toFixed(1).padStart(6) + '   ' + String(r.med).padStart(6)
     + '   ' + r.choices.toFixed(2).padStart(8));
 }
-const viable = results.filter((r) => r.clear > 0).length;
-const fair = results.filter((r) => r.clear >= 0.2 && r.clear <= 0.85).length;
 console.log('\nSUMMARY');
-console.log(`  classes that EVER clear the descent: ${viable}/${roster.length}`);
-console.log(`  classes in a FAIR band (20-85% clear — the tuning sweet spot): ${fair}`);
-console.log('  too-easy (>85%) = overtuned; never-clear (0%) = unfit for a combat run.');
+if (ENDLESS) {
+  const avgDeep = results.reduce((a, r) => a + r.avg, 0) / Math.max(1, results.length);
+  const medians = results.map((r) => r.med).sort((a, b) => a - b);
+  const cappedAny = results.filter((r) => r.clear > 0).length;
+  console.log(`  overall avg deepest floor: ${avgDeep.toFixed(1)} (median of class medians ${medians[Math.floor(medians.length / 2)]})`);
+  console.log(`  classes that ever reached the cap (${MAXFLOOR}): ${cappedAny}/${roster.length} ${cappedAny ? '— raise --max if many hit it' : ''}`);
+  console.log('  An endless curve is HEALTHY when deaths spread across depth (see histogram');
+  console.log('  below) rather than clustering on the early floors (a too-steep early ramp).');
+} else {
+  const viable = results.filter((r) => r.clear > 0).length;
+  const fair = results.filter((r) => r.clear >= 0.2 && r.clear <= 0.85).length;
+  console.log(`  classes that EVER clear the descent: ${viable}/${roster.length}`);
+  console.log(`  classes in a FAIR band (20-85% clear — the tuning sweet spot): ${fair}`);
+  console.log('  too-easy (>85%) = overtuned; never-clear (0%) = unfit for a combat run.');
+}
 
 // ── critical choices per run ──────────────────────────────────────────────
 // How often a run forced a genuine accept/refuse System-save trade-off (the
@@ -134,10 +155,12 @@ else {
 
 // ── death-by-floor histogram (where the curve spikes) ─────────────────────
 console.log('\nDEATHS BY FLOOR (where the difficulty curve bites)');
+const floorBottom = ENDLESS ? MAXFLOOR : DEPTH;
 const maxFloorDeaths = Math.max(1, ...Object.values(deathByFloor));
-for (let f = 1; f <= DEPTH; f++) {
-  const n = deathByFloor[f] | 0; if (!n && f > 1 && f < DEPTH && !deathByFloor[f]) { /* still print for shape */ }
-  const tag = f === DEPTH ? ' (boss)' : '';
+for (let f = 1; f <= floorBottom; f++) {
+  const n = deathByFloor[f] | 0;
+  const isBossF = ENDLESS ? (f % BOSS_EVERY === 0) : (f === DEPTH);
+  const tag = isBossF ? ' (boss)' : '';
   console.log('  floor ' + String(f).padStart(2) + tag.padEnd(7) + String(n).padStart(5) + '  ' + '█'.repeat(Math.round((n / maxFloorDeaths) * 30)));
 }
 console.log('\n  Use this to pick the launch roster, set the difficulty curve, and');

@@ -1239,10 +1239,11 @@
             : reason === 'collected' ? 'run_return_collected'
             : unteth ? 'run_return_died_untethered' : 'run_return_died_tethered';
         await _callCommonEvent(retId, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
-        // ENDING GATES: on a CLEAR, the System's verdict is gated by LIFETIME
-        // Surveillance (which endings remain open). Engine resolves the tier; the
-        // verdict text is the editable common event ending_verdict_<tier>.
-        if (reason === 'cleared' && window.GameCorruption) {
+        // ENDING GATES: on a successful return ALIVE (a fixed-run CLEAR, or an ENDLESS
+        // EXTRACT — you climbed back out with your gains), the System's verdict is gated
+        // by LIFETIME Surveillance (which endings remain open). Engine resolves the tier;
+        // the verdict text is the editable common event ending_verdict_<tier>.
+        if ((reason === 'cleared' || reason === 'extracted') && window.GameCorruption) {
             await _loadCorrupt();
             var open = GameCorruption.endingsOpen(_corruptDb, st.meta.lifetimeSurveillance | 0);
             var tier = open['true'] ? 'true' : open.good ? 'good' : 'submit';
@@ -1305,6 +1306,11 @@
                 if (!window.GameAct || !r) return '';
                 var n = _floorNode(r);
                 return n ? (n.glyph + ' ' + n.label) : '';
+            })
+            // [best] = your DEEPEST floor reached across all runs (the endless score).
+            .replace(/\[best\]/g, function () {
+                var m = window.GameSave && GameSave.state && GameSave.state.meta;
+                return String((m && m.deepest) | 0);
             })
             // [actforecast] = the SHAPE of the NEXT descent, previewed at the hub
             // before you commit. Composes the act for the pinned seed (run_seed_in);
