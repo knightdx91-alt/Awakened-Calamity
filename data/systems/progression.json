@@ -2,7 +2,7 @@
   "_meta": "XP/leveling tuning (PROGRESSION.md \u00a73.7, \u00a72). All constants are data so they port + tune without code changes. Consumed by src/systems/progression.js.",
   "xp": {
     "B": 100,
-    "p": 2.2,
+    "p": 2.0,
     "tierMult": {
       "basic": 1.0,
       "advanced": 3.5,
@@ -13,7 +13,7 @@
     }
   },
   "mob": {
-    "K": 17,
+    "K": 24,
     "q": 1.6
   },
   "levelDiff": {

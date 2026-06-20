@@ -1009,12 +1009,18 @@
         // endless descent stays a real escalation. One act = one boss-cadence chunk.
         var tier = endless ? Math.max(1, Math.min(3, 1 + Math.floor((fl - 1) / be)))
             : Math.max(1, Math.min(3, Math.ceil(fl * 3 / maxDepth)));
-        var depthBonus = endless ? (fl - 1) : 0;
+        // depth-based LEVEL scaling (data lever: run.json `scaling`) — the endless
+        // difficulty ramp. earlyGrace floors get a small discount for a gentle open.
+        var sc = (_runDb && _runDb.scaling) || {};
+        var rate = sc.enemyLevelPerFloor != null ? sc.enemyLevelPerFloor : 0.5;
+        var depthBonus = endless ? Math.round((fl - 1) * rate) : 0;
+        if (endless && fl <= (sc.earlyGrace | 0)) depthBonus -= (sc.graceLevels | 0);
         var fseed = (((run.seed >>> 0) + fl * 0x9E3779B1) >>> 0) || 1;
         var node = _floorNode(run);
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
             maxDepth: maxDepth, name: 'RunGenF' + fl, region: 'awakened', endless: endless,
-            depthBonus: depthBonus, creatures: _creaturesDb, biome: _runBiome(run), node: node ? node.gen : null });
+            depthBonus: depthBonus, bossBonus: (sc.bossLevelBonus | 0), creatures: _creaturesDb,
+            biome: _runBiome(run), node: node ? node.gen : null });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──

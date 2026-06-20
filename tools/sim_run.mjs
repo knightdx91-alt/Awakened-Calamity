@@ -7,6 +7,42 @@
 //
 //   node tools/sim_run.mjs [--runs 50] [--depth 10] [--classes warrior,rogue,scout]
 import { loadCore, buildPlayerDef, buildEnemyDef, runFight, classIds } from './sim_core.mjs';
+import { readFileSync } from 'fs';
+import { createRequire } from 'module';
+const _req = createRequire(import.meta.url);
+const GameProgression = _req(`${process.cwd()}/src/systems/progression.js`);
+let RUNCFG = {}; try { RUNCFG = JSON.parse(readFileSync(`${process.cwd()}/data/systems/run.json`, 'utf8')); } catch {}
+const SCALING = RUNCFG.scaling || {};
+let BIOMES = {}; try { BIOMES = JSON.parse(readFileSync(`${process.cwd()}/data/systems/biomes.json`, 'utf8')); } catch {}
+let RELICS = []; try { RELICS = (JSON.parse(readFileSync(`${process.cwd()}/data/systems/relics.json`, 'utf8')).relics) || []; } catch {}
+// A run hands out relics (a cache every floor + a boss reward) — major player power
+// the sim MUST model or it badly under-reads the curve. Accumulate their effects and
+// apply to the player def (stat mults + the crit/evade/lifesteal/thorns/defBonus bundle).
+function grantRelic(acc, rng) {
+  if (!RELICS.length) return;
+  const e = RELICS[Math.floor(rng() * RELICS.length) % RELICS.length].effect || {};
+  for (const k of ['atkMult', 'hpMult', 'defMult', 'spdMult', 'crit', 'evade', 'lifesteal', 'thorns', 'defBonus'])
+    if (e[k] != null) acc[k] = (acc[k] || 0) + e[k];
+}
+function applyRelics(def, acc) {
+  const s = def.stats;
+  s.atk = Math.max(1, Math.round(s.atk * (1 + (acc.atkMult || 0))));
+  s.hp = Math.max(1, Math.round(s.hp * (1 + (acc.hpMult || 0))));
+  s.def = Math.round((s.def || 0) * (1 + (acc.defMult || 0)));
+  if (s.speed != null) s.speed = Math.round(s.speed * (1 + (acc.spdMult || 0)));
+  def.bonuses = { crit: acc.crit || 0, evade: acc.evade || 0, lifesteal: acc.lifesteal || 0, thorns: acc.thorns || 0, defBonus: acc.defBonus || 0 };
+  return def;
+}
+// the sim must use the SAME tier-banded biome roster the generator does (mapgen
+// pool = tier band + a splash of tier-1 for tier≥2), or it wrongly spawns endgame
+// monsters on floor 1. Default to the configured biome (verdara).
+const SIM_BIOME = BIOMES[RUNCFG.biome] || BIOMES[(BIOMES._meta || {}).default] || null;
+function rosterFor(tier) {
+  if (!SIM_BIOME) return null;
+  const et = SIM_BIOME.enemyTiers || {};
+  const band = (tier <= 1 ? et['1'] : tier === 2 ? et['2'] : et['3']) || et['1'] || [];
+  return tier >= 2 ? band.concat(et['1'] || []) : band;
+}
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -49,32 +85,73 @@ function deathCause(r, entryHp) {
   return 'outleveled';
 }
 
+// shared depth→enemy-level scaling — MUST mirror main.js _genFloor so the sim
+// predicts the real curve. tier ramps with depth (capped 3); depthBonus = rounded
+// floors * rate, with an earlyGrace discount; bosses add tier*2 + bossLevelBonus.
+function enemyLevels(floor, isBoss, rng) {
+  const rate = SCALING.enemyLevelPerFloor != null ? SCALING.enemyLevelPerFloor : 0.5;
+  const tier = Math.max(1, Math.min(3, 1 + Math.floor((floor - 1) / BOSS_EVERY)));
+  let depthBonus = Math.round((floor - 1) * rate);
+  if (floor <= (SCALING.earlyGrace | 0)) depthBonus -= (SCALING.graceLevels | 0);
+  if (isBoss) return { main: Math.max(1, tier + depthBonus + 2 + (SCALING.bossLevelBonus | 0)), add: Math.max(1, tier + depthBonus) };
+  // roamer ≈ tier + depthBonus + intra(0..2)
+  return { main: Math.max(1, tier + depthBonus + Math.floor(rng() * 3)), add: Math.max(1, tier + depthBonus) };
+}
+
 function simRun(classId, runSeed) {
   const rng = mulberry(runSeed);
   let vit = { hp: 1, mp: 1, sp: 1 };
   let choices = 0;                                  // genuine trade-off moments this run
   let cumSurv = 0;                                  // cumulative Surveillance across the run
   const bottom = ENDLESS ? MAXFLOOR : DEPTH;
+  // ENDLESS models REAL leveling: the player gains XP from kills (GameProgression)
+  // and levels up, so whether they keep pace with the ramp emerges from the curve.
+  const tierOf = (db.classes[classId] || {}).tier || 'basic';
+  const prog = GameProgression.createProgress(tierOf, 1, db.progression);
+  const relicAcc = {};                              // accumulated relic power this run
   for (let floor = 1; floor <= bottom; floor++) {
     // partial rest every 3rd floor (a camp): recover some vitals
     if (floor > 1 && floor % 3 === 1) { vit = { hp: Math.min(1, vit.hp + 0.35), mp: Math.min(1, vit.mp + 0.5), sp: Math.min(1, vit.sp + 0.5) }; }
-    // endless: Alpha every BOSS_EVERY floors; enemy level scales with depth (depthBonus).
     const isBoss = ENDLESS ? (floor % BOSS_EVERY === 0) : (floor === DEPTH);
-    const lvl = ENDLESS ? (floor + (isBoss ? 3 : 0)) : (isBoss ? floor + 2 : floor);
     const enemies = [];
-    enemies.push(buildEnemyDef(db, pick(rng, creatures), lvl, 'e1'));
-    if (isBoss || (floor >= 5 && rng() < 0.5)) enemies.push(buildEnemyDef(db, pick(rng, creatures), Math.max(1, lvl - 2), 'e2'));
+    let elv;
+    if (ENDLESS) {
+      const el = enemyLevels(floor, isBoss, rng);
+      const tier = Math.max(1, Math.min(3, 1 + Math.floor((floor - 1) / BOSS_EVERY)));
+      const roster = rosterFor(tier) || creatures;
+      const bossPool = (SIM_BIOME && SIM_BIOME.bosses) || creatures;
+      enemies.push(buildEnemyDef(db, pick(rng, isBoss ? bossPool : roster), el.main, 'e1'));
+      // the Alpha is a SOLO boss event in-game (roamers are separate fights); only
+      // non-boss deep floors throw the occasional pack.
+      if (!isBoss && floor >= 5 && rng() < 0.4) enemies.push(buildEnemyDef(db, pick(rng, roster), el.add, 'e2'));
+      elv = el.main;
+    } else {
+      const lvl = isBoss ? floor + 2 : floor;
+      enemies.push(buildEnemyDef(db, pick(rng, creatures), lvl, 'e1'));
+      if (isBoss || (floor >= 5 && rng() < 0.5)) enemies.push(buildEnemyDef(db, pick(rng, creatures), Math.max(1, lvl - 2), 'e2'));
+      elv = lvl;
+    }
     const entryHp = vit.hp;
     const fightOpts = { startVit: vit };
     if (UNTETHERED) fightOpts.tethered = false;
     // Collection is cumulative across the run: the budget left over this fight is
     // the lifetime budget minus what we've already accrued.
     else fightOpts.collectBudget = Math.max(0, COLLECT - cumSurv);
-    const r = runFight(db, GameCombat, buildPlayerDef(db, classId, Math.max(1, Math.ceil(floor * 0.8))), enemies, runSeed * 31 + floor, fightOpts);
+    const plvl = ENDLESS ? Math.max(1, prog.level) : Math.max(1, Math.ceil(floor * 0.8));
+    let pdef = buildPlayerDef(db, classId, plvl);
+    if (ENDLESS) pdef = applyRelics(pdef, relicAcc);
+    const r = runFight(db, GameCombat, pdef, enemies, runSeed * 31 + floor, fightOpts);
     // Each lethal-save OFFER is a real accept/refuse dilemma the player would face.
     choices += r.saves | 0;
     cumSurv += r.surveillance | 0;
     if (r.winner !== 'player' || r.collected) return { depth: floor - 1, died: true, cause: deathCause(r, entryHp), deathFloor: floor, choices };
+    // won: gain XP from the kills (level like the real game) + collect this floor's
+    // relic cache (and a boss reward), the run's other power axis.
+    if (ENDLESS) {
+      for (const e of enemies) GameProgression.gainFromKill(prog, { level: e.level || elv, xpYield: 1 }, db.progression);
+      grantRelic(relicAcc, rng);
+      if (isBoss) grantRelic(relicAcc, rng);
+    }
     vit = { hp: Math.min(1, r.endVit.hp + REST), mp: Math.min(1, r.endVit.mp + REST), sp: Math.min(1, r.endVit.sp + REST) };
   }
   return { depth: bottom, died: false, choices };   // survived to the (sim) bottom

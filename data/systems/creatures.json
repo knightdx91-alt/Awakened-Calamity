@@ -456,7 +456,7 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 320,
+   "hp": 210,
    "atk": 34,
    "def": 28,
    "speed": 58
@@ -481,7 +481,7 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 300,
+   "hp": 200,
    "atk": 40,
    "def": 26,
    "speed": 66
@@ -506,7 +506,7 @@
   "xpYield": 6.5,
   "creditYield": 4.5,
   "stats": {
-   "hp": 420,
+   "hp": 270,
    "atk": 36,
    "def": 46,
    "speed": 42
@@ -531,7 +531,7 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 300,
+   "hp": 210,
    "atk": 32,
    "def": 24,
    "speed": 60
@@ -556,7 +556,7 @@
   "xpYield": 8.0,
   "creditYield": 5.0,
   "stats": {
-   "hp": 380,
+   "hp": 230,
    "atk": 46,
    "def": 34,
    "speed": 72
