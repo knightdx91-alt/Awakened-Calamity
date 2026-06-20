@@ -16,6 +16,19 @@
     { "id": "swift_anklet",    "cost": { "crystal_shard": 4 },                "credits": 70 },
     { "id": "warded_cloak",    "cost": { "sigil_dust": 3, "beast_hide": 2 },  "credits": 90 },
     { "id": "steel_axe",       "cost": { "scrap_metal": 9, "crystal_shard": 2 }, "credits": 180 },
-    { "id": "chain_hauberk",   "cost": { "beast_hide": 8, "scrap_metal": 4 },    "credits": 180 }
+    { "id": "chain_hauberk",   "cost": { "beast_hide": 8, "scrap_metal": 4 },    "credits": 180 },
+
+    { "id": "bronze_spear",    "cost": { "scrap_metal": 5 },                     "credits": 60 },
+    { "id": "iron_mace",       "cost": { "scrap_metal": 6 },                     "credits": 70 },
+    { "id": "duelists_rapier", "cost": { "scrap_metal": 7, "crystal_shard": 3 }, "credits": 190 },
+    { "id": "war_robe",        "cost": { "beast_hide": 5 },                      "credits": 60 },
+    { "id": "scale_mail",      "cost": { "beast_hide": 6, "scrap_metal": 2 },    "credits": 80 },
+    { "id": "brigandine",      "cost": { "beast_hide": 7, "scrap_metal": 4 },    "credits": 190 },
+    { "id": "power_ring",      "cost": { "crystal_shard": 3 },                   "credits": 70 },
+    { "id": "guard_charm",     "cost": { "crystal_shard": 3 },                   "credits": 70 },
+    { "id": "vital_locket",    "cost": { "crystal_shard": 5, "beast_hide": 2 },  "credits": 180 },
+    { "id": "luck_pendant",    "cost": { "crystal_shard": 6 },                   "credits": 200 },
+    { "id": "smoke_mask",      "cost": { "sigil_dust": 2, "beast_hide": 2 },     "credits": 80 },
+    { "id": "grave_ward",      "cost": { "sigil_dust": 4, "crystal_shard": 2 },  "credits": 190 }
   ]
 }

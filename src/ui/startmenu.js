@@ -1589,6 +1589,15 @@ window.GameStartMenu = (function () {
         selectedIdx=0; page='main'; _subIdx=0; _saveDone=false; isOpen=true;
         menuEl.classList.add('open'); _render();
     }
+    // Open straight to the FORGE (SUPPLIES → GEAR → UPGRADE) — used by the Dawnhearth
+    // Forge station's `forge` event command. mode: 'upgrade' (default) | 'craft' | 'equip'.
+    function openForge(mode) {
+        if (!menuEl) return;
+        _rebuildItems();
+        selectedIdx = 0; _saveDone = false; isOpen = true;
+        page = 'supplies'; _supPocket = 'gear'; _gearMode = mode || 'upgrade'; _subIdx = 0;
+        menuEl.classList.add('open'); _render();
+    }
     function close() {
         if (!menuEl) return;
         isOpen=false; menuEl.classList.remove('open');
@@ -1684,6 +1693,6 @@ window.GameStartMenu = (function () {
 
     document.addEventListener('DOMContentLoaded',init);
 
-    return { toggle, open, close, openBagForBattle, openPartyForBattle, moveUp, moveDown, moveLeft, moveRight, confirm, back,
+    return { toggle, open, close, openForge, openBagForBattle, openPartyForBattle, moveUp, moveDown, moveLeft, moveRight, confirm, back,
              get isOpen() { return isOpen; } };
 })();

@@ -1603,6 +1603,11 @@
             case 'meta': await _metaMenu(); break;
             case 'relic': await _grantRelic(c); break;
             case 'loot': await _loot(c, ctx); break;
+            case 'forge': {                                 // open the Forge (upgrade/craft gear)
+                await _loadGearDb(); await _loadRelicsDb(); await _loadLootDb(); await _loadCraftDb();
+                if (window.GameStartMenu && GameStartMenu.openForge) GameStartMenu.openForge(c.mode || 'upgrade');
+                break;
+            }
             // Fine-grained run-loop primitives (compose your own descent in events):
             case 'run': await _runOp(c); break;            // op: start | deeper | end
             case 'gendungeon': await _enterGenFloor(); break;  // generate + enter current floor

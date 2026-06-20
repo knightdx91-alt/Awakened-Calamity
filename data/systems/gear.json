@@ -20,6 +20,22 @@
     { "id": "keen_charm", "name": "Keen Charm", "slot": "accessory", "rarity": "rare", "icon": 164, "value": 300, "desc": "Sharpens the killing instinct.", "stats": { "crit": 0.1 } },
 
     { "id": "travel_cloak", "name": "Travel Cloak", "slot": "hazard", "rarity": "common", "icon": 180, "value": 25, "desc": "Weathered wrap. Blunts exposure.", "stats": { "defBonus": 2 } },
-    { "id": "warded_cloak", "name": "Warded Cloak", "slot": "hazard", "rarity": "rare", "icon": 181, "value": 300, "desc": "Sigil-stitched against the deep's bite.", "stats": { "defBonus": 6, "evade": 0.05 } }
+    { "id": "warded_cloak", "name": "Warded Cloak", "slot": "hazard", "rarity": "rare", "icon": 181, "value": 300, "desc": "Sigil-stitched against the deep's bite.", "stats": { "defBonus": 6, "evade": 0.05 } },
+
+    { "id": "bronze_spear", "name": "Bronze Spear", "slot": "weapon", "rarity": "uncommon", "icon": 100, "value": 130, "desc": "Reach and a keen point.", "stats": { "atk": 8 } },
+    { "id": "iron_mace", "name": "Iron Mace", "slot": "weapon", "rarity": "uncommon", "icon": 98, "value": 130, "desc": "Crude, heavy, dependable.", "stats": { "atk": 9, "spdMult": -0.05 } },
+    { "id": "duelists_rapier", "name": "Duelist's Rapier", "slot": "weapon", "rarity": "rare", "icon": 96, "value": 340, "desc": "Fast and precise — finds the gap.", "stats": { "atk": 9, "crit": 0.1, "spdMult": 0.05 } },
+
+    { "id": "war_robe", "name": "War Robe", "slot": "body", "rarity": "uncommon", "icon": 146, "value": 120, "desc": "Light layered cloth — quick and warm.", "stats": { "def": 3, "hp": 14, "spdMult": 0.06 } },
+    { "id": "scale_mail", "name": "Scale Mail", "slot": "body", "rarity": "uncommon", "icon": 145, "value": 140, "desc": "Overlapping scales turn a blow.", "stats": { "def": 6, "hp": 22 } },
+    { "id": "brigandine", "name": "Brigandine", "slot": "body", "rarity": "rare", "icon": 145, "value": 320, "desc": "Plates riveted into a sturdy coat.", "stats": { "def": 8, "hp": 26 } },
+
+    { "id": "power_ring", "name": "Power Ring", "slot": "accessory", "rarity": "uncommon", "icon": 160, "value": 130, "desc": "A band that lends the arm strength.", "stats": { "atk": 4 } },
+    { "id": "guard_charm", "name": "Guard Charm", "slot": "accessory", "rarity": "uncommon", "icon": 161, "value": 130, "desc": "Steadies your guard.", "stats": { "def": 4 } },
+    { "id": "vital_locket", "name": "Vital Locket", "slot": "accessory", "rarity": "rare", "icon": 165, "value": 300, "desc": "A warm ember of life held close.", "stats": { "hp": 30 } },
+    { "id": "luck_pendant", "name": "Luck Pendant", "slot": "accessory", "rarity": "rare", "icon": 166, "value": 320, "desc": "Fortune favors its bearer.", "stats": { "crit": 0.08, "evade": 0.08 } },
+
+    { "id": "smoke_mask", "name": "Smoke Mask", "slot": "hazard", "rarity": "uncommon", "icon": 182, "value": 120, "desc": "Slip the eye, blunt the fumes.", "stats": { "evade": 0.08 } },
+    { "id": "grave_ward", "name": "Grave Ward", "slot": "hazard", "rarity": "rare", "icon": 183, "value": 320, "desc": "A charm that turns the deep's malice.", "stats": { "defBonus": 8 } }
   ]
 }
