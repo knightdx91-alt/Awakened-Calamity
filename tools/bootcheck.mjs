@@ -16,9 +16,16 @@ const CHROME = process.env.CHROME ||
 const url = process.argv[2] || 'http://localhost:8099/game.html';
 const out = process.argv[3] || '/tmp/boot.png';
 
+// NOTE: do NOT pass --single-process (it HANGS this container's chromium).
+// --disable-dev-shm-usage avoids /dev/shm exhaustion in sandboxes.
 const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu'] });
+  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] });
 const p = await b.newPage();
+// Bypass the service worker + disk cache, or the SW serves a STALE game.html and
+// new <script>s never load (modules show up undefined). The #1 boot-check gotcha.
+const _cdp = await p.target().createCDPSession();
+await _cdp.send('Network.setBypassServiceWorker', { bypass: true }).catch(() => {});
+await p.setCacheEnabled(false);
 await p.setViewport({ width: 480, height: 320, deviceScaleFactor: 2 });
 const errs = [];
 p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
