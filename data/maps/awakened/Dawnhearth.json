@@ -131,7 +131,14 @@
    "commands": [
     {
      "type": "text",
-     "text": "A storefront, closed. The hours posted on the door are written in a hand that keeps changing."
+     "text": "THE SMITHY — heat and hammer-fall from within. The Forgemaster is in."
+    },
+    {
+     "type": "transfer",
+     "map": "DawnhearthSmithy",
+     "x": 13,
+     "y": 14,
+     "dir": "up"
     }
    ]
   },

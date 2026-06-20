@@ -220,6 +220,157 @@
     "xpPerFail": 4,
     "xpBase": 100,
     "xpPerLevel": 60,
-    "maxLevel": 20
+    "maxLevel": 20,
+    "ilvlPerLevel": 0.34
+  },
+  "classBonus": {
+    "smith": {
+      "discipline": "smithing",
+      "level": 3
+    },
+    "weaponsmith": {
+      "discipline": "smithing",
+      "level": 5
+    },
+    "armorsmith": {
+      "discipline": "smithing",
+      "level": 5
+    },
+    "blademaster": {
+      "discipline": "smithing",
+      "level": 5
+    },
+    "bladelord": {
+      "discipline": "smithing",
+      "level": 7
+    },
+    "maulwarden": {
+      "discipline": "smithing",
+      "level": 7
+    },
+    "plateforger": {
+      "discipline": "smithing",
+      "level": 7
+    },
+    "mailweaver": {
+      "discipline": "smithing",
+      "level": 7
+    },
+    "keenedge": {
+      "discipline": "smithing",
+      "level": 9
+    },
+    "siegemaster": {
+      "discipline": "smithing",
+      "level": 9
+    },
+    "aegisforger": {
+      "discipline": "smithing",
+      "level": 9
+    },
+    "quicksilver": {
+      "discipline": "smithing",
+      "level": 9
+    },
+    "stormtemper": {
+      "discipline": "smithing",
+      "level": 11
+    },
+    "warmonger": {
+      "discipline": "smithing",
+      "level": 11
+    },
+    "ironbulwark": {
+      "discipline": "smithing",
+      "level": 11
+    },
+    "calamity_forgemaster": {
+      "discipline": "smithing",
+      "level": 13
+    },
+    "worldanvil": {
+      "discipline": "smithing",
+      "level": 13
+    },
+    "leatherworker": {
+      "discipline": "leatherwork",
+      "level": 3
+    },
+    "tanner": {
+      "discipline": "leatherwork",
+      "level": 5
+    },
+    "outfitter": {
+      "discipline": "leatherwork",
+      "level": 5
+    },
+    "tailor": {
+      "discipline": "leatherwork",
+      "level": 3
+    },
+    "woodwright": {
+      "discipline": "leatherwork",
+      "level": 3
+    },
+    "jeweler": {
+      "discipline": "artificing",
+      "level": 3
+    },
+    "engineer": {
+      "discipline": "artificing",
+      "level": 3
+    },
+    "artificer": {
+      "discipline": "artificing",
+      "level": 5
+    },
+    "mechanist": {
+      "discipline": "artificing",
+      "level": 5
+    },
+    "runesmith": {
+      "discipline": "artificing",
+      "level": 5
+    },
+    "runebrand": {
+      "discipline": "artificing",
+      "level": 9
+    },
+    "glyphcarver": {
+      "discipline": "artificing",
+      "level": 7
+    },
+    "builder": {
+      "discipline": "artificing",
+      "level": 5
+    },
+    "wardbinder": {
+      "discipline": "warding",
+      "level": 7
+    },
+    "sigilward": {
+      "discipline": "warding",
+      "level": 9
+    },
+    "mason": {
+      "discipline": "warding",
+      "level": 3
+    },
+    "reliquarist": {
+      "discipline": "warding",
+      "level": 11
+    },
+    "starbinder": {
+      "discipline": "warding",
+      "level": 11
+    },
+    "souletcher": {
+      "discipline": "warding",
+      "level": 11
+    },
+    "systemscribe": {
+      "discipline": "warding",
+      "level": 13
+    }
   }
 }

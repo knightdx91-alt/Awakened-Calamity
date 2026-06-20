@@ -55,9 +55,19 @@
   // ilvl). Crafting grants proficiency XP. State: player.crafting[discipline]={level,xp}.
   function _pcfg(cfg) { return (cfg && cfg.proficiency) || {}; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function profOf(player, discipline) {
+  // The base proficiency a CLASS grants in a discipline (a Smith starts skilled at
+  // smithing). cfg.classBonus[classId] = { discipline, level }. Acts as a FLOOR.
+  function classBase(player, discipline, cfg) {
+    var cid = player && player.class && player.class.id;
+    var cb = cid && cfg && cfg.classBonus && cfg.classBonus[cid];
+    return (cb && cb.discipline === discipline) ? (cb.level | 0) : 0;
+  }
+  // Effective proficiency = max(trained level, class floor). cfg optional (for the
+  // class bonus); without it, just the trained level.
+  function profOf(player, discipline, cfg) {
     var c = (player && player.crafting && player.crafting[discipline]) || null;
-    return c ? Math.max(1, c.level | 0) : 1;
+    var trained = c ? (c.level | 0) : 0;
+    return Math.max(1, trained, classBase(player, discipline, cfg));
   }
   function successChance(level, tier, cfg) {
     var p = _pcfg(cfg);
@@ -74,15 +84,17 @@
   //   { success, crit, resultId, resultIlvl, discipline, tier, sChance, cChance }
   function attemptCraft(player, recipe, cfg, rng) {
     rng = rng || Math.random;
-    var disc = recipe.discipline || 'smithing', tier = recipe.tier || 1, lvl = profOf(player, disc);
+    var disc = recipe.discipline || 'smithing', tier = recipe.tier || 1, lvl = profOf(player, disc, cfg);
     var sC = successChance(lvl, tier, cfg), cC = critChance(lvl, tier, cfg);
-    var out = { discipline: disc, tier: tier, level: lvl, sChance: sC, cChance: cC, success: false, crit: false, resultId: recipe.id, resultIlvl: 1 };
+    // proficiency raises the BASE item-level of everything you forge.
+    var baseIlvl = 1 + Math.floor((lvl - 1) * ((_pcfg(cfg).ilvlPerLevel != null ? _pcfg(cfg).ilvlPerLevel : 0.34)));
+    var out = { discipline: disc, tier: tier, level: lvl, sChance: sC, cChance: cC, success: false, crit: false, resultId: recipe.id, resultIlvl: baseIlvl };
     if (rng() >= sC) return out;                       // failed craft
     out.success = true;
     if (rng() < cC) {                                  // CRITICAL — a higher-tier item / masterwork
       out.crit = true;
-      if (recipe.critUpgrade) out.resultId = recipe.critUpgrade;
-      else out.resultIlvl = 1 + ((_pcfg(cfg).masterworkIlvl | 0) || 3);
+      if (recipe.critUpgrade) out.resultId = recipe.critUpgrade;          // higher-tier item, at base ilvl
+      else out.resultIlvl = baseIlvl + ((_pcfg(cfg).masterworkIlvl | 0) || 3); // masterwork: +ilvl
     }
     return out;
   }

@@ -918,7 +918,7 @@ window.GameStartMenu = (function () {
         // proficiency summary
         var pf = document.createElement('div'); pf.style.cssText = 'font-size:6px;color:' + _FR.blue + ';margin-bottom:6px;';
         var discs = (cfg.proficiency && cfg.proficiency.disciplines) || [];
-        pf.textContent = discs.map(function (d) { return d.slice(0, 5) + ' L' + window.GameCrafting.profOf(ps, d); }).join('  ·  ');
+        pf.textContent = discs.map(function (d) { return d.slice(0, 5) + ' L' + window.GameCrafting.profOf(ps, d, cfg); }).join('  ·  ');
         el.appendChild(pf);
         // forge result banner (set after a craft)
         if (_forgeMsg) { var fm = document.createElement('div'); fm.style.cssText = 'font:7px "Press Start 2P";color:' + (_forgeCrit ? '#e8c860' : _FR.text) + ';text-align:center;margin-bottom:6px;'; fm.textContent = _forgeMsg; el.appendChild(fm); }
@@ -927,7 +927,7 @@ window.GameStartMenu = (function () {
             var def = _gearDef(rec.id); if (!def) return;
             var cost = window.GameCrafting.recipeCost(rec);
             var afford = window.GameCrafting.canPay(inv, ps.money | 0, cost);
-            var lvl = window.GameCrafting.profOf(ps, rec.discipline || 'smithing');
+            var lvl = window.GameCrafting.profOf(ps, rec.discipline || 'smithing', cfg);
             var sC = Math.round(window.GameCrafting.successChance(lvl, rec.tier || 1, cfg) * 100);
             var cC = Math.round(window.GameCrafting.critChance(lvl, rec.tier || 1, cfg) * 100);
             var info = (afford ? '' : '✗ ') + window.GameCrafting.costLine(cost, _matName)

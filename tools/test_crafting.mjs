@@ -70,5 +70,20 @@ const inv2 = { materials: {} };
 GC.refundMaterials(inv2, { materials: { scrap_metal: 6 } }, 0.5);
 check('failed craft refunds half the materials', inv2.materials.scrap_metal === 3);
 
+// ── CLASS bonus: a Smith starts proficient at smithing (a floor) ──
+const smithPlayer = { class: { id: 'smith' } };
+check('class grants a smithing floor', GC.profOf(smithPlayer, 'smithing', cfg) >= 3);
+check('class floor does NOT apply to other disciplines', GC.profOf(smithPlayer, 'warding', cfg) === 1);
+check('trained level overrides a lower class floor', GC.profOf({ class: { id: 'smith' }, crafting: { smithing: { level: 9, xp: 0 } } }, 'smithing', cfg) === 9);
+check('a non-crafter has no floor', GC.profOf({ class: { id: 'warrior' } }, 'smithing', cfg) === 1);
+check('Smith crafts with better odds than a novice',
+  GC.successChance(GC.profOf(smithPlayer, 'smithing', cfg), 1, cfg) > GC.successChance(1, 1, cfg));
+
+// ── base ilvl scales with proficiency (no-crit rng: 1st roll success, 2nd fails crit) ──
+const noCritRng = () => { let i = 0; return () => (i++ === 0 ? 0 : 0.999); };
+const base1 = GC.attemptCraft({}, ironRec, cfg, noCritRng());
+const base15 = GC.attemptCraft({ crafting: { smithing: { level: 15, xp: 0 } } }, ironRec, cfg, noCritRng());
+check('higher proficiency → higher base ilvl on a normal craft', base15.resultIlvl > base1.resultIlvl, `L1=i${base1.resultIlvl} L15=i${base15.resultIlvl}`);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

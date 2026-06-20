@@ -1,0 +1,131 @@
+{
+ "id": "MAP_DAWNHEARTHSMITHY",
+ "name": "Dawnhearth Smithy",
+ "region": "awakened",
+ "parent": "Dawnhearth",
+ "layout": "LAYOUT_DAWNHEARTHSMITHY",
+ "music": "MUS_NONE",
+ "weather": "WEATHER_NONE",
+ "map_type": "MAP_TYPE_INDOOR",
+ "allow_running": true,
+ "show_map_name": true,
+ "connections": [],
+ "npcs": [],
+ "warps": [],
+ "triggers": [],
+ "signs": [],
+ "start": {
+  "x": 13,
+  "y": 15
+ },
+ "events": [
+  {
+   "id": 1,
+   "name": "Exit",
+   "x": 13,
+   "y": 16,
+   "graphic": {
+    "sprite": "",
+    "file": "",
+    "single": true
+   },
+   "dir": "down",
+   "trigger": "touch",
+   "through": true,
+   "commands": [
+    {
+     "type": "transfer",
+     "map": "Dawnhearth",
+     "x": 40,
+     "y": 28,
+     "dir": "down"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Forgemaster",
+   "x": 13,
+   "y": 6,
+   "graphic": {
+    "sprite": "People4",
+    "file": "rtp/People4.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "❖ THE SMITHY ❖\nHeat rolls off the forge. The smith straightens. “Good — you came in. Bring me what the dark gives up and I’ll make it bite. Upgrade what you carry, or forge it new.”",
+     "face": {
+      "sheet": "People4",
+      "index": 0
+     }
+    },
+    {
+     "type": "choice",
+     "prompt": "The Forge:",
+     "options": [
+      {
+       "label": "Upgrade gear",
+       "then": [
+        {
+         "type": "forge",
+         "mode": "upgrade"
+        }
+       ]
+      },
+      {
+       "label": "Craft gear",
+       "then": [
+        {
+         "type": "forge",
+         "mode": "craft"
+        }
+       ]
+      },
+      {
+       "label": "Not now",
+       "then": [
+        {
+         "type": "text",
+         "text": "“Mind the sparks.”"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Anvil",
+   "x": 11,
+   "y": 7,
+   "graphic": {
+    "sprite": "!Other1",
+    "file": "rtp/!Other1.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": true
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "text",
+     "text": "A scarred anvil, ringing faintly even at rest. The Forgemaster works the System’s leavings into honest steel here."
+    }
+   ]
+  }
+ ]
+}
