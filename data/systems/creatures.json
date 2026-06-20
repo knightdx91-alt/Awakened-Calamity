@@ -456,9 +456,9 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 210,
-   "atk": 34,
-   "def": 28,
+   "hp": 150,
+   "atk": 26,
+   "def": 14,
    "speed": 58
   },
   "loadout": [
@@ -481,9 +481,9 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 200,
-   "atk": 40,
-   "def": 26,
+   "hp": 150,
+   "atk": 30,
+   "def": 12,
    "speed": 66
   },
   "loadout": [
@@ -506,9 +506,9 @@
   "xpYield": 6.5,
   "creditYield": 4.5,
   "stats": {
-   "hp": 270,
-   "atk": 36,
-   "def": 46,
+   "hp": 185,
+   "atk": 28,
+   "def": 18,
    "speed": 42
   },
   "loadout": [
@@ -531,10 +531,10 @@
   "xpYield": 6.0,
   "creditYield": 4.0,
   "stats": {
-   "hp": 210,
-   "atk": 32,
-   "def": 24,
-   "speed": 60
+   "hp": 155,
+   "atk": 26,
+   "def": 14,
+   "speed": 56
   },
   "loadout": [
    "pin_shot",
@@ -556,10 +556,10 @@
   "xpYield": 8.0,
   "creditYield": 5.0,
   "stats": {
-   "hp": 230,
-   "atk": 46,
-   "def": 34,
-   "speed": 72
+   "hp": 170,
+   "atk": 30,
+   "def": 16,
+   "speed": 60
   },
   "loadout": [
    "unmake",

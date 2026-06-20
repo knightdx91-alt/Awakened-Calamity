@@ -501,7 +501,7 @@
         // next) or the ALPHA boss (boss floor → battle, then descend = run cleared).
         var boss = opts.kind === 'boss', endless = !!opts.endless, depthBonus = opts.depthBonus | 0;
         if (boss) {
-            var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = Math.max(1, tier + depthBonus + 2 + (opts.bossBonus | 0));
+            var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = Math.max(1, tier + depthBonus + 1 + (opts.bossBonus | 0));
             // After the Alpha falls: in an ENDLESS run, claim a relic reward then CHOOSE
             // — descend deeper (push your luck) or extract to the surface, banking your
             // gains alive. In a FIXED run, beating the boss clears the run.

@@ -127,7 +127,7 @@ function enemyLevels(floor, isBoss, rng) {
   const tier = Math.max(1, Math.min(3, 1 + Math.floor((floor - 1) / BOSS_EVERY)));
   let depthBonus = Math.round((floor - 1) * rate);
   if (floor <= (SCALING.earlyGrace | 0)) depthBonus -= (SCALING.graceLevels | 0);
-  if (isBoss) return { main: Math.max(1, tier + depthBonus + 2 + (SCALING.bossLevelBonus | 0)), add: Math.max(1, tier + depthBonus) };
+  if (isBoss) return { main: Math.max(1, tier + depthBonus + 1 + (SCALING.bossLevelBonus | 0)), add: Math.max(1, tier + depthBonus) };
   // roamer ≈ tier + depthBonus + intra(0..2)
   return { main: Math.max(1, tier + depthBonus + Math.floor(rng() * 3)), add: Math.max(1, tier + depthBonus) };
 }
