@@ -6,7 +6,7 @@
  "bossEvery": 5,
  "scaling": {
   "_doc": "Endless difficulty ramp (DATA-driven, shared by main.js _genFloor and tools/sim_run.mjs so the sim predicts the real curve). depthBonus = round((floor-1)*enemyLevelPerFloor) is added to every enemy/boss level; earlyGrace floors get -graceLevels so the opening is gentle; bossLevelBonus tunes Alpha lethality.",
-  "enemyLevelPerFloor": 0.28,
+  "enemyLevelPerFloor": 0.36,
   "earlyGrace": 3,
   "graceLevels": 1,
   "bossLevelBonus": 0

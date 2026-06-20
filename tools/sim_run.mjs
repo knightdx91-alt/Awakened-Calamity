@@ -33,24 +33,23 @@ const EQUIP_DBS = { gear: GEAR, relics: RELICDB };
 // EQUIPMENT model — faithful to the game (src/systems/equip.js): relics are RARE
 // equippable gear, only ONE worn, bonuses ONLY from the 4 equipped slots (no
 // stacking). The bot greedily keeps best-in-slot. A rough power score ranks gear.
-function gearScore(def) {
-  const s = (def && (def.stats || def.effect)) || {};
+// score an INSTANCE ({id,ilvl}) by its ilvl-scaled stats (floor-scaled gear).
+function gearScore(item) {
+  const s = GameEquip.effectiveStats(item, EQUIP_DBS) || {};
   return (s.atk || 0) * 2.2 + (s.def || 0) * 1.2 + (s.hp || 0) * 0.25 + (s.speed || 0) * 0.15
     + (s.atkMult || 0) * 28 + (s.hpMult || 0) * 14 + (s.defMult || 0) * 10 + (s.spdMult || 0) * 8
     + (s.crit || 0) * 35 + (s.evade || 0) * 25 + (s.lifesteal || 0) * 30 + (s.thorns || 0) * 12 + (s.defBonus || 0) * 1.2;
 }
-// Try to equip a dropped item if it beats what's worn (respects the single-relic rule).
-function considerEquip(player, id) {
-  const def = GameEquip.resolve(id, EQUIP_DBS); if (!def) return;
+// Try to equip a dropped instance if it beats what's worn (respects single-relic).
+function considerEquip(player, item) {
+  const def = GameEquip.resolve(item, EQUIP_DBS); if (!def) return;
   const slot = def.slot || 'accessory', eq = (player.equipment = player.equipment || {});
-  const cur = eq[slot] ? GameEquip.resolve(eq[slot], EQUIP_DBS) : null;
-  if (cur && gearScore(cur) >= gearScore(def)) return;              // keep the better worn piece
-  // a relic must beat the currently worn relic too (only one allowed)
+  if (eq[slot] && gearScore(eq[slot]) >= gearScore(item)) return;   // keep the better worn piece
   if (def.rarity === 'relic') {
     const rs = GameEquip.equippedRelicSlot(player, EQUIP_DBS);
-    if (rs && rs !== slot) { const wr = GameEquip.resolve(eq[rs], EQUIP_DBS); if (wr && gearScore(wr) >= gearScore(def)) return; }
+    if (rs && rs !== slot && gearScore(eq[rs]) >= gearScore(item)) return;
   }
-  GameEquip.equip(player, id, EQUIP_DBS);
+  GameEquip.equip(player, item, EQUIP_DBS);
 }
 // Apply equipped-gear bonuses to a player def (flat + mult + the trait bundle).
 function applyEquip(def, player) {
@@ -62,10 +61,10 @@ function applyEquip(def, player) {
   def.bonuses = { crit: ag.bonuses.crit, evade: ag.bonuses.evade, lifesteal: ag.bonuses.lifesteal, thorns: ag.bonuses.thorns, defBonus: ag.bonuses.defBonus };
   return def;
 }
-// Roll a loot table and feed any gear/relic to the equip logic (materials ignored).
-function rollLoot(player, table, seed) {
+// Roll a loot table; gear drops scale to the floor (ilvl = floor), feeding equip.
+function rollLoot(player, table, seed, floor) {
   for (const g of GameLoot.roll(table, { loot: LOOTDB, gear: GEAR, relics: RELICDB }, seed))
-    if (g.pocket === 'gear') considerEquip(player, g.id);
+    if (g.pocket === 'gear') considerEquip(player, { id: g.id, ilvl: Math.max(1, floor | 0) });
 }
 // the sim must use the SAME tier-banded biome roster the generator does (mapgen
 // pool = tier band + a splash of tier-1 for tier≥2), or it wrongly spawns endgame
@@ -193,12 +192,12 @@ function simRun(classId, runSeed) {
     if (ENDLESS) {
       for (const e of enemies) GameProgression.gainFromKill(prog, { level: e.level || elv, xpYield: 1 }, db.progression);
       const node = nodeType(floor);
-      rollLoot(player, 'roamer', runSeed * 131 + floor * 17);                  // the floor's encounters
+      rollLoot(player, 'roamer', runSeed * 131 + floor * 17, floor);                  // the floor's encounters
       const chestN = 1 + Math.max(1, Math.min(3, 1 + Math.floor((floor - 1) / BOSS_EVERY))) + (node === 'treasure' ? 1 : 0);
-      for (let ci = 0; ci < chestN; ci++) rollLoot(player, 'chest', runSeed * 911 + floor * 53 + ci);
-      if (node === 'elite') rollLoot(player, 'elite', runSeed * 733 + floor * 23);
-      else if (node === 'treasure') rollLoot(player, 'cache', runSeed * 733 + floor * 23);
-      if (isBoss) rollLoot(player, 'boss', runSeed * 577 + floor * 13);
+      for (let ci = 0; ci < chestN; ci++) rollLoot(player, 'chest', runSeed * 911 + floor * 53 + ci, floor);
+      if (node === 'elite') rollLoot(player, 'elite', runSeed * 733 + floor * 23, floor);
+      else if (node === 'treasure') rollLoot(player, 'cache', runSeed * 733 + floor * 23, floor);
+      if (isBoss) rollLoot(player, 'boss', runSeed * 577 + floor * 13, floor);
     }
     vit = { hp: Math.min(1, r.endVit.hp + REST), mp: Math.min(1, r.endVit.mp + REST), sp: Math.min(1, r.endVit.sp + REST) };
   }

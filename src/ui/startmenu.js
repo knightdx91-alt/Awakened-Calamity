@@ -766,8 +766,9 @@ window.GameStartMenu = (function () {
         ['Key', 'keyItems', 'Story & landmark items.', 242, false],
     ];
     function _pocketCount(inv, key) {
-        var p = inv[key]; if (!p) return 0; var n = 0;
-        for (var k in p) n += (p[k] | 0); return n;
+        var p = inv[key]; if (!p) return 0;
+        if (Array.isArray(p)) return p.length;          // gear = list of instances
+        var n = 0; for (var k in p) n += (p[k] | 0); return n;
     }
     function _ensureItems() {
         if (window.GameItems && !GameItems.ready()) {
@@ -807,8 +808,10 @@ window.GameStartMenu = (function () {
         var r = window._relicsDb && (window._relicsDb.relics || []).filter(function (x) { return x.id === id; })[0]; if (r) return r;
         return (window.GameItems && GameItems.get(id)) || null;
     }
-    function _gearStatLine(def) {
-        var s = (def && (def.stats || def.effect)) || {}, parts = [];
+    // Stat line for an EQUIPMENT INSTANCE ({id,ilvl}) — flat stats shown ilvl-scaled.
+    function _gearStatLine(item) {
+        var dbs = { gear: window._gearDb, relics: window._relicsDb };
+        var s = (window.GameEquip && GameEquip.effectiveStats(item, dbs)) || {}, parts = [];
         var lab = { atk: 'ATK', def: 'DEF', hp: 'HP', speed: 'SPD' };
         for (var k in lab) if (s[k]) parts.push('+' + s[k] + ' ' + lab[k]);
         var pct = { atkMult: 'ATK', hpMult: 'HP', defMult: 'DEF', spdMult: 'SPD' };
@@ -819,10 +822,10 @@ window.GameStartMenu = (function () {
     }
     var _EQ_SLOTS = [['weapon', 'WEAPON'], ['body', 'BODY'], ['accessory', 'ACCESSORY'], ['hazard', 'HAZARD']];
     // GEAR pocket = the EQUIPMENT screen: equipped slots (select → unequip) over the
-    // bag (select → equip). Relics (rarity 'relic') show gold; only one may be worn.
+    // bag (select → equip). Gear is a LIST of instances { id, ilvl }; ilvl scales the
+    // flat stats. Relics (rarity 'relic') show gold; only one may be worn.
     function _buildGear(el, inv) {
         var ps = (window.GameSave && GameSave.state && GameSave.state.player) || {};
-        var dbs = { gear: window._gearDb, relics: window._relicsDb };
         var hd = document.createElement('div');
         hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';
         hd.textContent = 'EQUIPMENT';
@@ -832,45 +835,37 @@ window.GameStartMenu = (function () {
             w.textContent = 'Loading gear…'; el.appendChild(w); return;
         }
         var eq = ps.equipment || {};
-        _EQ_SLOTS.forEach(function (sl) {
-            var id = eq[sl[0]], def = id ? _gearDef(id) : null, relic = def && def.rarity === 'relic';
+        var mkRow = function (item, slotLabel, onSel) {
+            var id = window.GameEquip.idOf(item), def = id ? _gearDef(id) : null, relic = def && def.rarity === 'relic';
             var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
             var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
-            var sn = document.createElement('span'); sn.style.cssText = 'color:' + _FR.dim + ';width:64px;flex:none;font-size:7px;'; sn.textContent = sl[1];
+            if (slotLabel) { var sn = document.createElement('span'); sn.style.cssText = 'color:' + _FR.dim + ';width:60px;flex:none;font-size:7px;'; sn.textContent = slotLabel; top.appendChild(sn); }
             var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
             nm.textContent = def ? (relic ? '✦ ' : '') + def.name : '— empty —';
-            top.appendChild(sn); top.appendChild(nm); r.appendChild(top);
-            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.blue + ';'; d.textContent = _gearStatLine(def); r.appendChild(d); }
-            if (id) _sel(r, (function (slot) { return function () { _unequipSlot(slot); }; })(sl[0]));
-        });
-        // the bag — equippable items
-        var bag = (inv.gear) || {};
-        var ids = Object.keys(bag).filter(function (k) { return (bag[k] | 0) > 0; });
+            top.appendChild(nm);
+            if (item) { var il = document.createElement('span'); il.style.cssText = 'color:' + _FR.blue + ';font-size:7px;'; il.textContent = 'i' + window.GameEquip.ilvlOf(item); top.appendChild(il); }
+            r.appendChild(top);
+            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + (slotLabel ? _FR.blue : _FR.dim) + ';'; d.textContent = (slotLabel ? '' : (def.slot ? '[' + def.slot + ']  ' : '')) + _gearStatLine(item); r.appendChild(d); }
+            if (onSel) _sel(r, onSel);
+        };
+        _EQ_SLOTS.forEach(function (sl) { var it = eq[sl[0]]; mkRow(it, sl[1], it ? function () { _unequipSlot(sl[0]); } : null); });
+        // the bag — equippable instances (list)
+        var bag = Array.isArray(inv.gear) ? inv.gear : [];
         var sub = document.createElement('div');
         sub.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';margin:8px 0 5px;border-top:1px solid ' + _FR.border + ';padding-top:6px;';
-        sub.textContent = ids.length ? 'BAG — select to equip' : 'BAG — empty';
+        sub.textContent = bag.length ? 'BAG — select to equip' : 'BAG — empty';
         el.appendChild(sub);
-        ids.forEach(function (id) {
-            var def = _gearDef(id), relic = def && def.rarity === 'relic';
-            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
-            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
-            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
-            nm.textContent = (relic ? '✦ ' : '') + (def ? def.name : id) + (def && def.slot ? '  [' + def.slot + ']' : '');
-            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (bag[id] | 0);
-            top.appendChild(nm); top.appendChild(cnt); r.appendChild(top);
-            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.dim + ';'; d.textContent = _gearStatLine(def); r.appendChild(d); }
-            _sel(r, function () { _equipItem(id); });
-        });
+        bag.forEach(function (item, idx) { mkRow(item, null, function () { _equipItem(idx); }); });
     }
-    function _bagAdd(inv, id, n) { inv.gear = inv.gear || {}; inv.gear[id] = (inv.gear[id] | 0) + n; if (inv.gear[id] <= 0) delete inv.gear[id]; }
-    function _equipItem(id) {
+    function _equipItem(idx) {
         var st = window.GameSave && GameSave.state; if (!st || !window.GameEquip) return;
         var ps = st.player || (st.player = {}); var inv = st.inventory || (st.inventory = {});
-        var dbs = { gear: window._gearDb, relics: window._relicsDb };
-        var res = GameEquip.equip(ps, id, dbs);
+        if (!Array.isArray(inv.gear)) inv.gear = [];
+        var item = inv.gear[idx]; if (!item) return;
+        var res = GameEquip.equip(ps, item, { gear: window._gearDb, relics: window._relicsDb });
         if (!res.slot) return;
-        _bagAdd(inv, id, -1);
-        (res.freed || []).forEach(function (fid) { _bagAdd(inv, fid, 1); });
+        inv.gear.splice(idx, 1);                                  // remove equipped instance from bag
+        (res.freed || []).forEach(function (fi) { if (fi) inv.gear.push(fi); }); // freed back to bag
         if (window.GameSave.markDirty) GameSave.markDirty();
         if (window.GameAudio) GameAudio.playSE('Equip1');
         _subIdx = 0; _render();
@@ -878,8 +873,9 @@ window.GameStartMenu = (function () {
     function _unequipSlot(slot) {
         var st = window.GameSave && GameSave.state; if (!st || !window.GameEquip) return;
         var ps = st.player || (st.player = {}); var inv = st.inventory || (st.inventory = {});
-        var id = GameEquip.unequip(ps, slot);
-        if (id) _bagAdd(inv, id, 1);
+        if (!Array.isArray(inv.gear)) inv.gear = [];
+        var item = GameEquip.unequip(ps, slot);
+        if (item) inv.gear.push(item);
         if (window.GameSave.markDirty) GameSave.markDirty();
         _subIdx = 0; _render();
     }

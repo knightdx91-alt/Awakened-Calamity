@@ -1122,12 +1122,21 @@
         if (!grants.length) return;
         st.inventory = st.inventory || {};
         var got = [], relicGot = false;
+        // GEAR drops scale to the floor: item-level (ilvl) = current floor, so deeper
+        // gear is stronger. Gear is a LIST of instances; everything else is id:qty.
+        var ilvl = Math.max(1, fl);
         for (var i = 0; i < grants.length; i++) {
             var gr = grants[i], pk = gr.pocket || 'items';
-            st.inventory[pk] = st.inventory[pk] || {};
-            st.inventory[pk][gr.id] = (st.inventory[pk][gr.id] || 0) + (gr.qty || 1);
-            got.push((gr.qty > 1 ? gr.qty + '× ' : '') + _lootName(gr.id));
-            if (gr.relic) relicGot = true;
+            if (pk === 'gear') {
+                if (!Array.isArray(st.inventory.gear)) st.inventory.gear = [];
+                st.inventory.gear.push({ id: gr.id, ilvl: ilvl });
+                got.push(_lootName(gr.id) + ' (i' + ilvl + ')');
+                if (gr.relic) relicGot = true;
+            } else {
+                st.inventory[pk] = st.inventory[pk] || {};
+                st.inventory[pk][gr.id] = (st.inventory[pk][gr.id] || 0) + (gr.qty || 1);
+                got.push((gr.qty > 1 ? gr.qty + '× ' : '') + _lootName(gr.id));
+            }
         }
         if (GameSave.markDirty) GameSave.markDirty();
         if (got.length) await _say('You found ' + got.join(', ') + '.' + (relicGot ? '\n✦ A RELIC! Equip it from your SUPPLIES → EQUIPMENT.' : ''));

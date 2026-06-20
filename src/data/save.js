@@ -107,7 +107,7 @@
                 tethers:   {},   // Bind a weakened creature
                 tonics:    {},   // purge Exposure
                 materials: {},
-                gear:      {},
+                gear:      [],   // LIST of equipment instances { id, ilvl } (not id:qty)
                 keyItems:  {},
             },
 
@@ -378,13 +378,25 @@
             // Re-inflate Sets
             if (Array.isArray(data.worldFlags))  data.worldFlags  = new Set(data.worldFlags);
             if (Array.isArray(data.visitedMaps)) data.visitedMaps = new Set(data.visitedMaps);
-            // Backfill inventory pockets if missing or wrong format
+            // Backfill inventory pockets if missing or wrong format. GEAR is a LIST of
+            // equipment instances { id, ilvl }; all other pockets are id:qty maps.
             const inv = data.inventory || (data.inventory = {});
-            const POCKETS = ['items','campKits','food','tethers','tonics','materials','gear','keyItems'];
+            const POCKETS = ['items','campKits','food','tethers','tonics','materials','keyItems'];
             for (const p of POCKETS) {
-                // Migrate old array format to object format
                 if (Array.isArray(inv[p])) inv[p] = {};
                 if (!inv[p] || typeof inv[p] !== 'object') inv[p] = {};
+            }
+            // gear: ensure a list; convert any legacy id:qty map into instances (ilvl 1).
+            if (!Array.isArray(inv.gear)) {
+                const legacy = (inv.gear && typeof inv.gear === 'object') ? inv.gear : {};
+                const list = [];
+                for (const id in legacy) for (let i = 0; i < (legacy[id] | 0); i++) list.push({ id, ilvl: 1 });
+                inv.gear = list;
+            }
+            // equipment: bare-id slots → instances (ilvl 1)
+            if (data.player && data.player.equipment) {
+                const eq = data.player.equipment;
+                for (const sl in eq) if (eq[sl] && typeof eq[sl] === 'string') eq[sl] = { id: eq[sl], ilvl: 1 };
             }
             this.currentSlot = slotIndex;
             this.state = data;
