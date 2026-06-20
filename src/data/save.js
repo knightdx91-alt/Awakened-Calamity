@@ -69,7 +69,10 @@
                 designation: '',    // System catalog tag (random at creation)
                 class: null,        // { id, level, xp, spec }
                 skills: [],         // learned skill ids
-                ownedClasses: []    // classes you can switch to for free
+                ownedClasses: [],   // classes you can switch to for free
+                // Equipment slots (GameEquip). Weapons/armor/accessories/relics found
+                // as loot equip here; combat reads ONLY equipped pieces. One relic max.
+                equipment: { weapon: null, body: null, accessory: null, hazard: null }
             },
 
             // Unified progression (XP/level/attributes). createProgress() seeds it

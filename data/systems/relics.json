@@ -1,30 +1,315 @@
 {
-  "_meta": { "doc": "Relics — the roguelite per-run reward layer. Found on descents (chests, floor/boss rewards); they grant passive bonuses for the CURRENT run only and are wiped when the run ends. Effects aggregate (GameRelics.effects) into combat: stat multipliers scale the player's stats; crit/evade/lifesteal/thorns/defBonus feed the combat actor's `bonuses`; survPerSaveMult/collectionBonus tune the System dilemma. Rarity weights the roll." },
-  "weights": { "common": 60, "rare": 28, "epic": 12 },
-  "relics": [
-    { "id": "whetstone",    "name": "Cracked Whetstone", "tier": "common", "icon": 0,  "desc": "+15% attack.",                       "effect": { "atkMult": 0.15 } },
-    { "id": "plate_shard",  "name": "Plate Shard",       "tier": "common", "icon": 0,  "desc": "+20% max HP.",                       "effect": { "hpMult": 0.20 } },
-    { "id": "ward_sigil",   "name": "Ward Sigil",        "tier": "common", "icon": 0,  "desc": "+25% defense.",                      "effect": { "defMult": 0.25 } },
-    { "id": "quickstep",    "name": "Quickstep Charm",   "tier": "common", "icon": 0,  "desc": "+15% speed.",                        "effect": { "spdMult": 0.15 } },
-    { "id": "keen_lens",    "name": "Keen Lens",         "tier": "common", "icon": 0,  "desc": "+12% critical chance.",              "effect": { "crit": 0.12 } },
-    { "id": "smoke_step",   "name": "Smoke Step",        "tier": "common", "icon": 0,  "desc": "+12% chance to evade attacks.",      "effect": { "evade": 0.12 } },
-    { "id": "leech_fang",   "name": "Leech Fang",        "tier": "rare",   "icon": 0,  "desc": "Heal 14% of damage you deal.",        "effect": { "lifesteal": 0.14 } },
-    { "id": "bramble_mail", "name": "Bramble Mail",      "tier": "rare",   "icon": 0,  "desc": "Reflect 25% of damage taken (thorns).", "effect": { "thorns": 0.25 } },
-    { "id": "berserker_idol","name": "Berserker Idol",   "tier": "rare",   "icon": 0,  "desc": "+30% attack, but -10% max HP.",       "effect": { "atkMult": 0.30, "hpMult": -0.10 } },
-    { "id": "ironroot",     "name": "Ironroot Heart",    "tier": "rare",   "icon": 0,  "desc": "+35% max HP and +15% defense.",       "effect": { "hpMult": 0.35, "defMult": 0.15 } },
-    { "id": "faraday_cage", "name": "Faraday Cage",      "tier": "rare",   "icon": 0,  "desc": "-40% Surveillance from each System save.", "effect": { "survPerSaveMult": -0.40 } },
-    { "id": "ghost_thread", "name": "Ghost Thread",      "tier": "rare",   "icon": 0,  "desc": "+18% evade and +10% speed.",          "effect": { "evade": 0.18, "spdMult": 0.10 } },
-    { "id": "executioner",  "name": "Executioner's Mark","tier": "epic",   "icon": 0,  "desc": "+20% attack and +18% critical chance.", "effect": { "atkMult": 0.20, "crit": 0.18 } },
-    { "id": "vampire_crown","name": "Vampire's Crown",   "tier": "epic",   "icon": 0,  "desc": "Lifesteal 22% and +15% attack.",      "effect": { "lifesteal": 0.22, "atkMult": 0.15 } },
-    { "id": "leaded_veil",  "name": "Leaded Veil",       "tier": "epic",   "icon": 0,  "desc": "Collection threshold +60 this run (the System loses your trail).", "effect": { "collectionBonus": 60 } },
-    { "id": "juggernaut_core","name": "Juggernaut Core", "tier": "epic",   "icon": 0,  "desc": "+45% max HP, +25% defense, -10% speed.", "effect": { "hpMult": 0.45, "defMult": 0.25, "spdMult": -0.10 } },
-    { "id": "barbed_vest",   "name": "Barbed Vest",       "tier": "common", "icon": 0,  "desc": "+8 flat defense.",                    "effect": { "defBonus": 8 } },
-    { "id": "gut_brace",     "name": "Gut Brace",         "tier": "common", "icon": 0,  "desc": "+12% max HP and +8% defense.",        "effect": { "hpMult": 0.12, "defMult": 0.08 } },
-    { "id": "duelist_glove", "name": "Duelist's Glove",   "tier": "common", "icon": 0,  "desc": "+10% attack and +8% speed.",          "effect": { "atkMult": 0.10, "spdMult": 0.08 } },
-    { "id": "thorn_buckler", "name": "Thorn Buckler",     "tier": "rare",   "icon": 0,  "desc": "Reflect 18% damage and +10% defense.","effect": { "thorns": 0.18, "defMult": 0.10 } },
-    { "id": "stalkers_cowl", "name": "Stalker's Cowl",    "tier": "rare",   "icon": 0,  "desc": "+15% crit and +12% evade.",           "effect": { "crit": 0.15, "evade": 0.12 } },
-    { "id": "bloodletter",   "name": "Bloodletter",       "tier": "rare",   "icon": 0,  "desc": "Lifesteal 16% but -8% defense.",      "effect": { "lifesteal": 0.16, "defMult": -0.08 } },
-    { "id": "deadmans_dial", "name": "Dead Man's Dial",   "tier": "epic",   "icon": 0,  "desc": "+25% attack, +20% speed, -15% max HP.","effect": { "atkMult": 0.25, "spdMult": 0.20, "hpMult": -0.15 } },
-    { "id": "null_shroud",   "name": "Null Shroud",       "tier": "epic",   "icon": 0,  "desc": "-50% Surveillance per save and Collection threshold +30.", "effect": { "survPerSaveMult": -0.50, "collectionBonus": 30 } }
-  ]
+ "_meta": {
+  "doc": "Relics — the roguelite per-run reward layer. Found on descents (chests, floor/boss rewards); they grant passive bonuses for the CURRENT run only and are wiped when the run ends. Effects aggregate (GameRelics.effects) into combat: stat multipliers scale the player's stats; crit/evade/lifesteal/thorns/defBonus feed the combat actor's `bonuses`; survPerSaveMult/collectionBonus tune the System dilemma. Rarity weights the roll."
+ },
+ "weights": {
+  "common": 60,
+  "rare": 28,
+  "epic": 12
+ },
+ "relics": [
+  {
+   "id": "whetstone",
+   "name": "Cracked Whetstone",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+15% attack.",
+   "effect": {
+    "atkMult": 0.15
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "plate_shard",
+   "name": "Plate Shard",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+20% max HP.",
+   "effect": {
+    "hpMult": 0.2
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "ward_sigil",
+   "name": "Ward Sigil",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+25% defense.",
+   "effect": {
+    "defMult": 0.25
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "quickstep",
+   "name": "Quickstep Charm",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+15% speed.",
+   "effect": {
+    "spdMult": 0.15
+   },
+   "slot": "accessory",
+   "rarity": "relic"
+  },
+  {
+   "id": "keen_lens",
+   "name": "Keen Lens",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+12% critical chance.",
+   "effect": {
+    "crit": 0.12
+   },
+   "slot": "accessory",
+   "rarity": "relic"
+  },
+  {
+   "id": "smoke_step",
+   "name": "Smoke Step",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+12% chance to evade attacks.",
+   "effect": {
+    "evade": 0.12
+   },
+   "slot": "accessory",
+   "rarity": "relic"
+  },
+  {
+   "id": "leech_fang",
+   "name": "Leech Fang",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "Heal 14% of damage you deal.",
+   "effect": {
+    "lifesteal": 0.14
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "bramble_mail",
+   "name": "Bramble Mail",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "Reflect 25% of damage taken (thorns).",
+   "effect": {
+    "thorns": 0.25
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "berserker_idol",
+   "name": "Berserker Idol",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "+30% attack, but -10% max HP.",
+   "effect": {
+    "atkMult": 0.3,
+    "hpMult": -0.1
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "ironroot",
+   "name": "Ironroot Heart",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "+35% max HP and +15% defense.",
+   "effect": {
+    "hpMult": 0.35,
+    "defMult": 0.15
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "faraday_cage",
+   "name": "Faraday Cage",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "-40% Surveillance from each System save.",
+   "effect": {
+    "survPerSaveMult": -0.4
+   },
+   "slot": "hazard",
+   "rarity": "relic"
+  },
+  {
+   "id": "ghost_thread",
+   "name": "Ghost Thread",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "+18% evade and +10% speed.",
+   "effect": {
+    "evade": 0.18,
+    "spdMult": 0.1
+   },
+   "slot": "accessory",
+   "rarity": "relic"
+  },
+  {
+   "id": "executioner",
+   "name": "Executioner's Mark",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "+20% attack and +18% critical chance.",
+   "effect": {
+    "atkMult": 0.2,
+    "crit": 0.18
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "vampire_crown",
+   "name": "Vampire's Crown",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "Lifesteal 22% and +15% attack.",
+   "effect": {
+    "lifesteal": 0.22,
+    "atkMult": 0.15
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "leaded_veil",
+   "name": "Leaded Veil",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "Collection threshold +60 this run (the System loses your trail).",
+   "effect": {
+    "collectionBonus": 60
+   },
+   "slot": "hazard",
+   "rarity": "relic"
+  },
+  {
+   "id": "juggernaut_core",
+   "name": "Juggernaut Core",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "+45% max HP, +25% defense, -10% speed.",
+   "effect": {
+    "hpMult": 0.45,
+    "defMult": 0.25,
+    "spdMult": -0.1
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "barbed_vest",
+   "name": "Barbed Vest",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+8 flat defense.",
+   "effect": {
+    "defBonus": 8
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "gut_brace",
+   "name": "Gut Brace",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+12% max HP and +8% defense.",
+   "effect": {
+    "hpMult": 0.12,
+    "defMult": 0.08
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "duelist_glove",
+   "name": "Duelist's Glove",
+   "tier": "common",
+   "icon": 0,
+   "desc": "+10% attack and +8% speed.",
+   "effect": {
+    "atkMult": 0.1,
+    "spdMult": 0.08
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "thorn_buckler",
+   "name": "Thorn Buckler",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "Reflect 18% damage and +10% defense.",
+   "effect": {
+    "thorns": 0.18,
+    "defMult": 0.1
+   },
+   "slot": "body",
+   "rarity": "relic"
+  },
+  {
+   "id": "stalkers_cowl",
+   "name": "Stalker's Cowl",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "+15% crit and +12% evade.",
+   "effect": {
+    "crit": 0.15,
+    "evade": 0.12
+   },
+   "slot": "accessory",
+   "rarity": "relic"
+  },
+  {
+   "id": "bloodletter",
+   "name": "Bloodletter",
+   "tier": "rare",
+   "icon": 0,
+   "desc": "Lifesteal 16% but -8% defense.",
+   "effect": {
+    "lifesteal": 0.16,
+    "defMult": -0.08
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "deadmans_dial",
+   "name": "Dead Man's Dial",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "+25% attack, +20% speed, -15% max HP.",
+   "effect": {
+    "atkMult": 0.25,
+    "spdMult": 0.2,
+    "hpMult": -0.15
+   },
+   "slot": "weapon",
+   "rarity": "relic"
+  },
+  {
+   "id": "null_shroud",
+   "name": "Null Shroud",
+   "tier": "epic",
+   "icon": 0,
+   "desc": "-50% Surveillance per save and Collection threshold +30.",
+   "effect": {
+    "survPerSaveMult": -0.5,
+    "collectionBonus": 30
+   },
+   "slot": "hazard",
+   "rarity": "relic"
+  }
+ ]
 }

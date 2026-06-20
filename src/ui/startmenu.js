@@ -762,7 +762,7 @@ window.GameStartMenu = (function () {
         ['Tonics', 'tonics', 'Heat · Cold · Toxic · Gloom · Tempest — purge Exposure.', 192, true],
         ['Items', 'items', 'General consumables.', 176, true],
         ['Materials', 'materials', 'Scavenge for field crafting & hazard gear.', 300, false],
-        ['Gear', 'gear', 'Affinity-defended equipment vs. biome hazards.', 161, false],
+        ['Gear', 'gear', 'EQUIPMENT — equip weapons, armor & relics (one relic max).', 161, false],
         ['Key', 'keyItems', 'Story & landmark items.', 242, false],
     ];
     function _pocketCount(inv, key) {
@@ -800,7 +800,91 @@ window.GameStartMenu = (function () {
             _sel(r, (function (key) { return function () { _supPocket = key; _subIdx = 0; _render(); }; })(p[1]));
         });
     }
+    // Resolve a gear/relic def (name/desc/icon/slot/rarity) by id from the equipment
+    // pools (gear.json / relics.json), falling back to the item DB.
+    function _gearDef(id) {
+        var g = window._gearDb && (window._gearDb.gear || []).filter(function (x) { return x.id === id; })[0]; if (g) return g;
+        var r = window._relicsDb && (window._relicsDb.relics || []).filter(function (x) { return x.id === id; })[0]; if (r) return r;
+        return (window.GameItems && GameItems.get(id)) || null;
+    }
+    function _gearStatLine(def) {
+        var s = (def && (def.stats || def.effect)) || {}, parts = [];
+        var lab = { atk: 'ATK', def: 'DEF', hp: 'HP', speed: 'SPD' };
+        for (var k in lab) if (s[k]) parts.push('+' + s[k] + ' ' + lab[k]);
+        var pct = { atkMult: 'ATK', hpMult: 'HP', defMult: 'DEF', spdMult: 'SPD' };
+        for (var m in pct) if (s[m]) parts.push((s[m] > 0 ? '+' : '') + Math.round(s[m] * 100) + '% ' + pct[m]);
+        var ot = { crit: 'crit', evade: 'evade', lifesteal: 'lifesteal', thorns: 'thorns', defBonus: 'ward' };
+        for (var o in ot) if (s[o]) parts.push((typeof s[o] === 'number' && s[o] < 1 && s[o] > -1 ? (s[o] > 0 ? '+' : '') + Math.round(s[o] * 100) + '% ' : '+' + s[o] + ' ') + ot[o]);
+        return parts.join('  ');
+    }
+    var _EQ_SLOTS = [['weapon', 'WEAPON'], ['body', 'BODY'], ['accessory', 'ACCESSORY'], ['hazard', 'HAZARD']];
+    // GEAR pocket = the EQUIPMENT screen: equipped slots (select → unequip) over the
+    // bag (select → equip). Relics (rarity 'relic') show gold; only one may be worn.
+    function _buildGear(el, inv) {
+        var ps = (window.GameSave && GameSave.state && GameSave.state.player) || {};
+        var dbs = { gear: window._gearDb, relics: window._relicsDb };
+        var hd = document.createElement('div');
+        hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';
+        hd.textContent = 'EQUIPMENT';
+        el.appendChild(hd);
+        if (!window.GameEquip || !window._gearDb) {
+            var w = document.createElement('div'); w.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';';
+            w.textContent = 'Loading gear…'; el.appendChild(w); return;
+        }
+        var eq = ps.equipment || {};
+        _EQ_SLOTS.forEach(function (sl) {
+            var id = eq[sl[0]], def = id ? _gearDef(id) : null, relic = def && def.rarity === 'relic';
+            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
+            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+            var sn = document.createElement('span'); sn.style.cssText = 'color:' + _FR.dim + ';width:64px;flex:none;font-size:7px;'; sn.textContent = sl[1];
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
+            nm.textContent = def ? (relic ? '✦ ' : '') + def.name : '— empty —';
+            top.appendChild(sn); top.appendChild(nm); r.appendChild(top);
+            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.blue + ';'; d.textContent = _gearStatLine(def); r.appendChild(d); }
+            if (id) _sel(r, (function (slot) { return function () { _unequipSlot(slot); }; })(sl[0]));
+        });
+        // the bag — equippable items
+        var bag = (inv.gear) || {};
+        var ids = Object.keys(bag).filter(function (k) { return (bag[k] | 0) > 0; });
+        var sub = document.createElement('div');
+        sub.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';margin:8px 0 5px;border-top:1px solid ' + _FR.border + ';padding-top:6px;';
+        sub.textContent = ids.length ? 'BAG — select to equip' : 'BAG — empty';
+        el.appendChild(sub);
+        ids.forEach(function (id) {
+            var def = _gearDef(id), relic = def && def.rarity === 'relic';
+            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
+            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
+            nm.textContent = (relic ? '✦ ' : '') + (def ? def.name : id) + (def && def.slot ? '  [' + def.slot + ']' : '');
+            var cnt = document.createElement('span'); cnt.style.color = _FR.blue; cnt.textContent = '×' + (bag[id] | 0);
+            top.appendChild(nm); top.appendChild(cnt); r.appendChild(top);
+            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + _FR.dim + ';'; d.textContent = _gearStatLine(def); r.appendChild(d); }
+            _sel(r, function () { _equipItem(id); });
+        });
+    }
+    function _bagAdd(inv, id, n) { inv.gear = inv.gear || {}; inv.gear[id] = (inv.gear[id] | 0) + n; if (inv.gear[id] <= 0) delete inv.gear[id]; }
+    function _equipItem(id) {
+        var st = window.GameSave && GameSave.state; if (!st || !window.GameEquip) return;
+        var ps = st.player || (st.player = {}); var inv = st.inventory || (st.inventory = {});
+        var dbs = { gear: window._gearDb, relics: window._relicsDb };
+        var res = GameEquip.equip(ps, id, dbs);
+        if (!res.slot) return;
+        _bagAdd(inv, id, -1);
+        (res.freed || []).forEach(function (fid) { _bagAdd(inv, fid, 1); });
+        if (window.GameSave.markDirty) GameSave.markDirty();
+        if (window.GameAudio) GameAudio.playSE('Equip1');
+        _subIdx = 0; _render();
+    }
+    function _unequipSlot(slot) {
+        var st = window.GameSave && GameSave.state; if (!st || !window.GameEquip) return;
+        var ps = st.player || (st.player = {}); var inv = st.inventory || (st.inventory = {});
+        var id = GameEquip.unequip(ps, slot);
+        if (id) _bagAdd(inv, id, 1);
+        if (window.GameSave.markDirty) GameSave.markDirty();
+        _subIdx = 0; _render();
+    }
     function _buildPocket(el, inv, key) {
+        if (key === 'gear') { _buildGear(el, inv); return; }
         var meta = _POCKETS.filter(function (p) { return p[1] === key; })[0] || ['Pocket', key, '', 176, false];
         var hd = document.createElement('div');
         hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';

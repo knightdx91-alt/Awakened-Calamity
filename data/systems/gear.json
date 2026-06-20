@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "doc": "EQUIPMENT (weapons/armor/accessories). Found as loot; equipped into slots on state.player.equipment. RELICS (data/systems/relics.json) are the rare, powerful TIER of this same gear — they carry a `slot` and rarity 'relic', and only ONE relic may be equipped at a time (see src/systems/equip.js). Bonuses come ONLY from equipped pieces (no passive stacking). stats keys: flat atk/def/hp/speed; mults atkMult/hpMult/defMult/spdMult; combat bonuses crit/evade/lifesteal/thorns/defBonus; run effects survPerSaveMult/collectionBonus.",
+    "rarityWeight": { "common": 100, "uncommon": 45, "rare": 16, "relic": 0 }
+  },
+  "slots": ["weapon", "body", "accessory", "hazard"],
+  "gear": [
+    { "id": "rusted_dagger", "name": "Rusted Dagger", "slot": "weapon", "rarity": "common", "icon": 96, "value": 30, "desc": "A pitted blade. Better than fists.", "stats": { "atk": 3 } },
+    { "id": "iron_sword", "name": "Iron Sword", "slot": "weapon", "rarity": "uncommon", "icon": 96, "value": 120, "desc": "Honest steel, evenly balanced.", "stats": { "atk": 7 } },
+    { "id": "hunters_bow", "name": "Hunter's Bow", "slot": "weapon", "rarity": "uncommon", "icon": 102, "value": 140, "desc": "Draws true. Rewards a steady eye.", "stats": { "atk": 6, "crit": 0.06 } },
+    { "id": "steel_axe", "name": "Steel Axe", "slot": "weapon", "rarity": "rare", "icon": 97, "value": 320, "desc": "Heavy, brutal, slow to forgive.", "stats": { "atk": 12, "spdMult": -0.05 } },
+    { "id": "warglaive", "name": "Warglaive", "slot": "weapon", "rarity": "rare", "icon": 99, "value": 360, "desc": "A reach weapon that bites first.", "stats": { "atk": 10, "crit": 0.08 } },
+
+    { "id": "padded_vest", "name": "Padded Vest", "slot": "body", "rarity": "common", "icon": 144, "value": 30, "desc": "Quilted cloth. Stops a graze.", "stats": { "def": 2, "hp": 8 } },
+    { "id": "leather_cuirass", "name": "Leather Cuirass", "slot": "body", "rarity": "uncommon", "icon": 144, "value": 120, "desc": "Boiled hide, light and quiet.", "stats": { "def": 5, "hp": 18 } },
+    { "id": "chain_hauberk", "name": "Chain Hauberk", "slot": "body", "rarity": "rare", "icon": 145, "value": 320, "desc": "Riveted mail. Turns an edge.", "stats": { "def": 9, "hp": 30, "spdMult": -0.04 } },
+
+    { "id": "leather_band", "name": "Leather Band", "slot": "accessory", "rarity": "common", "icon": 162, "value": 25, "desc": "A worn charm-band. A little luck.", "stats": { "evade": 0.04 } },
+    { "id": "swift_anklet", "name": "Swift Anklet", "slot": "accessory", "rarity": "uncommon", "icon": 163, "value": 130, "desc": "Quickens the step.", "stats": { "spdMult": 0.1 } },
+    { "id": "keen_charm", "name": "Keen Charm", "slot": "accessory", "rarity": "rare", "icon": 164, "value": 300, "desc": "Sharpens the killing instinct.", "stats": { "crit": 0.1 } },
+
+    { "id": "travel_cloak", "name": "Travel Cloak", "slot": "hazard", "rarity": "common", "icon": 180, "value": 25, "desc": "Weathered wrap. Blunts exposure.", "stats": { "defBonus": 2 } },
+    { "id": "warded_cloak", "name": "Warded Cloak", "slot": "hazard", "rarity": "rare", "icon": 181, "value": 300, "desc": "Sigil-stitched against the deep's bite.", "stats": { "defBonus": 6, "evade": 0.05 } }
+  ]
+}

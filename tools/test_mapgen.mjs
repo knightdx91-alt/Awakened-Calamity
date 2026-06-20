@@ -64,7 +64,7 @@ for (let s = 0; s < 30; s++) {
   const hasBranch = deep && deep.commands.some(c => c.type === 'gendungeon' ||
     (c.type === 'conditional' && JSON.stringify(c).includes('gendungeon')));
   if (!runsDeeper || !hasBranch) descendOk = false;
-  if (!names.includes('RelicCache')) hadRelic = false;
+  if (!names.includes('Chest')) hadRelic = false;
   if (!names.some(n => n === 'Roamer')) hadRoamer = false;
   // every interactable event must be reachable (no walled-off boss/loot)
   for (const e of map.events) if (e.trigger !== 'touch' || e.name === 'Roamer') { if (!eventReachable(layout, set, e)) { allReach = false; } }
@@ -74,7 +74,7 @@ check('every floor has an Entrance', hadEntrance);
 check('normal floors have StairsDown', hadStairs);
 check('boss floors have an Alpha', hadBoss);
 check('the way deeper runs the run-loop (run deeper + gendungeon/end)', descendOk);
-check('every floor has a RelicCache', hadRelic);
+check('every floor places loot chests', hadRelic);
 check('floors spawn roaming encounters', hadRoamer);
 check('all events reachable from spawn (no soft-lock)', allReach);
 
@@ -136,21 +136,21 @@ let eliteOk = true;
 for (let s = 0; s < 12; s++) {
   const { map: m } = GameMapGen.generateFloor({ seed: 700 + s, tier: 2, creatures, node: { elite: true, encounterMult: 1.15, levelBonus: 1, guaranteedRelic: true } });
   const roamers = m.events.filter(e => e.name === 'Roamer').length;
-  const caches = m.events.filter(e => e.name === 'RelicCache').length;
-  if (roamers < 1 || caches < 2) eliteOk = false;
+  const caches = m.events.filter(e => e.name === 'GearCache').length;
+  if (roamers < 1 || caches < 1) eliteOk = false;
 }
-check('elite node: guaranteed roamer + second relic cache', eliteOk);
+check('elite node: guaranteed roamer + a gear cache', eliteOk);
 // TREASURE node: a guaranteed relic cache + extra chest, sparse enemies.
 let treaOk = true;
 for (let s = 0; s < 12; s++) {
   const { map: m } = GameMapGen.generateFloor({ seed: 800 + s, tier: 2, creatures, node: { encounterMult: 0.3, treasure: true, guaranteedRelic: true } });
-  if (m.events.filter(e => e.name === 'RelicCache').length < 2) treaOk = false;
+  if (m.events.filter(e => e.name === 'GearCache').length < 1) treaOk = false;
 }
-check('treasure node: second relic cache', treaOk);
+check('treasure node: a gear cache', treaOk);
 // no node → unchanged default floor (traps present, single relic cache)
 const { map: dm } = GameMapGen.generateFloor({ seed: 900, tier: 2, creatures });
-check('no node → default floor (has traps, one relic cache)',
-  dm.events.some(e => e.name === 'Trap') && dm.events.filter(e => e.name === 'RelicCache').length === 1);
+check('no node → default floor (has traps, NO gear cache — relics are rare)',
+  dm.events.some(e => e.name === 'Trap') && dm.events.filter(e => e.name === 'GearCache').length === 0);
 
 // ── ROOM-SHAPE VARIETY: CA cave rooms (generator roadmap #5) ───────────────
 // Forcing all-cave rooms must STILL stay fully reachable (ensureConnected +
@@ -181,7 +181,7 @@ for (const style of ['rooms', 'bsp']) {
     const set = reachable(l, m.start.x, m.start.y);
     for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) styleReach = false;
     const names = m.events.map(e => e.name);
-    if (!names.includes('Entrance') || !names.includes('RelicCache')) styleLayer = false;
+    if (!names.includes('Entrance') || !names.includes('Chest')) styleLayer = false;
   }
 }
 check('every layout style stays fully reachable', styleReach);

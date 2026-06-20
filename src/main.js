@@ -1086,6 +1086,52 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (window._relicsDb = _relicsDb = j); })
             .catch(function () { return (window._relicsDb = _relicsDb = { relics: [], weights: {} }); });
     }
+    var _gearDb = null;
+    function _loadGearDb() {
+        if (_gearDb) return Promise.resolve(_gearDb);
+        return fetch('data/systems/gear.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._gearDb = _gearDb = j); })
+            .catch(function () { return (window._gearDb = _gearDb = { gear: [], slots: [] }); });
+    }
+    var _lootDb = null;
+    function _loadLootDb() {
+        if (_lootDb) return Promise.resolve(_lootDb);
+        return fetch('data/systems/loot.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._lootDb = _lootDb = j); })
+            .catch(function () { return (window._lootDb = _lootDb = { tables: {}, materials: [] }); });
+    }
+    // Display name for any loot id (gear / relic / material / consumable).
+    function _lootName(id) {
+        var g = _gearDb && (_gearDb.gear || []).filter(function (x) { return x.id === id; })[0]; if (g) return g.name;
+        var r = _relicsDb && (_relicsDb.relics || []).filter(function (x) { return x.id === id; })[0]; if (r) return r.name;
+        var m = _lootDb && (_lootDb.materials || []).filter(function (x) { return x.id === id; })[0]; if (m) return m.name;
+        if (window.GameItems && GameItems.name) { var n = GameItems.name(id); if (n) return n; }
+        return id.replace(/_/g, ' ');
+    }
+    // The `loot` command: roll a table (data/systems/loot.json) into concrete grants
+    // and drop them in the bag. Seeded by run+floor+event so a shared seed reproduces
+    // the drop. Announces what fell. Enemies → materials (+rare gear); chests/caches/
+    // bosses → gear and (rarely) a relic.
+    async function _loot(c, ctx) {
+        await _loadLootDb(); await _loadGearDb(); await _loadRelicsDb();
+        if (!window.GameLoot) return;
+        var st = GameSave.state; if (!st) return;
+        var run = st.run || {}, fl = run.floor | 0, ev = ctx && ctx.event;
+        var seed = (((run.seed >>> 0) + fl * 7919 + ((ev ? ev.x : 0) * 31 + (ev ? ev.y : 0)) + (c.salt | 0)) >>> 0) || 1;
+        var grants = GameLoot.roll(c.table || 'roamer', { loot: _lootDb, gear: _gearDb, relics: _relicsDb }, seed);
+        if (!grants.length) return;
+        st.inventory = st.inventory || {};
+        var got = [], relicGot = false;
+        for (var i = 0; i < grants.length; i++) {
+            var gr = grants[i], pk = gr.pocket || 'items';
+            st.inventory[pk] = st.inventory[pk] || {};
+            st.inventory[pk][gr.id] = (st.inventory[pk][gr.id] || 0) + (gr.qty || 1);
+            got.push((gr.qty > 1 ? gr.qty + '× ' : '') + _lootName(gr.id));
+            if (gr.relic) relicGot = true;
+        }
+        if (GameSave.markDirty) GameSave.markDirty();
+        if (got.length) await _say('You found ' + got.join(', ') + '.' + (relicGot ? '\n✦ A RELIC! Equip it from your SUPPLIES → EQUIPMENT.' : ''));
+    }
     function _relicEffects() {
         var st = window.GameSave && GameSave.state;
         if (!window.GameRelics || !_relicsDb || !st || !st.run) return { survPerSaveMult: 0, collectionBonus: 0 };
@@ -1540,6 +1586,7 @@
             case 'battle': { var _br = await _battle(c); await _runReact(_br); break; }
             case 'meta': await _metaMenu(); break;
             case 'relic': await _grantRelic(c); break;
+            case 'loot': await _loot(c, ctx); break;
             // Fine-grained run-loop primitives (compose your own descent in events):
             case 'run': await _runOp(c); break;            // op: start | deeper | end
             case 'gendungeon': await _enterGenFloor(); break;  // generate + enter current floor
@@ -1999,6 +2046,8 @@
             _loadQuestDb();   // preload so quest conditionals resolve
             _loadActs();      // preload so the hub [actforecast] uses the live pacing cfg
             _loadRunDb();     // preload so maxDepth/biome are known at the hub
+            _loadGearDb();    // preload equipment defs (combat reads equipped gear)
+            _loadRelicsDb();  // preload relic (rare-gear) defs
 
             if (window.GameDialogue) GameDialogue.init();
 

@@ -382,20 +382,24 @@
         else gfx = { sprite: sprite, file: 'rtp/' + sprite + '.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false };
         this.events.push({ x: x, y: y, name: 'Roamer', trigger: 'touch', through: false,
             behavior: { type: 'roam', sight: 5, speed: 420 }, graphic: gfx,
+            // beat the creature → combat pays XP+Credits; then a MATERIALS drop (+rare gear)
             commands: [{ type: 'text', text: 'A System-twisted creature lunges from the dark!' },
-                { type: 'battle', enemies: [{ key: key, level: level }] }, { type: 'despawn' }] });
+                { type: 'battle', enemies: [{ key: key, level: level }] },
+                { type: 'loot', table: 'roamer' }, { type: 'despawn' }] });
     };
-    // A chest: examine once → grant loot → the chest VANISHES (despawn). The solid
-    // event blocks movement on its own, so no separate crate prop is needed; despawn
-    // leaves clean floor (and no lingering self-switch in localStorage).
-    Builder.prototype.placeChest = function (x, y, money, item) {
-        var loot = [], gained = [];
-        if (money) { loot.push({ type: 'money', op: '+', amount: money }); gained.push(money + ' Cr'); }
-        if (item) { loot.push({ type: 'item', op: '+', id: item, pocket: 'items', qty: 1 }); gained.push('a ' + item.replace(/_/g, ' ')); }
-        loot.push({ type: 'text', text: 'You found ' + (gained.length ? gained.join(' and ') : 'nothing of use') + '.' });
-        loot.push({ type: 'despawn' });
-        this.events.push({ x: x, y: y, name: 'Chest', trigger: 'action', through: false, graphic: chestGfx(),
-            commands: [{ type: 'text', text: 'A weathered chest, half-buried in the dust.' }].concat(loot) });
+    // A chest: examine once → drop loot (consumables + gear, rarely a relic) → VANISH.
+    // The solid event blocks movement on its own (no separate prop; despawn = clean floor).
+    Builder.prototype.placeChest = function (x, y, money, salt) {
+        var cmds = [{ type: 'text', text: 'A weathered chest, half-buried in the dust.' }];
+        if (money) cmds.push({ type: 'money', op: '+', amount: money }, { type: 'text', text: 'You pocket ' + money + ' Cr.' });
+        cmds.push({ type: 'loot', table: 'chest', salt: salt | 0 }, { type: 'despawn' });
+        this.events.push({ x: x, y: y, name: 'Chest', trigger: 'action', through: false, graphic: chestGfx(), commands: cmds });
+    };
+    // A cache: the RARE gear/relic drop point → take it → the cache VANISHES.
+    Builder.prototype.placeGearCache = function (x, y, table, salt) {
+        this.events.push({ x: x, y: y, name: 'GearCache', trigger: 'action', through: false, graphic: chestGfx(),
+            commands: [{ type: 'text', text: 'A reinforced cache, sealed with a System sigil.' },
+                { type: 'loot', table: table || 'cache', salt: salt | 0 }, { type: 'despawn' }] });
     };
     // A relic cache: take the relic → the cache VANISHES.
     Builder.prototype.placeRelicCache = function (x, y, count) {
@@ -502,7 +506,7 @@
             // — descend deeper (push your luck) or extract to the surface, banking your
             // gains alive. In a FIXED run, beating the boss clears the run.
             var afterBoss = endless
-                ? [{ type: 'relic', count: 3 },
+                ? [{ type: 'loot', table: 'boss' },
                    { type: 'choice', prompt: 'The Alpha is dead. A deeper stair yawns below. Push on, or carry your gains back to the surface?',
                      options: [
                        { label: 'Descend deeper', then: [{ type: 'run', op: 'deeper' }, { type: 'gendungeon' }] },
@@ -553,12 +557,15 @@
         var loot = body.slice().sort(function (a, c) { return far(c) - far(a); }).slice(0, chestN);
         for (var l = 0; l < loot.length; l++) {
             var cf = b._roomFloor(loot[l], true, true);
-            if (cf[0] !== null) b.placeChest(cf[0], cf[1], rng.randint(40, 80) * (1 + ((far(loot[l]) / maxd * 2) | 0)), rng.choice([null, 'potion', 'bandage', 'ration', 'ether']));
+            if (cf[0] !== null) b.placeChest(cf[0], cf[1], rng.randint(40, 80) * (1 + ((far(loot[l]) / maxd * 2) | 0)), l + 1);
         }
-        // relic cache in the deepest body room (run-reward layer). Elite/treasure
-        // nodes guarantee a second cache (richer reward for the harder/lucky floor).
-        if (loot.length) { var rf = b._roomFloor(loot[0], true, true); if (rf[0] !== null) b.placeRelicCache(rf[0], rf[1], 3); }
-        if (node.guaranteedRelic && loot.length > 1) { var rf2 = b._roomFloor(loot[1], true, true); if (rf2[0] !== null) b.placeRelicCache(rf2[0], rf2[1], 3); }
+        // GEAR cache — the gear/relic drop point. RELICS ARE RARE: a normal floor has
+        // NO cache; only ELITE/TREASURE nodes get one (boss floors reward via the Alpha).
+        // The cache's loot table sets the (small) relic chance, so relics are occasional.
+        if ((node.elite || node.treasure) && loot.length) {
+            var rf = b._roomFloor(loot[0], true, true);
+            if (rf[0] !== null) b.placeGearCache(rf[0], rf[1], node.elite ? 'elite' : 'cache', 9);
+        }
         // REST node: a campfire refuge (full heal once) in a body room.
         if (node.rest && body.length) { var rr = b._roomFloor(body[(body.length / 2) | 0] || body[0]); if (rr[0] !== null) b.placeCampfire(rr[0], rr[1]); }
         // hidden hazards in open floor cells

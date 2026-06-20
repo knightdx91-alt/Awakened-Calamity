@@ -108,19 +108,20 @@
             var me = root.GameMeta.effects(root._metaDb, root.GameSave.state.meta);
             if (me.hpMult) stats = Object.assign({}, stats, { hp: Math.round(stats.hp * (1 + me.hpMult)) });
         }
-        // RELICS: per-run rewards. Stat multipliers scale the build; the trait
-        // bundle (crit/evade/lifesteal/thorns/defBonus) feeds the combat actor.
+        // EQUIPMENT: bonuses come ONLY from EQUIPPED gear (state.player.equipment).
+        // Weapons/armor/accessories add flat stats; relics (the rare tier) add mults
+        // + the crit/evade/lifesteal/thorns/defBonus trait bundle. No passive stacking.
         var _run = (root.GameSave && root.GameSave.state && root.GameSave.state.run) || null;
         var bonuses = null;
-        if (_run && root.GameRelics && root._relicsDb) {
-            var re = root.GameRelics.effects(root._relicsDb, _run);
+        if (root.GameEquip && ps) {
+            var ag = root.GameEquip.aggregate(ps, { gear: root._gearDb, relics: root._relicsDb });
             stats = Object.assign({}, stats, {
-                atk: Math.max(1, Math.round(stats.atk * (1 + re.atkMult))),
-                hp: Math.max(1, Math.round(stats.hp * (1 + re.hpMult))),
-                def: Math.max(0, Math.round(stats.def * (1 + re.defMult))),
-                speed: Math.max(1, Math.round((stats.speed || 40) * (1 + re.spdMult)))
+                atk: Math.max(1, Math.round((stats.atk + ag.flat.atk) * (1 + ag.mult.atk))),
+                hp: Math.max(1, Math.round((stats.hp + ag.flat.hp) * (1 + ag.mult.hp))),
+                def: Math.max(0, Math.round((stats.def + ag.flat.def) * (1 + ag.mult.def))),
+                speed: Math.max(1, Math.round(((stats.speed || 40) + ag.flat.speed) * (1 + ag.mult.spd)))
             });
-            bonuses = { crit: re.crit, evade: re.evade, lifesteal: re.lifesteal, thorns: re.thorns, defBonus: re.defBonus };
+            bonuses = { crit: ag.bonuses.crit, evade: ag.bonuses.evade, lifesteal: ag.bonuses.lifesteal, thorns: ag.bonuses.thorns, defBonus: ag.bonuses.defBonus };
         }
         // CORRUPTION: during a run, cumulative Surveillance saps your atk (the System
         // "deciding for you"). This is the FELT in-combat cost of leaning on the

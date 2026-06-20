@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "doc": "LOOT tables (generator roadmap / drops). What drops from what, rolled by src/systems/loot.js (pure, seeded → replay-safe) via the `loot` event command. Enemies drop crafting MATERIALS + Credits (combat already pays Credits) and rarely GEAR; chests drop consumables + gear; caches/bosses drop gear and (rarely) a RELIC. Gear rarity is rolled from gear.json's rarityWeight; relics are the rare tier (only one equippable). Materials feed the future crafting system.",
+    "version": 1
+  },
+  "materials": [
+    { "id": "scrap_metal",   "name": "Scrap Metal",   "icon": 260, "value": 8,  "desc": "Twisted System-forged scrap. Smithing stock." },
+    { "id": "beast_hide",    "name": "Beast Hide",    "icon": 261, "value": 10, "desc": "Hide from a twisted creature. Leatherwork stock." },
+    { "id": "crystal_shard", "name": "Crystal Shard", "icon": 262, "value": 16, "desc": "A humming shard of dungeon crystal. Reagent." },
+    { "id": "sigil_dust",    "name": "Sigil Dust",    "icon": 263, "value": 20, "desc": "Residue of a broken System sigil. Rare reagent." }
+  ],
+  "tables": {
+    "roamer": { "materials": [1, 2], "gearChance": 0.06, "relicChance": 0.0 },
+    "elite":  { "materials": [2, 3], "gearChance": 0.30, "relicChance": 0.05 },
+    "chest":  { "materials": [0, 1], "gearChance": 0.55, "relicChance": 0.02, "consumable": 0.7 },
+    "cache":  { "materials": [1, 2], "gearChance": 1.0,  "relicChance": 0.18 },
+    "boss":   { "materials": [2, 4], "gearChance": 1.0,  "relicChance": 0.40 }
+  },
+  "consumables": ["potion", "bandage", "ration", "ether"]
+}
