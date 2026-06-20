@@ -1100,6 +1100,13 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (window._lootDb = _lootDb = j); })
             .catch(function () { return (window._lootDb = _lootDb = { tables: {}, materials: [] }); });
     }
+    var _craftDb = null;
+    function _loadCraftDb() {
+        if (_craftDb) return Promise.resolve(_craftDb);
+        return fetch('data/systems/crafting.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (window._craftDb = _craftDb = j); })
+            .catch(function () { return (window._craftDb = _craftDb = { upgrade: {}, recipes: [] }); });
+    }
     // Display name for any loot id (gear / relic / material / consumable).
     function _lootName(id) {
         var g = _gearDb && (_gearDb.gear || []).filter(function (x) { return x.id === id; })[0]; if (g) return g.name;
@@ -2057,6 +2064,8 @@
             _loadRunDb();     // preload so maxDepth/biome are known at the hub
             _loadGearDb();    // preload equipment defs (combat reads equipped gear)
             _loadRelicsDb();  // preload relic (rare-gear) defs
+            _loadLootDb();    // preload material defs (forge cost names)
+            _loadCraftDb();   // preload forge recipes/upgrade costs
 
             if (window.GameDialogue) GameDialogue.init();
 

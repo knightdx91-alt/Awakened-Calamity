@@ -453,6 +453,7 @@ window.GameStartMenu = (function () {
     // and wires click → select + activate. onSelect runs on A / click.
     var _subRows = [];
     var _supPocket = null;   // SUPPLIES drill: null = pocket list, else pocket key
+    var _gearMode = 'equip'; // GEAR screen mode: 'equip' | 'upgrade' | 'craft' (the Forge)
     function _sel(rowEl, onSelect) {
         var idx = _subRows.length;
         _subRows.push({ onSelect: onSelect });
@@ -821,41 +822,116 @@ window.GameStartMenu = (function () {
         return parts.join('  ');
     }
     var _EQ_SLOTS = [['weapon', 'WEAPON'], ['body', 'BODY'], ['accessory', 'ACCESSORY'], ['hazard', 'HAZARD']];
-    // GEAR pocket = the EQUIPMENT screen: equipped slots (select → unequip) over the
-    // bag (select → equip). Gear is a LIST of instances { id, ilvl }; ilvl scales the
-    // flat stats. Relics (rarity 'relic') show gold; only one may be worn.
+    function _matName(id) {
+        var m = window._lootDb && (window._lootDb.materials || []).filter(function (x) { return x.id === id; })[0];
+        return m ? m.name : String(id).replace(/_/g, ' ');
+    }
+    function _gearRow(el, item, slotLabel, extra, onSel) {
+        var id = window.GameEquip.idOf(item), def = id ? _gearDef(id) : null, relic = def && def.rarity === 'relic';
+        var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
+        var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+        if (slotLabel) { var sn = document.createElement('span'); sn.style.cssText = 'color:' + _FR.dim + ';width:60px;flex:none;font-size:7px;'; sn.textContent = slotLabel; top.appendChild(sn); }
+        var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
+        nm.textContent = def ? (relic ? '✦ ' : '') + def.name : '— empty —';
+        top.appendChild(nm);
+        if (item) { var il = document.createElement('span'); il.style.cssText = 'color:' + _FR.blue + ';font-size:7px;'; il.textContent = 'i' + window.GameEquip.ilvlOf(item); top.appendChild(il); }
+        r.appendChild(top);
+        if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + (slotLabel ? _FR.blue : _FR.dim) + ';'; d.textContent = (slotLabel ? '' : (def.slot ? '[' + def.slot + ']  ' : '')) + _gearStatLine(item); r.appendChild(d); }
+        if (extra) { var ex = document.createElement('div'); ex.style.cssText = 'font-size:6px;color:#caa94a;'; ex.textContent = extra; r.appendChild(ex); }
+        if (onSel) _sel(r, onSel);
+        return r;
+    }
+    // GEAR pocket = EQUIPMENT + the FORGE. Tabs: EQUIP (wear/remove), UPGRADE (spend
+    // materials to raise a piece's ilvl), CRAFT (forge gear from materials).
     function _buildGear(el, inv) {
         var ps = (window.GameSave && GameSave.state && GameSave.state.player) || {};
         var hd = document.createElement('div');
         hd.style.cssText = 'font:8px "Press Start 2P";color:' + _FR.text + ';border-bottom:2px solid ' + _FR.border + ';padding-bottom:5px;margin-bottom:7px;';
-        hd.textContent = 'EQUIPMENT';
+        hd.textContent = _gearMode === 'upgrade' ? '⚒ FORGE — UPGRADE' : _gearMode === 'craft' ? '⚒ FORGE — CRAFT' : 'EQUIPMENT';
         el.appendChild(hd);
         if (!window.GameEquip || !window._gearDb) {
             var w = document.createElement('div'); w.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';';
             w.textContent = 'Loading gear…'; el.appendChild(w); return;
         }
+        // mode tabs (shown in equip mode)
+        if (_gearMode === 'equip') {
+            var tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:7px;';
+            el.appendChild(tabs);
+            var mkTab = function (label, mode) {
+                var r = _row(tabs, { css: 'flex:1;justify-content:center;background:' + _FR.body + ';border:1px solid ' + _FR.border + ';border-radius:5px;font-size:7px;padding:5px;' });
+                r.textContent = label; _sel(r, function () { _gearMode = mode; _subIdx = 0; _render(); });
+            };
+            mkTab('⚒ UPGRADE', 'upgrade'); mkTab('⚒ CRAFT', 'craft');
+        }
         var eq = ps.equipment || {};
-        var mkRow = function (item, slotLabel, onSel) {
-            var id = window.GameEquip.idOf(item), def = id ? _gearDef(id) : null, relic = def && def.rarity === 'relic';
-            var r = _row(el, { css: 'flex-direction:column;align-items:flex-start;gap:2px;background:' + _FR.body + ';border:1px solid ' + (relic ? '#d8b24a' : _FR.border) + ';border-radius:5px;margin-bottom:4px;' });
-            var top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
-            if (slotLabel) { var sn = document.createElement('span'); sn.style.cssText = 'color:' + _FR.dim + ';width:60px;flex:none;font-size:7px;'; sn.textContent = slotLabel; top.appendChild(sn); }
-            var nm = document.createElement('span'); nm.style.cssText = 'flex:1;color:' + (relic ? '#e8c860' : _FR.text) + ';';
-            nm.textContent = def ? (relic ? '✦ ' : '') + def.name : '— empty —';
-            top.appendChild(nm);
-            if (item) { var il = document.createElement('span'); il.style.cssText = 'color:' + _FR.blue + ';font-size:7px;'; il.textContent = 'i' + window.GameEquip.ilvlOf(item); top.appendChild(il); }
-            r.appendChild(top);
-            if (def) { var d = document.createElement('div'); d.style.cssText = 'font-size:6px;color:' + (slotLabel ? _FR.blue : _FR.dim) + ';'; d.textContent = (slotLabel ? '' : (def.slot ? '[' + def.slot + ']  ' : '')) + _gearStatLine(item); r.appendChild(d); }
-            if (onSel) _sel(r, onSel);
-        };
-        _EQ_SLOTS.forEach(function (sl) { var it = eq[sl[0]]; mkRow(it, sl[1], it ? function () { _unequipSlot(sl[0]); } : null); });
-        // the bag — equippable instances (list)
         var bag = Array.isArray(inv.gear) ? inv.gear : [];
+
+        if (_gearMode === 'upgrade') { _buildForgeUpgrade(el, ps, inv, eq, bag); return; }
+        if (_gearMode === 'craft') { _buildForgeCraft(el, ps, inv); return; }
+
+        // EQUIP mode
+        _EQ_SLOTS.forEach(function (sl) { var it = eq[sl[0]]; _gearRow(el, it, sl[1], null, it ? function () { _unequipSlot(sl[0]); } : null); });
         var sub = document.createElement('div');
         sub.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';margin:8px 0 5px;border-top:1px solid ' + _FR.border + ';padding-top:6px;';
         sub.textContent = bag.length ? 'BAG — select to equip' : 'BAG — empty';
         el.appendChild(sub);
-        bag.forEach(function (item, idx) { mkRow(item, null, function () { _equipItem(idx); }); });
+        bag.forEach(function (item, idx) { _gearRow(el, item, null, null, function () { _equipItem(idx); }); });
+    }
+    function _matBar(el, inv) {
+        var line = document.createElement('div'); line.style.cssText = 'font-size:6px;color:' + _FR.dim + ';margin-bottom:6px;';
+        var mats = (inv.materials) || {}, parts = [];
+        for (var k in mats) if ((mats[k] | 0) > 0) parts.push(_matName(k) + ' ×' + mats[k]);
+        line.textContent = 'Materials: ' + (parts.length ? parts.join('  ·  ') : 'none') + '   ·   ' + ((window.GameSave.state.player.money | 0)) + ' Cr';
+        el.appendChild(line);
+    }
+    // UPGRADE: spend the slot material + Cr to raise a piece's ilvl by 1.
+    function _buildForgeUpgrade(el, ps, inv, eq, bag) {
+        _matBar(el, inv);
+        var items = [];   // {item, where:'eq'|'bag', slot, idx}
+        _EQ_SLOTS.forEach(function (sl) { if (eq[sl[0]]) items.push({ item: eq[sl[0]], where: 'eq', slot: sl[0] }); });
+        bag.forEach(function (it, i) { items.push({ item: it, where: 'bag', idx: i }); });
+        if (!items.length) { var em = document.createElement('div'); em.style.cssText = 'font:7px "Press Start 2P";color:' + _FR.dim + ';text-align:center;padding-top:10px;'; em.textContent = 'No gear to upgrade.'; el.appendChild(em); return; }
+        items.forEach(function (ent) {
+            var def = _gearDef(window.GameEquip.idOf(ent.item)); var slot = def ? def.slot : 'accessory';
+            var cost = window.GameCrafting.upgradeCost(slot, window.GameEquip.ilvlOf(ent.item), window._craftDb);
+            var afford = window.GameCrafting.canPay(inv, ps.money | 0, cost);
+            _gearRow(el, ent.item, ent.where === 'eq' ? 'WORN' : null,
+                (afford ? '→ i' + (window.GameEquip.ilvlOf(ent.item) + 1) + ':  ' : '✗ need:  ') + window.GameCrafting.costLine(cost, _matName),
+                afford ? function () { _upgradeGear(ent); } : null);
+        });
+    }
+    function _upgradeGear(ent) {
+        var st = window.GameSave && GameSave.state; var ps = st.player, inv = st.inventory;
+        var def = _gearDef(window.GameEquip.idOf(ent.item)); var slot = def ? def.slot : 'accessory';
+        var cost = window.GameCrafting.upgradeCost(slot, window.GameEquip.ilvlOf(ent.item), window._craftDb);
+        if (!window.GameCrafting.pay(inv, ps, cost)) return;
+        ent.item.ilvl = window.GameEquip.ilvlOf(ent.item) + 1;     // mutate the instance in place
+        if (window.GameSave.markDirty) GameSave.markDirty();
+        if (window.GameAudio) GameAudio.playSE('Equip1');
+        _render();
+    }
+    // CRAFT: forge a fresh base gear piece from materials (enters the bag at ilvl 1).
+    function _buildForgeCraft(el, ps, inv) {
+        _matBar(el, inv);
+        var recipes = (window._craftDb && window._craftDb.recipes) || [];
+        recipes.forEach(function (rec) {
+            var def = _gearDef(rec.id); if (!def) return;
+            var cost = window.GameCrafting.recipeCost(rec);
+            var afford = window.GameCrafting.canPay(inv, ps.money | 0, cost);
+            _gearRow(el, { id: rec.id, ilvl: 1 }, null,
+                (afford ? 'CRAFT:  ' : '✗ need:  ') + window.GameCrafting.costLine(cost, _matName),
+                afford ? function () { _craftGear(rec); } : null);
+        });
+    }
+    function _craftGear(rec) {
+        var st = window.GameSave && GameSave.state; var ps = st.player, inv = st.inventory;
+        var cost = window.GameCrafting.recipeCost(rec);
+        if (!window.GameCrafting.pay(inv, ps, cost)) return;
+        if (!Array.isArray(inv.gear)) inv.gear = [];
+        inv.gear.push({ id: rec.id, ilvl: 1 });
+        if (window.GameSave.markDirty) GameSave.markDirty();
+        if (window.GameAudio) GameAudio.playSE('Equip1');
+        _render();
     }
     function _equipItem(idx) {
         var st = window.GameSave && GameSave.state; if (!st || !window.GameEquip) return;
@@ -1478,7 +1554,8 @@ window.GameStartMenu = (function () {
         if (_battleBagCancel) { close(); return; }
         if (_battlePartyCancel) { close(); return; }
         if (page==='system' && _sysSub) { _sysSub=null; _render(); return; }  // sub-screen → services
-        if (page==='supplies' && _supPocket) { _supPocket=null; _subIdx=0; _render(); return; }  // pocket → pocket list
+        if (page==='supplies' && _supPocket==='gear' && _gearMode!=='equip') { _gearMode='equip'; _subIdx=0; _render(); return; }  // forge tab → equip
+        if (page==='supplies' && _supPocket) { _supPocket=null; _gearMode='equip'; _subIdx=0; _render(); return; }  // pocket → pocket list
         _sysSub=null; _supPocket=null;
         page='main'; _subIdx=0; _render();
     }

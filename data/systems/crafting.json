@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "doc": "CRAFTING / FORGE (consumes materials from loot). UPGRADE raises a gear instance's item-level (ilvl) by 1 — cost scales with the current ilvl and uses the slot's signature material + Credits. RECIPES forge a fresh base gear piece from materials. Pure logic in src/systems/crafting.js; UI in src/ui/forge.js (opened by the `forge` event command at the Dawnhearth Forge). Materials come from data/systems/loot.json.",
+    "version": 1
+  },
+  "upgrade": {
+    "slotMaterial": { "weapon": "scrap_metal", "body": "beast_hide", "accessory": "crystal_shard", "hazard": "sigil_dust" },
+    "baseQty": 2,
+    "qtyPerLevel": 0.6,
+    "creditBase": 20,
+    "creditPerLevel": 10
+  },
+  "recipes": [
+    { "id": "iron_sword",      "cost": { "scrap_metal": 5 },                  "credits": 60 },
+    { "id": "leather_cuirass", "cost": { "beast_hide": 5 },                   "credits": 60 },
+    { "id": "swift_anklet",    "cost": { "crystal_shard": 4 },                "credits": 70 },
+    { "id": "warded_cloak",    "cost": { "sigil_dust": 3, "beast_hide": 2 },  "credits": 90 },
+    { "id": "steel_axe",       "cost": { "scrap_metal": 9, "crystal_shard": 2 }, "credits": 180 },
+    { "id": "chain_hauberk",   "cost": { "beast_hide": 8, "scrap_metal": 4 },    "credits": 180 }
+  ]
+}
