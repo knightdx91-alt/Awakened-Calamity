@@ -337,7 +337,14 @@
    "commands": [
     {
      "type": "text",
-     "text": "The Ashlab annex. A keypad blinks red. You don’t have clearance — yet."
+     "text": "THE ASHLAB ANNEX — the keypad blinks, then accepts you. The Archivist must have left it open."
+    },
+    {
+     "type": "transfer",
+     "map": "DawnhearthLab",
+     "x": 12,
+     "y": 12,
+     "dir": "up"
     }
    ]
   },
@@ -1022,7 +1029,7 @@
     },
     {
      "type": "text",
-     "text": "❖ THE CRYSTAL (north) — the System’s hub: supplies, services, classifications."
+     "text": "❖ THE CRYSTAL (north) — the System’s hub: supplies, services, classifications. (It watches.)"
     },
     {
      "type": "text",
@@ -1030,15 +1037,23 @@
     },
     {
      "type": "text",
-     "text": "❖ THE STILL PLACE (southwest) — the Remembrance: spend what you carried back."
+     "text": "❖ THE FORGE — upgrade & craft gear.   ❖ THE STILL PLACE (southwest) — the Remembrance."
     },
     {
      "type": "text",
-     "text": "❖ THE BOARD (east) — notices & bounties.   ❖ THE INFIRMARY (northwest) — Sister Wenna heals."
+     "text": "❖ GARRICK’S STALL — the black market: supplies off the System’s books."
     },
     {
      "type": "text",
-     "text": "❖ THE INN (south gate) — rest between descents."
+     "text": "❖ VANGUARD BOUNTIES — claim rewards for how deep you’ve gone."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE INFIRMARY — Sister Wenna heals (no Surveillance).   ❖ THE ASHLAB (east door) — the Archivist keeps what the System edits out."
+    },
+    {
+     "type": "text",
+     "text": "❖ THE INN (south gate) — rest, heal, and save between descents."
     }
    ]
   },
@@ -1136,6 +1151,412 @@
         {
          "type": "text",
          "text": "“The fire’ll be hot when you're ready.”"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "name": "Garrick",
+   "x": 37,
+   "y": 20,
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "graphic": {
+    "sprite": "People6",
+    "file": "rtp/People6.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "commands": [
+    {
+     "type": "text",
+     "text": "A wiry man leans on a crate of unmarked goods, watching the Vanguard sentry from the corner of his eye.\n“Garrick. I sell what the crystal won’t — no sigils, no record, no Surveillance. Costs a little more. Freedom always does.”",
+     "face": {
+      "sheet": "People2",
+      "index": 4
+     }
+    },
+    {
+     "type": "shop",
+     "offgrid": true
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "name": "VanguardBounties",
+   "x": 33,
+   "y": 24,
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "graphic": {
+    "sprite": "NoticeBoard",
+    "file": "rtp/NoticeBoard.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "commands": [
+    {
+     "type": "text",
+     "text": "❖ VANGUARD BOUNTIES ❖\nA brass-framed board. “The Order pays for proof of progress in the dark. Standing contracts — claim what you’ve earned.”"
+    },
+    {
+     "type": "choice",
+     "prompt": "Claim a bounty:",
+     "options": [
+      {
+       "label": "First Descent (reach floor 2)",
+       "then": [
+        {
+         "type": "conditional",
+         "cond": {
+          "kind": "meta",
+          "metric": "deepest",
+          "op": ">=",
+          "value": 2
+         },
+         "then": [
+          {
+           "type": "conditional",
+           "cond": {
+            "kind": "selfswitch",
+            "letter": "A",
+            "value": true
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "✓ First Descent — already claimed."
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "★ First Descent — verified. Claiming reward…"
+            },
+            {
+             "type": "money",
+             "op": "+",
+             "amount": 100
+            },
+            {
+             "type": "text",
+             "text": "“Vanguard credits transferred: 100 Cr.”"
+            },
+            {
+             "type": "item",
+             "op": "+",
+             "id": "potion",
+             "pocket": "items",
+             "qty": 2
+            },
+            {
+             "type": "text",
+             "text": "Requisition added to your pack."
+            },
+            {
+             "type": "selfswitch",
+             "letter": "A",
+             "value": true
+            }
+           ]
+          }
+         ],
+         "else": [
+          {
+           "type": "text",
+           "text": "□ First Descent — not yet met."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Into the Dark (reach floor 5)",
+       "then": [
+        {
+         "type": "conditional",
+         "cond": {
+          "kind": "meta",
+          "metric": "deepest",
+          "op": ">=",
+          "value": 5
+         },
+         "then": [
+          {
+           "type": "conditional",
+           "cond": {
+            "kind": "selfswitch",
+            "letter": "B",
+            "value": true
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "✓ Into the Dark — already claimed."
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "★ Into the Dark — verified. Claiming reward…"
+            },
+            {
+             "type": "money",
+             "op": "+",
+             "amount": 250
+            },
+            {
+             "type": "text",
+             "text": "“Vanguard credits transferred: 250 Cr.”"
+            },
+            {
+             "type": "item",
+             "op": "+",
+             "id": "hi_potion",
+             "pocket": "items",
+             "qty": 2
+            },
+            {
+             "type": "text",
+             "text": "Requisition added to your pack."
+            },
+            {
+             "type": "selfswitch",
+             "letter": "B",
+             "value": true
+            }
+           ]
+          }
+         ],
+         "else": [
+          {
+           "type": "text",
+           "text": "□ Into the Dark — not yet met."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Deep Delver (reach floor 10)",
+       "then": [
+        {
+         "type": "conditional",
+         "cond": {
+          "kind": "meta",
+          "metric": "deepest",
+          "op": ">=",
+          "value": 10
+         },
+         "then": [
+          {
+           "type": "conditional",
+           "cond": {
+            "kind": "selfswitch",
+            "letter": "C",
+            "value": true
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "✓ Deep Delver — already claimed."
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "★ Deep Delver — verified. Claiming reward…"
+            },
+            {
+             "type": "money",
+             "op": "+",
+             "amount": 600
+            },
+            {
+             "type": "text",
+             "text": "“Vanguard credits transferred: 600 Cr.”"
+            },
+            {
+             "type": "item",
+             "op": "+",
+             "id": "elixir",
+             "pocket": "items",
+             "qty": 1
+            },
+            {
+             "type": "text",
+             "text": "Requisition added to your pack."
+            },
+            {
+             "type": "selfswitch",
+             "letter": "C",
+             "value": true
+            }
+           ]
+          }
+         ],
+         "else": [
+          {
+           "type": "text",
+           "text": "□ Deep Delver — not yet met."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Alpha Slayer (clear a descent)",
+       "then": [
+        {
+         "type": "conditional",
+         "cond": {
+          "kind": "meta",
+          "metric": "clears",
+          "op": ">=",
+          "value": 1
+         },
+         "then": [
+          {
+           "type": "conditional",
+           "cond": {
+            "kind": "selfswitch",
+            "letter": "D",
+            "value": true
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "✓ Alpha Slayer — already claimed."
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "★ Alpha Slayer — verified. Claiming reward…"
+            },
+            {
+             "type": "money",
+             "op": "+",
+             "amount": 400
+            },
+            {
+             "type": "text",
+             "text": "“Vanguard credits transferred: 400 Cr.”"
+            },
+            {
+             "type": "item",
+             "op": "+",
+             "id": "ether",
+             "pocket": "items",
+             "qty": 2
+            },
+            {
+             "type": "text",
+             "text": "Requisition added to your pack."
+            },
+            {
+             "type": "selfswitch",
+             "letter": "D",
+             "value": true
+            }
+           ]
+          }
+         ],
+         "else": [
+          {
+           "type": "text",
+           "text": "□ Alpha Slayer — not yet met."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Veteran (5 clears)",
+       "then": [
+        {
+         "type": "conditional",
+         "cond": {
+          "kind": "meta",
+          "metric": "clears",
+          "op": ">=",
+          "value": 5
+         },
+         "then": [
+          {
+           "type": "conditional",
+           "cond": {
+            "kind": "selfswitch",
+            "letter": "E",
+            "value": true
+           },
+           "then": [
+            {
+             "type": "text",
+             "text": "✓ Veteran — already claimed."
+            }
+           ],
+           "else": [
+            {
+             "type": "text",
+             "text": "★ Veteran — verified. Claiming reward…"
+            },
+            {
+             "type": "money",
+             "op": "+",
+             "amount": 1200
+            },
+            {
+             "type": "text",
+             "text": "“Vanguard credits transferred: 1200 Cr.”"
+            },
+            {
+             "type": "item",
+             "op": "+",
+             "id": "camp_kit",
+             "pocket": "campKits",
+             "qty": 2
+            },
+            {
+             "type": "text",
+             "text": "Requisition added to your pack."
+            },
+            {
+             "type": "selfswitch",
+             "letter": "E",
+             "value": true
+            }
+           ]
+          }
+         ],
+         "else": [
+          {
+           "type": "text",
+           "text": "□ Veteran — not yet met."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "label": "Never mind",
+       "then": [
+        {
+         "type": "text",
+         "text": "The contracts will keep."
         }
        ]
       }

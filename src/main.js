@@ -500,6 +500,13 @@
                 default: return !!run.active;
             }
         }
+        // lifetime meta progress (deepest floor / clears / runs / fragments) — for
+        // milestone bounties and gated content. metric + op + value.
+        if (cond.kind === 'meta') {
+            var meta = (window.GameSave && GameSave.state && GameSave.state.meta) || {};
+            var mv = meta[cond.metric || 'deepest'] | 0, mt = cond.value | 0;
+            switch (cond.op) { case '<=': return mv <= mt; case '>': return mv > mt; case '<': return mv < mt; case '!=': return mv !== mt; case '==': return mv === mt; default: return mv >= mt; }
+        }
         if (!ES) return true;
         if (cond.kind === 'switch') return ES.getSwitch(cond.id) === (cond.value !== false);
         if (cond.kind === 'selfswitch') return ES.getSelf(ctx.mapName, ctx.evId, cond.letter || 'A') === (cond.value !== false);
@@ -1516,6 +1523,9 @@
                 break;
             }
             case 'system': await new Promise(function (res) { if (window.GameSystemShop) GameSystemShop.open(res); else res(); }); break;
+            // OFF-GRID MARKET — supplies for credits, NO Surveillance (a scarcity
+            // markup instead). The off-the-books contrast to the System crystal.
+            case 'shop': await new Promise(function (res) { if (window.GameSystemShop) GameSystemShop.open(res, { offgrid: c.offgrid !== false }); else res(); }); break;
             case 'grantclass': {
                 // NPC/quest reward: give a Classification (the non-shop source).
                 var st0 = window.GameSave && GameSave.state;

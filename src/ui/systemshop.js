@@ -9,7 +9,7 @@
 window.GameSystemShop = (function () {
     'use strict';
 
-    var _active = false, _root = null, _onClose = null, _db = null, _loading = false;
+    var _active = false, _root = null, _onClose = null, _db = null, _loading = false, _offgrid = false;
 
     function isActive() { return _active; }
 
@@ -25,14 +25,18 @@ window.GameSystemShop = (function () {
         ]).then(function (res) { _db = { classes: res[0] || {}, skills: res[1] || {} }; _loading = false; cb(); });
     }
 
-    // open(onClose) — onClose fires when the player leaves the shop (lets an
-    // event 'system' command continue afterward).
-    function open(onClose) {
+    // open(onClose, opts) — onClose fires when the player leaves the shop (lets an
+    // event 'system'/'shop' command continue afterward). opts.offgrid = true opens
+    // the OFF-GRID MARKET: supplies only, NO Surveillance, but a scarcity markup.
+    // (The thematic contrast: the System watches; the black market doesn't, for a price.)
+    function open(onClose, opts) {
         if (_active) { if (onClose) onClose(); return; }
         _active = true; _onClose = onClose || null;
-        _sub = 'root';
+        _offgrid = !!(opts && opts.offgrid);
+        _sub = _offgrid ? 'supplies' : 'root';
         _ensureDb(function () { _mount(); });
     }
+    var OFFGRID_MARKUP = 1.3;   // off-grid gear costs more (scarcity) — but no Surveillance
 
     // ---- state helpers ----
     function _st() { return (window.GameSave && GameSave.state) || null; }
@@ -65,11 +69,18 @@ window.GameSystemShop = (function () {
         var sv = Math.max(0, Math.min(100, _surv().surveillance || 0));
         var hot = sv >= 66, mid = sv >= 33, acc = hot ? '#ff3030' : mid ? '#f8d000' : '#00ccff';
         var head = _root.querySelector('.sh-head');
-        head.innerHTML =
-            '<div class="sh-title" style="color:' + acc + '">THE SYSTEM</div>' +
-            '<div class="sh-cr">Cr ' + _credits() + '</div>' +
-            '<div class="sh-surv"><div class="sh-surv-l" style="color:' + acc + '">SURVEILLANCE ' + Math.round(sv) + '%</div>' +
-                '<div class="sh-bar"><i style="width:' + sv + '%;background:' + acc + '"></i></div></div>';
+        if (_offgrid) {
+            head.innerHTML =
+                '<div class="sh-title" style="color:#7bd88f">THE BLACK MARKET</div>' +
+                '<div class="sh-cr">Cr ' + _credits() + '</div>' +
+                '<div class="sh-surv"><div class="sh-surv-l" style="color:#5b6b5d">OFF THE BOOKS — the System isn’t watching here</div></div>';
+        } else {
+            head.innerHTML =
+                '<div class="sh-title" style="color:' + acc + '">THE SYSTEM</div>' +
+                '<div class="sh-cr">Cr ' + _credits() + '</div>' +
+                '<div class="sh-surv"><div class="sh-surv-l" style="color:' + acc + '">SURVEILLANCE ' + Math.round(sv) + '%</div>' +
+                    '<div class="sh-bar"><i style="width:' + sv + '%;background:' + acc + '"></i></div></div>';
+        }
 
         var s = _root.querySelector('#sh-scroll'); s.innerHTML = '';
         if (_sub === 'root') _renderRoot(s);
@@ -83,9 +94,9 @@ window.GameSystemShop = (function () {
         foot.innerHTML = '';
         var btn = document.createElement('button');
         btn.className = 'sh-foot-btn';
-        btn.textContent = (_sub === 'root') ? 'LEAVE' : '‹ BACK';
+        btn.textContent = (_sub === 'root' || _offgrid) ? 'LEAVE' : '‹ BACK';
         btn.addEventListener('click', function () {
-            if (_sub === 'root') { _close(); }
+            if (_sub === 'root' || _offgrid) { _close(); }
             else { _sub = (_sub === 'specialize' || _sub === 'reclassify') ? 'classes' : 'root'; _render(); }
         });
         foot.appendChild(btn);
@@ -116,12 +127,17 @@ window.GameSystemShop = (function () {
         var goods = (window.GameItems && GameItems.shopItems && GameItems.shopItems()) || [];
         if (!goods.length) { host.appendChild(_msg('No stock available.')); return; }
         goods.forEach(function (g) {
-            var cost = g.value || 0, surv = Math.max(1, Math.round(cost / 80)), afford = credits >= cost;
-            _buyBtn(host, g.name + '  — Cr ' + cost, (g.desc || '') + ' (+' + surv + ' Surv)', afford, function () {
+            var base = g.value || 0;
+            var cost = _offgrid ? Math.round(base * OFFGRID_MARKUP) : base;
+            var surv = Math.max(1, Math.round(base / 80)), afford = credits >= cost;
+            var sub = _offgrid ? ((g.desc || '') + ' (off the books)') : ((g.desc || '') + ' (+' + surv + ' Surv)');
+            _buyBtn(host, g.name + '  — Cr ' + cost, sub, afford, function () {
                 var s = _st(); if (!s) return;
                 s.inventory = s.inventory || {}; s.inventory[g.pocket] = s.inventory[g.pocket] || {};
                 s.inventory[g.pocket][g.id] = (s.inventory[g.pocket][g.id] || 0) + 1;
-                _spend(cost); _raise(surv, g.name + ' acquired.');
+                _spend(cost);
+                if (_offgrid) { if (window.GameSystem && GameSystem.notify) GameSystem.notify(g.name + ' acquired — no record kept.', 'info'); }
+                else _raise(surv, g.name + ' acquired.');
                 if (window.GameAudio) GameAudio.playSE('Coin'); _render();
             });
         });

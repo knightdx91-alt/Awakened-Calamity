@@ -96,6 +96,9 @@
          "what": "all"
         },
         {
+         "type": "opensave"
+        },
+        {
          "type": "fade",
          "mode": "out",
          "frames": 20
@@ -107,7 +110,7 @@
         },
         {
          "type": "text",
-         "text": "You wake clear-headed and whole. For a moment you almost feel like yourself."
+         "text": "You wake clear-headed and whole. The innkeeper has noted your stay — your progress is safe here."
         }
        ]
       },

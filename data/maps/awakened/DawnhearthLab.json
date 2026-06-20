@@ -1,1 +1,152 @@
-{"id": "MAP_DAWNHEARTHLAB", "name": "DawnhearthLab", "region": "awakened", "parent": "", "layout": "LAYOUT_DAWNHEARTHLAB", "music": "MUS_NONE", "weather": "WEATHER_NONE", "map_type": "MAP_TYPE_INTERIOR", "allow_running": true, "show_map_name": true, "connections": [], "npcs": [], "warps": [], "triggers": [], "signs": [], "events": [{"id": 1, "name": "Exit", "x": 12, "y": 13, "graphic": {"sprite": "", "file": "", "single": true}, "dir": "down", "trigger": "action", "through": false, "commands": [{"type": "text", "text": "Leave."}]}]}
+{
+ "id": "MAP_DAWNHEARTHLAB",
+ "name": "DawnhearthLab",
+ "region": "awakened",
+ "parent": "",
+ "layout": "LAYOUT_DAWNHEARTHLAB",
+ "music": "MUS_NONE",
+ "weather": "WEATHER_NONE",
+ "map_type": "MAP_TYPE_INTERIOR",
+ "allow_running": true,
+ "show_map_name": true,
+ "connections": [],
+ "npcs": [],
+ "warps": [],
+ "triggers": [],
+ "signs": [],
+ "events": [
+  {
+   "id": 1,
+   "name": "Exit",
+   "x": 12,
+   "y": 13,
+   "graphic": {
+    "sprite": "",
+    "file": "",
+    "single": true
+   },
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "commands": [
+    {
+     "type": "transfer",
+     "map": "Dawnhearth",
+     "x": 48,
+     "y": 28,
+     "dir": "down"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Archivist",
+   "x": 12,
+   "y": 5,
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "graphic": {
+    "sprite": "People7",
+    "file": "rtp/People7.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "commands": [
+    {
+     "type": "text",
+     "text": "A stooped scholar looks up from a wall of salvaged drives. “You’re Awakened. Good. The System tells you what you are. I keep what it edits out.”",
+     "face": {
+      "sheet": "People3",
+      "index": 0
+     }
+    },
+    {
+     "type": "choice",
+     "prompt": "Ask the Archivist:",
+     "options": [
+      {
+       "label": "What is this place?",
+       "then": [
+        {
+         "type": "text",
+         "text": "“The Ashlab. Before the System onlined, people studied the dark beneath Dawnhearth. The OWPS — the Overflow Working Prevention Study. They learned what the Calamity is. Then the System reclassified the lab as ‘property’ and the staff as ‘resolved’.”",
+         "face": {
+          "sheet": "People3",
+          "index": 0
+         }
+        }
+       ]
+      },
+      {
+       "label": "The cycle — is it real?",
+       "then": [
+        {
+         "type": "text",
+         "text": "“You feel it, don’t you. The repetition. The names recut on the well. Every Awakened has stood where you stand and asked me this. I answer the same way each time, and forget I’ve answered. The System resets the page. It does not reset the dark.”",
+         "face": {
+          "sheet": "People3",
+          "index": 0
+         }
+        }
+       ]
+      },
+      {
+       "label": "How do I get out?",
+       "then": [
+        {
+         "type": "text",
+         "text": "“Not by descending. Descending is what it wants — it feeds. The way out is in what the OWPS buried on the lowest floors. Find their cache. Bring it here. Then we’ll talk about endings.”",
+         "face": {
+          "sheet": "People3",
+          "index": 0
+         }
+        }
+       ]
+      },
+      {
+       "label": "Leave",
+       "then": [
+        {
+         "type": "text",
+         "text": "“Come back when the dark has taught you to doubt.”",
+         "face": {
+          "sheet": "People3",
+          "index": 0
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "DataShelf",
+   "x": 17,
+   "y": 9,
+   "dir": "down",
+   "trigger": "action",
+   "through": false,
+   "graphic": {
+    "sprite": "Other2",
+    "file": "rtp/Other2.png",
+    "frame_w": 32,
+    "frame_h": 32,
+    "cols": 3,
+    "rows": 4,
+    "single": false
+   },
+   "commands": [
+    {
+     "type": "text",
+     "text": "Cracked drives and water-stained ledgers. One label, still legible: “OWPS — FLOOR-BY-FLOOR. DO NOT LET IT READ THIS.”"
+    }
+   ]
+  }
+ ]
+}

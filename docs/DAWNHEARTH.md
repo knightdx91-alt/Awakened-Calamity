@@ -20,6 +20,24 @@ Companion to `STORY.md`. Tracks the opening town's content: who's on the streets
 | **Memorial** | 16,30 | — | Re-carved names, no dates (cycle). |
 | **Tutorial Fiend** | 34,24 | (Monster1) | First fight (touch → battle). |
 
+## ✅ Activity pass — BUILT 2026-06-20 (wire-up: "more to do")
+Added/wired so Dawnhearth is a real hub between descents (all browser-verified, 0 errors):
+- **Garrick's Stall** (off-grid market, @37,20) — new **`shop` event command** opens the **BLACK
+  MARKET**: buy supplies for credits with **NO Surveillance** (a ~1.3× scarcity markup instead). The
+  thematic counter to the System crystal. (`GameSystemShop.open(cb,{offgrid:true})`; registered in the
+  engine `runCmd` **and** the map-editor palette.)
+- **Vanguard Bounties** board (@33,24) — a **milestone reward ladder** claimable once each: reach
+  floor 2/5/10, clear a descent, 5 clears → credits + items. Pure DATA, powered by a new
+  **`meta` conditional kind** (lifetime `deepest`/`clears`/`runs`/`fragments` ≥ N) + per-bounty
+  self-switches. Registered in the editor's conditional form too.
+- **The Ashlab** (Door13 → `DawnhearthLab`) — now ENTERABLE. New **Archivist** NPC delivers the
+  buried-truth / OWPS / cycle lore (4-branch choice) + a **DataShelf** examine; the Lab's broken
+  text-stub Exit is now a real transfer back. (The OWPS "bring the cache up" thread is seeded.)
+- **The Inn** RestBed — now **heals + saves** (`opensave`), making it a true in-town Safe Zone.
+- **Plaza Directory** updated to list the Forge, Garrick's Stall, the Bounties, and the Ashlab.
+- **Still orphaned (deliberately):** `DawnhearthCellars.json` is a 48×48 dungeon-shaped maze; wiring
+  it now would ship a hollow space — left for a proper off-grid-dungeon design pass.
+
 ## Interiors to BUILD ⬜ (and what goes inside)
 > Door → building links are proposed; wire the door event to a `transfer` once the interior map exists.
 
@@ -28,9 +46,8 @@ Companion to `STORY.md`. Tracks the opening town's content: who's on the streets
   shelf of keepsakes from Awakened who didn't come back (cycle weight, optional examines).
 - ⬜ **Dawnhearth Infirmary** — `vd_dawnhearth_infirmary` · door **Door3 (42,17)** · NPC **Sister Wenna**.
   Off-System healing: a healer NPC using the `heal` command (cheap/free early, the human alternative to
-  paying the crystal). Beds.
-- ☑/dress **The Roadside Inn** — `vd_dawnhearth_inn` · door **Door12 (31,21)** · map **DawnhearthInn.json EXISTS**.
-  Verify/dress the interior; innkeeper NPC; **rest + save** (an in-town Safe Zone). Wire Door12 → DawnhearthInn.
+  paying the crystal). Beds. (Sister Wenna already stands in the plaza @22,20 as the healer.)
+- ☑ **The Roadside Inn** — door **Door12** · map **DawnhearthInn.json** — WIRED (rest = heal + save).
 - ⬜ **Dawnhearth Market** — `vd_dawnhearth_market` · door **Door4 (49,19)** · owner **Garrick**.
   The **off-grid supplier** — buy food/gear/materials for credits **without** Surveillance (thematic
   contrast to the crystal shop). Could be a street stall instead of an interior if simpler.

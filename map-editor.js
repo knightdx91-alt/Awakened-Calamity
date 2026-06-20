@@ -1273,7 +1273,7 @@
     ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
-    ['system', '🔮 Open System Shop'],
+    ['system', '🔮 Open System Shop'], ['shop', '🛒 Off-grid Market'],
     // run loop (roguelite descent) — fine-grained primitives + the descend macro
     ['run', '🏔️ Run (start/deeper/end)'], ['gendungeon', '🗺️ Generate+Enter Floor'],
     ['descend', '⛰️ Descend (macro)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
@@ -1319,6 +1319,7 @@
       case 'item': return { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 };
       case 'battle': return { type: 'battle', enemies: [] };
       case 'system': return { type: 'system' };
+      case 'shop': return { type: 'shop', offgrid: true };
       case 'run': return { type: 'run', op: 'start', tethered: true, seed: null, reason: 'cleared' };
       case 'gendungeon': return { type: 'gendungeon' };
       case 'descend': return { type: 'descend', start: true, tethered: true, seed: null };
@@ -1500,12 +1501,13 @@
       if (!cmd.cond) cmd.cond = { kind: 'switch', id: '1', value: true };
       var cr = el('div', 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;');
       cr.innerHTML = lbl('If') +
-        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option><option value="run">Run</option></select>' +
+        '<select class="cKind"><option value="switch">Switch</option><option value="selfswitch">Self-SW</option><option value="variable">Variable</option><option value="quest">Quest</option><option value="run">Run</option><option value="meta">Meta (lifetime)</option></select>' +
         '<span class="cParams"></span>';
       cr.querySelector('.cKind').value = cmd.cond.kind;
       cr.querySelector('.cKind').addEventListener('change', function () {
         if (this.value === 'quest') cmd.cond = { kind: 'quest', id: '', check: 'active', stage: 0 };
         else if (this.value === 'run') cmd.cond = { kind: 'run', check: 'cleared', op: '>=', value: 1 };
+        else if (this.value === 'meta') cmd.cond = { kind: 'meta', metric: 'deepest', op: '>=', value: 1 };
         else cmd.cond = { kind: this.value, id: '1', letter: 'A', op: '>=', value: this.value === 'variable' ? 0 : true };
         renderEventPanel();
       });
@@ -1536,6 +1538,12 @@
         krc.value = cmd.cond.check || 'cleared'; krf.style.display = (cmd.cond.check === 'floor') ? '' : 'none';
         krc.addEventListener('change', function () { cmd.cond.check = this.value; krf.style.display = this.value === 'floor' ? '' : 'none'; });
         var kro = cp.querySelector('.kOp'); kro.value = cmd.cond.op || '>='; kro.addEventListener('change', function () { cmd.cond.op = this.value; });
+        cp.querySelector('.kVal').addEventListener('change', function () { cmd.cond.value = parseInt(this.value, 10) || 0; });
+      } else if (cmd.cond.kind === 'meta') {
+        cp.innerHTML = '<select class="kMetric"><option value="deepest">Deepest floor</option><option value="clears">Total clears</option><option value="runs">Total runs</option><option value="fragments">Fragments</option></select> ' +
+          '<select class="kOp"><option>&gt;=</option><option>==</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
+        var km = cp.querySelector('.kMetric'); km.value = cmd.cond.metric || 'deepest'; km.addEventListener('change', function () { cmd.cond.metric = this.value; });
+        var kmo = cp.querySelector('.kOp'); kmo.value = cmd.cond.op || '>='; kmo.addEventListener('change', function () { cmd.cond.op = this.value; });
         cp.querySelector('.kVal').addEventListener('change', function () { cmd.cond.value = parseInt(this.value, 10) || 0; });
       } else {
         cp.innerHTML = '# <input type="text" class="kId" value="' + (cmd.cond.id || '1') + '" style="width:36px;"> <select class="kOp"><option>==</option><option>&gt;=</option><option>&lt;=</option><option>&gt;</option><option>&lt;</option><option>!=</option></select> <input type="number" class="kVal" value="' + (cmd.cond.value | 0) + '" style="width:48px;">';
