@@ -268,5 +268,80 @@ for (let s = 0; s < 20; s++) {
 }
 check('shipped prefab set keeps all floors reachable', defReach);
 
+// ── ENCOUNTER DIRECTOR (generator roadmap #6) ──────────────────────────────
+// Packs cluster (2+ roamers within 2 tiles of each other) and the encounter mix
+// gets denser/peakier with depth — not uniform scatter. All roamers stay reachable.
+function roamerCells(map) { return map.events.filter(e => e.name === 'Roamer').map(e => [e.x, e.y]); }
+let sawPack = false, dirReach = true, totalRoamers = 0;
+for (let s = 0; s < 40; s++) {
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 11000 + s, tier: 3, creatures, biome: { packChance: 1, maxPack: 3 } });
+  const rc = roamerCells(m); totalRoamers += rc.length;
+  // a pack = some roamer with >=1 other roamer within Chebyshev distance 2
+  for (let a = 0; a < rc.length; a++) for (let b2 = 0; b2 < rc.length; b2++) {
+    if (a === b2) continue;
+    if (Math.max(Math.abs(rc[a][0] - rc[b2][0]), Math.abs(rc[a][1] - rc[b2][1])) <= 2) sawPack = true;
+  }
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) dirReach = false;
+}
+check('encounter director forms clustered packs (packChance=1)', sawPack);
+check('director: all encounters stay reachable', dirReach);
+// packChance=0 → no clusters (lone roamers only): compared to packChance=1, fewer roamers
+let loneRoamers = 0;
+for (let s = 0; s < 40; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 11000 + s, tier: 3, creatures, biome: { packChance: 0 } });
+  loneRoamers += roamerCells(m).length;
+}
+check('packs raise the roamer count vs lone-only (depth-scaled density)', totalRoamers > loneRoamers, `${totalRoamers} vs ${loneRoamers}`);
+// AMBUSH: with ambushChance=1, loot rooms get a guard adjacent to a chest.
+let sawAmbush = false;
+for (let s = 0; s < 30 && !sawAmbush; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 12000 + s, tier: 3, creatures, biome: { ambushChance: 1, packChance: 0, encounterRate: 0 } });
+  const chests = m.events.filter(e => e.name === 'Chest'), roam = roamerCells(m);
+  // encounterRate 0 → the only roamers are ambush guards, each beside a chest
+  for (const c of chests) for (const r of roam)
+    if (Math.max(Math.abs(c.x - r[0]), Math.abs(c.y - r[1])) <= 1) sawAmbush = true;
+}
+check('ambush guards seat beside loot chests', sawAmbush);
+
+// ── FLOOR TEMPLATES / RECIPES (generator roadmap #5, data half) ─────────────
+// A template forces a prefab at a room ROLE and drops an authored HOOK event.
+const shrineTpl = { id: 'shrine_floor', anchors: [
+  { role: 'deepest', prefab: 'shrine' },
+  { role: 'random', event: { name: 'Lorestone', trigger: 'action', commands: [{ type: 'text', text: 'A worn stone.' }] } }
+] };
+let tplPrefab = false, tplHook = false, tplReach = true;
+for (let s = 0; s < 24; s++) {
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 13000 + s, tier: 2, creatures, template: shrineTpl });
+  if (m.events.some(e => e.name === 'RelicCache')) tplPrefab = true;   // shrine prefab carries 'R'
+  if (m.events.some(e => e.name === 'Lorestone')) tplHook = true;       // authored hook event
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) tplReach = false;
+}
+check('template anchors force a prefab (shrine RelicCache)', tplPrefab);
+check('template drops an authored hook event', tplHook);
+check('template floors stay fully reachable', tplReach);
+// template style/size/hazard overrides apply
+const big = GameMapGen.generateFloor({ seed: 14000, tier: 2, creatures, template: { style: 'bsp', size: { w: 60, h: 40 }, hazard: { spikeText: 'CUSTOM SPIKE' } } });
+check('template overrides size', big.layout.width === 60 && big.layout.height === 40);
+const trapEv = big.map.events.find(e => e.name === 'Trap');
+check('template overrides hazard text', trapEv && JSON.stringify(trapEv).includes('CUSTOM SPIKE'));
+// template enemyTiers override — roamers come from the override roster
+const ovr = GameMapGen.generateFloor({ seed: 14100, tier: 1, creatures, template: { enemyTiers: { 1: ['husk_rat'] }, encounterRate: 1 } });
+const ovrKeys = ovr.map.events.filter(e => e.name === 'Roamer').map(e => e.commands.find(c => c.type === 'battle').enemies[0].key);
+check('template overrides the enemy roster', ovrKeys.length > 0 && ovrKeys.every(k => k === 'husk_rat'));
+// template determinism
+const t1 = GameMapGen.generateFloor({ seed: 15000, tier: 2, creatures, template: shrineTpl });
+const t2 = GameMapGen.generateFloor({ seed: 15000, tier: 2, creatures, template: shrineTpl });
+check('template floors are deterministic (same seed → identical)', JSON.stringify(t1) === JSON.stringify(t2));
+// shipped floor_templates.json is valid + its referenced prefabs exist
+let tplFile = null; try { tplFile = JSON.parse(readFileSync(`${ROOT}/data/systems/floor_templates.json`)); } catch {}
+check('floor_templates.json parses with a templates map', !!(tplFile && tplFile.templates && Object.keys(tplFile.templates).length));
+let prefabIds = new Set((shippedPrefabs && shippedPrefabs.prefabs || []).map(p => p.id));
+let refsOk = true;
+if (tplFile && tplFile.templates) for (const t of Object.values(tplFile.templates))
+  for (const a of (t.anchors || [])) if (a.prefab && !prefabIds.has(a.prefab)) refsOk = false;
+check('every template prefab anchor references a real prefab', refsOk);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

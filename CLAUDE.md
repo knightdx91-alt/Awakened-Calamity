@@ -2,6 +2,25 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-20 — Generator roadmap #6 (encounter director) + #5 data half (floor recipes)
+Finished the generator roadmap. **#6 ENCOUNTER DIRECTOR** (`src/systems/mapgen.js`): replaced the
+uniform per-room roamer scatter — density + encounter TYPE now scale with a room's depth from the
+entrance. Shallow rooms → none / lone roamer; deep rooms → clustered **PACKS** (2–`maxPack`,
+telegraphed via the existing sight cones, placed with new `Builder._freeFloorsAround`). Loot rooms
+get **AMBUSH guards** beside the chest (chance/level rise with depth); ELITE nodes drop a mini-boss
+**+ a guard pack**. Tunable per biome (`packChance`/`maxPack`/`ambushChance`, defaulted in
+DEFAULT_BIOME); rest floors stay calm. Roamer events never touch the collision map → can't soft-lock.
+**#5 DATA HALF — floor RECIPES** (`data/systems/floor_templates.json`): whole-floor intent —
+`style`/`size`/`hazard`/`enemyTiers`/`encounterRate` overrides + **anchors** that force a prefab at a
+room ROLE (entrance/alpha/deepest/shallow/random) or drop an authored **hook event** (quest/lore/NPC).
+`generateFloor` reads `opts.template`; `main.js` resolves it per floor from `node.gen.template` →
+`biome.template`. Ships a template-only `shrine` prefab + `shrine_floor`/`gauntlet` templates. Also
+**fixed a latent bug**: `depthBonus` was used by the prefab stamper before its hoisted `var` was
+assigned (NaN prefab-enemy levels) — moved the declaration up. `tools/test_mapgen.mjs` **36 → 49
+checks**; browser-verified the templated floor + packs render with 0 errors. **Generator roadmap
+#1–6 all DONE.** Remaining deeper polish noted in `docs/GENERATOR_ROADMAP.md` (per-biome tileset/wall
+set for #3; ambush hidden-reveal + mixed-roster packs for #6; World-Bible-driven templates for #5).
+
 ## ✅ DONE 2026-06-20 — Generator roadmap #5: PREFABS / set-pieces
 Audited the generator roadmap against the code: **#1–4 are genuinely done + verified** (runtime
 mapgen, room-shape variety/BSP/drunkard/sectioning, biome system, run/act composer — `test_mapgen`

@@ -48,7 +48,13 @@
         encounterRate: 0.75,
         caveChance: 0.4,
         style: 'mixed',
-        windiness: 0.3
+        windiness: 0.3,
+        // encounter director (#6): chance a room's encounter is a clustered PACK
+        // (rises with depth), the pack-size cap, and the chance a loot room gets a
+        // guarding ambush roamer beside its chest.
+        packChance: 0.35,
+        maxPack: 3,
+        ambushChance: 0.45
     };
     function resolveBiome(biome) {
         if (!biome || typeof biome !== 'object') return DEFAULT_BIOME;
@@ -62,7 +68,10 @@
             encounterRate: biome.encounterRate != null ? biome.encounterRate : DEFAULT_BIOME.encounterRate,
             caveChance: biome.caveChance != null ? biome.caveChance : DEFAULT_BIOME.caveChance,
             style: biome.style || DEFAULT_BIOME.style,
-            windiness: biome.windiness != null ? biome.windiness : DEFAULT_BIOME.windiness
+            windiness: biome.windiness != null ? biome.windiness : DEFAULT_BIOME.windiness,
+            packChance: biome.packChance != null ? biome.packChance : DEFAULT_BIOME.packChance,
+            maxPack: biome.maxPack != null ? biome.maxPack : DEFAULT_BIOME.maxPack,
+            ambushChance: biome.ambushChance != null ? biome.ambushChance : DEFAULT_BIOME.ambushChance
         };
     }
 
@@ -106,7 +115,15 @@
             '.......',
             '...A...',
             '.......',
-            'P.....P'] }
+            'P.....P'] },
+        // 'template' tag = NOT in the random body pool (relics stay rare); only a
+        // floor template (data/systems/floor_templates.json) can anchor it by id.
+        { id: 'shrine', name: 'Relic Shrine', tags: ['template'], rows: [
+            'o.....o',
+            '.#...#.',
+            '...R...',
+            '.#...#.',
+            'o.....o'] }
     ];
 
     // ── seeded RNG helpers (mulberry32 via GameRNG), Python-random-shaped API ──
@@ -343,6 +360,23 @@
         }
         return [null, null];
     };
+    // up to n free floor cells within `radius` of (cx,cy), nearest first — for
+    // clustering a PACK or seating an ambush guard beside loot (#6). Skips props,
+    // collisions, and cells already holding an event.
+    Builder.prototype._freeFloorsAround = function (cx, cy, radius, n, includeCenter) {
+        var evset = {}; for (var e = 0; e < this.events.length; e++) evset[this.events[e].x + ',' + this.events[e].y] = 1;
+        var out = [], cand = [];
+        for (var dy = -radius; dy <= radius; dy++) for (var dx = -radius; dx <= radius; dx++) {
+            if (!includeCenter && !dx && !dy) continue;
+            var x = cx + dx, y = cy + dy, i = y * this.W + x;
+            if (x < 1 || y < 1 || x >= this.W - 1 || y >= this.H - 1) continue;
+            if (!this.walk[i] || this.over[i] !== -1 || this.coll[i] || evset[x + ',' + y]) continue;
+            cand.push([x, y, dx * dx + dy * dy]);
+        }
+        cand.sort(function (a, b) { return a[2] - b[2]; });
+        for (var c = 0; c < cand.length && out.length < n; c++) out.push([cand[c][0], cand[c][1]]);
+        return out;
+    };
     Builder.prototype.scatterInRooms = function (gid, n, block) {
         var placed = 0, tries = 0;
         while (placed < n && tries < n * 80) {
@@ -511,6 +545,19 @@
         var creatures = opts.creatures || null;
         var bio = resolveBiome(opts.biome);
         var node = opts.node || {};               // act-composer node gen modifiers (#4)
+        // FLOOR TEMPLATE / RECIPE (generator roadmap #5, data half): author whole-
+        // floor intent — size/style overrides, hazard/roster overrides, and ANCHORS
+        // (force a prefab at a named room role, or drop an authored hook/quest event).
+        // Data: data/systems/floor_templates.json, resolved + passed by main.js.
+        var tpl = (opts.template && typeof opts.template === 'object') ? opts.template : null;
+        if (tpl) {
+            if (tpl.size) { if (tpl.size.w) w = tpl.size.w | 0; if (tpl.size.h) h = tpl.size.h | 0; }
+            if (tpl.hazard) bio = Object.assign({}, bio, { hazard: Object.assign({}, bio.hazard, tpl.hazard) });
+            if (tpl.encounterRate != null) bio = Object.assign({}, bio, { encounterRate: tpl.encounterRate });
+            var tet = tpl.enemyTiers;
+            if (tet) bio = Object.assign({}, bio, { enemyTiers: {
+                1: tet[1] || tet['1'] || bio.enemyTiers[1], 2: tet[2] || tet['2'] || bio.enemyTiers[2], 3: tet[3] || tet['3'] || bio.enemyTiers[3] } });
+        }
         var encMult = node.encounterMult != null ? node.encounterMult : 1;
         var lvlBonus = node.levelBonus | 0;
         var rng = mkRng(opts.seed);
@@ -520,7 +567,7 @@
         // scatter (chained corridors); 'bsp' = recursive partition (connected by
         // construction); 'mixed' = pick per floor. biome.style can pin it.
         var caveChance = bio.caveChance != null ? bio.caveChance : 0.4;
-        var style = opts.style || bio.style || 'mixed';
+        var style = opts.style || (tpl && tpl.style) || bio.style || 'mixed';
         if (style === 'mixed') style = rng.random() < 0.5 ? 'bsp' : 'rooms';
         var rooms = [], i;
         // windiness: chance a connection is an organic drunkard's walk vs a clean
@@ -562,6 +609,7 @@
         var maxd = rooms.reduce(function (m, r) { return Math.max(m, far(r)); }, 1) || 1;
         var sprites = ['Monster1', 'Monster3'];
         var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
+        var depthBonus = opts.depthBonus | 0;   // endless level ramp (used by prefabs + encounters)
 
         // SET-PIECES / PREFABS (generator roadmap #5): stamp a few hand-authored
         // templates into body rooms (vault/guard post/pillar hall/prison) + a pillar
@@ -596,6 +644,28 @@
             if (afit.length) stampInto(rng.choice(afit), alpha);
         }
 
+        // FLOOR-TEMPLATE ANCHORS (#5 data half): resolve a named room ROLE and either
+        // force a prefab there or queue an authored HOOK event (placed after walls).
+        function roleRoom(role) {
+            if (role === 'entrance') return rooms[0];
+            if (role === 'alpha') return alpha;
+            var br = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha; });
+            if (!br.length) return alpha;
+            if (role === 'deepest') return br.slice().sort(function (a, c) { return far(c) - far(a); })[0];
+            if (role === 'shallow') return br.slice().sort(function (a, c) { return far(a) - far(c); })[0];
+            return rng.choice(br);                 // 'random' (default)
+        }
+        var tplEventAnchors = [];                   // {room, event} placed post-finalize
+        if (tpl && tpl.anchors) for (var an = 0; an < tpl.anchors.length; an++) {
+            var anc = tpl.anchors[an], rr = roleRoom(anc.role || 'random');
+            if (anc.prefab) {
+                var apf = null;
+                for (var pj = 0; pj < prefabList.length; pj++) if (prefabList[pj].id === anc.prefab) { apf = prefabList[pj]; break; }
+                if (apf && pfFits(apf, rr) && !prefRooms[rr[0] + ',' + rr[1]]) { stampInto(apf, rr); prefRooms[rr[0] + ',' + rr[1]] = true; }
+            }
+            if (anc.event) tplEventAnchors.push({ room: rr, event: anc.event });
+        }
+
         // section big rectangular halls (#5) — some of them (skip prefab rooms)
         for (var dv = 0; dv < rooms.length; dv++) if (!prefRooms[rooms[dv][0] + ',' + rooms[dv][1]] && rng.random() < 0.45) b.divideRoom(rooms[dv]);
         b.finalizeWalls();
@@ -607,9 +677,21 @@
                 // fog-of-war depth read (#4): floors seen so far + the boss; rest hidden
                 { type: 'text', text: 'DEPTH:  [act]\nHere:  [floorlabel]\n(What lies deeper is unknown.)' }] });
 
+        // place authored HOOK events from the floor template (quest spots / lore /
+        // NPCs) at a floor cell in their role room — the hybrid-authoring bridge.
+        for (var ta = 0; ta < tplEventAnchors.length; ta++) {
+            var tev = tplEventAnchors[ta], tf = b._roomFloor(tev.room, true);
+            if (tf[0] === null) continue;
+            var ev = tev.event;
+            b.events.push({ x: tf[0], y: tf[1], name: ev.name || 'Hook',
+                trigger: ev.trigger || 'action', through: !!ev.through,
+                graphic: ev.graphic || { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
+                behavior: ev.behavior, commands: ev.commands || [{ type: 'text', text: '...' }] });
+        }
+
         // The deepest room holds either the way DOWN (normal floor → descend to the
         // next) or the ALPHA boss (boss floor → battle, then descend = run cleared).
-        var boss = opts.kind === 'boss', endless = !!opts.endless, depthBonus = opts.depthBonus | 0;
+        var boss = opts.kind === 'boss', endless = !!opts.endless;   // depthBonus declared above
         if (boss) {
             var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = Math.max(1, tier + depthBonus + 1 + (opts.bossBonus | 0));
             // After the Alpha falls: in an ENDLESS run, claim a relic reward then CHOOSE
@@ -642,23 +724,42 @@
                         else: [{ type: 'gendungeon' }] }] });
         }
 
-        // roaming encounters in body rooms, scaled by depth. The act node tunes
-        // density (encMult: rest=0/treasure=0.3/elite≥1) and enemy level (lvlBonus).
-        // body rooms exclude entrance, alpha, and self-populated PREFAB rooms (#5).
+        // ── ENCOUNTER DIRECTOR (generator roadmap #6) ──────────────────────────
+        // Not random scatter: density + encounter TYPE scale with a room's depth from
+        // the entrance. Shallow rooms skew to none / a lone roamer; deeper rooms skew
+        // to clustered PACKS (telegraphed — roamers are visible with sight cones), and
+        // loot rooms get AMBUSH guards (below). The act node still tunes overall
+        // density (encMult) and level (lvlBonus). Body rooms exclude entrance, alpha,
+        // and self-populated prefab rooms.
         var body = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha && !prefRooms[r[0] + ',' + r[1]]; });
         var encRate = bio.encounterRate * encMult;
-        for (var r1 = 0; r1 < body.length; r1++) {
-            if (rng.random() < encRate) {
-                var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + lvlBonus + depthBonus + ((depth * 2 + rng.random()) | 0));
-                var sf = b._roomFloor(body[r1]);
-                if (sf[0] !== null) b.placeMonster(sf[0], sf[1], rng.choice(pool), lvl, rng.choice(sprites), creatures);
+        var packChance = bio.packChance, maxPack = bio.maxPack;
+        // a lone roamer or a clustered pack at a room, level/size scaled by depth `d`.
+        function placeEncounter(room, d) {
+            var lvl = Math.max(1, tier + lvlBonus + depthBonus + ((d * 2 + rng.random()) | 0));
+            var center = b._roomFloor(room);
+            if (center[0] === null) return;
+            // PACK chance rises with depth; shallow rooms almost never pack.
+            if (rng.random() < packChance * (0.3 + d)) {
+                var size = Math.min(maxPack, 2 + ((d * (maxPack - 1) + rng.random()) | 0));
+                var spots = b._freeFloorsAround(center[0], center[1], 2, size, true);
+                for (var sp = 0; sp < spots.length; sp++)
+                    b.placeMonster(spots[sp][0], spots[sp][1], rng.choice(pool), Math.max(1, lvl - 1), rng.choice(sprites), creatures);
+            } else {
+                b.placeMonster(center[0], center[1], rng.choice(pool), lvl, rng.choice(sprites), creatures);
             }
         }
-        // ELITE node: a guaranteed tougher roamer in the deepest body room.
+        for (var r1 = 0; r1 < body.length; r1++)
+            if (rng.random() < encRate) placeEncounter(body[r1], far(body[r1]) / maxd);
+        // ELITE node: a guaranteed tougher mini-boss + a small guard pack in the deepest room.
         if (node.elite && body.length) {
             var eroom = body.slice().sort(function (a, c) { return far(c) - far(a); })[0];
             var ef = b._roomFloor(eroom);
-            if (ef[0] !== null) b.placeMonster(ef[0], ef[1], rng.choice(pool), Math.max(2, tier + lvlBonus + depthBonus + 2), 'Monster2', creatures);
+            if (ef[0] !== null) {
+                b.placeMonster(ef[0], ef[1], rng.choice(pool), Math.max(2, tier + lvlBonus + depthBonus + 2), 'Monster2', creatures);
+                var guards = b._freeFloorsAround(ef[0], ef[1], 2, 2, false);
+                for (var gd = 0; gd < guards.length; gd++) b.placeMonster(guards[gd][0], guards[gd][1], rng.choice(pool), Math.max(1, tier + lvlBonus + depthBonus), rng.choice(sprites), creatures);
+            }
         }
         // REST node: no extra loot churn — a campfire refuge instead (placed below).
         // chests reward the deep / dead-end rooms (treasure node = extra chest).
@@ -666,7 +767,15 @@
         var loot = body.slice().sort(function (a, c) { return far(c) - far(a); }).slice(0, chestN);
         for (var l = 0; l < loot.length; l++) {
             var cf = b._roomFloor(loot[l], true, true);
-            if (cf[0] !== null) b.placeChest(cf[0], cf[1], rng.randint(40, 80) * (1 + ((far(loot[l]) / maxd * 2) | 0)), l + 1);
+            if (cf[0] === null) continue;
+            var ld = far(loot[l]) / maxd;
+            b.placeChest(cf[0], cf[1], rng.randint(40, 80) * (1 + ((ld * 2) | 0)), l + 1);
+            // AMBUSH (#6): a guard roamer beside the loot — deeper loot is better
+            // protected. Skipped on rest floors (the refuge stays calm).
+            if (!node.rest && rng.random() < bio.ambushChance * (0.4 + ld)) {
+                var ag = b._freeFloorsAround(cf[0], cf[1], 1, 1, false);
+                if (ag.length) b.placeMonster(ag[0][0], ag[0][1], rng.choice(pool), Math.max(1, tier + lvlBonus + depthBonus + 1), rng.choice(sprites), creatures);
+            }
         }
         // GEAR cache — the gear/relic drop point. RELICS ARE RARE: a normal floor has
         // NO cache; only ELITE/TREASURE nodes get one (boss floors reward via the Alpha).

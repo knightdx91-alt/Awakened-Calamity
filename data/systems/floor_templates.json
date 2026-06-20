@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "doc": "Whole-floor RECIPES (generator roadmap #5, data half). A template authors floor-scale INTENT — size/style overrides, hazard/roster overrides, and ANCHORS that force a prefab at a named room role or drop an authored hook/quest event — and lets the runtime generator fill the rest. The bridge to hybrid authoring (hand-place quest spots, generate the filler).",
+    "how": "main.js resolves a template id from the act node (node.gen.template) or the biome (biome.template), looks it up here, and passes it to GameMapGen.generateFloor as opts.template. Absent template → generation is unchanged.",
+    "fields": {
+      "style": "'rooms' | 'bsp' | 'mixed' — pins the layout algorithm",
+      "size": "{ w, h } — override the floor dimensions",
+      "hazard": "partial override merged over the biome hazard (spikeText/spikeDmg/sensorText/sensorSurveil/sensorWeight)",
+      "encounterRate": "override the biome encounter density (0..1)",
+      "enemyTiers": "{ \"1\":[keys], \"2\":[...], \"3\":[...] } — override the roster band(s)",
+      "anchors": "[ { role, prefab? , event? } ] — role: 'entrance'|'alpha'|'deepest'|'shallow'|'random'. prefab = a prefab id (incl. template-only ids like 'shrine'). event = an authored event { name, graphic?, trigger?, through?, commands:[...] } placed at a floor cell in that room."
+    },
+    "note": "Authored event text supports the engine's runtime tokens ([name]/[designation]/[v:id]/[s:id])."
+  },
+  "templates": {
+    "shrine_floor": {
+      "id": "shrine_floor", "name": "Shrine Floor",
+      "anchors": [
+        { "role": "deepest", "prefab": "shrine" },
+        { "role": "random", "event": { "name": "Lorestone", "trigger": "action",
+          "graphic": { "sprite": "Other2", "file": "rtp/Other2.png", "frame_w": 32, "frame_h": 32, "cols": 3, "rows": 4, "single": false },
+          "commands": [
+            { "type": "text", "text": "A worn stone, older than the System. Faint letters remain." },
+            { "type": "text", "text": "\"They came down here to be unseen. The System followed them anyway.\"" }
+          ] } }
+      ]
+    },
+    "gauntlet": {
+      "id": "gauntlet", "name": "The Gauntlet", "style": "bsp", "encounterRate": 0.9,
+      "anchors": [
+        { "role": "entrance", "prefab": "guard_post" },
+        { "role": "deepest", "prefab": "guard_post" }
+      ]
+    }
+  }
+}

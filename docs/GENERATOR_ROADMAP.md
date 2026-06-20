@@ -129,13 +129,29 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    built-ins). `tools/test_mapgen.mjs` grew to **36 checks** (stamping via a unique RelicCache
    marker, wall reachability, rest-floor calm, boss arena, determinism, shipped-data validity);
    browser-verified a boss floor + arena renders with 0 errors.
-   **Still open (the data-driven TEMPLATE half of #5, `MAPGEN_SPEC §3`):** author whole-floor
-   intent in JSON (`{biome, anchors, enemy_table, hazard, hook}`) so the generator fills detail —
-   hybrid authoring (hand-place quest spots, generate the filler), bridging to the World Bible
-   (`data/world/<region>.json`). Prefabs are the room-scale building block this would compose.
+   **Data-driven TEMPLATE half DONE (2026-06-20):** whole-floor RECIPES in
+   **`data/systems/floor_templates.json`** author floor-scale intent — `style`/`size` overrides,
+   `hazard`/`enemyTiers`/`encounterRate` overrides, and **anchors** that either force a prefab at a
+   named room ROLE (`entrance`/`alpha`/`deepest`/`shallow`/`random`) or drop an authored **hook
+   event** (quest spot / lore / NPC) in that room. `generateFloor` reads `opts.template`; `main.js`
+   resolves it per floor from `node.gen.template` → `biome.template` (null → unchanged). A
+   template-only `shrine` prefab (carries a relic, kept out of the random body pool) ships for
+   anchoring. This is the hybrid-authoring bridge (hand-place quest spots, generate the filler) →
+   World Bible (`data/world/<region>.json`). Browser-verified the `shrine_floor` template renders
+   (hook + shrine present, 0 errors). **#5 is now feature-complete** (room prefabs + floor recipes).
 
-6. **Smarter enemy/encounter placement.** Telegraphed packs, elite rooms, ambushes, placement
-   scaled by depth — not random scatter.
+6. **Smarter enemy/encounter placement.** ✅ DONE (2026-06-20) — an ENCOUNTER DIRECTOR replaces the
+   uniform per-room roamer scatter. Density + encounter TYPE scale with a room's **depth from the
+   entrance**: shallow rooms skew to none / a lone roamer; deeper rooms skew to clustered **PACKS**
+   (2–`maxPack`, telegraphed since roamers are visible with sight cones). Loot rooms get **AMBUSH
+   guards** seated beside their chest (chance + level rise with depth → deeper loot is better
+   defended). ELITE nodes now drop a mini-boss **plus a guard pack**. Tunable per biome
+   (`packChance`/`maxPack`/`ambushChance`, all defaulted in `DEFAULT_BIOME`). Rest floors stay calm
+   (no packs/ambushes). All placement routes through the reachability guarantees (roamer events
+   don't touch the collision map, so they can't soft-lock). `tools/test_mapgen.mjs` → **49 checks**
+   (pack clustering, depth-scaled density, ambush-beside-loot, reachability); browser-verified.
+   **Still open (deeper):** ambush *reveal* (hidden-until-near) vs. the current always-visible
+   telegraph; troop composition (mixed roster per pack); encounter budget per act node.
 
 (See also the gameplay assessment: the real game-completeness blockers are enemy/boss variety,
 relics, in-run story, audio/juice, and a human playtest — tracked in `FIX_LIST.md`.)

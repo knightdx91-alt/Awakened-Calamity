@@ -959,6 +959,21 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_prefabsDb = j); })
             .catch(function () { return (_prefabsDb = {}); });
     }
+    var _templatesDb = null;
+    function _loadTemplates() {
+        if (_templatesDb) return Promise.resolve(_templatesDb);
+        return fetch('data/systems/floor_templates.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_templatesDb = j); })
+            .catch(function () { return (_templatesDb = {}); });
+    }
+    // Resolve the floor RECIPE for the current floor: the act node can name one
+    // (node.gen.template), else the biome can pin a default (biome.template). Looked
+    // up in floor_templates.json; null → generation is unchanged.
+    function _floorTemplate(run, node, biome) {
+        var id = (node && node.gen && node.gen.template) || (biome && biome.template) || null;
+        if (!id || !_templatesDb || !_templatesDb.templates) return null;
+        return _templatesDb.templates[id] || null;
+    }
     var _actsDb = null;
     function _loadActs() {
         if (_actsDb) return Promise.resolve(_actsDb);
@@ -1024,11 +1039,13 @@
         if (endless && fl <= (sc.earlyGrace | 0)) depthBonus -= (sc.graceLevels | 0);
         var fseed = (((run.seed >>> 0) + fl * 0x9E3779B1) >>> 0) || 1;
         var node = _floorNode(run);
+        var biome = _runBiome(run);
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
             maxDepth: maxDepth, name: 'RunGenF' + fl, region: 'awakened', endless: endless,
             depthBonus: depthBonus, bossBonus: (sc.bossLevelBonus | 0), creatures: _creaturesDb,
-            biome: _runBiome(run), node: node ? node.gen : null,
-            prefabs: (_prefabsDb && _prefabsDb.prefabs) || null });
+            biome: biome, node: node ? node.gen : null,
+            prefabs: (_prefabsDb && _prefabsDb.prefabs) || null,
+            template: _floorTemplate(run, node, biome) });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
@@ -1072,7 +1089,7 @@
     async function _enterGenFloor() {
         var st = GameSave.state; st.run = st.run || {};
         await _loadRunDb();
-        if (_runtimeGen()) { await _loadCreatures(); await _loadBiomes(); await _loadPrefabs(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
+        if (_runtimeGen()) { await _loadCreatures(); await _loadBiomes(); await _loadPrefabs(); await _loadTemplates(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
         else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
     }
     async function _runOp(c) {
