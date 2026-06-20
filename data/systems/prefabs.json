@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "doc": "Hand-authored room templates (set-pieces) stamped into generated dungeon floors — generator roadmap #5. The runtime generator (src/systems/mapgen.js) carries a built-in copy (DEFAULT_PREFABS); this file is the editable override passed in as opts.prefabs (loaded by main.js, like biomes/acts).",
+    "legend": {
+      "#": "wall (forced solid; finalizeWalls renders it + a north face)",
+      ".": "floor",
+      "A": "floor anchor (boss/center) — plain floor, the orchestration drops the Alpha here",
+      "P": "pillar prop (blocking)",
+      "o": "decor prop from the biome (non-blocking)",
+      "C": "treasure chest event",
+      "G": "gear cache event",
+      "R": "relic cache event (rare — use sparingly; relic pacing is normally node-driven)",
+      "E": "enemy guard (roaming, chases on sight)",
+      "~": "hidden trap (spike or System sensor)",
+      "f": "campfire refuge (full heal once)"
+    },
+    "tags": "['body'] = stamped into a normal room; ['arena'] = stamped around the Alpha on boss floors (keep the center 'A' clear). A prefab only stamps into a room it fits (width <= room width, rows <= room height). Up to 2 body prefabs per floor. Reachability is re-guaranteed after stamping, so a template can never seal off the floor.",
+    "note": "If you ADD prefabs here they take over from the built-in set entirely (the engine uses opts.prefabs when non-empty). Keep at least the boss_arena entry if you want a boss set-piece."
+  },
+  "prefabs": [
+    { "id": "pillar_hall", "name": "Pillared Hall", "tags": ["body"], "rows": [
+      "P.....P",
+      ".......",
+      "...C...",
+      ".......",
+      "P.....P"] },
+    { "id": "vault", "name": "Sealed Vault", "tags": ["body"], "rows": [
+      ".......",
+      ".##.##.",
+      ".#.G.#.",
+      ".#####.",
+      "......."] },
+    { "id": "guard_post", "name": "Guard Post", "tags": ["body"], "rows": [
+      ".......",
+      ".P.E.P.",
+      "...C...",
+      ".P.E.P.",
+      "......."] },
+    { "id": "prison", "name": "Forgotten Cells", "tags": ["body"], "rows": [
+      "o.....o",
+      ".#.#.#.",
+      "...C...",
+      ".#.#.#.",
+      "o.....o"] },
+    { "id": "boss_arena", "name": "Alpha Arena", "tags": ["arena"], "rows": [
+      "P.....P",
+      ".......",
+      "...A...",
+      ".......",
+      "P.....P"] }
+  ]
+}

@@ -115,10 +115,24 @@ organic links, drop in **prefabs** for set-pieces — all behind `style: 'rooms'
    note that it's random. Wired into the **DescentGate** (with a glyph legend) + the **Replay Slate**.
    Acts/run DB preloaded at boot so the forecast uses the live pacing config.
 
-5. **Data-driven templates / recipes (`MAPGEN_SPEC §3`).** Author intent in JSON
-   (`{biome, anchors, enemy_table, hazard, hook}`); the generator fills detail. Enables hybrid
-   authoring (hand-place quest spots, generate the filler) and bridges to the World Bible
-   (`data/world/<region>.json`). This is also where **prefabs/set-pieces** get authored.
+5. **Prefabs / set-pieces.** ✅ DONE (2026-06-20) — hand-authored room TEMPLATES stamped into
+   generated rooms for QA-able quality rooms. `Builder.stampPrefab` writes an ASCII grid + legend
+   (`#` wall · `.` floor · `A` anchor · `P` pillar · `o` decor · `C` chest · `G` gear cache ·
+   `R` relic cache · `E` enemy guard · `~` trap · `f` campfire) into `walk[]`/`over[]`/`events[]`.
+   `generateFloor` stamps up to **2 body prefabs** (vault / guard post / pillared hall / forgotten
+   cells) into non-entrance/non-alpha rooms that fit, plus a pillar **ARENA** around the Alpha on
+   boss floors (center stays clear for the boss). Stamped rooms self-populate (skipped by the normal
+   roamer/chest/pillar/divider passes); **rest floors stamp nothing** (the refuge stays calm).
+   Stamped walls route through the same `ensureCollisionConnected` guarantee, so a template can never
+   soft-lock a floor. Built-in `DEFAULT_PREFABS` + the editable **`data/systems/prefabs.json`**
+   (loaded by `main.js`, passed as `opts.prefabs` like biomes/acts — non-empty overrides the
+   built-ins). `tools/test_mapgen.mjs` grew to **36 checks** (stamping via a unique RelicCache
+   marker, wall reachability, rest-floor calm, boss arena, determinism, shipped-data validity);
+   browser-verified a boss floor + arena renders with 0 errors.
+   **Still open (the data-driven TEMPLATE half of #5, `MAPGEN_SPEC §3`):** author whole-floor
+   intent in JSON (`{biome, anchors, enemy_table, hazard, hook}`) so the generator fills detail —
+   hybrid authoring (hand-place quest spots, generate the filler), bridging to the World Bible
+   (`data/world/<region>.json`). Prefabs are the room-scale building block this would compose.
 
 6. **Smarter enemy/encounter placement.** Telegraphed packs, elite rooms, ambushes, placement
    scaled by depth — not random scatter.

@@ -66,6 +66,49 @@
         };
     }
 
+    // ── PREFABS / SET-PIECES (generator roadmap #5) ───────────────────────────
+    // Hand-authored room templates stamped into generated rooms for QA-able quality
+    // rooms (vault, guard post, pillar hall, prison) + a boss ARENA. Each is an
+    // ASCII grid + a legend; stampPrefab writes floor/walls/props/events. Walls and
+    // events route through the SAME reachability guarantees as everything else
+    // (ensureCollisionConnected re-carves if a template ever isolates a cell), so a
+    // prefab can never make a floor unwinnable. Data mirror: data/systems/prefabs.json.
+    //   legend: '#' wall · '.' floor · 'A' floor anchor (boss/center, no content)
+    //           'P' pillar(block) · 'o' decor(non-block) · 'C' chest · 'G' gear cache
+    //           'R' relic cache · 'E' enemy guard · '~' trap · 'f' campfire refuge
+    var DEFAULT_PREFABS = [
+        { id: 'pillar_hall', name: 'Pillared Hall', tags: ['body'], rows: [
+            'P.....P',
+            '.......',
+            '...C...',
+            '.......',
+            'P.....P'] },
+        { id: 'vault', name: 'Sealed Vault', tags: ['body'], rows: [
+            '.......',
+            '.##.##.',
+            '.#.G.#.',
+            '.#####.',
+            '.......'] },
+        { id: 'guard_post', name: 'Guard Post', tags: ['body'], rows: [
+            '.......',
+            '.P.E.P.',
+            '...C...',
+            '.P.E.P.',
+            '.......'] },
+        { id: 'prison', name: 'Forgotten Cells', tags: ['body'], rows: [
+            'o.....o',
+            '.#.#.#.',
+            '...C...',
+            '.#.#.#.',
+            'o.....o'] },
+        { id: 'boss_arena', name: 'Alpha Arena', tags: ['arena'], rows: [
+            'P.....P',
+            '.......',
+            '...A...',
+            '.......',
+            'P.....P'] }
+    ];
+
     // ── seeded RNG helpers (mulberry32 via GameRNG), Python-random-shaped API ──
     function mkRng(seed) {
         var st = RNG.create(((seed | 0) || 1) >>> 0);
@@ -429,6 +472,36 @@
                     { type: 'selfswitch', letter: 'A', value: true }] }] });
     };
 
+    // Stamp a prefab template's grid at top-left (x0,y0). Floor cells carve walk[];
+    // '#' cells are forced solid (interior walls → finalizeWalls/faces handle them);
+    // legend symbols drop props/events via the existing placers. ctx supplies the
+    // per-room context (rng, enemy pool/level, biome decor/hazard, chest scaling).
+    Builder.prototype.stampPrefab = function (pf, x0, y0, ctx) {
+        var rows = pf.rows, ph = rows.length, x, y;
+        for (y = 0; y < ph; y++) {
+            var line = rows[y];
+            for (x = 0; x < line.length; x++) {
+                var gx = x0 + x, gy = y0 + y;
+                if (!this.inb(gx, gy) || gx < 1 || gy < 1 || gx > this.W - 2 || gy > this.H - 2) continue;
+                var ch = line[x], idx = gy * this.W + gx;
+                if (ch === '#') { this.walk[idx] = false; continue; }
+                this.walk[idx] = true;                 // everything non-'#' is floor
+                var salt = (gx * 31 + gy) & 0x7fff;
+                switch (ch) {
+                    case 'P': this.setp(gx, gy, GID.pillar, true); break;
+                    case 'o': this.setp(gx, gy, ctx.decor, false); break;
+                    case 'C': this.placeChest(gx, gy, ctx.rng.randint(40, 80) * (ctx.chestMult || 1), salt); break;
+                    case 'G': this.placeGearCache(gx, gy, 'cache', salt); break;
+                    case 'R': this.placeRelicCache(gx, gy, 3); break;
+                    case 'E': this.placeMonster(gx, gy, ctx.rng.choice(ctx.pool), ctx.enemyLvl, ctx.rng.choice(ctx.sprites), ctx.creatures); break;
+                    case '~': this.placeTrap(gx, gy, ctx.rng.random() < ctx.sensorW ? 'sensor' : 'spike', ctx.hazard); break;
+                    case 'f': this.placeCampfire(gx, gy); break;
+                    default: break;                    // '.' / 'A' = plain floor
+                }
+            }
+        }
+    };
+
     // ── orchestration (mirror of gen_dungeon) ─────────────────────────────────
     function generateFloor(opts) {
         opts = opts || {};
@@ -479,16 +552,54 @@
             for (var ex2 = 0; ex2 < 1 + tier; ex2++) if (rooms.length >= 3) { var pr = rng.sample(rooms, 2); connect(pr[0][0], pr[0][1], pr[1][0], pr[1][1], 1); }
         }
         b.ensureConnected();
-        // section big rectangular halls (#5) — some of them, for variety
-        for (var dv = 0; dv < rooms.length; dv++) if (rng.random() < 0.45) b.divideRoom(rooms[dv]);
-        b.finalizeWalls();
-        b.renderNorthFaces();
 
-        // critical path: Entrance = first room; Alpha = the room farthest from it
+        // critical-path positions (needed before the prefab/section passes):
+        // Entrance = first room; Alpha = the room farthest from it.
         var ex = rooms[0][0], ey = rooms[0][1];
         function far(r) { return (r[0] - ex) * (r[0] - ex) + (r[1] - ey) * (r[1] - ey); }
         var alpha = rooms.reduce(function (best, r) { return far(r) > far(best) ? r : best; }, rooms[0]);
         var ax = alpha[0], ay = alpha[1];
+        var maxd = rooms.reduce(function (m, r) { return Math.max(m, far(r)); }, 1) || 1;
+        var sprites = ['Monster1', 'Monster3'];
+        var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
+
+        // SET-PIECES / PREFABS (generator roadmap #5): stamp a few hand-authored
+        // templates into body rooms (vault/guard post/pillar hall/prison) + a pillar
+        // ARENA around the boss. The center stays clear; reachability is re-guaranteed
+        // by ensureCollisionConnected below. Data override: opts.prefabs (prefabs.json).
+        var prefabList = (opts.prefabs && opts.prefabs.length) ? opts.prefabs : DEFAULT_PREFABS;
+        var decorGid = GID.bones;
+        for (var dpi = 0; dpi < bio.props.length; dpi++) { if (!bio.props[dpi].block && GID[bio.props[dpi].gid] != null) { decorGid = GID[bio.props[dpi].gid]; break; } }
+        function prefW(pf) { var m = 0; for (var i2 = 0; i2 < pf.rows.length; i2++) m = Math.max(m, pf.rows[i2].length); return m; }
+        function pfFits(pf, r) { return prefW(pf) <= r[2] && pf.rows.length <= r[3]; }
+        function stampInto(pf, r) {
+            var pw = prefW(pf), ph2 = pf.rows.length;
+            var depth = far(r) / maxd, lvl = Math.max(1, tier + lvlBonus + depthBonus + ((depth * 2 + rng.random()) | 0));
+            b.stampPrefab(pf, r[0] - (pw >> 1), r[1] - (ph2 >> 1), { rng: rng, pool: pool, sprites: sprites,
+                creatures: creatures, decor: decorGid, hazard: bio.hazard,
+                sensorW: (bio.hazard.sensorWeight != null ? bio.hazard.sensorWeight : 0.4),
+                enemyLvl: lvl, chestMult: 1 + ((depth * 2) | 0) });
+        }
+        var prefRooms = {};
+        var bodyPool = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha; });
+        rng.shuffle(bodyPool);
+        var bodyPrefabs = prefabList.filter(function (p) { return (p.tags || ['body']).indexOf('body') >= 0; });
+        // REST floors stay a calm refuge — no set-piece guards/hazards there.
+        var maxPref = node.rest ? 0 : Math.min(2, bodyPool.length), placedPref = 0;
+        for (var pri = 0; pri < bodyPool.length && placedPref < maxPref; pri++) {
+            var rm = bodyPool[pri], fit = bodyPrefabs.filter(function (p) { return pfFits(p, rm); });
+            if (!fit.length) continue;
+            stampInto(rng.choice(fit), rm); prefRooms[rm[0] + ',' + rm[1]] = true; placedPref++;
+        }
+        if (opts.kind === 'boss') {
+            var afit = prefabList.filter(function (p) { return (p.tags || []).indexOf('arena') >= 0 && pfFits(p, alpha); });
+            if (afit.length) stampInto(rng.choice(afit), alpha);
+        }
+
+        // section big rectangular halls (#5) — some of them (skip prefab rooms)
+        for (var dv = 0; dv < rooms.length; dv++) if (!prefRooms[rooms[dv][0] + ',' + rooms[dv][1]] && rng.random() < 0.45) b.divideRoom(rooms[dv]);
+        b.finalizeWalls();
+        b.renderNorthFaces();
         b.setp(ex, ey, GID.stairs, false);
         b.events.push({ x: ex, y: ey, name: 'Entrance', trigger: 'action', through: false,
             graphic: { sprite: 'Other3', file: 'rtp/Other3.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
@@ -496,7 +607,6 @@
                 // fog-of-war depth read (#4): floors seen so far + the boss; rest hidden
                 { type: 'text', text: 'DEPTH:  [act]\nHere:  [floorlabel]\n(What lies deeper is unknown.)' }] });
 
-        var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
         // The deepest room holds either the way DOWN (normal floor → descend to the
         // next) or the ALPHA boss (boss floor → battle, then descend = run cleared).
         var boss = opts.kind === 'boss', endless = !!opts.endless, depthBonus = opts.depthBonus | 0;
@@ -534,9 +644,8 @@
 
         // roaming encounters in body rooms, scaled by depth. The act node tunes
         // density (encMult: rest=0/treasure=0.3/elite≥1) and enemy level (lvlBonus).
-        var body = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha; });
-        var maxd = rooms.reduce(function (m, r) { return Math.max(m, far(r)); }, 1) || 1;
-        var sprites = ['Monster1', 'Monster3'];
+        // body rooms exclude entrance, alpha, and self-populated PREFAB rooms (#5).
+        var body = rooms.filter(function (r) { return r !== rooms[0] && r !== alpha && !prefRooms[r[0] + ',' + r[1]]; });
         var encRate = bio.encounterRate * encMult;
         for (var r1 = 0; r1 < body.length; r1++) {
             if (rng.random() < encRate) {
@@ -584,6 +693,7 @@
         // pillars in big halls + light clutter
         for (var rp = 0; rp < rooms.length; rp++) {
             var room = rooms[rp];
+            if (prefRooms[room[0] + ',' + room[1]]) continue;   // prefab rooms bring their own
             if (room[2] >= 7 && room[3] >= 5) {
                 var dxs = [-((room[2] / 2 | 0)) + 1, (room[2] / 2 | 0) - 1], pys = [room[1] - (room[3] / 2 | 0) + 1, room[1] + (room[3] / 2 | 0) - 1];
                 for (var di = 0; di < 2; di++) for (var pi = 0; pi < 2; pi++) {

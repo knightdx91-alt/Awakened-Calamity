@@ -206,5 +206,67 @@ for (let s = 0; s < 24; s++) {
 }
 check('max-windiness all-cave floors stay fully reachable (all styles)', windyReach);
 
+// ── PREFABS / SET-PIECES (generator roadmap #5) ────────────────────────────
+// Use a custom prefab list with a UNIQUE marker the normal generator never
+// places on a plain floor: a body prefab carrying a RelicCache ('R') + interior
+// walls ('#'). On a no-node floor a RelicCache only appears via a prefab, so its
+// presence proves stamping; reachability must still hold despite the stamped walls.
+const markPrefabs = [
+  { id: 'test_vault', tags: ['body'], rows: [
+    '.......',
+    '.#####.',
+    '.#.R.#.',
+    '.##.##.',
+    '.......'] },
+  { id: 'test_arena', tags: ['arena'], rows: [
+    'P.....P',
+    '...A...',
+    'P.....P'] }
+];
+let prefabPlaced = false, prefabReach = true;
+for (let s = 0; s < 30; s++) {
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 9100 + s, tier: 2, creatures, prefabs: markPrefabs });
+  if (m.events.some(e => e.name === 'RelicCache')) prefabPlaced = true;
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) prefabReach = false;
+}
+check('prefab set-pieces get stamped into floors (unique RelicCache marker)', prefabPlaced);
+check('prefab walls never soft-lock a floor (all events reachable)', prefabReach);
+
+// REST floors stay a refuge even with prefabs available (no guards/hazards stamped).
+let prefabRestOk = true;
+for (let s = 0; s < 12; s++) {
+  const { map: m } = GameMapGen.generateFloor({ seed: 9200 + s, tier: 2, creatures, prefabs: markPrefabs, node: { encounterMult: 0, rest: true } });
+  if (m.events.some(e => e.name === 'RelicCache' || e.name === 'Roamer' || e.name === 'Trap')) prefabRestOk = false;
+}
+check('rest floors stay calm — no prefabs stamped', prefabRestOk);
+
+// boss ARENA: boss floors with an arena prefab still reach the Alpha + stay valid.
+let arenaReach = true, arenaBoss = true;
+for (let s = 0; s < 12; s++) {
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 9300 + s, tier: 3, kind: 'boss', creatures, prefabs: markPrefabs });
+  if (!m.events.some(e => e.name === 'Alpha')) arenaBoss = false;
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) arenaReach = false;
+}
+check('boss arena: Alpha present + reachable', arenaBoss && arenaReach);
+
+// prefabs are deterministic (same seed + same prefab list → identical floor)
+const pA = GameMapGen.generateFloor({ seed: 9400, tier: 2, creatures, prefabs: markPrefabs });
+const pB = GameMapGen.generateFloor({ seed: 9400, tier: 2, creatures, prefabs: markPrefabs });
+check('prefab stamping is deterministic (same seed → identical)', JSON.stringify(pA) === JSON.stringify(pB));
+
+// the shipped data file is valid + the built-in defaults stamp without breaking reachability
+let shippedPrefabs = null; try { shippedPrefabs = JSON.parse(readFileSync(`${ROOT}/data/systems/prefabs.json`)); } catch {}
+check('prefabs.json parses with a prefabs[] array', !!(shippedPrefabs && Array.isArray(shippedPrefabs.prefabs) && shippedPrefabs.prefabs.length));
+let defReach = true;
+for (let s = 0; s < 20; s++) {
+  const boss = (s % 4) === 3;
+  const { map: m, layout: l } = GameMapGen.generateFloor({ seed: 9500 + s, tier: 2, kind: boss ? 'boss' : 'floor', creatures, prefabs: shippedPrefabs ? shippedPrefabs.prefabs : null });
+  const set = reachable(l, m.start.x, m.start.y);
+  for (const e of m.events) if (e.trigger !== 'touch' || e.name === 'Roamer') if (!eventReachable(l, set, e)) defReach = false;
+}
+check('shipped prefab set keeps all floors reachable', defReach);
+
 console.log(`\n${pass}/${pass + fail} checks passed`);
 process.exit(fail ? 1 : 0);

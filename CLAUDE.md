@@ -2,6 +2,23 @@
 
 Guidance for Claude Code working in this repo. **Read this first.**
 
+## ✅ DONE 2026-06-20 — Generator roadmap #5: PREFABS / set-pieces
+Audited the generator roadmap against the code: **#1–4 are genuinely done + verified** (runtime
+mapgen, room-shape variety/BSP/drunkard/sectioning, biome system, run/act composer — `test_mapgen`
+29/29 + `test_act` 16/16 confirmed). Built **#5 prefabs/set-pieces**: `Builder.stampPrefab` stamps
+hand-authored ASCII room templates (legend: `#`wall `.`floor `A`anchor `P`pillar `o`decor `C`chest
+`G`gear cache `R`relic cache `E`enemy `~`trap `f`campfire) into `walk/over/events`. `generateFloor`
+stamps up to 2 body prefabs (vault/guard post/pillared hall/forgotten cells) into fitting non-
+entrance/non-alpha rooms + a pillar ARENA around the Alpha on boss floors (center kept clear). Prefab
+rooms self-populate (skipped by normal roamer/chest/pillar/divider passes); **rest floors stamp
+nothing**. Stamped walls route through the existing `ensureCollisionConnected` guarantee → can't soft-
+lock. Built-in `DEFAULT_PREFABS` + editable **`data/systems/prefabs.json`** (loaded in `main.js`,
+passed as `opts.prefabs` like biomes/acts; non-empty overrides built-ins). `test_mapgen.mjs` → **36
+checks** (stamping via unique RelicCache marker, wall reachability, rest calm, boss arena,
+determinism, shipped-data validity); **browser-verified** a boss floor+arena renders, 0 errors.
+**Still open:** roadmap **#6 smarter encounter placement** (telegraphed packs/elite rooms/ambushes);
+the data-driven WHOLE-FLOOR template half of #5 (`MAPGEN_SPEC §3`); per-biome tileset/wall set (#3).
+
 ## 📌 SESSION WRAP — 2026-06-19 (PART 2: RPG-Maker-ification + descent fixes; all on `main`)
 Owner directive locked in (CRITICAL RULES): **build it like RPG Maker — editable event/data
 blocks wherever possible; if something genuinely can't be data-driven, TELL the owner why, never

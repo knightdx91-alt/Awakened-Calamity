@@ -952,6 +952,13 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_biomesDb = j); })
             .catch(function () { return (_biomesDb = {}); });
     }
+    var _prefabsDb = null;
+    function _loadPrefabs() {
+        if (_prefabsDb) return Promise.resolve(_prefabsDb);
+        return fetch('data/systems/prefabs.json?b=' + (window.__BUILD__ || '0'), { cache: 'no-cache' })
+            .then(function (r) { return r.json(); }).then(function (j) { return (_prefabsDb = j); })
+            .catch(function () { return (_prefabsDb = {}); });
+    }
     var _actsDb = null;
     function _loadActs() {
         if (_actsDb) return Promise.resolve(_actsDb);
@@ -1020,7 +1027,8 @@
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
             maxDepth: maxDepth, name: 'RunGenF' + fl, region: 'awakened', endless: endless,
             depthBonus: depthBonus, bossBonus: (sc.bossLevelBonus | 0), creatures: _creaturesDb,
-            biome: _runBiome(run), node: node ? node.gen : null });
+            biome: _runBiome(run), node: node ? node.gen : null,
+            prefabs: (_prefabsDb && _prefabsDb.prefabs) || null });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
@@ -1064,7 +1072,7 @@
     async function _enterGenFloor() {
         var st = GameSave.state; st.run = st.run || {};
         await _loadRunDb();
-        if (_runtimeGen()) { await _loadCreatures(); await _loadBiomes(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
+        if (_runtimeGen()) { await _loadCreatures(); await _loadBiomes(); await _loadPrefabs(); await _enterMap(_genFloor(st.run), 'awakened', null, null); }
         else await _enterMap(GameRun.floorMap(st.run, _runDb), 'awakened', null, null);
     }
     async function _runOp(c) {
