@@ -335,6 +335,19 @@
    }
   ]
  },
+ "run_return_extracted": {
+  "name": "Run return \u2014 extracted (voluntary surface, banked alive)",
+  "commands": [
+   {
+    "type": "text",
+    "text": "You turn from the deeper stair and climb back toward the light \u2014 alive, gains in hand. The dark will keep what you left for next time."
+   },
+   {
+    "type": "text",
+    "text": "Memory fragments +[v:run_fragments]  (total [v:run_total_fragments] \u00b7 deepest floor [v:run_deepest])"
+   }
+  ]
+ },
  "run_return_collected": {
   "name": "Run return \u2014 collected (Surveillance maxed)",
   "commands": [

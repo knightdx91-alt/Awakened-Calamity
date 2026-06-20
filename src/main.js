@@ -959,16 +959,31 @@
             .then(function (r) { return r.json(); }).then(function (j) { return (_actsDb = j); })
             .catch(function () { return (_actsDb = null); });
     }
-    // Compose the run's act (paced node sequence) from its seed — replay-safe.
-    function _composeAct(run) {
-        if (!window.GameAct || !run) return null;
-        var len = (_runDb && _runDb.maxDepth) || 4;
-        return GameAct.compose(run.seed >>> 0, len, _actsDb || GameAct.DEFAULT_CFG);
+    // The CURRENT act (paced node sequence) + the within-act floor. ENDLESS runs are
+    // composed one act (length=bossEvery) per boss-cadence chunk: act `i` is seeded by
+    // run.seed+i so the descent is replay-safe and infinite. FIXED runs = one act of
+    // length maxDepth. Caches run.act for the active chunk (run.actIdx). Returns
+    // { act, within } where `within` is the 1-based floor inside this act.
+    function _currentAct(run) {
+        if (!window.GameAct || !run) return { act: null, within: 0 };
+        var cfg = _actsDb || GameAct.DEFAULT_CFG;
+        if (!(_runDb && _runDb.endless)) {
+            if (!run.act) run.act = GameAct.compose(run.seed >>> 0, (_runDb && _runDb.maxDepth) || 4, cfg);
+            return { act: run.act, within: run.floor | 0 };
+        }
+        var be = (_runDb && _runDb.bossEvery) || 5;
+        var actIdx = Math.floor(((run.floor | 0) - 1) / be);
+        if (run.actIdx !== actIdx || !run.act) {
+            run.actIdx = actIdx;
+            run.act = GameAct.compose((((run.seed >>> 0) + actIdx * 0x9E3779B1) >>> 0) || 1, be, cfg);
+        }
+        return { act: run.act, within: ((run.floor | 0) - 1) % be + 1 };
     }
+    function _composeAct(run) { return _currentAct(run).act; }
     // The act node for the current floor (its `gen` modifiers tune generation).
     function _floorNode(run) {
-        if (!window.GameAct || !run || !run.act) return null;
-        return GameAct.nodeFor(run.act, run.floor | 0);
+        var a = _currentAct(run);
+        return a.act ? GameAct.nodeFor(a.act, a.within) : null;
     }
     // Pick the biome def for this run: run.run.biome override → run.json `biome` →
     // biomes._meta.default → first non-meta biome. Returns null (→ generator default).
@@ -984,20 +999,28 @@
     // seed reproduces the whole descent), tier ramping with depth, boss on the last.
     function _runtimeGen() { return !!(window.GameMapGen && _runDb && _runDb.runtimeGen !== false); }
     function _genFloor(run) {
+        var endless = !!(_runDb && _runDb.endless);
         var maxDepth = (_runDb && _runDb.maxDepth) || 4;
-        var boss = (run.floor | 0) >= maxDepth;
-        var tier = Math.max(1, Math.min(3, Math.ceil((run.floor | 0) * 3 / maxDepth)));
-        var fseed = (((run.seed >>> 0) + (run.floor | 0) * 0x9E3779B1) >>> 0) || 1;
+        var be = (_runDb && _runDb.bossEvery) || 5;
+        var fl = run.floor | 0;
+        var boss = window.GameRun ? GameRun.isBossFloor(run, _runDb || {}) : (fl >= maxDepth);
+        // tier (enemy ROSTER band) ramps with depth, capped at the 3 authored bands;
+        // depthBonus keeps enemy/boss LEVELS climbing forever past the band cap so an
+        // endless descent stays a real escalation. One act = one boss-cadence chunk.
+        var tier = endless ? Math.max(1, Math.min(3, 1 + Math.floor((fl - 1) / be)))
+            : Math.max(1, Math.min(3, Math.ceil(fl * 3 / maxDepth)));
+        var depthBonus = endless ? (fl - 1) : 0;
+        var fseed = (((run.seed >>> 0) + fl * 0x9E3779B1) >>> 0) || 1;
         var node = _floorNode(run);
         return GameMapGen.generateFloor({ seed: fseed, tier: tier, kind: boss ? 'boss' : 'floor',
-            maxDepth: maxDepth, name: 'RunGenF' + (run.floor | 0), region: 'awakened',
-            creatures: _creaturesDb, biome: _runBiome(run), node: node ? node.gen : null });
+            maxDepth: maxDepth, name: 'RunGenF' + fl, region: 'awakened', endless: endless,
+            depthBonus: depthBonus, creatures: _creaturesDb, biome: _runBiome(run), node: node ? node.gen : null });
     }
 
     // ── Fine-grained run-loop primitives (RPG-Maker-style composable commands) ──
     // The descent flow is built from these so it's authorable in event blocks:
     //   `run start`  → begin a fresh run (seed/relics/start-kit), at floor 1
-    //   `run deeper` → advance one floor (past the boss this sets run.cleared)
+    //   `run deeper` → advance one floor (endless: always; fixed: sets run.cleared past the boss)
     //   `run end`    → end the run (carry-over to meta) with a reason
     //   `gendungeon` → generate + ENTER the current floor (the "transfer" to the
     //                  generated map; pool fallback when runtimeGen is off)
@@ -1096,11 +1119,11 @@
     function _purgeRunFloors() {
         if (!ES || !ES.clearMaps || !_runDb) return;
         var pool = (_runDb.floorPool || []).concat(_runDb.bossPool || []);
-        // runtime-generated floors reuse the names RunGenF1..RunGenF<maxDepth> across
-        // runs — purge their per-floor event state too (so chests refill each run).
-        var maxDepth = (_runDb.maxDepth | 0) || 4;
-        for (var f = 1; f <= maxDepth; f++) pool.push('RunGenF' + f, 'MAP_RUNGENF' + f);
         var n = ES.clearMaps(pool);
+        // ENDLESS runtime floors use the names RunGenF1, RunGenF2, … (unbounded) — wipe
+        // ALL of them by prefix so per-floor event state never accumulates, however
+        // deep the last descent went. (Chests despawn, but traps set a self-switch.)
+        if (ES.clearMapPrefix) { n += ES.clearMapPrefix('RunGenF'); n += ES.clearMapPrefix('MAP_RUNGENF'); }
         if (ES.clearSwitchPrefix) ES.clearSwitchPrefix('gate_');   // reset lever/cache puzzles each run
         if (n) console.log('[Run] purged ephemeral floor state for', pool.length, 'maps (', n, 'self-switches )');
     }
@@ -1192,7 +1215,7 @@
         if (firstRun) {
             // The pivotal first-descent beat lives in EDITABLE common events; the
             // engine only picks which one by how the run ended.
-            var ceId = reason === 'cleared' ? 'first_descent_cleared'
+            var ceId = (reason === 'cleared' || reason === 'extracted') ? 'first_descent_cleared'
                 : unteth ? 'first_descent_untethered' : 'first_descent_tethered';
             await _callCommonEvent(ceId, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
         }
@@ -1212,6 +1235,7 @@
         // The per-run return narration lives in common_events.json (editable). The
         // engine only picks WHICH by how the run ended.
         var retId = reason === 'cleared' ? 'run_return_cleared'
+            : reason === 'extracted' ? 'run_return_extracted'
             : reason === 'collected' ? 'run_return_collected'
             : unteth ? 'run_return_died_untethered' : 'run_return_died_tethered';
         await _callCommonEvent(retId, { mapName: (GameMap.current && GameMap.current.name) || '', evId: 'endrun', event: null });
@@ -1265,17 +1289,21 @@
             // [v:id] = a game variable value (RPG Maker's \V[n]); [s:id] = ON/OFF switch
             .replace(/\[v:([^\]]+)\]/g, function (_, id) { return ES ? String(ES.getVar(id.trim())) : '0'; })
             .replace(/\[s:([^\]]+)\]/g, function (_, id) { return (ES && ES.getSwitch(id.trim())) ? 'ON' : 'OFF'; })
-            // [act] = the current run's paced act as a FOG-OF-WAR glyph map (floors
-            // ahead hidden as '?', boss always shown) — keeps the descent's mystery;
-            // [floorlabel] = THIS floor's node label (you're standing in it).
+            // [act] = the current ACT as a FOG-OF-WAR glyph map (floors ahead hidden as
+            // '?', the act's Alpha always shown) — keeps the descent's mystery. Endless
+            // runs show the current boss-cadence act with a depth read; [floorlabel] =
+            // THIS floor's node label (you're standing in it).
             .replace(/\[act\]/g, function () {
                 var r = window.GameSave && GameSave.state && GameSave.state.run;
-                return (window.GameAct && r && r.act) ? GameAct.fogMap(r.act, r.floor | 0) : '';
+                if (!window.GameAct || !r) return '';
+                var a = _currentAct(r); if (!a.act) return '';
+                var fog = GameAct.fogMap(a.act, a.within);
+                return (_runDb && _runDb.endless) ? ('D' + (r.floor | 0) + '   ' + fog) : fog;
             })
             .replace(/\[floorlabel\]/g, function () {
                 var r = window.GameSave && GameSave.state && GameSave.state.run;
-                if (!window.GameAct || !r || !r.act) return '';
-                var n = GameAct.nodeFor(r.act, r.floor | 0);
+                if (!window.GameAct || !r) return '';
+                var n = _floorNode(r);
                 return n ? (n.glyph + ' ' + n.label) : '';
             })
             // [actforecast] = the SHAPE of the NEXT descent, previewed at the hub
@@ -1284,9 +1312,11 @@
             .replace(/\[actforecast\]/g, function () {
                 if (!window.GameAct) return '(unknown)';
                 var seed = ES ? (ES.getVar('run_seed_in') | 0) : 0;
-                if (seed <= 0) return '(unpinned — a fresh, random shape each descent)';
-                var len = (_runDb && _runDb.maxDepth) || 4;
-                return GameAct.glyphMap(GameAct.compose(seed >>> 0, len, _actsDb || GameAct.DEFAULT_CFG), 0);
+                if (seed <= 0) return '(unpinned — a fresh, random descent; you go as deep as you can)';
+                // pinned/replay: preview the FIRST act's shape (endless = one act per boss cadence)
+                var len = (_runDb && _runDb.endless) ? (_runDb.bossEvery || 5) : ((_runDb && _runDb.maxDepth) || 4);
+                return GameAct.glyphMap(GameAct.compose(seed >>> 0, len, _actsDb || GameAct.DEFAULT_CFG), 0) +
+                    ((_runDb && _runDb.endless) ? ' ⋯' : '');
             });
     }
     async function runCmd(c, ctx) {

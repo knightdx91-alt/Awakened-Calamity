@@ -43,6 +43,15 @@ window.GameEventState = (function () {
         clearMaps:  function (maps) {
             var total = 0; (maps || []).forEach(function (m) { total += this.clearMap(m); }, this); return total;
         },
+        // Wipe self-switches for every map whose NAME starts with `prefix` — used for
+        // ENDLESS runtime floors (RunGenF1, RunGenF2, … unbounded) so trap/event state
+        // can't accumulate across runs no matter how deep a descent went.
+        clearMapPrefix: function (prefix) {
+            var removed = 0;
+            for (var k in state.selfSwitches) { if (k.indexOf(prefix) === 0) { delete state.selfSwitches[k]; removed++; } }
+            if (removed) save();
+            return removed;
+        },
         // Wipe global switches whose id starts with `prefix` (e.g. per-run 'gate_'
         // puzzle switches that must reset each descent).
         clearSwitchPrefix: function (prefix) {

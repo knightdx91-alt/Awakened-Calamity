@@ -495,19 +495,27 @@
         var pool = (tier <= 1 ? bio.enemyTiers[1] : tier === 2 ? bio.enemyTiers[2] : bio.enemyTiers[3]).concat(tier >= 2 ? bio.enemyTiers[1] : []);
         // The deepest room holds either the way DOWN (normal floor → descend to the
         // next) or the ALPHA boss (boss floor → battle, then descend = run cleared).
-        var boss = opts.kind === 'boss';
+        var boss = opts.kind === 'boss', endless = !!opts.endless, depthBonus = opts.depthBonus | 0;
         if (boss) {
-            var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = 2 + tier * 2;
+            var bossKey = opts.boss || rng.choice(bio.bosses), bossLvl = 2 + tier * 2 + depthBonus;
+            // After the Alpha falls: in an ENDLESS run, claim a relic reward then CHOOSE
+            // — descend deeper (push your luck) or extract to the surface, banking your
+            // gains alive. In a FIXED run, beating the boss clears the run.
+            var afterBoss = endless
+                ? [{ type: 'relic', count: 3 },
+                   { type: 'choice', prompt: 'The Alpha is dead. A deeper stair yawns below. Push on, or carry your gains back to the surface?',
+                     options: [
+                       { label: 'Descend deeper', then: [{ type: 'run', op: 'deeper' }, { type: 'gendungeon' }] },
+                       { label: 'Return to the surface', then: [{ type: 'run', op: 'end', reason: 'extracted' }] }] }]
+                : [{ type: 'run', op: 'deeper' },
+                   { type: 'conditional', cond: { kind: 'run', check: 'cleared' },
+                       then: [{ type: 'run', op: 'end', reason: 'cleared' }],
+                       else: [{ type: 'gendungeon' }] }];
             b.events.push({ x: ax, y: ay, name: 'Alpha', trigger: 'action', through: false,
                 graphic: { sprite: 'Monster2', file: 'rtp/Monster2.png', frame_w: 32, frame_h: 32, cols: 3, rows: 4, single: false },
                 commands: [{ type: 'text', text: 'The Alpha uncoils from the dark — far larger than its kin.' },
                     { type: 'battle', enemies: [{ key: bossKey, level: bossLvl }] },
-                    { type: 'text', text: 'The Alpha falls. The dungeon goes still.' }, { type: 'despawn' },
-                    // fine-grained run loop: advance, then clear (past boss) vs. enter next
-                    { type: 'run', op: 'deeper' },
-                    { type: 'conditional', cond: { kind: 'run', check: 'cleared' },
-                        then: [{ type: 'run', op: 'end', reason: 'cleared' }],
-                        else: [{ type: 'gendungeon' }] }] });
+                    { type: 'text', text: 'The Alpha falls. The dungeon goes still.' }, { type: 'despawn' }].concat(afterBoss) });
         } else {
             b.setp(ax, ay, GID.stairs, false);
             b.events.push({ x: ax, y: ay, name: 'StairsDown', trigger: 'action', through: false,
@@ -528,7 +536,7 @@
         var encRate = bio.encounterRate * encMult;
         for (var r1 = 0; r1 < body.length; r1++) {
             if (rng.random() < encRate) {
-                var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + lvlBonus + ((depth * 2 + rng.random()) | 0));
+                var depth = far(body[r1]) / maxd, lvl = Math.max(1, tier + lvlBonus + depthBonus + ((depth * 2 + rng.random()) | 0));
                 var sf = b._roomFloor(body[r1]);
                 if (sf[0] !== null) b.placeMonster(sf[0], sf[1], rng.choice(pool), lvl, rng.choice(sprites), creatures);
             }
@@ -537,7 +545,7 @@
         if (node.elite && body.length) {
             var eroom = body.slice().sort(function (a, c) { return far(c) - far(a); })[0];
             var ef = b._roomFloor(eroom);
-            if (ef[0] !== null) b.placeMonster(ef[0], ef[1], rng.choice(pool), Math.max(2, tier + lvlBonus + 2), 'Monster2', creatures);
+            if (ef[0] !== null) b.placeMonster(ef[0], ef[1], rng.choice(pool), Math.max(2, tier + lvlBonus + depthBonus + 2), 'Monster2', creatures);
         }
         // REST node: no extra loot churn — a campfire refuge instead (placed below).
         // chests reward the deep / dead-end rooms (treasure node = extra chest).

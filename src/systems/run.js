@@ -10,7 +10,14 @@
   'use strict';
 
   function active(run) { return !!(run && run.active); }
-  function isBossFloor(run, db) { return (run.floor | 0) >= ((db && db.maxDepth) || 4); }
+  // Boss cadence: ENDLESS runs spawn an Alpha every `bossEvery` floors and NEVER
+  // auto-clear — the descent is infinite, ending only on death, Collection, or a
+  // voluntary extract. Fixed runs end at `maxDepth` (legacy / pool fallback).
+  function isBossFloor(run, db) {
+    db = db || {};
+    if (db.endless) { var be = db.bossEvery || 5; return (run.floor | 0) > 0 && ((run.floor | 0) % be === 0); }
+    return (run.floor | 0) >= (db.maxDepth || 4);
+  }
 
   // map for the current floor, chosen from the pool by run seed (so runs differ)
   function floorMap(run, db) {
@@ -35,9 +42,11 @@
     return { floor: 1, map: floorMap(run, db), boss: isBossFloor(run, db), tethered: run.tethered };
   }
 
-  // Go one floor deeper. Returns {cleared:true} past the boss, else the new floor.
+  // Go one floor deeper. ENDLESS: always advances (never clears) — you go as deep
+  // as you can. FIXED: returns {cleared:true} past the boss.
   function descend(run, db) {
-    if (isBossFloor(run, db)) { run.cleared = true; return { cleared: true }; }
+    db = db || {};
+    if (!db.endless && isBossFloor(run, db)) { run.cleared = true; return { cleared: true }; }
     run.floor = (run.floor | 0) + 1;
     return { floor: run.floor, map: floorMap(run, db), boss: isBossFloor(run, db) };
   }
@@ -48,19 +57,23 @@
     return { surveillance: run.surveillance, collected: run.surveillance >= (collectAt || 240) };
   }
 
-  // End the run. reason: 'died' | 'collected' | 'cleared'. Applies carry-over to
-  // meta and returns a summary for the reset screen.
+  // End the run. reason: 'died' | 'collected' | 'cleared' | 'extracted'. Applies
+  // carry-over to meta and returns a summary for the reset screen. 'extracted' = a
+  // voluntary return to the surface in an endless run (you banked your gains alive).
   function end(run, meta, reason) {
     meta = meta || {};
     meta.runs = (meta.runs | 0) + 1;
     meta.deepest = Math.max(meta.deepest | 0, run.floor | 0);
     if (reason === 'cleared') meta.clears = (meta.clears | 0) + 1;
+    if (reason === 'extracted') meta.extractions = (meta.extractions | 0) + 1;
     if (reason === 'collected') meta.collections = (meta.collections | 0) + 1;
     if (run.tethered === false) meta.untetheredRuns = (meta.untetheredRuns | 0) + 1;
     // lifetime Surveillance gates the good/true endings (untethered runs stay clean)
     meta.lifetimeSurveillance = (meta.lifetimeSurveillance | 0) + (run.surveillance | 0);
-    // memory fragments: deeper runs + clean runs (low Surveillance) + untethered remember more
-    var frag = (run.floor | 0) + (reason === 'cleared' ? 3 : 0) + ((run.surveillance | 0) < 60 ? 2 : 0)
+    // memory fragments: deeper runs + a survival bonus for clearing/extracting alive
+    // + clean runs (low Surveillance) + untethered remember more
+    var survived = (reason === 'cleared' || reason === 'extracted');
+    var frag = (run.floor | 0) + (survived ? 3 : 0) + ((run.surveillance | 0) < 60 ? 2 : 0)
       + (run.tethered === false ? 2 : 0);
     meta.fragments = (meta.fragments | 0) + frag;
     var summary = { reason: reason, floor: run.floor | 0, surveillance: run.surveillance | 0,

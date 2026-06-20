@@ -1,4 +1,5 @@
-{ "_meta":{"doc":"Run-loop config: a 4-floor descent (3 floors + boss). With runtimeGen ON, GameMapGen grows a FRESH floor per descent from run.seed+floor (a shared seed reproduces the descent). floorPool/bossPool are the pre-baked fallback used when runtimeGen is off or GameMapGen is unavailable."},
+{ "_meta":{"doc":"Run-loop config. ENDLESS descent: there is NO fixed floor count — you go as deep as you can, difficulty (tier + enemy level) climbing with depth, an Alpha boss every `bossEvery` floors. A run ends ONLY on death, Collection (Surveillance maxed, tethered), or a VOLUNTARY extract after a boss (bank your gains). `maxDepth` is the legacy fixed-length used only when `endless` is false. With runtimeGen ON, GameMapGen grows a FRESH floor per descent from run.seed+floor+actIdx (a shared seed reproduces the descent); the act composer composes one paced act (length=bossEvery) per boss-cadence chunk. floorPool/bossPool are the pre-baked fallback used when runtimeGen is off."},
+  "endless": true, "bossEvery": 5,
   "maxDepth": 4, "biome": "verdara", "runtimeGen": true,
   "floorPool": ["RunFloorA","RunFloorB","RunFloorC","RunFloorD","RunFloorE","RunFloorF"],
   "bossPool": ["RunBoss1","RunBoss2"] }
