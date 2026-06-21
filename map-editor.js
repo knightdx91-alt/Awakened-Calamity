@@ -2586,7 +2586,7 @@
       ['Flood Fill', '', function () { setToolBtn('fill'); }, function () { return state.tool === 'fill'; }],
       ['Select (box)', '', function () { setToolBtn('select'); }, function () { return state.tool === 'select'; }],
       ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }, function () { return state.tool === 'pick'; }],
-      ['Pan (drag to move map)', '', function () { setToolBtn('pan'); }, function () { return state.tool === 'pan'; }],
+      ['Pan (or tap the active tool off)', '', function () { setToolBtn('pan'); }, function () { return state.tool === 'pan'; }],
       ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }],
       'sep',
       ['Multi-tile brush', '', function () {
@@ -2708,10 +2708,15 @@
   document.querySelectorAll('.tool').forEach(function (b) {
     if (!b.dataset.tool) return;
     b.addEventListener('click', function () {
-      state.tool = b.dataset.tool;
+      // Tap an already-active draw tool to turn it OFF → falls back to Pan
+      // (drag the map to move it). No need to ever hunt for the Pan button.
+      var t = b.dataset.tool;
+      if (state.tool === t && !state.eraser && t !== 'pan') t = 'pan';
+      state.tool = t;
       state.eraser = false; $('eraserBtn').classList.remove('active');
-      document.querySelectorAll('.tool').forEach(function (x) { x.classList.remove('active'); });
-      b.classList.add('active');
+      document.querySelectorAll('.tool').forEach(function (x) {
+        x.classList.toggle('active', x.dataset.tool === state.tool);
+      });
       mapCanvas.style.cursor = (state.tool === 'pan') ? 'grab' : '';
       updateToolStatus();
     });
