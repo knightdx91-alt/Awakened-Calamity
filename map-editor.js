@@ -1033,7 +1033,13 @@
     }
     if (state.tool === 'pick' && state.mode === 'map') { applyAt(p.x, p.y); return; } // pick doesn't mutate
     if (state.tool === 'select') { rectStart = p; state.sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drawMap(); return; }
-    if (state.mode === 'event') { eventClick(p.x, p.y); return; }
+    if (state.mode === 'event') {
+      // Press on an existing event → arm a drag (move it). A tap that doesn't
+      // move just falls through to eventClick (select/edit) on pointerup.
+      var evHit = eventAt(p.x, p.y);
+      if (evHit && !state._pickDest) { state._evDrag = { ev: evHit, startX: p.x, startY: p.y, moved: false }; return; }
+      eventClick(p.x, p.y); return;
+    }
     pushUndo();                                          // record state before any edit gesture
     if (state.mode === 'shadow') {
       var q0 = eventQuarter(e);
@@ -1065,6 +1071,14 @@
       $('statTile').textContent = 'tile #' + layer.data[idx(p.x, p.y)] +
         (state.layers.ground.collision[idx(p.x, p.y)] ? '  (blocked)' : '');
     }
+    if (state._evDrag) {                                 // dragging an event to a new tile
+      var ed = state._evDrag;
+      if (inBounds(p.x, p.y) && (p.x !== ed.ev.x || p.y !== ed.ev.y) && !eventAt(p.x, p.y)) {
+        if (!ed.moved) { pushUndo(); ed.moved = true; }
+        ed.ev.x = p.x; ed.ev.y = p.y; state.selectedEvent = ed.ev; drawMap();
+      }
+      return;
+    }
     if (state.tool === 'select' && rectStart) {
       state.sel = { x0: Math.min(rectStart.x, p.x), y0: Math.min(rectStart.y, p.y),
                     x1: Math.max(rectStart.x, p.x), y1: Math.max(rectStart.y, p.y) };
@@ -1086,6 +1100,12 @@
       panState = null;
       mapCanvas.style.cursor = (state.tool === 'pan' || spaceHeld) ? 'grab' : '';
       return;
+    }
+    if (state._evDrag) {
+      var ed = state._evDrag; state._evDrag = null;
+      if (ed.moved) toast('Moved ' + ed.ev.name + ' → (' + ed.ev.x + ',' + ed.ev.y + ')');
+      else eventClick(ed.startX, ed.startY);           // a tap (no move) → select/edit
+      drawMap(); painting = false; return;
     }
     if (state.tool === 'select' && rectStart) {
       var ps = eventCell(e);
