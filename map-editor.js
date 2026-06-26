@@ -1703,6 +1703,9 @@
     ['affinity',     'AC: Set Affinity',       'AC Custom'],
     ['appearance',   'AC: Set Appearance',     'AC Custom'],
     ['finalize_creation','AC: Finalize Creation','AC Custom'],
+    ['voice',        'AC: Reactive Voice',     'AC Custom'],
+    ['loot',         'AC: Open Loot',          'AC Custom'],
+    ['forge',        'AC: Open Forge',         'AC Custom'],
   ];
   function newCmd(type) {
     switch (type) {
@@ -1777,6 +1780,9 @@
       case 'animation': return { type: 'animation', target: 'player', id: 'Attack1', wait: true };
       case 'scroll_text': return { type: 'scroll_text', text: '', frames: 180 };
       case 'location_info': return { type: 'location_info', x: 0, y: 0, info: 'collision', variable: '1' };
+      case 'voice': return { type: 'voice', speaker: '' };
+      case 'loot': return { type: 'loot', tier: 1, count: 1 };
+      case 'forge': return { type: 'forge', mode: 'upgrade' };
     }
     return { type: type };
   }
@@ -2411,6 +2417,24 @@
     } else if (cmd.type === 'erase_event' || cmd.type === 'openmenu' || cmd.type === 'opensave' || cmd.type === 'gameover' || cmd.type === 'totitle' || cmd.type === 'recover_all') {
       var notes = { erase_event: 'Removes THIS event for the rest of the map session.', openmenu: 'Opens the start/pause menu.', opensave: 'Saves the game to the current slot.', gameover: 'Plays the Game Over fanfare and returns to the title.', totitle: 'Returns to the title screen.', recover_all: 'Fully restores HP / MP / Stamina and clears Exposure.' };
       body.innerHTML = '<div style="font-size:10px;color:#aaa;">' + (notes[cmd.type] || '') + ' No parameters.</div>';
+    } else if (cmd.type === 'voice') {
+      body.innerHTML = '<div class="row">' + lbl('Speaker') + '<input type="text" class="cSpk" value="' + (cmd.speaker || '') + '" placeholder="mira / bram / corwin..." style="flex:1;min-width:0;"></div>' +
+        '<div class="row">' + lbl('Seed') + '<input type="number" class="cSeed" value="' + (cmd.seed == null ? '' : (cmd.seed | 0)) + '" placeholder="random" style="width:80px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Picks a context-appropriate line from data/dialogue/&lt;speaker&gt;.json based on the current game state (run depth, clears, surveillance, etc.).</div>';
+      body.querySelector('.cSpk').addEventListener('change', function () { cmd.speaker = this.value.trim(); });
+      body.querySelector('.cSeed').addEventListener('change', function () { cmd.seed = this.value === '' ? null : (parseInt(this.value, 10) || 0); });
+    } else if (cmd.type === 'loot') {
+      body.innerHTML = '<div class="row">' + lbl('Tier') + '<input type="number" class="cTier" min="1" max="4" value="' + ((cmd.tier | 0) || 1) + '" style="width:50px;">' +
+        lbl('Count') + '<input type="number" class="cCount" min="1" max="10" value="' + ((cmd.count | 0) || 1) + '" style="width:50px;"></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Rolls tier-appropriate gear/consumable loot and presents it to the player (chest-open flow). Count = items offered.</div>';
+      body.querySelector('.cTier').addEventListener('change', function () { cmd.tier = parseInt(this.value, 10) || 1; });
+      body.querySelector('.cCount').addEventListener('change', function () { cmd.count = parseInt(this.value, 10) || 1; });
+    } else if (cmd.type === 'forge') {
+      body.innerHTML = '<div class="row">' + lbl('Mode') +
+        '<select class="cMode"><option value="upgrade">Upgrade gear</option><option value="craft">Craft gear</option><option value="both">Upgrade + Craft</option></select></div>' +
+        '<div style="font-size:9px;color:#888;margin-top:2px;">Opens the Forge screen (upgrade/craft gear). Requires gear DB + crafting DB to be loaded.</div>';
+      body.querySelector('.cMode').value = cmd.mode || 'upgrade';
+      body.querySelector('.cMode').addEventListener('change', function () { cmd.mode = this.value; });
     }
   }
   // "Pick..." -- arm a click on the map to set a transfer's X,Y (and map = current).

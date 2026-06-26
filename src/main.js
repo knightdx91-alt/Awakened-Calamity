@@ -1811,10 +1811,16 @@
         }
     }
     async function runEvent(ev) {
-        if (!ev || _transitioning || _eventRunning || !ev.commands || !ev.commands.length) return;
+        if (!ev || _transitioning || _eventRunning) return;
+        // Support multi-page events (XP-style pages[]): run the first page whose
+        // condition is met (for now: page 0, which is always present). Old flat
+        // {commands:[]} events are also handled by checking ev.commands directly.
+        var pg = (ev.pages && ev.pages[0]) ? ev.pages[0] : ev;
+        var cmds = pg.commands || [];
+        if (!cmds.length) return;
         _eventRunning = true;
         var ctx = { mapName: (GameMap.current && GameMap.current.name) || '', evId: ev.id, event: ev, exited: false };
-        try { await runCmdList(ev.commands, ctx); }
+        try { await runCmdList(cmds, ctx); }
         catch (e) { console.warn('[Event] error', e); }
         finally { _eventRunning = false; }
     }
