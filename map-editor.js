@@ -862,10 +862,17 @@
     mapCanvas.height = state.height * cs;
     mctx.imageSmoothingEnabled = false;
     mctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-    // Layers draw bottom→top (ground, overlay, upper). Dim the non-active ones like RM.
-    drawLayer('ground', state.active === 'ground' ? 1 : 0.4);
-    drawLayer('overlay', state.active === 'overlay' ? 1 : 0.4);
-    drawLayer('upper', state.active === 'upper' ? 1 : 0.4);
+    // Layers draw bottom→top. Respect layerView: 'all'=full, 'below'=dim above active, 'dim'=dim others
+    var lv = state.layerView || 'dim';
+    var LAYER_ORDER = ['ground', 'overlay', 'upper'];
+    var activeIdx = LAYER_ORDER.indexOf(state.active);
+    LAYER_ORDER.forEach(function (key, li) {
+      var alpha;
+      if (lv === 'all') { alpha = 1; }
+      else if (lv === 'below') { alpha = li > activeIdx ? 0 : (li === activeIdx ? 1 : 0.5); }
+      else { alpha = li === activeIdx ? 1 : 0.4; }  // 'dim' (default RM behaviour)
+      drawLayer(key, alpha);
+    });
 
     // Shadows (RM shadow pen): translucent black quarter-cells, drawn over tiles.
     if (state.shadow) {
@@ -1180,6 +1187,11 @@
       toast('Player start: ' + state.startLoc.map + ' (' + p.x + ',' + p.y + ')');
       drawMap(); return;
     }
+    if (state._pickDest && state._pickDest._warp) {  // Warp pick-destination (any mode)
+      var mapName = ($('mapName') && $('mapName').value) || '';
+      if (state._warpPickCallback) { state._warpPickCallback(p.x, p.y, mapName); state._warpPickCallback = null; }
+      state._pickDest = null; return;
+    }
     // Collision / Region modes act regardless of the active draw tool (so picking
     // Pan/Rectangle/etc. doesn't stop collision painting). Pan still wins (above).
     if (state.mode === 'collide') {
@@ -1325,19 +1337,58 @@
     drawMap(); renderWarpList();
   }
   function renderWarpList() {
-    var list = $('warpList'); if (!list) return;   // Warp UI removed -- warps are events now
+    var list = $('warpList'); if (!list) return;
     list.innerHTML = '';
-    if (!state.warps.length) { list.innerHTML = '<div class="hint">No warps yet.</div>'; return; }
+    if (!state.warps.length) { list.innerHTML = '<div class="hint">No warps. Switch to Warp mode and click tiles.</div>'; return; }
     state.warps.forEach(function (w, i) {
       var div = document.createElement('div'); div.className = 'warp-item';
-      var info = document.createElement('span'); info.textContent = '(' + w.x + ',' + w.y + ')';
+      div.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px;';
+
+      var info = document.createElement('span');
+      info.textContent = '(' + w.x + ',' + w.y + ') →';
+      info.style.cssText = 'font-size:11px;white-space:nowrap;min-width:60px;';
+
+      // Destination map name
       var dest = document.createElement('input');
-      dest.type = 'text'; dest.value = w.dest_map; dest.style.width = '100px';
-      dest.title = 'destination MAP_CONST';
+      dest.type = 'text'; dest.value = w.dest_map || '';
+      dest.placeholder = 'dest map name';
+      dest.style.cssText = 'width:90px;font-size:11px;';
+      dest.title = 'Destination map name';
       dest.addEventListener('change', function () { w.dest_map = this.value; });
-      var del = document.createElement('button'); del.textContent = '✕';
+
+      // Destination coords
+      var dx = document.createElement('input');
+      dx.type = 'number'; dx.value = w.dest_x != null ? w.dest_x : 0;
+      dx.style.cssText = 'width:36px;font-size:11px;'; dx.title = 'Dest X';
+      dx.addEventListener('change', function () { w.dest_x = parseInt(this.value,10)||0; });
+
+      var dy = document.createElement('input');
+      dy.type = 'number'; dy.value = w.dest_y != null ? w.dest_y : 0;
+      dy.style.cssText = 'width:36px;font-size:11px;'; dy.title = 'Dest Y';
+      dy.addEventListener('change', function () { w.dest_y = parseInt(this.value,10)||0; });
+
+      // "Pick on map" button — arms the same pick-dest flow used by Transfer events
+      var pick = document.createElement('button');
+      pick.textContent = '📍'; pick.title = 'Click a tile on the canvas to set destination';
+      pick.style.cssText = 'font-size:13px;padding:0 3px;border:1px solid #808080;background:#ECE9D8;cursor:pointer;';
+      pick.addEventListener('click', function () {
+        toast('Click a tile to set warp destination…');
+        state._pickDest = { ev: null, cmd: w, _warp: true };
+        // Override the pick handler to write dest_x/dest_y instead of cmd.x/cmd.y
+        state._warpPickCallback = function (tx, ty, mapName) {
+          w.dest_map = mapName || w.dest_map;
+          w.dest_x = tx; w.dest_y = ty;
+          dx.value = tx; dy.value = ty; dest.value = w.dest_map;
+          toast('Warp dest → ' + w.dest_map + ' (' + tx + ',' + ty + ')');
+        };
+      });
+
+      var del = document.createElement('button');
+      del.textContent = '✕'; del.style.cssText = 'font-size:11px;padding:0 3px;border:1px solid #808080;background:#ECE9D8;cursor:pointer;color:#c00;margin-left:auto;';
       del.addEventListener('click', function () { state.warps.splice(i, 1); drawMap(); renderWarpList(); });
-      div.appendChild(info); div.appendChild(dest); div.appendChild(del);
+
+      div.appendChild(info); div.appendChild(dest); div.appendChild(dx); div.appendChild(dy);
+      div.appendChild(pick); div.appendChild(del);
       list.appendChild(div);
     });
   }
@@ -1351,11 +1402,17 @@
   function openEventEditor() { $('eventEditorModal').style.display = 'flex'; renderEventPanel(); }
   function closeEventEditor() { $('eventEditorModal').style.display = 'none'; }
   function eventClick(x, y) {
-    if (state._pickDest) {                       // arming a Transfer destination
+    if (state._pickDest) {                       // arming a Transfer destination or warp dest
       var pd = state._pickDest; state._pickDest = null;
-      pd.cmd.map = $('mapName').value || pd.cmd.map; pd.cmd.x = x; pd.cmd.y = y;
-      state.selectedEvent = pd.ev; openEventEditor();
-      toast('Destination set: ' + pd.cmd.map + ' (' + x + ',' + y + ')');
+      var mapName = ($('mapName') && $('mapName').value) || '';
+      if (pd._warp && state._warpPickCallback) {  // warp destination pick
+        state._warpPickCallback(x, y, mapName);
+        state._warpPickCallback = null;
+      } else {                                    // Transfer event destination pick
+        pd.cmd.map = mapName || pd.cmd.map; pd.cmd.x = x; pd.cmd.y = y;
+        state.selectedEvent = pd.ev; openEventEditor();
+        toast('Destination set: ' + pd.cmd.map + ' (' + x + ',' + y + ')');
+      }
       return;
     }
     var ev = eventAt(x, y);
@@ -1669,8 +1726,16 @@
     var head = el('div', 'display:flex;align-items:center;gap:4px;',
       '<span style="color:#808080;font-family:monospace;font-size:11px;white-space:nowrap;">@&gt;</span>' +
       '<span style="color:#000;font-size:11px;flex:1;font-family:Tahoma,sans-serif;">' + label + '</span>' +
-      '<button class="cmdDel" style="border:none;background:none;color:#888;cursor:pointer;font-size:11px;padding:0 2px;" title="Delete">X</button>');
+      '<button class="cmdUp"  style="border:none;background:none;color:#808080;cursor:pointer;font-size:10px;padding:0 2px;line-height:1;" title="Move up">▲</button>' +
+      '<button class="cmdDn"  style="border:none;background:none;color:#808080;cursor:pointer;font-size:10px;padding:0 2px;line-height:1;" title="Move down">▼</button>' +
+      '<button class="cmdDel" style="border:none;background:none;color:#888;cursor:pointer;font-size:11px;padding:0 2px;" title="Delete">✕</button>');
     card.appendChild(head);
+    head.querySelector('.cmdUp').addEventListener('click', function () {
+      if (ci === 0) return; pushUndo(); var t = list[ci-1]; list[ci-1] = list[ci]; list[ci] = t; renderEventPanel();
+    });
+    head.querySelector('.cmdDn').addEventListener('click', function () {
+      if (ci >= list.length-1) return; pushUndo(); var t = list[ci+1]; list[ci+1] = list[ci]; list[ci] = t; renderEventPanel();
+    });
     head.querySelector('.cmdDel').addEventListener('click', function () { list.splice(ci, 1); renderEventPanel(); });
     var body = el('div'); card.appendChild(body);
 
@@ -2286,6 +2351,40 @@
       if (ev === state.selectedEvent) { d.style.background = 'var(--accent2)'; d.style.borderColor = 'var(--accent)'; }
       d.textContent = ev.name + '  (' + ev.x + ',' + ev.y + ')' + (ev.graphic ? ' · ' + ev.graphic.sprite : '');
       d.addEventListener('click', function () { state.selectedEvent = ev; openEventEditor(); drawMap(); });
+      // Right-click event list row: Edit / Go To / Delete
+      d.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        if (window._ctx) window._ctx.show(e.clientX, e.clientY, [
+          ['Edit',    function () { state.selectedEvent = ev; openEventEditor(); drawMap(); }],
+          ['Go To',   function () {
+            // Scroll canvas so the event tile is visible
+            var cs = cell(), panel = document.getElementById('canvasPanel');
+            if (panel) { panel.scrollLeft = ev.x * cs - panel.clientWidth / 2; panel.scrollTop = ev.y * cs - panel.clientHeight / 2; }
+            state.selectedEvent = ev; drawMap();
+          }],
+          'sep',
+          ['Delete',  function () { deleteEvent(ev); }, 'danger']
+        ]);
+      });
+      // Long-press on mobile
+      var _lt = null, _lx = 0, _ly = 0;
+      d.addEventListener('touchstart', function (e) {
+        var t = e.touches[0]; _lx = t.clientX; _ly = t.clientY;
+        _lt = setTimeout(function () { _lt = null;
+          if (window._ctx) window._ctx.show(_lx, _ly, [
+            ['Edit',   function () { state.selectedEvent = ev; openEventEditor(); drawMap(); }],
+            ['Go To',  function () {
+              var cs = cell(), panel = document.getElementById('canvasPanel');
+              if (panel) { panel.scrollLeft = ev.x * cs - panel.clientWidth / 2; panel.scrollTop = ev.y * cs - panel.clientHeight / 2; }
+              state.selectedEvent = ev; drawMap();
+            }],
+            'sep',
+            ['Delete', function () { deleteEvent(ev); }, 'danger']
+          ]);
+        }, 500);
+      }, { passive: true });
+      d.addEventListener('touchmove', function (e) { if (_lt) { var t=e.touches[0]; if(Math.abs(t.clientX-_lx)>8||Math.abs(t.clientY-_ly)>8){clearTimeout(_lt);_lt=null;} } }, { passive: true });
+      d.addEventListener('touchend',    function () { if (_lt) { clearTimeout(_lt); _lt = null; } });
       list.appendChild(d);
     });
   }
@@ -2676,6 +2775,17 @@
     else if (k === 'c') { e.preventDefault(); copySelection(); }
     else if (k === 'x') { e.preventDefault(); cutSelection(); }
     else if (k === 'v') { e.preventDefault(); pasteClipboard(); }
+    else if (k === 'a') { e.preventDefault();
+      var w = state.layers.ground.width, h = state.layers.ground.height;
+      if (w && h) { state.sel = { x0:0, y0:0, x1:w-1, y1:h-1 }; copySelection(); drawMap(); toast('All tiles selected.'); }
+    }
+  });
+
+  // F10 / F11 / F12 keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'F10') { e.preventDefault(); openMaterialsDialog(); }
+    if (e.key === 'F11') { e.preventDefault(); openScriptEditor(); }
+    if (e.key === 'F12') { e.preventDefault(); clickEl('playBtn'); }
   });
 
   // Shift the whole map (all layers + regions) by dx,dy; out-of-range cells clear.
@@ -2805,6 +2915,17 @@
           dbState.sel[tid] = i;
           dbRenderList(tid);
           dbRenderDetail(tid, i);
+        });
+        row.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          if (window._ctx) window._ctx.dbList(e.clientX, e.clientY, list, function (n) {
+            var cur = dbState.data[tid] || [];
+            while (cur.length < n) cur.push({ name: 'New Entry ' + (cur.length + 1) });
+            if (cur.length > n) cur.splice(n);
+            dbState.data[tid] = cur;
+            dbState.dirty[tid] = true;
+            dbRenderList(tid);
+          });
         });
         list.appendChild(row);
       });
@@ -3004,7 +3125,106 @@
         tabKeys.map(function (k) {
           return dbRow(k, '<span style="color:#333;font-size:10px;">' + tabs[k] + '</span>');
         }).join('') +
-        '</table>';
+        '</table>' +
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin:10px 0 4px;">Passage Editor <span style="font-weight:normal;font-size:10px;color:#666;">(click tiles to toggle walkable/blocked)</span></div>' +
+        '<div id="dbPassageWrap" style="border:1px inset #808080;background:#222;overflow:auto;max-height:220px;"></div>' +
+        '<div style="margin-top:4px;font-size:10px;color:#555;">🟢 = walkable &nbsp; 🔴 = blocked &nbsp; ⬛ = overlay (above player)</div>';
+
+      // Wire name/tile changes
+      var ni = detail.querySelector('.db-name');
+      if (ni) ni.addEventListener('input', function () { item.name = this.value; dbState.dirty['tilesets'] = true; });
+      var ti = detail.querySelector('.db-tile');
+      if (ti) ti.addEventListener('input', function () { item.tile = parseInt(this.value,10)||32; dbState.dirty['tilesets'] = true; });
+
+      // Passage editor — load the active sheet and paint a passage grid over it
+      var activeTabKey = tabKeys[0];
+      var sheetName = activeTabKey ? tabs[activeTabKey] : null;
+      if (!sheetName) return;
+      var wrap = detail.querySelector('#dbPassageWrap');
+      var tileSize = item.tile || 32;
+      // Ensure passage array exists on item
+      if (!item._passages) item._passages = {};
+
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () {
+        var cols = Math.floor(img.width / tileSize);
+        var rows = Math.floor(img.height / tileSize);
+        var SCALE = Math.min(2, Math.floor(64 / tileSize)) || 1;
+        var cs = tileSize * SCALE;
+        var cv = document.createElement('canvas');
+        cv.width = cols * cs; cv.height = rows * cs;
+        cv.style.cssText = 'display:block;image-rendering:pixelated;cursor:crosshair;';
+        var cx = cv.getContext('2d');
+        cx.imageSmoothingEnabled = false;
+
+        function paintPassage() {
+          cx.clearRect(0, 0, cv.width, cv.height);
+          cx.drawImage(img, 0, 0, cv.width, cv.height);
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var key = r + '_' + c;
+              var val = item._passages[key]; // 0=walk, 1=blocked, 4=overlay
+              if (val === 1) {
+                cx.fillStyle = 'rgba(220,40,40,0.55)';
+                cx.fillRect(c*cs, r*cs, cs, cs);
+                cx.fillStyle = '#fff'; cx.font = Math.floor(cs*0.5)+'px sans-serif';
+                cx.textAlign='center'; cx.textBaseline='middle';
+                cx.fillText('✕', c*cs+cs/2, r*cs+cs/2);
+              } else if (val === 4) {
+                cx.fillStyle = 'rgba(40,80,200,0.4)';
+                cx.fillRect(c*cs, r*cs, cs, cs);
+                cx.fillStyle = '#fff'; cx.font = Math.floor(cs*0.4)+'px sans-serif';
+                cx.textAlign='center'; cx.textBaseline='middle';
+                cx.fillText('▲', c*cs+cs/2, r*cs+cs/2);
+              } else {
+                cx.fillStyle = 'rgba(40,200,80,0.25)';
+                cx.fillRect(c*cs+1, r*cs+1, cs-2, cs-2);
+              }
+              cx.strokeStyle='rgba(0,0,0,0.3)'; cx.lineWidth=1;
+              cx.strokeRect(c*cs+0.5, r*cs+0.5, cs-1, cs-1);
+            }
+          }
+        }
+
+        // Cycle: walkable → blocked → overlay → walkable
+        function tileClick(e) {
+          var r2 = cv.getBoundingClientRect();
+          var tx = Math.floor((e.clientX - r2.left) / cs);
+          var ty = Math.floor((e.clientY - r2.top) / cs);
+          if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) return;
+          var key = ty + '_' + tx;
+          var cur = item._passages[key] || 0;
+          item._passages[key] = cur === 0 ? 1 : cur === 1 ? 4 : 0;
+          dbState.dirty['tilesets'] = true;
+          paintPassage();
+        }
+        cv.addEventListener('click', tileClick);
+        // Touch tap
+        cv.addEventListener('touchend', function (e) {
+          e.preventDefault();
+          var t = e.changedTouches[0];
+          tileClick({ clientX: t.clientX, clientY: t.clientY });
+        });
+
+        paintPassage();
+        wrap.appendChild(cv);
+        // Tab row to pick which sheet to view
+        if (tabKeys.length > 1) {
+          var tabRow = document.createElement('div');
+          tabRow.style.cssText = 'display:flex;gap:2px;margin-bottom:4px;flex-wrap:wrap;';
+          tabKeys.forEach(function (tk) {
+            var b = document.createElement('button');
+            b.textContent = tk; b.style.cssText = 'font-size:10px;padding:1px 6px;';
+            if (tk === activeTabKey) b.style.fontWeight = 'bold';
+            b.addEventListener('click', function () { dbDetailTilesets(detail, item, idx); });
+            tabRow.appendChild(b);
+          });
+          wrap.insertBefore(tabRow, cv);
+        }
+      };
+      img.onerror = function () { wrap.innerHTML = '<div style="color:#888;padding:6px;font-size:11px;">Could not load sheet: ' + sheetName + '</div>'; };
+      img.src = 'data/tilesets/' + sheetName + '.png';
     }
 
     // ── Common Events tab — from CommonEvents.rxdata @name @trigger @switch_id @list
