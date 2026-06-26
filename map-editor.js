@@ -3047,6 +3047,8 @@
       { id: 'states',        label: 'States',         src: null,                               key: null },
       { id: 'animations',    label: 'Animations',     src: null,                               key: null },
       { id: 'tilesets',      label: 'Tilesets',       src: 'data/tilesets/_rm_sets.json',      key: 'sets' },
+      { id: 'sprites',       label: 'Sprites',        src: '_sprites_combined',                key: null },
+      { id: 'icons',         label: 'Icons',          src: 'data/icons/rtp_iconset.json',      key: null },
       { id: 'common_events', label: 'Common Events',  src: 'data/systems/common_events.json',  key: null },
       { id: 'system',        label: 'System',         src: 'data/systems/system.json',         key: null },
       { id: 'script',        label: 'Script',         src: null,                               key: null },
@@ -3083,9 +3085,37 @@
       if (!t) return;
       if (dbState.data[tid]) { dbRenderList(tid); return; }
       if (!t.src) { dbState.data[tid] = []; dbRenderList(tid); return; }
+
+      // Special: sprites = merge rtp_index + xp_index
+      if (t.src === '_sprites_combined') {
+        Promise.all([
+          fetch('data/sprites/rtp_index.json?_=' + Date.now()).then(function(r){ return r.json(); }).catch(function(){ return {sprites:[]}; }),
+          fetch('data/sprites/xp_index.json?_=' + Date.now()).then(function(r){ return r.json(); }).catch(function(){ return {sprites:[]}; })
+        ]).then(function(parts) {
+          var all = (parts[0].sprites || []).concat(parts[1].sprites || []);
+          dbState.data[tid] = all;
+          if (!dbState.sel[tid]) dbState.sel[tid] = 0;
+          dbRenderList(tid);
+        });
+        return;
+      }
+
+      // Special: icons = single metadata object, not an array of entries
+      if (tid === 'icons') {
+        fetch(t.src + '?_=' + Date.now()).then(function(r){ return r.json(); }).then(function(d) {
+          // Store as single-element array wrapping the metadata; renderer handles it specially
+          dbState.data[tid] = [d];
+          if (!dbState.sel[tid]) dbState.sel[tid] = 0;
+          dbRenderList(tid);
+        }).catch(function(){ dbState.data[tid] = []; dbRenderList(tid); });
+        return;
+      }
+
       fetch(t.src + '?_=' + Date.now()).then(function (r) { return r.json(); }).then(function (d) {
-        var items = t.key ? (d[t.key] || d) : (Array.isArray(d) ? d : (d.classes || d.skills || d.items || d.entries || []));
-        if (!Array.isArray(items)) items = Object.values(items);
+        var items = t.key ? (d[t.key] || d) : (Array.isArray(d) ? d : (d.classes || d.skills || d.items || d.entries || null));
+        // If no known array key found, treat the whole object as a keyed dict → convert to array
+        // Filter out _meta / _comment entries that are schema docs, not data records
+        if (!items || !Array.isArray(items)) items = Object.values(d).filter(function(v){ return v && typeof v === 'object' && !Array.isArray(v) && (v.name || v.id); });
         dbState.data[tid] = items;
         if (!dbState.sel[tid]) dbState.sel[tid] = 0;
         dbRenderList(tid);
@@ -3099,7 +3129,7 @@
       if (countEl) countEl.textContent = items.length;
       list.innerHTML = '';
       items.forEach(function (item, i) {
-        var name = item.name || item.id || item.tileset_name || ('Item ' + (i + 1));
+        var name = item.name || item.id || item.tileset_name || item.sheet || ('Item ' + (i + 1));
         var row = document.createElement('div');
         row.style.cssText = 'padding:1px 4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         row.textContent = (i + 1).toString().padStart(3, '0') + ': ' + name;
@@ -3152,6 +3182,12 @@
           break;
         case 'tilesets':
           dbDetailTilesets(detail, item, idx);
+          break;
+        case 'sprites':
+          dbDetailSprites(detail, item);
+          break;
+        case 'icons':
+          dbDetailIcons(detail, item);
           break;
         case 'common_events':
           dbDetailCommonEvents(detail, item, idx);
@@ -3421,6 +3457,99 @@
       };
       img.onerror = function () { wrap.innerHTML = '<div style="color:#888;padding:6px;font-size:11px;">Could not load sheet: ' + sheetName + '</div>'; };
       img.src = 'data/tilesets/' + sheetName + '.png';
+    }
+
+    // ── Sprites tab — preview a character sprite sheet with frame walk cycle ──
+    function dbDetailSprites(detail, item) {
+      if (!item) { detail.innerHTML = '<div style="color:#888;padding:8px;">No sprite selected.</div>'; return; }
+      var path = 'data/sprites/' + item.file;
+      var fw = item.frame_w || 48, fh = item.frame_h || 64;
+      var cols = item.cols || 3, rows = item.rows || 4;
+      var sw = item.sheet_w || (fw * cols), sh = item.sheet_h || (fh * rows);
+      var scale = Math.min(3, Math.floor(192 / Math.max(fw, fh)));
+      detail.innerHTML =
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<div style="font-weight:bold;margin-bottom:6px;">' + (item.id || item.file) + '</div>' +
+            '<canvas id="dbSprPrev" width="' + (sw*scale) + '" height="' + (sh*scale) + '" style="image-rendering:pixelated;border:1px solid #808080;background:#222;display:block;"></canvas>' +
+            '<div style="font-size:10px;color:#555;margin-top:3px;">Full sheet (' + sw + '×' + sh + 'px) · ' + (cols*rows) + ' frames</div>' +
+          '</div>' +
+          '<div style="flex:1;min-width:160px;">' +
+            dbTable(
+              dbRow('ID',      '<span style="color:#333;">' + (item.id||'?') + '</span>') +
+              dbRow('File',    '<span style="font-size:10px;color:#555;word-break:break-all;">' + item.file + '</span>') +
+              dbRow('Frame W', dbNum(fw)) +
+              dbRow('Frame H', dbNum(fh)) +
+              dbRow('Cols',    dbNum(cols)) +
+              dbRow('Rows',    dbNum(rows)) +
+              dbRow('Single',  '<input type="checkbox" ' + (item.single?'checked':'') + ' disabled>') +
+              dbRow('Shadow',  '<input type="checkbox" ' + (item.shadow?'checked':'') + ' disabled>')
+            ) +
+          '</div>' +
+        '</div>';
+      var c = detail.querySelector('#dbSprPrev');
+      if (!c) return;
+      var ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      var img = new Image();
+      img.onload = function () {
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * scale, img.height * scale);
+      };
+      img.onerror = function () { ctx.fillStyle='#555'; ctx.font='11px sans-serif'; ctx.fillText('Load failed',4,20); };
+      img.src = path;
+    }
+
+    // ── Icons tab — grid of all 624 icons from IconSet ──────────────────
+    function dbDetailIcons(detail, item) {
+      if (!item) { detail.innerHTML = '<div style="color:#888;padding:8px;">No icon data.</div>'; return; }
+      var iconSize = item.icon || 24;
+      var perRow = item.per_row || 16;
+      var count = item.count || 624;
+      var sheetFile = 'data/icons/' + item.sheet;
+      var scale = 2; // display at 2× (48px per icon)
+      var dSize = iconSize * scale;
+      detail.innerHTML =
+        '<div style="font-weight:bold;margin-bottom:4px;">IconSet — ' + count + ' icons (' + iconSize + 'px each) · hover for id</div>' +
+        '<div style="margin-bottom:6px;font-size:11px;color:#555;">Click an icon to copy its index number.</div>' +
+        '<canvas id="dbIconGrid" width="' + (perRow * dSize) + '" height="' + (Math.ceil(count/perRow) * dSize) + '" style="image-rendering:pixelated;border:1px solid #808080;cursor:crosshair;display:block;max-width:100%;"></canvas>' +
+        '<div id="dbIconInfo" style="margin-top:4px;font-size:11px;color:#333;min-height:16px;"></div>';
+      var c = detail.querySelector('#dbIconGrid');
+      var infoEl = detail.querySelector('#dbIconInfo');
+      if (!c) return;
+      var ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      var img = new Image();
+      img.onload = function () {
+        ctx.clearRect(0, 0, c.width, c.height);
+        for (var i = 0; i < count; i++) {
+          var sc = i % perRow, sr = Math.floor(i / perRow);
+          ctx.drawImage(img, sc * iconSize, sr * iconSize, iconSize, iconSize, sc * dSize, sr * dSize, dSize, dSize);
+        }
+        // Grid lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.5;
+        for (var r = 0; r <= Math.ceil(count/perRow); r++) { ctx.beginPath(); ctx.moveTo(0,r*dSize); ctx.lineTo(c.width,r*dSize); ctx.stroke(); }
+        for (var cl = 0; cl <= perRow; cl++) { ctx.beginPath(); ctx.moveTo(cl*dSize,0); ctx.lineTo(cl*dSize,c.height); ctx.stroke(); }
+      };
+      img.onerror = function () { ctx.fillStyle='#555'; ctx.font='11px sans-serif'; ctx.fillText('IconSet load failed: '+sheetFile,4,20); };
+      img.src = sheetFile;
+      c.addEventListener('mousemove', function (e) {
+        var r2 = c.getBoundingClientRect();
+        var x = (e.clientX - r2.left) / r2.width * c.width;
+        var y = (e.clientY - r2.top) / r2.height * c.height;
+        var col = Math.floor(x / dSize), row = Math.floor(y / dSize);
+        var id = row * perRow + col;
+        if (id >= 0 && id < count) infoEl.textContent = 'Icon #' + id + '  (col ' + col + ', row ' + row + ')';
+      });
+      c.addEventListener('click', function (e) {
+        var r2 = c.getBoundingClientRect();
+        var x = (e.clientX - r2.left) / r2.width * c.width;
+        var y = (e.clientY - r2.top) / r2.height * c.height;
+        var col = Math.floor(x / dSize), row = Math.floor(y / dSize);
+        var id = row * perRow + col;
+        if (id >= 0 && id < count) {
+          navigator.clipboard && navigator.clipboard.writeText(String(id)).catch(function(){});
+          infoEl.textContent = 'Copied icon #' + id + ' to clipboard';
+        }
+      });
     }
 
     // ── Common Events tab — from CommonEvents.rxdata @name @trigger @switch_id @list
