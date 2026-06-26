@@ -380,10 +380,9 @@
   }
 
   function updateTilesetStatus() {
-    var layer = L();
-    $('statTileset').textContent = 'Tileset: ' + (layer.name || '--') +
-      ' (' + (totalMetatiles(layer) || '?') + ')';
-    $('statLayer').textContent = 'Layer: ' + state.active;
+    // XP status bar: show layer number
+    var layerNum = state.active === 'ground' ? 1 : state.active === 'overlay' ? 2 : 3;
+    $('statLayer').textContent = 'Layer ' + layerNum;
   }
 
   function totalMetatiles(layer) {
@@ -825,7 +824,7 @@
     }
     state.region = nr; state.shadow = nsh;
     if (!keep) { state.warps = []; state.events = []; state.selectedEvent = null; }
-    $('statSize').textContent = w + ' × ' + h;
+    $('statSize').textContent = ($('mapName') ? $('mapName').value : 'Map') + ' (' + w + ' x ' + h + ')';
     drawMap();
     renderWarpList();
   }
@@ -978,7 +977,7 @@
   function restore(s) {
     state.width = s.width; state.height = s.height;
     $('mapW').value = s.width; $('mapH').value = s.height;
-    $('statSize').textContent = s.width + ' × ' + s.height;
+    $('statSize').textContent = ($('mapName') ? $('mapName').value : 'Map') + ' (' + s.width + ' x ' + s.height + ')';
     LAYER_KEYS.forEach(function (k) {
       var L = state.layers[k], d = s.layers[k]; if (!d) return;
       if (d.data) L.data = Int32Array.from(d.data);
@@ -1225,11 +1224,11 @@
       return;
     }
     var p = eventCell(e);
-    $('statCoord').textContent = 'x: ' + p.x + '  y: ' + p.y;
+    $('statCoord').textContent = p.x + ', ' + p.y;
     if (inBounds(p.x, p.y)) {
       var layer = L();
-      $('statTile').textContent = 'tile #' + layer.data[idx(p.x, p.y)] +
-        (state.layers.ground.collision[idx(p.x, p.y)] ? '  (blocked)' : '');
+      $('statTile').textContent = 'Tile: ' + layer.data[idx(p.x, p.y)] +
+        (state.layers.ground.collision[idx(p.x, p.y)] ? ' [X]' : '');
     }
     if (state._evDrag) {                                 // dragging an event to a new tile
       var ed = state._evDrag;
@@ -2350,7 +2349,7 @@
 
       $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
-      $('statSize').textContent = w + ' × ' + h;
+      $('statSize').textContent = ($('mapName') ? $('mapName').value : 'Map') + ' (' + w + ' x ' + h + ')';
       if (mapMeta) {
         if (mapMeta.name) $('mapName').value = mapMeta.name;
         if (mapMeta.region) {
@@ -2907,11 +2906,11 @@
 
   $('autoToggle').addEventListener('click', function () { setAutoMode(!state.autoMode); });
 
-  var TOOL_ICON = { pencil: '✏ Pencil', rect: '▭ Rectangle', ellipse: '◯ Ellipse',
-                    fill: '🪣 Fill', pick: '⛏ Pick', select: '⬚ Select', pan: '🖐 Pan' };
+  var TOOL_ICON = { pencil: 'Pencil', rect: 'Rectangle', ellipse: 'Ellipse',
+                    fill: 'Fill', pick: 'Pick', select: 'Select', pan: 'Pan' };
   function updateToolStatus() {
     var st = $('statTool'); if (!st) return;
-    st.textContent = state.eraser ? '⌫ Eraser' : (TOOL_ICON[state.tool] || state.tool);
+    st.textContent = state.eraser ? 'Eraser' : (TOOL_ICON[state.tool] || state.tool);
   }
   document.querySelectorAll('.tool').forEach(function (b) {
     if (!b.dataset.tool) return;

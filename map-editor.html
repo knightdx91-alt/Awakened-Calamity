@@ -6,23 +6,57 @@
 <title>Map Editor -- Awakened Calamity</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-  /* RPG Maker MZ-style light theme */
+  /* ── RPG Maker XP Windows-XP Luna theme ── */
   :root {
-    --win:#e4e4e4; --panel:#f0f0f0; --panel2:#e8e8e8; --toolbar:#ededed;
-    --line:#a8a8a8; --line2:#c4c4c4; --text:#202020; --dim:#606060;
-    --accent:#3a7bd5; --accent2:#cfe0f6; --sel:#ff3030;
-    --tab:#dcdcdc; --tabActive:#f0f0f0; --btn:#f6f6f6; --btnH:#e2ecfb;
+    /* Luna palette */
+    --win:#ECE9D8;          /* Windows XP Luna desktop/dialog bg */
+    --panel:#ECE9D8;        /* panel bg */
+    --panel2:#D4D0C8;       /* darker panel (toolbar, statusbar) */
+    --toolbar:#ECE9D8;      /* menu/toolbar bg */
+    --line:#848484;         /* border dark edge (3D raised) */
+    --line2:#FFFFFF;        /* border light edge (3D raised) */
+    --lineG:#808080;        /* groove/sunken outer */
+    --lineG2:#FFFFFF;       /* groove inner */
+    --text:#000000;
+    --dim:#444444;
+    --accent:#316AC5;       /* XP selection blue */
+    --accent2:#C1D2EE;      /* XP selection bg light */
+    --sel:#FF0000;
+    --btn:#ECE9D8;
+    --btnH:#DEEAFF;
+    --tab:#ECE9D8; --tabActive:#FFFFFF;
+    /* Canvas bg */
+    --canvas-bg:#808080;
   }
   * { box-sizing: border-box; }
   html,body { margin:0; height:100%; height:100dvh; background:var(--win); color:var(--text);
-    font-family:"Segoe UI", Tahoma, system-ui, sans-serif; font-size:12px; }
+    font-family:Tahoma,"MS Sans Serif",sans-serif; font-size:11px; }
   body { overflow:hidden; }
 
-  /* ── Orientation: mirrors the GAME's system (styles.css .orient-*) ──
-     Portrait = no rotation, TOP-anchored (menu bar always at the visible top;
-     dvh keeps it within the mobile viewport). Landscape = rotate -90° filling a
-     portrait screen sideways (top-left origin, anchored top:100%), exactly like
-     the game; reverse-landscape = +90°; reverse-portrait = 180°. */
+  /* Windows XP 3D raised/sunken border helpers */
+  .xp-raised {
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #848484; border-right:1px solid #848484;
+  }
+  .xp-raised-outer {
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #404040; border-right:1px solid #404040;
+  }
+  .xp-sunken {
+    border-top:1px solid #848484; border-left:1px solid #848484;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+  }
+  .xp-sunken-deep {
+    border:2px solid; border-color:#808080 #FFFFFF #FFFFFF #808080;
+  }
+  /* inset field look */
+  .xp-field {
+    border-top:1px solid #7F9DB9; border-left:1px solid #7F9DB9;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+    background:#FFFFFF;
+  }
+
+  /* ── Orientation system ── */
   #rotor { position:absolute; top:0; left:0;
     width:100vw; height:100vh; height:100dvh;
     display:flex; flex-direction:column; transform-origin:top left;
@@ -33,174 +67,352 @@
   body.ed-landscape         #rotor { top:100%; left:0;    transform:rotate(-90deg); }
   body.ed-reverse-landscape #rotor { top:0;    left:100%; transform:rotate(90deg);  }
 
-  /* ── RPG-Maker-XP-style menu bar ── */
-  #menubar { display:flex; align-items:stretch; background:var(--toolbar);
-    border-bottom:1px solid var(--line); font-size:12px; user-select:none; }
-  #menubar .menu { padding:4px 10px; cursor:pointer; position:relative; }
-  #menubar .menu:hover, #menubar .menu.open { background:var(--accent); color:#fff; }
-  #menubar .dropdown { display:none; position:absolute; top:100%; left:0; z-index:120;
-    min-width:178px; background:#fff; color:var(--text); border:1px solid var(--line);
-    box-shadow:0 8px 24px rgba(0,0,0,.28); padding:3px; }
+  /* ── RPG Maker XP menu bar ── */
+  #menubar {
+    display:flex; align-items:stretch; background:var(--toolbar);
+    border-bottom:1px solid #808080;
+    font-size:11px; font-family:Tahoma,"MS Sans Serif",sans-serif;
+    user-select:none; flex:0 0 auto;
+  }
+  #menubar .menu { padding:3px 8px; cursor:pointer; position:relative; white-space:nowrap; }
+  #menubar .menu:hover, #menubar .menu.open {
+    background:var(--accent); color:#fff;
+  }
+  /* XP dropdown — white bg, flat border */
+  #menubar .dropdown {
+    display:none; position:absolute; top:100%; left:0; z-index:120;
+    min-width:200px;
+    background:#FFFFFF; color:var(--text);
+    border:1px solid #808080;
+    box-shadow:2px 2px 4px rgba(0,0,0,.35);
+    padding:2px 0;
+  }
   #menubar .menu.open .dropdown { display:block; }
-  #menubar .mi { padding:5px 14px; cursor:pointer; border-radius:3px; white-space:nowrap;
-    display:flex; justify-content:space-between; gap:18px; }
+  #menubar .mi {
+    padding:3px 22px 3px 26px; cursor:pointer; white-space:nowrap;
+    display:flex; justify-content:space-between; gap:24px;
+    font-size:11px; line-height:1.6;
+  }
   #menubar .mi:hover { background:var(--accent); color:#fff; }
-  #menubar .mi.disabled { color:#aaa; cursor:default; }
-  #menubar .mi.disabled:hover { background:transparent; color:#aaa; }
-  #menubar .mi .key { color:#999; font-size:11px; }
+  #menubar .mi.disabled { color:#808080; cursor:default; }
+  #menubar .mi.disabled:hover { background:transparent; color:#808080; }
+  #menubar .mi .key { color:#606060; font-size:11px; }
   #menubar .mi:hover .key { color:#dfe; }
-  #menubar .mi-sep { height:1px; background:var(--line2); margin:3px 4px; }
+  /* XP menu separator — a single groove line */
+  #menubar .mi-sep {
+    height:0; border-top:1px solid #808080; border-bottom:1px solid #FFFFFF;
+    margin:3px 0;
+  }
 
-  /* ── Icon toolbar -- HIDDEN (owner removed it; everything is in the menu bar).
-     The buttons stay in the DOM so the menu items still drive their handlers. ── */
-  #toolbar { display:none !important; }
-  #toolbar.show { display:flex; align-items:center; gap:2px; padding:3px 6px;
-    background:linear-gradient(#f4f4f4,#e6e6e6); border-bottom:1px solid var(--line);
-    flex-wrap:wrap; }
-  #toolbar .tgrp { display:flex; align-items:center; gap:1px; }
-  #toolbar .tsep { width:1px; height:22px; background:var(--line2); margin:0 4px; }
-  .tb { min-width:26px; height:26px; font-size:14px; padding:2px 5px; line-height:1;
-    display:inline-flex; align-items:center; justify-content:center; }
-  .tb.txt { font-size:11px; font-weight:600; min-width:30px; }
-  /* legacy: keep old group/sep classes harmless */
+  /* ── XP Icon toolbar ── */
+  /* toolbar_strip.png: 256×48, 16 icons per row, 3 rows (normal/hot/disabled), 16×16 each */
+  #toolbar {
+    display:flex; align-items:center; gap:0; padding:2px 4px;
+    background:var(--panel2);
+    border-bottom:1px solid #808080;
+    border-top:1px solid #FFFFFF;
+    flex:0 0 auto;
+    flex-wrap:wrap;
+  }
+  #toolbar .tgrp { display:flex; align-items:center; gap:0; }
+  /* XP toolbar separator: a classic 3D groove */
+  #toolbar .tsep {
+    width:6px; height:24px; flex:0 0 6px;
+    border-left:1px solid #808080; border-right:1px solid #FFFFFF;
+    margin:0 3px;
+  }
+  /* XP toolbar buttons — flat with raised border on hover/active */
+  .tb {
+    width:24px; height:23px;
+    padding:0; margin:1px;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid transparent;
+    cursor:pointer;
+    position:relative; overflow:hidden;
+    /* icon via background-image sprite */
+  }
+  .tb:hover {
+    background:var(--btnH);
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #848484; border-right:1px solid #848484;
+  }
+  .tb:active, .tb.active {
+    background:#D0D0C8;
+    border-top:1px solid #848484; border-left:1px solid #848484;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+  }
+  .tb.txt { font-size:11px; font-weight:bold; width:auto; min-width:32px; padding:0 4px;
+    font-family:Tahoma,sans-serif; }
+  .tb .xp-icon {
+    width:16px; height:16px; display:block;
+    background-image:url('assets/xp_ui/toolbar_strip.png');
+    background-repeat:no-repeat;
+    image-rendering:pixelated;
+    /* Default: icon 0, row 0 (normal state) */
+    background-position:0 0;
+    background-size:256px 48px;
+  }
+  /* Icon col positions (x = -col*16, y = -row*16); row 0=normal, 1=hot, 2=disabled */
+  /* Map icon columns to toolbar buttons via data-icon attribute */
+  #toolbar .tsep + .tgrp { margin-left:0; }
+
+  /* XP global widget style */
   #topbar { display:none; }
-  h1 { font-size:13px; margin:0 8px 0 2px; color:#2b4a7a; font-weight:700; letter-spacing:.3px; }
-  button, select, input { font-family:inherit; font-size:12px; color:var(--text);
-    background:var(--btn); border:1px solid var(--line); border-radius:3px; padding:3px 7px; }
+  h1 { font-size:11px; margin:0 4px; color:#000; font-weight:bold; }
+  button, select, input {
+    font-family:Tahoma,"MS Sans Serif",sans-serif; font-size:11px; color:var(--text);
+    background:var(--btn);
+    border-top:1px solid #848484; border-left:1px solid #848484;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+    border-radius:0; padding:2px 6px;
+  }
   button { cursor:pointer; }
   button:hover { background:var(--btnH); }
-  button.active { background:var(--accent); color:#fff; border-color:#2c63ad; font-weight:600; }
-  button.tool { min-width:30px; font-size:14px; padding:3px 6px; }
+  /* XP "push button" active/selected state */
+  button.active {
+    background:#D4D0C8;
+    border-top:1px solid #808080; border-left:1px solid #808080;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+    color:#000; font-weight:bold;
+  }
+  button.tool { min-width:24px; font-size:12px; padding:1px 4px; }
+  /* XP text field / listbox look */
+  input, select {
+    border:2px solid;
+    border-color:#808080 #FFFFFF #FFFFFF #808080;
+    background:#FFFFFF;
+    border-radius:0;
+    padding:1px 4px;
+  }
   input[type=number] { width:50px; }
   input[type=text] { width:130px; }
-  label.lbl { color:var(--dim); }
-  select { padding:3px 4px; }
+  label.lbl { color:var(--text); font-size:11px; }
 
-  /* ── Main 3-pane layout ── */
-  /* overflow:auto = never clip; if panels exceed the viewport you can scroll
-     to every panel instead of having an edge cut off. */
-  #main { flex:1; display:flex; min-height:0; min-width:0; overflow:auto; }
+  /* ── Main 2-pane layout (XP: left palette+map-list / right canvas) ── */
+  #main { flex:1; display:flex; min-height:0; min-width:0; overflow:hidden; }
 
-  /* Left: map tree + palette */
-  #leftCol { width:230px; min-width:230px; flex:0 0 auto; background:var(--panel);
-    border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
-  /* Classic RPG Maker map list -- separate boxed area at the bottom-left. */
-  #treePanel { border-top:2px groove #cfcfcf; display:flex; flex-direction:column;
-    height:230px; flex:0 0 auto; background:var(--panel); }
-  #treeHead, #palHeadLbl { padding:4px 8px; font-size:11px; font-weight:700; color:#2b4a7a;
-    background:linear-gradient(#eaeaea,#dedede); border-bottom:1px solid var(--line2);
-    text-transform:uppercase; letter-spacing:.4px; }
-  #mapTree { overflow:auto; flex:1; margin:5px; padding:3px;
-    background:#ffffff; border:2px inset #c8c8c8; }
-  .tree-item { padding:2px 4px; font-size:12px; cursor:pointer;
-    display:flex; align-items:center; gap:2px; user-select:none;
-    -webkit-user-select:none; -webkit-touch-callout:none; line-height:1.5; }
-  .tree-item:hover { background:#eef2fb; }
-  .tree-item.active { background:#2f5fbf; color:#fff; }
-  .tree-caret { width:12px; flex:0 0 12px; text-align:center; font-size:9px;
-    color:var(--dim); cursor:pointer; }
-  .tree-item.active .tree-caret { color:#dce; }
-  .tree-icon { flex:0 0 16px; text-align:center; font-size:12px; }
-  .tree-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #treeAddBtn { float:right; padding:0 6px; font-size:13px; line-height:1.4; }
+  /* Left panel: fixed width, XP sunken border on right */
+  #leftCol {
+    width:244px; min-width:244px; flex:0 0 auto; background:var(--panel);
+    border-right:2px solid; border-right-color:#808080;
+    display:flex; flex-direction:column; min-height:0;
+  }
 
-  /* Context menu (press-and-hold / right-click on the map tree) */
-  #ctxMenu { position:fixed; z-index:100; display:none; min-width:158px; padding:4px;
-    background:#fff; color:var(--text); border:1px solid var(--line); border-radius:6px;
-    box-shadow:0 8px 28px rgba(0,0,0,.28); }
-  #ctxMenu .ci { padding:7px 14px; font-size:12px; border-radius:4px; cursor:pointer;
-    white-space:nowrap; }
-  #ctxMenu .ci:hover { background:var(--accent); color:#fff; }
-  #ctxMenu .ci.danger { color:#c02020; }
-  #ctxMenu .ci.danger:hover { background:#c02020; color:#fff; }
-  #ctxMenu .ci-sep { height:1px; background:var(--line2); margin:4px 4px; }
-
+  /* === PALETTE PANEL (top ~65%) === */
   #palettePanel { flex:1; display:flex; flex-direction:column; min-height:0; }
-  #palToolRow { padding:4px 6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;
-    border-bottom:1px solid var(--line2); background:var(--panel2); }
-  #palTabs { display:flex; flex-wrap:wrap; gap:3px; padding:5px 6px; background:var(--panel2);
-    border-bottom:1px solid var(--line2); }
-  .pal-tab { padding:3px 9px; font-size:11px; font-weight:600; cursor:pointer;
-    background:var(--tab); border:1px solid var(--line); border-radius:4px;
-    color:var(--dim); text-transform:capitalize; }
+
+  /* XP "Tilesets" label row — flat panel separator */
+  #palHeadLbl {
+    padding:3px 6px; font-size:11px; font-weight:bold; color:#000;
+    background:var(--panel2);
+    border-bottom:1px solid #808080;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+
+  /* Row: tileset selector / Set selector */
+  #palToolRow { padding:3px 4px; display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+    border-bottom:1px solid #808080; background:var(--panel); }
+  #palTabs { display:flex; flex-wrap:wrap; gap:2px; padding:3px 4px; background:var(--panel);
+    border-bottom:1px solid #808080; }
+  /* XP palette tabs look like small push-buttons */
+  .pal-tab {
+    padding:2px 8px; font-size:11px; font-weight:bold; cursor:pointer;
+    background:var(--btn); color:#000;
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #848484; border-right:1px solid #848484;
+  }
   .pal-tab:hover { background:var(--btnH); }
-  .pal-tab.active { background:var(--accent); color:#fff; border-color:#2c63ad; }
-  #autoToggle { padding:2px 8px; font-size:11px; }
-  #paletteHead { padding:3px 8px; border-bottom:1px solid var(--line2); display:flex;
-    align-items:center; gap:6px; flex-wrap:wrap; background:var(--panel2); }
-  #paletteWrap { flex:1; overflow:auto; padding:4px; background:#fafafa; }
-  /* pan-x pan-y lets a touch DRAG scroll the palette (large sheets overflow the
-     column); a tap still selects a tile, and mouse drag-select still works. */
+  .pal-tab.active {
+    background:#D4D0C8;
+    border-top:1px solid #808080; border-left:1px solid #808080;
+    border-bottom:1px solid #FFFFFF; border-right:1px solid #FFFFFF;
+    color:#000; font-weight:bold;
+  }
+  #autoToggle { padding:1px 6px; font-size:11px; }
+  #paletteHead { padding:2px 6px; border-bottom:1px solid #808080; display:flex;
+    align-items:center; gap:4px; flex-wrap:wrap; background:var(--panel); }
+  /* XP-style tileset tile display: white bg, sunken listbox border */
+  #paletteWrap {
+    flex:1; overflow:auto; padding:2px;
+    background:#FFFFFF;
+    border:2px solid; border-color:#808080 #FFFFFF #FFFFFF #808080;
+    margin:3px;
+  }
   #paletteCanvas { display:block; image-rendering:pixelated; cursor:crosshair; touch-action:pan-x pan-y; }
-  #autoPalette { display:none; padding:6px; gap:6px; flex-wrap:wrap; }
+  #autoPalette { display:none; padding:4px; gap:4px; flex-wrap:wrap; }
   #autoPalette.show { display:flex; }
   .auto-swatch { width:64px; display:flex; flex-direction:column; align-items:center;
-    gap:2px; cursor:pointer; padding:4px; border:1px solid transparent; border-radius:4px; }
-  .auto-swatch:hover { background:var(--btnH); }
-  .auto-swatch.active { background:var(--accent2); border-color:var(--accent); }
-  .auto-swatch canvas { image-rendering:pixelated; border:1px solid var(--line2); }
+    gap:2px; cursor:pointer; padding:3px; border:1px solid transparent; }
+  .auto-swatch:hover { background:var(--accent2); }
+  .auto-swatch.active { background:var(--accent); color:#fff; }
+  .auto-swatch canvas { image-rendering:pixelated; border:1px solid #808080; }
   .auto-swatch span { font-size:10px; color:var(--text); text-align:center; word-break:break-word; }
 
-  /* Center: map canvas */
-  #canvasPanel { flex:1 1 auto; min-width:220px; overflow:auto; background:#8a8a8a;
-    background-image:linear-gradient(45deg,#7e7e7e 25%,transparent 25%),
-      linear-gradient(-45deg,#7e7e7e 25%,transparent 25%),
-      linear-gradient(45deg,transparent 75%,#7e7e7e 75%),
-      linear-gradient(-45deg,transparent 75%,#7e7e7e 75%);
-    background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0px;
-    position:relative; }
-  #mapCanvas { image-rendering:pixelated; display:block; margin:16px; cursor:crosshair;
-    box-shadow:0 0 0 1px #555, 0 4px 16px rgba(0,0,0,.35); background:#000; touch-action:none; }
-  /* Contextual mode bar floating over the top of the map area */
-  #modeBar { position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:20;
-    background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:6px;
-    padding:5px 10px; box-shadow:0 3px 10px rgba(0,0,0,.25); display:flex; align-items:center;
-    gap:6px; font-size:11px; max-width:92%; }
-  /* Editor modal dialogs (Map Properties, Event) */
-  .ed-modal { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center; }
-  .ed-box { width:340px; max-width:92vw; max-height:86vh; background:var(--panel);
-    border:1px solid var(--line); border-radius:8px; display:flex; flex-direction:column;
-    box-shadow:0 12px 40px rgba(0,0,0,.4); }
-  .ed-head { padding:9px 12px; border-bottom:1px solid var(--line); display:flex;
-    align-items:center; justify-content:space-between; }
-  .ed-head strong { color:#2b4a7a; }
-  .ed-body { padding:10px 12px; }
+  /* === MAP TREE PANEL (bottom ~35%) === */
+  /* XP map list: a listbox with a thick sunken groove border */
+  #treePanel {
+    border-top:2px solid; border-top-color:#808080;
+    display:flex; flex-direction:column;
+    height:220px; flex:0 0 220px; background:var(--panel);
+  }
+  #treeHead {
+    padding:3px 6px; font-size:11px; font-weight:bold; color:#000;
+    background:var(--panel2); border-bottom:1px solid #808080;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  /* The map listbox itself — XP sunken inset */
+  #mapTree {
+    overflow:auto; flex:1; margin:3px; padding:0;
+    background:#FFFFFF;
+    border:2px solid; border-color:#808080 #FFFFFF #FFFFFF #808080;
+    font-size:11px;
+  }
+  .tree-item {
+    padding:1px 4px; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; gap:3px; user-select:none;
+    -webkit-user-select:none; -webkit-touch-callout:none; line-height:1.5;
+    white-space:nowrap; overflow:hidden;
+  }
+  .tree-item:hover { background:#D0D8F0; }
+  .tree-item.active { background:var(--accent); color:#fff; }
+  .tree-caret { width:11px; flex:0 0 11px; text-align:center; font-size:9px; cursor:pointer; }
+  .tree-item.active .tree-caret { color:#dce; }
+  .tree-icon { flex:0 0 14px; text-align:center; font-size:11px; }
+  .tree-label { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  #treeAddBtn {
+    font-size:12px; line-height:1; padding:0 5px;
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #848484; border-right:1px solid #848484;
+  }
 
-  /* Responsive: shrink the left panel on smaller screens */
-  @media (max-width:900px) { #leftCol { width:194px; min-width:194px; } }
+  /* Context menu — XP floating menu style */
+  #ctxMenu {
+    position:fixed; z-index:100; display:none; min-width:180px;
+    padding:2px 0;
+    background:#FFFFFF; color:var(--text);
+    border:1px solid #808080;
+    box-shadow:2px 2px 4px rgba(0,0,0,.35);
+  }
+  #ctxMenu .ci { padding:3px 24px 3px 24px; font-size:11px; cursor:pointer; white-space:nowrap; }
+  #ctxMenu .ci:hover { background:var(--accent); color:#fff; }
+  #ctxMenu .ci.danger { color:#C00000; }
+  #ctxMenu .ci.danger:hover { background:var(--accent); color:#fff; }
+  #ctxMenu .ci-sep {
+    height:0; border-top:1px solid #808080; border-bottom:1px solid #FFFFFF;
+    margin:2px 0;
+  }
+
+  /* === CANVAS PANEL (right — fills all remaining space) === */
+  #canvasPanel {
+    flex:1 1 auto; min-width:220px; overflow:auto;
+    /* XP gray checker background */
+    background:#808080;
+    position:relative;
+  }
+  #mapCanvas {
+    image-rendering:pixelated; display:block; margin:8px; cursor:crosshair;
+    /* XP flat sunken border around canvas */
+    border:2px solid; border-color:#404040 #FFFFFF #FFFFFF #404040;
+    background:#000; touch-action:none;
+  }
+  /* Floating mode-bar over the canvas */
+  #modeBar {
+    position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:20;
+    background:var(--panel); border:1px solid #808080;
+    padding:4px 8px; box-shadow:2px 2px 4px rgba(0,0,0,.3);
+    display:flex; align-items:center; gap:6px; font-size:11px; max-width:92%;
+  }
+
+  /* === XP DIALOG WINDOWS === */
+  .ed-modal {
+    position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.35);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ed-box {
+    width:360px; max-width:94vw; max-height:88vh; background:var(--panel);
+    /* XP window raised border */
+    border-top:2px solid #FFFFFF; border-left:2px solid #FFFFFF;
+    border-bottom:2px solid #848484; border-right:2px solid #848484;
+    display:flex; flex-direction:column;
+    box-shadow:2px 2px 8px rgba(0,0,0,.45);
+  }
+  /* XP title bar — Luna gradient blue */
+  .ed-head {
+    padding:4px 8px;
+    background:linear-gradient(to right, #0A246A, #A6CAF0);
+    display:flex; align-items:center; justify-content:space-between;
+    flex:0 0 auto;
+  }
+  .ed-head strong { color:#FFFFFF; font-size:11px; font-weight:bold; }
+  /* XP close button on title bar */
+  .ed-head button {
+    width:16px; height:14px; padding:0; font-size:10px; line-height:1;
+    background:#ECE9D8; color:#000; font-weight:bold;
+    border-top:1px solid #FFFFFF; border-left:1px solid #FFFFFF;
+    border-bottom:1px solid #808080; border-right:1px solid #808080;
+    min-width:0;
+  }
+  .ed-body { padding:8px 10px; overflow:auto; }
+
+  /* Responsive */
+  @media (max-width:900px) { #leftCol { width:204px; min-width:204px; } }
   @media (max-width:600px) {
-    #topbar h1 { display:none; }
-    #leftCol { width:162px; min-width:162px; }
+    #leftCol { width:168px; min-width:168px; }
     .auto-swatch { width:54px; }
   }
 
   /* ── XP tileset palette: autotile strip (7 slots) + main tiles ── */
   #xpPaletteWrap { flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
-  #xpAutotileStrip { display:none; flex-wrap:wrap; gap:2px; padding:4px 6px;
-    background:var(--panel2); border-bottom:1px solid var(--line2); }
+  #xpAutotileStrip {
+    display:none; flex-wrap:wrap; gap:2px; padding:3px 4px;
+    background:var(--panel); border-bottom:1px solid #808080;
+  }
   #xpAutotileStrip.show { display:flex; }
-  .xp-at-slot { width:66px; display:flex; flex-direction:column; align-items:center;
-    gap:1px; cursor:pointer; padding:3px; border:1px solid transparent; border-radius:3px; }
-  .xp-at-slot:hover { background:var(--btnH); }
-  .xp-at-slot.active { background:var(--accent2); border-color:var(--accent); }
-  .xp-at-slot.empty { opacity:.35; cursor:default; }
-  .xp-at-slot canvas { image-rendering:pixelated; border:1px solid var(--line2); }
-  .xp-at-slot span { font-size:9px; color:var(--dim); text-align:center;
-    word-break:break-word; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #xpTileWrap { flex:1; overflow:auto; padding:4px; background:#fafafa; }
+  .xp-at-slot {
+    width:64px; display:flex; flex-direction:column; align-items:center;
+    gap:1px; cursor:pointer; padding:2px; border:1px solid transparent;
+  }
+  .xp-at-slot:hover { background:var(--accent2); }
+  .xp-at-slot.active {
+    background:var(--accent); color:#fff;
+    border:1px solid #000;
+  }
+  .xp-at-slot.empty { opacity:.4; cursor:default; }
+  .xp-at-slot canvas { image-rendering:pixelated; border:1px solid #808080; }
+  .xp-at-slot span { font-size:9px; color:var(--text); text-align:center;
+    word-break:break-word; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #xpTileWrap {
+    flex:1; overflow:auto; padding:2px;
+    background:#FFFFFF;
+    border:2px solid; border-color:#808080 #FFFFFF #FFFFFF #808080;
+    margin:3px;
+  }
   #xpTileCanvas { display:block; image-rendering:pixelated; cursor:crosshair; touch-action:pan-x pan-y; }
-  .card { background:#fafafa; border:1px solid var(--line2); border-radius:5px; padding:7px; }
-  .card h3 { margin:0 0 6px; font-size:10px; text-transform:uppercase;
-    letter-spacing:.5px; color:#2b4a7a; }
-  .row { display:flex; align-items:center; gap:6px; margin:4px 0; flex-wrap:wrap; }
-  .swatch { width:40px; height:40px; image-rendering:pixelated; border:1px solid var(--line);
-    border-radius:3px; background:#000; }
-  #statusbar { padding:3px 10px; background:linear-gradient(#ececec,#dedede);
-    border-top:1px solid var(--line); color:var(--dim); font-size:11px; display:flex; gap:18px; }
-  .hint { color:var(--dim); font-size:11px; line-height:1.5; }
-  .warp-item { font-size:11px; padding:3px 5px; background:#eef1f6; border:1px solid var(--line2);
-    border-radius:4px; margin:3px 0; display:flex; justify-content:space-between; gap:6px; }
+
+  /* Misc */
+  .card { background:var(--panel); border:2px solid; border-color:#808080 #FFFFFF #FFFFFF #808080; padding:6px; }
+  .card h3 { margin:0 0 4px; font-size:11px; font-weight:bold; color:#000; }
+  .row { display:flex; align-items:center; gap:6px; margin:3px 0; flex-wrap:wrap; }
+  .swatch { width:40px; height:40px; image-rendering:pixelated; border:1px solid #808080; background:#000; }
+
+  /* XP status bar — raised top border, flat bg */
+  #statusbar {
+    padding:2px 6px;
+    background:var(--panel2);
+    border-top:1px solid #808080;
+    color:#000; font-size:11px;
+    display:flex; gap:0; flex:0 0 auto;
+  }
+  /* XP status bar panels: each segment has a sunken look */
+  #statusbar > span {
+    padding:1px 8px;
+    border:1px solid; border-color:#808080 #FFFFFF #FFFFFF #808080;
+    margin-right:2px;
+  }
+  .hint { color:#444; font-size:11px; line-height:1.5; }
+  .warp-item { font-size:11px; padding:2px 5px;
+    background:var(--panel); border:1px solid #808080;
+    margin:2px 0; display:flex; justify-content:space-between; gap:6px; }
   .warp-item button { padding:1px 5px; font-size:11px; }
 </style>
 </head>
@@ -209,79 +421,78 @@
   <!-- ── Menu bar (RPG Maker XP order) ── -->
   <div id="menubar"></div>
 
-  <!-- ── Icon toolbar (RPG Maker XP group order) ── -->
+  <!-- ── RPG Maker XP Icon Toolbar ── -->
+  <!-- toolbar_strip.png cols: 0=new 1=open 2=save 3=cut 4=copy 5=paste 6=undo 7=redo
+       8=layer1 9=layer2 10=layer3 11=events 12=pencil 13=rect 14=ellipse 15=fill
+       (next row repeats for hot state; row offset via background-position-y)
+       Extra icon cols derived from 904 sheet for remaining tools. -->
   <div id="toolbar">
-    <!-- File -->
+    <!-- File group -->
     <div class="tgrp">
-      <button id="newBtn" class="tb" title="New map">📄</button>
-      <button id="genBtn" class="tb" title="Generate a map (town / route / forest / dungeon / interior)">🎲</button>
-      <button id="importBtn" class="tb" title="Open / Import...">📂</button>
-      <button id="exportBtn" class="tb" title="Export (save layout+map)">💾</button>
+      <button id="newBtn" class="tb" title="New Map"><span class="xp-icon" style="background-position-x:0px"></span></button>
+      <button id="importBtn" class="tb" title="Open..."><span class="xp-icon" style="background-position-x:-16px"></span></button>
+      <button id="exportBtn" class="tb" title="Save"><span class="xp-icon" style="background-position-x:-32px"></span></button>
     </div>
     <div class="tsep"></div>
-    <!-- Edit -->
+    <!-- Edit group -->
     <div class="tgrp">
-      <button id="cutBtn" class="tb" title="Cut (coming soon)">✂️</button>
-      <button id="copyBtn" class="tb" title="Copy (coming soon)">⧉</button>
-      <button id="pasteBtn" class="tb" title="Paste (coming soon)">📋</button>
-      <button id="delBtn" class="tb" title="Delete (coming soon)">❌</button>
+      <button id="cutBtn" class="tb" title="Cut"><span class="xp-icon" style="background-position-x:-48px"></span></button>
+      <button id="copyBtn" class="tb" title="Copy"><span class="xp-icon" style="background-position-x:-64px"></span></button>
+      <button id="pasteBtn" class="tb" title="Paste"><span class="xp-icon" style="background-position-x:-80px"></span></button>
     </div>
     <div class="tsep"></div>
-    <!-- Undo / Redo -->
+    <!-- Undo/Redo -->
     <div class="tgrp">
-      <button id="undoBtn" class="tb" title="Undo (coming soon)">↶</button>
-      <button id="redoBtn" class="tb" title="Redo (coming soon)">↷</button>
+      <button id="undoBtn" class="tb" title="Undo (Ctrl+Z)"><span class="xp-icon" style="background-position-x:-96px"></span></button>
+      <button id="redoBtn" class="tb" title="Redo (Ctrl+Y)"><span class="xp-icon" style="background-position-x:-112px"></span></button>
     </div>
     <div class="tsep"></div>
-    <!-- Mode: map layers + event layer -->
+    <!-- Layers -->
     <div class="tgrp" id="layerGroup">
-      <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (Ground)">1</button>
-      <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (Overlay)">2</button>
-      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (Upper) -- coming soon">3</button>
-      <button id="eventModeBtn" class="tb" title="Event layer (click again to turn off)">◆</button>
+      <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (F1)">1</button>
+      <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (F2)">2</button>
+      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (F3)">3</button>
+      <button id="eventModeBtn" class="tb txt" title="Events (F4)">Ev</button>
     </div>
     <div class="tsep"></div>
     <!-- Draw tools -->
     <div class="tgrp" id="toolGroup">
-      <button data-tool="pencil"  class="tb tool active" title="Pencil">✏️</button>
-      <button data-tool="rect"    class="tb tool" title="Rectangle">▭</button>
-      <button data-tool="ellipse" class="tb tool" title="Ellipse">◯</button>
-      <button data-tool="fill"    class="tb tool" title="Flood fill">🪣</button>
-      <button data-tool="pick"    class="tb tool" title="Pick (eyedropper)">⛏️</button>
-      <button data-tool="select"  class="tb tool" title="Select (drag a box → Copy/Cut/Paste/Delete)">⬚</button>
-      <button data-tool="pan"     class="tb tool" title="Pan (hold & drag to move the map; or middle-drag / Space+drag)">🖐️</button>
-      <button id="eraserBtn"      class="tb tool" title="Eraser (paint empty)">⌫</button>
+      <button data-tool="pencil"  class="tb tool active" title="Pencil"><span class="xp-icon" style="background-position-x:-192px"></span></button>
+      <button data-tool="rect"    class="tb tool" title="Rectangle"><span class="xp-icon" style="background-position-x:-208px"></span></button>
+      <button data-tool="ellipse" class="tb tool" title="Ellipse"><span class="xp-icon" style="background-position-x:-224px"></span></button>
+      <button data-tool="fill"    class="tb tool" title="Fill"><span class="xp-icon" style="background-position-x:-240px"></span></button>
+      <button data-tool="pick"    class="tb tool" title="Select (eyedropper)">&#x2022;</button>
+      <button data-tool="select"  class="tb tool" title="Select Region">&#9632;</button>
+      <button data-tool="pan"     class="tb tool" title="Pan">&#9995;</button>
+      <button id="eraserBtn"      class="tb tool" title="Eraser">E</button>
     </div>
     <div class="tsep"></div>
     <!-- Scale -->
     <div class="tgrp" id="scaleGroup">
-      <button class="tb txt scale active" data-scale="2"    title="Display the map in 1:1 scale&#10;1/1">1/1</button>
-      <button class="tb txt scale"        data-scale="1"    title="Display the map in 1:2 scale&#10;1/2">1/2</button>
-      <button class="tb txt scale"        data-scale="0.5"  title="Display the map in 1:4 scale&#10;1/4">1/4</button>
-      <button class="tb txt scale"        data-scale="0.25" title="Display the map in 1:8 scale&#10;1/8">1/8</button>
+      <button class="tb txt scale active" data-scale="2"    title="1:1 scale (F5)">1/1</button>
+      <button class="tb txt scale"        data-scale="1"    title="1:2 scale (F6)">1/2</button>
+      <button class="tb txt scale"        data-scale="0.5"  title="1:4 scale (F7)">1/4</button>
+      <button class="tb txt scale"        data-scale="0.25" title="1:8 scale (F8)">1/8</button>
     </div>
     <div class="tsep"></div>
     <!-- Tools -->
     <div class="tgrp">
-      <button id="dbBtn" class="tb" title="Database (coming soon)">🗄️</button>
-      <button id="matBtn" class="tb" title="Materials (coming soon)">🎨</button>
-      <button id="scriptBtn" class="tb" title="Script (coming soon)">📜</button>
-      <button id="soundBtn" class="tb" title="Sound test (coming soon)">🔊</button>
+      <button id="dbBtn"     class="tb txt" title="Database (F9)">DB</button>
+      <button id="matBtn"    class="tb txt" title="Materials (F10)">Mat</button>
+      <button id="scriptBtn" class="tb txt" title="Script Editor (F11)">Sc</button>
+      <button id="soundBtn"  class="tb txt" title="Sound Test">&#9836;</button>
     </div>
     <div class="tsep"></div>
-    <!-- View: screen orientation (rotate the whole editor 90°, like the game) -->
+    <!-- Playtest + extras -->
     <div class="tgrp">
-      <button id="orientBtn" class="tb txt" title="Screen orientation (like the game)">⟳ Portrait</button>
-      <button id="gridToolBtn" class="tb active" title="Toggle grid">▦</button>
-    </div>
-    <div class="tsep"></div>
-    <!-- Game -->
-    <div class="tgrp">
-      <button id="playBtn" class="tb" title="Playtest (open the game on this map)">▶️</button>
-      <button id="shotBtn" class="tb" title="Screenshot → upload & get a shareable link">📷</button>
+      <button id="playBtn"  class="tb txt" title="Playtest (F12)">&#9654;</button>
+      <button id="genBtn"   class="tb txt" title="Generate Map">Gen</button>
+      <button id="shotBtn"  class="tb txt" title="Screenshot">&#128247;</button>
+      <button id="gridToolBtn" class="tb txt active" title="Toggle Grid">&#9638;</button>
+      <button id="orientBtn"   class="tb txt" title="Screen Orientation">&#8635;</button>
     </div>
 
-    <!-- Hidden controls the JS still binds to (driven by menus/toolbar above) -->
+    <!-- Hidden controls still bound by JS -->
     <select id="layerSel" style="display:none">
       <option value="ground">Ground</option><option value="overlay">Overlay</option><option value="upper">Upper</option>
     </select>
@@ -295,11 +506,11 @@
     <button id="resizeBtn" style="display:none"></button>
     <button id="gridBtn" class="active" style="display:none"></button>
     <button id="zoomOut" style="display:none"></button>
-    <span id="zoomLabel" style="display:none">2×</span>
+    <span id="zoomLabel" style="display:none">2x</span>
     <button id="zoomIn" style="display:none"></button>
     <input type="file" id="importFile" accept=".json" style="display:none">
-    <button id="repoSaveBtn" style="display:none">☁ Save</button>
-    <button id="repoLoadBtn" style="display:none">☁ Load</button>
+    <button id="repoSaveBtn" style="display:none">Save</button>
+    <button id="repoLoadBtn" style="display:none">Load</button>
   </div>
 
   <div id="main">
@@ -307,14 +518,12 @@
     <div id="leftCol">
       <div id="palettePanel">
         <div id="palHeadLbl">Tilesets
-          <span style="float:right; font-weight:400; text-transform:none;">
-            <button id="tabModeBtn" title="Switch palette mode: XP (one tileset + autotiles) ⇄ VX Ace tabs"
-              style="padding:1px 7px; font-size:10px;">XP</button>
-          </span>
+          <button id="tabModeBtn" title="Switch palette mode: XP single-tileset / VX Ace A-E tabs"
+            style="padding:1px 6px; font-size:10px; font-weight:bold;">XP</button>
         </div>
 
         <!-- XP mode: single tileset dropdown with autotile strip -->
-        <div id="xpModeRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid var(--line2); background:var(--panel2);">
+        <div id="xpModeRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid #808080; background:var(--panel2);">
           <span class="lbl">Tileset</span>
           <select id="xpTilesetSel" style="flex:1; min-width:0;"></select>
         </div>
@@ -327,12 +536,12 @@
 
         <!-- VX Ace mode (hidden in XP mode) -->
         <div id="vxModeRows" style="display:none;">
-          <div id="palToolRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid var(--line2); background:var(--panel2);">
+          <div id="palToolRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid #808080; background:var(--panel2);">
             <span class="lbl">Set</span>
             <select id="rmSetSel" style="flex:1; min-width:0;"></select>
           </div>
           <div id="palTabs"></div>
-          <div style="padding:4px 6px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:5px; background:var(--panel2);">
+          <div style="padding:4px 6px; border-bottom:1px solid #808080; display:flex; align-items:center; gap:5px; background:var(--panel2);">
             <span class="lbl">Sheet</span>
             <select id="tilesetSel" style="flex:1; min-width:0;"></select>
           </div>
@@ -349,8 +558,10 @@
         </div>
       </div>
       <div id="treePanel">
-        <div id="treeHead">Map List <button id="treeAddBtn" title="New top-level map">＋</button></div>
-        <div id="mapTree"><div class="hint" style="padding:6px;">Loading...</div></div>
+        <div id="treeHead">Map List
+          <button id="treeAddBtn" title="New map">+</button>
+        </div>
+        <div id="mapTree"><div class="hint" style="padding:4px;">Loading...</div></div>
       </div>
     </div>
 
@@ -406,8 +617,8 @@
         <div class="row" id="genTier" style="display:none;"><label class="lbl">Tier</label><input type="number" id="genTierIn" value="1" min="1" max="4"></div>
         <div class="row" style="font-size:11px;opacity:.7;">Generates onto the canvas -- tweak, then ☁ Save to Repo.</div>
       </div>
-      <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--line2);">
-        <button id="genGo" style="background:#2b6a3a;color:#fff;border-color:#3a8a4f;">Generate</button>
+      <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid #808080;">
+        <button id="genGo" style="background:var(--accent);color:#fff;border-top:1px solid #88AACF;border-left:1px solid #88AACF;border-bottom:1px solid #1A3A80;border-right:1px solid #1A3A80;">Generate</button>
         <button id="genCancel">Cancel</button>
       </div>
     </div>
@@ -426,8 +637,8 @@
           <select id="mapRegion"><option selected>awakened</option><option>custom</option></select></div>
         <div class="row"><label class="lbl">Layout ID</label><input type="text" id="layoutId" value="LAYOUT_NEW_MAP" style="flex:1;min-width:0;"></div>
       </div>
-      <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--line2);">
-        <button id="mapPropsSaveRepo" style="background:#2b6a3a;color:#fff;border-color:#3a8a4f;">☁ Save to Repo</button>
+      <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid #808080;">
+        <button id="mapPropsSaveRepo" style="background:var(--accent);color:#fff;border-top:1px solid #88AACF;border-left:1px solid #88AACF;border-bottom:1px solid #1A3A80;border-right:1px solid #1A3A80;">☁ Save to Repo</button>
         <button id="mapPropsDone">Done</button>
       </div>
     </div>
@@ -440,7 +651,7 @@
       <div class="ed-body" style="overflow:auto;">
         <div class="row"><label class="lbl">Map</label><select id="destMapSel" style="flex:1;min-width:0;"></select>
           <span id="destPickInfo" class="hint"></span></div>
-        <div style="overflow:auto;max-height:64vh;border:1px solid var(--line2);background:#8a8a8a;margin-top:6px;">
+        <div style="overflow:auto;max-height:64vh;border:1px solid #808080;background:#8a8a8a;margin-top:6px;">
           <canvas id="destCanvas" style="image-rendering:pixelated;display:block;cursor:crosshair;touch-action:none;"></canvas>
         </div>
       </div>
@@ -454,36 +665,39 @@
       <div class="ed-body" style="overflow:auto;">
         <div id="eventProps"></div>
         <div style="margin-top:8px;">
-          <strong style="font-size:10px;color:#2b4a7a;">OTHER EVENTS ON THIS MAP</strong>
+          <strong style="font-size:11px;font-weight:bold;color:#000000;">OTHER EVENTS ON THIS MAP</strong>
           <div id="eventList" style="max-height:120px;overflow:auto;margin-top:3px;"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- XP status bar: map panel + coord panel + tile panel + tool panel -->
   <div id="statusbar">
-    <span id="statCoord">--</span>
-    <span id="statTile">--</span>
-    <span id="statSize">--</span>
-    <span id="statTileset">--</span>
-    <span id="statLayer">--</span>
-    <span id="statTool" style="color:#2b4a7a;font-weight:600;">✏ Pencil</span>
-    <span id="statBuild" style="margin-left:auto;color:#9a9a9a;">build __CACHE_BUST__</span>
+    <span id="statSize" style="min-width:200px;">--</span>
+    <span id="statCoord" style="min-width:80px;">--</span>
+    <span id="statTile" style="min-width:80px;">--</span>
+    <span id="statTileset" style="min-width:80px; display:none;">--</span>
+    <span id="statLayer">Layer 1</span>
+    <span id="statTool">Pencil</span>
+    <span id="statBuild" style="margin-left:auto; border:none; color:#808080;">build __CACHE_BUST__</span>
   </div>
  </div><!-- /#rotor -->
 
   <!-- Map-tree context menu (press-and-hold / right-click) -->
   <div id="ctxMenu"></div>
 
-  <!-- Character sprite picker -->
+  <!-- Character sprite picker (XP style) -->
   <div id="spriteModal" style="display:none; position:fixed; inset:0; z-index:60;
-      background:rgba(0,0,0,.5); align-items:center; justify-content:center;">
+      background:rgba(0,0,0,.4); align-items:center; justify-content:center;">
     <div style="width:640px; max-width:94vw; max-height:86vh; background:var(--panel);
-        border:1px solid var(--line); border-radius:8px; display:flex; flex-direction:column;
-        box-shadow:0 12px 40px rgba(0,0,0,.4);">
-      <div style="padding:10px 14px; border-bottom:1px solid var(--line); display:flex;
-          align-items:center; gap:10px;">
-        <strong style="color:#2b4a7a;">Character Sprites</strong>
+        border-top:2px solid #FFFFFF; border-left:2px solid #FFFFFF;
+        border-bottom:2px solid #848484; border-right:2px solid #848484;
+        display:flex; flex-direction:column;
+        box-shadow:2px 2px 8px rgba(0,0,0,.5);">
+      <div style="padding:4px 8px; background:linear-gradient(to right,#0A246A,#A6CAF0);
+          display:flex; align-items:center; gap:10px; border-bottom:1px solid #808080;">
+        <strong style="color:#FFFFFF; font-size:11px;">Character Sprites</strong>
         <select id="spriteCat" style="margin-left:auto;"></select>
         <button id="spriteModalClose">✕</button>
       </div>
@@ -507,7 +721,7 @@
         box-shadow:0 12px 40px rgba(0,0,0,.4);">
       <div style="padding:10px 14px; border-bottom:1px solid var(--line); display:flex;
           align-items:center; justify-content:space-between;">
-        <strong style="color:#2b4a7a;">Load map from repo</strong>
+        <strong style="color:#000000;">Load map from repo</strong>
         <button id="repoModalClose">✕</button>
       </div>
       <div id="repoModalBody" style="padding:10px 12px; overflow:auto; flex:1;">
