@@ -3669,10 +3669,34 @@
   // -- Map Properties + Event editor modal wiring (RM XP-style dialogs) --
   function openMapProps() {
     state._propsOrig = $('mapName').value || '';   // remember identity to detect a rename
+    // Populate Tileset dropdown from _rm_sets.json (mirrors XP Tilesets tab)
+    var tsEl = $('mapTileset');
+    if (tsEl && tsEl.options.length <= 1) {
+      fetch('data/tilesets/_rm_sets.json').then(function(r){return r.json();}).then(function(d){
+        (d.sets||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=s.name; tsEl.appendChild(o); });
+        if (state.mapTileset) tsEl.value = state.mapTileset;
+      }).catch(function(){});
+    } else if (tsEl && state.mapTileset) { tsEl.value = state.mapTileset; }
+    // Populate BGM/BGS/encounter fields from state
+    if ($('mapBGM')) $('mapBGM').value = (state.mapBGM||'');
+    if ($('mapBGS')) $('mapBGS').value = (state.mapBGS||'');
+    if ($('mapAutoplayBGM')) $('mapAutoplayBGM').checked = !!(state.mapAutoplayBGM);
+    if ($('mapAutoplayBGS')) $('mapAutoplayBGS').checked = !!(state.mapAutoplayBGS);
+    if ($('mapEncounterStep')) $('mapEncounterStep').value = (state.mapEncounterStep||30);
     $('mapPropsModal').style.display = 'flex';
   }
-  function closeMapProps() { $('mapPropsModal').style.display = 'none'; }
-  $('mapPropsClose').addEventListener('click', closeMapProps);
+  function applyMapProps() {
+    // Save BGM/BGS/tileset/encounter fields to state
+    if ($('mapTileset')) state.mapTileset = $('mapTileset').value;
+    if ($('mapBGM')) state.mapBGM = $('mapBGM').value;
+    if ($('mapBGS')) state.mapBGS = $('mapBGS').value;
+    if ($('mapAutoplayBGM')) state.mapAutoplayBGM = $('mapAutoplayBGM').checked;
+    if ($('mapAutoplayBGS')) state.mapAutoplayBGS = $('mapAutoplayBGS').checked;
+    if ($('mapEncounterStep')) state.mapEncounterStep = parseInt($('mapEncounterStep').value)||30;
+  }
+  function closeMapProps() { applyMapProps(); $('mapPropsModal').style.display = 'none'; }
+  $('mapPropsClose').addEventListener('click', function(){ $('mapPropsModal').style.display='none'; });
+  if ($('mapPropsCancel')) $('mapPropsCancel').addEventListener('click', function(){ $('mapPropsModal').style.display='none'; });
   if ($('mapPropsDone')) $('mapPropsDone').addEventListener('click', closeMapProps);
   if ($('mapPropsSaveRepo')) $('mapPropsSaveRepo').addEventListener('click', function () {
     var orig = state._propsOrig || '';

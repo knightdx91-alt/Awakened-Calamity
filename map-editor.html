@@ -427,67 +427,67 @@
        (next row repeats for hot state; row offset via background-position-y)
        Extra icon cols derived from 904 sheet for remaining tools. -->
   <div id="toolbar">
-    <!-- File group -->
+    <!-- File group — titles from RPGXP.exe string table -->
     <div class="tgrp">
-      <button id="newBtn" class="tb" title="New Map"><span class="xp-icon" style="background-position-x:0px"></span></button>
-      <button id="importBtn" class="tb" title="Open..."><span class="xp-icon" style="background-position-x:-16px"></span></button>
-      <button id="exportBtn" class="tb" title="Save"><span class="xp-icon" style="background-position-x:-32px"></span></button>
+      <button id="newBtn" class="tb" title="Create a new project&#10;New Project"><span class="xp-icon" style="background-position-x:0px"></span></button>
+      <button id="importBtn" class="tb" title="Open map file&#10;Open"><span class="xp-icon" style="background-position-x:-16px"></span></button>
+      <button id="exportBtn" class="tb" title="Save map file&#10;Save"><span class="xp-icon" style="background-position-x:-32px"></span></button>
     </div>
     <div class="tsep"></div>
     <!-- Edit group -->
     <div class="tgrp">
-      <button id="cutBtn" class="tb" title="Cut"><span class="xp-icon" style="background-position-x:-48px"></span></button>
-      <button id="copyBtn" class="tb" title="Copy"><span class="xp-icon" style="background-position-x:-64px"></span></button>
-      <button id="pasteBtn" class="tb" title="Paste"><span class="xp-icon" style="background-position-x:-80px"></span></button>
+      <button id="cutBtn" class="tb" title="Cut&#10;Cut"><span class="xp-icon" style="background-position-x:-48px"></span></button>
+      <button id="copyBtn" class="tb" title="Copy&#10;Copy"><span class="xp-icon" style="background-position-x:-64px"></span></button>
+      <button id="pasteBtn" class="tb" title="Paste&#10;Paste"><span class="xp-icon" style="background-position-x:-80px"></span></button>
     </div>
     <div class="tsep"></div>
     <!-- Undo/Redo -->
     <div class="tgrp">
-      <button id="undoBtn" class="tb" title="Undo (Ctrl+Z)"><span class="xp-icon" style="background-position-x:-96px"></span></button>
-      <button id="redoBtn" class="tb" title="Redo (Ctrl+Y)"><span class="xp-icon" style="background-position-x:-112px"></span></button>
+      <button id="undoBtn" class="tb" title="Undo last action&#10;Undo"><span class="xp-icon" style="background-position-x:-96px"></span></button>
+      <button id="redoBtn" class="tb" title="Redo last action&#10;Redo"><span class="xp-icon" style="background-position-x:-112px"></span></button>
     </div>
     <div class="tsep"></div>
-    <!-- Layers -->
+    <!-- Layers — titles from RPGXP.exe string table [33201-33204] -->
     <div class="tgrp" id="layerGroup">
-      <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (F1)">1</button>
-      <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (F2)">2</button>
-      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (F3)">3</button>
-      <button id="eventModeBtn" class="tb txt" title="Events (F4)">Ev</button>
+      <button class="tb txt mode-layer active" data-layer="ground"  title="Switche to layer 1 editing mode&#10;Layer 1">1</button>
+      <button class="tb txt mode-layer"        data-layer="overlay" title="Switche to layer 2 editing mode&#10;Layer 2">2</button>
+      <button class="tb txt mode-layer"        data-layer="upper"   title="Switche to layer 3 editing mode&#10;Layer 3">3</button>
+      <button id="eventModeBtn" class="tb txt" title="Switche to event editing eode&#10;Events">Ev</button>
     </div>
     <div class="tsep"></div>
-    <!-- Draw tools -->
+    <!-- Draw tools — titles from RPGXP.exe string table [33301-33305] -->
     <div class="tgrp" id="toolGroup">
-      <button data-tool="pencil"  class="tb tool active" title="Pencil"><span class="xp-icon" style="background-position-x:-192px"></span></button>
-      <button data-tool="rect"    class="tb tool" title="Rectangle"><span class="xp-icon" style="background-position-x:-208px"></span></button>
-      <button data-tool="ellipse" class="tb tool" title="Ellipse"><span class="xp-icon" style="background-position-x:-224px"></span></button>
-      <button data-tool="fill"    class="tb tool" title="Fill"><span class="xp-icon" style="background-position-x:-240px"></span></button>
-      <button data-tool="pick"    class="tb tool" title="Select (eyedropper)">&#x2022;</button>
-      <button data-tool="select"  class="tb tool" title="Select Region">&#9632;</button>
-      <button data-tool="pan"     class="tb tool" title="Pan">&#9995;</button>
-      <button id="eraserBtn"      class="tb tool" title="Eraser">E</button>
+      <button data-tool="pencil"  class="tb tool active" title="Draw tiles freehand&#10;Pencil"><span class="xp-icon" style="background-position-x:-192px"></span></button>
+      <button data-tool="rect"    class="tb tool" title="Draw a rectangle&#10;Rectangle"><span class="xp-icon" style="background-position-x:-208px"></span></button>
+      <button data-tool="ellipse" class="tb tool" title="Draw an ellipse&#10;Ellipse"><span class="xp-icon" style="background-position-x:-224px"></span></button>
+      <button data-tool="fill"    class="tb tool" title="Fill the region with the current tile&#10;Flood Fill"><span class="xp-icon" style="background-position-x:-240px"></span></button>
+      <button data-tool="pick"    class="tb tool" title="Select a square portion of the map&#10;Select">&#x2022;</button>
+      <button data-tool="select"  class="tb tool" title="Select a square portion of the map&#10;Select">&#9632;</button>
+      <button data-tool="pan"     class="tb tool" title="Pan map&#10;Pan">&#9995;</button>
+      <button id="eraserBtn"      class="tb tool" title="Erase tiles&#10;Eraser">E</button>
     </div>
     <div class="tsep"></div>
-    <!-- Scale -->
+    <!-- Scale — titles from RPGXP.exe string table [33401-33404] -->
     <div class="tgrp" id="scaleGroup">
-      <button class="tb txt scale active" data-scale="2"    title="1:1 scale (F5)">1/1</button>
-      <button class="tb txt scale"        data-scale="1"    title="1:2 scale (F6)">1/2</button>
-      <button class="tb txt scale"        data-scale="0.5"  title="1:4 scale (F7)">1/4</button>
-      <button class="tb txt scale"        data-scale="0.25" title="1:8 scale (F8)">1/8</button>
+      <button class="tb txt scale active" data-scale="2"    title="Display the map in 1:1 scale&#10;1:1">1/1</button>
+      <button class="tb txt scale"        data-scale="1"    title="Display the map in 1:2 scale&#10;1:2">1/2</button>
+      <button class="tb txt scale"        data-scale="0.5"  title="Display the map in 1:4 scale&#10;1:4">1/4</button>
+      <button class="tb txt scale"        data-scale="0.25" title="Display the map in 1:8 scale&#10;1:8">1/8</button>
     </div>
     <div class="tsep"></div>
-    <!-- Tools -->
+    <!-- Tools — titles from RPGXP.exe string table [33501-33505] -->
     <div class="tgrp">
-      <button id="dbBtn"     class="tb txt" title="Database (F9)">DB</button>
-      <button id="matBtn"    class="tb txt" title="Materials (F10)">Mat</button>
-      <button id="scriptBtn" class="tb txt" title="Script Editor (F11)">Sc</button>
-      <button id="soundBtn"  class="tb txt" title="Sound Test">&#9836;</button>
+      <button id="dbBtn"     class="tb txt" title="Open the database&#10;Database">DB</button>
+      <button id="matBtn"    class="tb txt" title="Open the materialbase&#10;Materials">Mat</button>
+      <button id="scriptBtn" class="tb txt" title="Open the script editor&#10;Script Editor">Sc</button>
+      <button id="soundBtn"  class="tb txt" title="Open the sound test window&#10;Sound Test">&#9836;</button>
     </div>
     <div class="tsep"></div>
-    <!-- Playtest + extras -->
+    <!-- Playtest + extras — titles from RPGXP.exe string table [33601-33604] -->
     <div class="tgrp">
-      <button id="playBtn"  class="tb txt" title="Playtest (F12)">&#9654;</button>
+      <button id="playBtn"  class="tb txt" title="Start a playtest of this game&#10;Playtest">&#9654;</button>
       <button id="genBtn"   class="tb txt" title="Generate Map">Gen</button>
-      <button id="shotBtn"  class="tb txt" title="Screenshot">&#128247;</button>
+      <button id="shotBtn"  class="tb txt" title="Open folder for game currently being edited&#10;Open Game Folder">&#128247;</button>
       <button id="gridToolBtn" class="tb txt active" title="Toggle Grid">&#9638;</button>
       <button id="orientBtn"   class="tb txt" title="Screen Orientation">&#8635;</button>
     </div>
@@ -624,22 +624,47 @@
     </div>
   </div>
 
-  <!-- Map Properties dialog (right-click a map in the list, or Tools menu) -->
+  <!-- Map Properties dialog — field names from Map001.rxdata + MapInfos.rxdata -->
   <div id="mapPropsModal" class="ed-modal" style="display:none;">
-    <div class="ed-box">
-      <div class="ed-head"><strong>Map Properties</strong><button id="mapPropsClose">✕</button></div>
+    <div class="ed-box" style="width:400px;">
+      <div class="ed-head"><strong>Map Properties</strong><button id="mapPropsClose" style="background:none;border:none;color:#fff;cursor:pointer;font-weight:bold;">X</button></div>
       <div class="ed-body">
-        <div class="row"><label class="lbl">Name</label><input type="text" id="mapName" value="NewMap" style="flex:1;min-width:0;"></div>
-        <div class="row"><label class="lbl">Width</label><input type="number" id="mapW" value="20" min="1" max="200">
-          <label class="lbl">Height</label><input type="number" id="mapH" value="18" min="1" max="200">
-          <button id="resizeBtn2" title="Resize keeping content">Resize</button></div>
-        <div class="row"><label class="lbl">Region</label>
-          <select id="mapRegion"><option selected>awakened</option><option>custom</option></select></div>
-        <div class="row"><label class="lbl">Layout ID</label><input type="text" id="layoutId" value="LAYOUT_NEW_MAP" style="flex:1;min-width:0;"></div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr><td class="lbl" style="width:90px;">Name</td>
+              <td><input type="text" id="mapName" value="NewMap" style="width:100%;box-sizing:border-box;"></td></tr>
+          <tr><td class="lbl">Tileset</td>
+              <td><select id="mapTileset" style="width:100%;"></select></td></tr>
+          <tr><td class="lbl">Width</td>
+              <td style="display:flex;align-items:center;gap:6px;">
+                <input type="number" id="mapW" value="20" min="1" max="500" style="width:60px;">
+                <label class="lbl">Height</label>
+                <input type="number" id="mapH" value="18" min="1" max="500" style="width:60px;">
+                <button id="resizeBtn2" title="Resize keeping content" style="margin-left:4px;">Resize</button>
+              </td></tr>
+          <tr><td colspan="2" style="padding-top:6px;"><b style="font-size:11px;">BGM</b></td></tr>
+          <tr><td class="lbl">Autoplay BGM</td>
+              <td><label><input type="checkbox" id="mapAutoplayBGM"> Enable</label></td></tr>
+          <tr><td class="lbl">BGM</td>
+              <td><input type="text" id="mapBGM" placeholder="audio filename" style="width:100%;box-sizing:border-box;"></td></tr>
+          <tr><td colspan="2" style="padding-top:6px;"><b style="font-size:11px;">BGS</b></td></tr>
+          <tr><td class="lbl">Autoplay BGS</td>
+              <td><label><input type="checkbox" id="mapAutoplayBGS"> Enable</label></td></tr>
+          <tr><td class="lbl">BGS</td>
+              <td><input type="text" id="mapBGS" placeholder="audio filename" style="width:100%;box-sizing:border-box;"></td></tr>
+          <tr><td colspan="2" style="padding-top:6px;"><b style="font-size:11px;">Encounter</b></td></tr>
+          <tr><td class="lbl">Encounter Steps</td>
+              <td><input type="number" id="mapEncounterStep" value="30" min="1" max="999" style="width:70px;"></td></tr>
+          <tr><td colspan="2" style="padding-top:6px;"><b style="font-size:11px;">Game Data</b></td></tr>
+          <tr><td class="lbl">Region</td>
+              <td><select id="mapRegion"><option selected>awakened</option><option>custom</option></select></td></tr>
+          <tr><td class="lbl">Layout ID</td>
+              <td><input type="text" id="layoutId" value="LAYOUT_NEW_MAP" style="width:100%;box-sizing:border-box;"></td></tr>
+        </table>
       </div>
       <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid #808080;">
         <button id="mapPropsSaveRepo" style="background:var(--accent);color:#fff;border-top:1px solid #88AACF;border-left:1px solid #88AACF;border-bottom:1px solid #1A3A80;border-right:1px solid #1A3A80;">☁ Save to Repo</button>
-        <button id="mapPropsDone">Done</button>
+        <button id="mapPropsDone" class="xp-raised" style="min-width:75px;">OK</button>
+        <button id="mapPropsCancel" class="xp-raised" style="min-width:75px;">Cancel</button>
       </div>
     </div>
   </div>
