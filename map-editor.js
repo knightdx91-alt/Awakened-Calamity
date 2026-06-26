@@ -627,13 +627,23 @@
     var layer = L();
     var tiles = [];
     var seen = {};
-    state.setTabs.forEach(function (t) {
-      if (t.role === 'A2') return;            // ground autotile handled by the Auto palette
-      var sheet = layer.sheets.filter(function (s) { return s.name === t.sheet; })[0];
-      if (!sheet || seen[t.sheet]) return;
-      seen[t.sheet] = 1;
-      for (var i = 0; i < sheet.count; i++) tiles.push({ sheet: sheet, local: i, gid: sheet.offset + i });
-    });
+    if (state.setTabs.length > 0) {
+      // MV-set mode: iterate tabs, skip A2 ground (handled by Auto palette)
+      state.setTabs.forEach(function (t) {
+        if (t.role === 'A2') return;
+        var sheet = layer.sheets.filter(function (s) { return s.name === t.sheet; })[0];
+        if (!sheet || seen[t.sheet]) return;
+        seen[t.sheet] = 1;
+        for (var i = 0; i < sheet.count; i++) tiles.push({ sheet: sheet, local: i, gid: sheet.offset + i });
+      });
+    } else {
+      // XP mode: use layer.sheets directly (xpActivate sets these)
+      layer.sheets.forEach(function (sheet) {
+        if (!sheet || seen[sheet.name]) return;
+        seen[sheet.name] = 1;
+        for (var i = 0; i < sheet.count; i++) tiles.push({ sheet: sheet, local: i, gid: sheet.offset + i });
+      });
+    }
     state.xpView = { tiles: tiles };
     return state.xpView;
   }
@@ -3497,10 +3507,10 @@
   // Repurpose the Materials (🎨) toolbar button as the character-sprite picker.
   var matB = $('matBtn');
   if (matB) { matB.title = 'Character Sprites'; matB.addEventListener('click', function () { openSpriteModal('player'); }); }
-  $('cutBtn').addEventListener('click', cutSelection);
-  $('copyBtn').addEventListener('click', copySelection);
-  $('pasteBtn').addEventListener('click', pasteClipboard);
-  $('delBtn').addEventListener('click', clearSelection);
+  var cutB = $('cutBtn'); if (cutB) cutB.addEventListener('click', cutSelection);
+  var cpyB = $('copyBtn'); if (cpyB) cpyB.addEventListener('click', copySelection);
+  var pstB = $('pasteBtn'); if (pstB) pstB.addEventListener('click', pasteClipboard);
+  var delB = $('delBtn'); if (delB) delB.addEventListener('click', clearSelection);
 
   // Screenshot -> capture the whole editor, upload to the `screenshots` branch,
   // show a copyable raw link to paste back. Lets the owner show what they see.
