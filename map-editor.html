@@ -624,6 +624,41 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DATABASE WINDOW  —  14 tabs from RPGXP.exe string table [301-326]
+       Fields derived from rxdata file structures (each @field = one column)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div id="dbModal" class="ed-modal" style="display:none;">
+    <div class="ed-box" style="width:min(98vw,860px);height:min(96vh,620px);display:flex;flex-direction:column;">
+      <div class="ed-head">
+        <strong>Database</strong>
+        <button id="dbClose" style="background:none;border:none;color:#fff;cursor:pointer;font-weight:bold;padding:0 4px;">X</button>
+      </div>
+      <!-- Tab strip — exact names from string table [301-326] -->
+      <div id="dbTabs" style="display:flex;flex-wrap:nowrap;overflow-x:auto;background:var(--panel2);border-bottom:2px solid #808080;padding:3px 4px 0;gap:1px;flex:0 0 auto;">
+      </div>
+      <!-- Body: list on left, detail on right -->
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <!-- Left: numbered list (XP style) -->
+        <div style="width:170px;flex:0 0 170px;border-right:1px solid #808080;display:flex;flex-direction:column;background:var(--panel);">
+          <div style="padding:3px 6px;font-size:11px;background:var(--panel2);border-bottom:1px solid #808080;display:flex;align-items:center;gap:4px;">
+            <span style="flex:1;">Items: <b id="dbCount">0</b></span>
+            <button id="dbMaxBtn" style="font-size:10px;padding:1px 5px;" title="Change maximum number of items">Max...</button>
+          </div>
+          <div id="dbList" style="flex:1;overflow-y:auto;font-size:11px;font-family:Tahoma,sans-serif;border:2px solid;border-color:#808080 #fff #fff #808080;margin:3px;background:#fff;"></div>
+        </div>
+        <!-- Right: detail editor -->
+        <div id="dbDetail" style="flex:1;overflow-y:auto;padding:8px;font-size:11px;font-family:Tahoma,sans-serif;"></div>
+      </div>
+      <!-- Footer -->
+      <div style="display:flex;gap:6px;justify-content:flex-end;padding:6px 10px;border-top:1px solid #808080;background:var(--panel2);flex:0 0 auto;">
+        <button id="dbOK"     class="xp-raised" style="min-width:75px;">OK</button>
+        <button id="dbCancel" class="xp-raised" style="min-width:75px;">Cancel</button>
+        <button id="dbApply"  class="xp-raised" style="min-width:75px;">Apply</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Map Properties dialog — field names from Map001.rxdata + MapInfos.rxdata -->
   <div id="mapPropsModal" class="ed-modal" style="display:none;">
     <div class="ed-box" style="width:400px;">

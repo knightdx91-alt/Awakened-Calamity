@@ -2714,7 +2714,369 @@
     clickEl('gridBtn');
     gtb.classList.toggle('active', $('gridBtn').classList.contains('active'));
   });
-  ['dbBtn', 'scriptBtn', 'soundBtn'].forEach(function (id) {
+  // ═══════════════════════════════════════════════════════════════════
+  // DATABASE WINDOW — 14 tabs from RPGXP.exe string table [301-326]
+  // Tab names, field labels all from binary analysis of RPGXP.exe rxdata.
+  // ═══════════════════════════════════════════════════════════════════
+  (function () {
+    // Tab definitions — singular [301,303,...] / plural [302,304,...] from string table
+    var DB_TABS = [
+      { id: 'actors',        label: 'Actors',        src: 'data/systems/classes.json',        key: null },
+      { id: 'classes',       label: 'Classes',        src: 'data/systems/classes.json',        key: null },
+      { id: 'skills',        label: 'Skills',         src: 'data/systems/skills.json',         key: null },
+      { id: 'items',         label: 'Items',          src: 'data/systems/items.json',          key: null },
+      { id: 'weapons',       label: 'Weapons',        src: null,                               key: null },
+      { id: 'armors',        label: 'Armors',         src: null,                               key: null },
+      { id: 'enemies',       label: 'Enemies',        src: 'data/systems/creatures.json',      key: null },
+      { id: 'troops',        label: 'Troops',         src: null,                               key: null },
+      { id: 'states',        label: 'States',         src: null,                               key: null },
+      { id: 'animations',    label: 'Animations',     src: null,                               key: null },
+      { id: 'tilesets',      label: 'Tilesets',       src: 'data/tilesets/_rm_sets.json',      key: 'sets' },
+      { id: 'common_events', label: 'Common Events',  src: 'data/systems/common_events.json',  key: null },
+      { id: 'system',        label: 'System',         src: 'data/systems/system.json',         key: null },
+      { id: 'script',        label: 'Script',         src: null,                               key: null },
+    ];
+
+    var dbState = { tab: 'actors', data: {}, sel: {}, dirty: {} };
+
+    function dbEl(id) { return document.getElementById(id); }
+
+    // Build tab strip
+    var tabStrip = dbEl('dbTabs');
+    DB_TABS.forEach(function (t) {
+      var btn = document.createElement('button');
+      btn.textContent = t.label;
+      btn.dataset.tab = t.id;
+      btn.style.cssText = 'font-size:11px;font-family:Tahoma,sans-serif;padding:3px 10px;border:1px solid #808080;border-bottom:none;cursor:pointer;white-space:nowrap;margin-bottom:-1px;';
+      btn.style.background = (t.id === dbState.tab) ? '#ECE9D8' : '#D4D0C8';
+      btn.addEventListener('click', function () { dbSwitchTab(t.id); });
+      tabStrip.appendChild(btn);
+    });
+
+    function dbSwitchTab(tid) {
+      dbState.tab = tid;
+      // Update tab button appearances
+      Array.from(tabStrip.children).forEach(function (b) {
+        b.style.background = (b.dataset.tab === tid) ? '#ECE9D8' : '#D4D0C8';
+        b.style.fontWeight = (b.dataset.tab === tid) ? 'bold' : 'normal';
+      });
+      dbLoadTab(tid);
+    }
+
+    function dbLoadTab(tid) {
+      var t = DB_TABS.filter(function (x) { return x.id === tid; })[0];
+      if (!t) return;
+      if (dbState.data[tid]) { dbRenderList(tid); return; }
+      if (!t.src) { dbState.data[tid] = []; dbRenderList(tid); return; }
+      fetch(t.src + '?_=' + Date.now()).then(function (r) { return r.json(); }).then(function (d) {
+        var items = t.key ? (d[t.key] || d) : (Array.isArray(d) ? d : (d.classes || d.skills || d.items || d.entries || []));
+        if (!Array.isArray(items)) items = Object.values(items);
+        dbState.data[tid] = items;
+        if (!dbState.sel[tid]) dbState.sel[tid] = 0;
+        dbRenderList(tid);
+      }).catch(function () { dbState.data[tid] = []; dbRenderList(tid); });
+    }
+
+    function dbRenderList(tid) {
+      var items = dbState.data[tid] || [];
+      var list = dbEl('dbList');
+      var countEl = dbEl('dbCount');
+      if (countEl) countEl.textContent = items.length;
+      list.innerHTML = '';
+      items.forEach(function (item, i) {
+        var name = item.name || item.id || item.tileset_name || ('Item ' + (i + 1));
+        var row = document.createElement('div');
+        row.style.cssText = 'padding:1px 4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        row.textContent = (i + 1).toString().padStart(3, '0') + ': ' + name;
+        row.dataset.idx = i;
+        if (i === (dbState.sel[tid] || 0)) {
+          row.style.background = '#316AC5'; row.style.color = '#fff';
+        }
+        row.addEventListener('click', function () {
+          dbState.sel[tid] = i;
+          dbRenderList(tid);
+          dbRenderDetail(tid, i);
+        });
+        list.appendChild(row);
+      });
+      dbRenderDetail(tid, dbState.sel[tid] || 0);
+    }
+
+    // Detail panel renderers per tab — fields from rxdata @field analysis
+    function dbRenderDetail(tid, idx) {
+      var items = dbState.data[tid] || [];
+      var item = items[idx];
+      var detail = dbEl('dbDetail');
+      detail.innerHTML = '';
+      if (!item) { detail.innerHTML = '<div style="color:#888;padding:8px;">No item selected.</div>'; return; }
+
+      switch (tid) {
+        case 'actors':
+        case 'classes':
+          dbDetailClasses(detail, item, tid, idx);
+          break;
+        case 'skills':
+          dbDetailSkills(detail, item, idx);
+          break;
+        case 'items':
+          dbDetailItems(detail, item, idx);
+          break;
+        case 'enemies':
+          dbDetailEnemies(detail, item, idx);
+          break;
+        case 'tilesets':
+          dbDetailTilesets(detail, item, idx);
+          break;
+        case 'common_events':
+          dbDetailCommonEvents(detail, item, idx);
+          break;
+        case 'system':
+          dbDetailSystem(detail, item);
+          break;
+        default:
+          // Generic key-value viewer for unimplemented tabs
+          dbDetailGeneric(detail, item);
+      }
+    }
+
+    function dbRow(label, input) {
+      return '<tr><td style="width:130px;padding:2px 6px 2px 0;color:#000;white-space:nowrap;vertical-align:top;">' + label + '</td><td style="padding:2px 0;">' + input + '</td></tr>';
+    }
+    function dbInput(val, cls) {
+      return '<input type="text" class="' + (cls||'db-inp') + '" value="' + (val||'').toString().replace(/"/g,'&quot;') + '" style="width:200px;box-sizing:border-box;">';
+    }
+    function dbNum(val, cls) {
+      return '<input type="number" class="' + (cls||'db-num') + '" value="' + (val||0) + '" style="width:70px;">';
+    }
+    function dbText(val, cls) {
+      return '<textarea class="' + (cls||'db-ta') + '" rows="2" style="width:100%;box-sizing:border-box;">' + (val||'') + '</textarea>';
+    }
+    function dbTable(rows) {
+      return '<table style="border-collapse:collapse;width:100%;">' + rows + '</table>';
+    }
+
+    // ── Classes / Actors tab ──────────────────────────────────────────
+    function dbDetailClasses(detail, item, tid, idx) {
+      var h = '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
+      h += '<div style="flex:1;min-width:220px;">';
+      h += '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Basic Settings</div>';
+      h += dbTable(
+        dbRow('Name', dbInput(item.name, 'db-name')) +
+        dbRow('ID', '<span style="color:#555;">' + (item.id || idx + 1) + '</span>') +
+        dbRow('Tier', dbInput(item.tier || 'basic', 'db-tier')) +
+        dbRow('Combat Role', dbInput(item.combatRole || '', 'db-role')) +
+        dbRow('Signature', dbInput(item.signature || '', 'db-sig'))
+      );
+      h += '<div style="font-weight:bold;border-bottom:1px solid #808080;margin:8px 0 6px;">Stat Profile</div>';
+      var sp = item.statProfile || {};
+      h += dbTable(
+        dbRow('HP', dbNum(sp.hp, 'db-hp')) +
+        dbRow('ATK', dbNum(sp.atk, 'db-atk')) +
+        dbRow('DEF', dbNum(sp.def, 'db-def')) +
+        dbRow('SPD', dbNum(sp.spd, 'db-spd'))
+      );
+      h += '</div>';
+      h += '<div style="flex:1;min-width:220px;">';
+      h += '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Skills</div>';
+      var skills = item.grantsSkills || [];
+      h += '<div style="border:1px solid #808080;background:#fff;min-height:80px;padding:3px;font-size:11px;">';
+      skills.forEach(function (s) { h += '<div>' + s + '</div>'; });
+      h += '</div>';
+      h += '<div style="font-weight:bold;border-bottom:1px solid #808080;margin:8px 0 6px;">Evolves Into</div>';
+      var ev = item.evolvesInto || [];
+      h += '<div style="border:1px solid #808080;background:#fff;min-height:40px;padding:3px;font-size:11px;">';
+      ev.forEach(function (e) { h += '<div>' + (e.class || e) + '</div>'; });
+      h += '</div>';
+      h += '</div>';
+      h += '</div>';
+      detail.innerHTML = h;
+      // Wire name change live to list
+      var nameInp = detail.querySelector('.db-name');
+      if (nameInp) nameInp.addEventListener('input', function () {
+        item.name = this.value;
+        dbState.dirty[tid] = true;
+        var rows = dbEl('dbList').children;
+        if (rows[idx]) rows[idx].textContent = (idx + 1).toString().padStart(3,'0') + ': ' + this.value;
+      });
+    }
+
+    // ── Skills tab ───────────────────────────────────────────────────
+    function dbDetailSkills(detail, item, idx) {
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Skill: ' + (item.name||'') + '</div>' +
+        dbTable(
+          dbRow('Name', dbInput(item.name, 'db-name')) +
+          dbRow('ID', '<span style="color:#555;">' + (item.id||idx+1) + '</span>') +
+          dbRow('Type', dbInput(item.type||'active', 'db-type')) +
+          dbRow('Effect', dbInput(item.effect||'', 'db-eff')) +
+          dbRow('Power', dbNum(item.power||0, 'db-pow')) +
+          dbRow('SP Cost', dbNum(item.cost||0, 'db-cost')) +
+          dbRow('Affinity', dbInput(item.affinity||'', 'db-aff')) +
+          dbRow('Tags', dbInput((item.tags||[]).join(', '), 'db-tags')) +
+          dbRow('Description', dbText(item.description||item.desc||'', 'db-desc'))
+        );
+      var nameInp = detail.querySelector('.db-name');
+      if (nameInp) nameInp.addEventListener('input', function () {
+        item.name = this.value; dbState.dirty['skills'] = true;
+        var rows = dbEl('dbList').children;
+        if (rows[idx]) rows[idx].textContent = (idx+1).toString().padStart(3,'0') + ': ' + this.value;
+      });
+    }
+
+    // ── Items tab ────────────────────────────────────────────────────
+    function dbDetailItems(detail, item, idx) {
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Item: ' + (item.name||'') + '</div>' +
+        dbTable(
+          dbRow('Name', dbInput(item.name, 'db-name')) +
+          dbRow('ID', '<span style="color:#555;">' + (item.id||idx+1) + '</span>') +
+          dbRow('Pocket', dbInput(item.pocket||'items', 'db-pocket')) +
+          dbRow('Price', dbNum(item.value||0, 'db-price')) +
+          dbRow('Stack', dbNum(item.stack||99, 'db-stack')) +
+          dbRow('Field Use', '<input type="checkbox" class="db-field" ' + (item.field?'checked':'') + '>') +
+          dbRow('Battle Use', '<input type="checkbox" class="db-battle" ' + (item.battle?'checked':'') + '>') +
+          dbRow('Shop', '<input type="checkbox" class="db-shop" ' + (item.shop?'checked':'') + '>') +
+          dbRow('Description', dbText(item.desc||item.description||'', 'db-desc'))
+        );
+      var nameInp = detail.querySelector('.db-name');
+      if (nameInp) nameInp.addEventListener('input', function () {
+        item.name = this.value; dbState.dirty['items'] = true;
+        var rows = dbEl('dbList').children;
+        if (rows[idx]) rows[idx].textContent = (idx+1).toString().padStart(3,'0') + ': ' + this.value;
+      });
+    }
+
+    // ── Enemies tab ──────────────────────────────────────────────────
+    // Field names from Enemies.rxdata: @name @maxhp @atk @pdef @mdef @agi @dex @str @int @exp @gold
+    function dbDetailEnemies(detail, item, idx) {
+      var sp = item.statProfile || item.stats || {};
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Enemy: ' + (item.name||'') + '</div>' +
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:200px;">' +
+        dbTable(
+          dbRow('Name', dbInput(item.name, 'db-name')) +
+          dbRow('ID', '<span>' + (item.id||item.key||idx+1) + '</span>') +
+          dbRow('Battler', dbInput(item.battler||'', 'db-battler')) +
+          dbRow('Tier', dbNum(item.tier||1, 'db-tier'))
+        ) + '</div>' +
+        '<div style="flex:1;min-width:200px;">' +
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:4px;">Parameters</div>' +
+        dbTable(
+          dbRow('MaxHP', dbNum(sp.hp||item.hp||100, 'db-hp')) +
+          dbRow('ATK',   dbNum(sp.atk||item.atk||10, 'db-atk')) +
+          dbRow('DEF',   dbNum(sp.def||item.def||5, 'db-def')) +
+          dbRow('SPD',   dbNum(sp.spd||item.spd||5, 'db-spd')) +
+          dbRow('EXP',   dbNum(item.xpYield||item.exp||10, 'db-exp')) +
+          dbRow('Gold',  dbNum(item.goldDrop||0, 'db-gold'))
+        ) + '</div>' +
+        '</div>';
+      var nameInp = detail.querySelector('.db-name');
+      if (nameInp) nameInp.addEventListener('input', function () {
+        item.name = this.value; dbState.dirty['enemies'] = true;
+        var rows = dbEl('dbList').children;
+        if (rows[idx]) rows[idx].textContent = (idx+1).toString().padStart(3,'0') + ': ' + this.value;
+      });
+    }
+
+    // ── Tilesets tab — from Tilesets.rxdata @tileset_name @autotile_names @name
+    function dbDetailTilesets(detail, item, idx) {
+      var tabs = item.tabs || {};
+      var tabKeys = Object.keys(tabs);
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Tileset: ' + (item.name||'') + '</div>' +
+        dbTable(
+          dbRow('Name', dbInput(item.name, 'db-name')) +
+          dbRow('ID', '<span style="color:#555;">' + (item.id||idx+1) + '</span>') +
+          dbRow('Tile Size', dbNum(item.tile||32, 'db-tile'))
+        ) +
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin:8px 0 4px;">Sheets (A1-C)</div>' +
+        '<table style="border-collapse:collapse;width:100%;">' +
+        tabKeys.map(function (k) {
+          return dbRow(k, '<span style="color:#333;font-size:10px;">' + tabs[k] + '</span>');
+        }).join('') +
+        '</table>';
+    }
+
+    // ── Common Events tab — from CommonEvents.rxdata @name @trigger @switch_id @list
+    function dbDetailCommonEvents(detail, item, idx) {
+      var triggerOpts = ['None','Autorun','Parallel'].map(function (t, i) {
+        return '<option value="' + i + '" ' + (item.trigger == i ? 'selected' : '') + '>' + t + '</option>';
+      }).join('');
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Common Event: ' + (item.name||'') + '</div>' +
+        dbTable(
+          dbRow('Name', dbInput(item.name, 'db-name')) +
+          dbRow('Trigger', '<select class="db-trigger" style="width:120px;">' + triggerOpts + '</select>') +
+          dbRow('Switch', dbInput(item.switch_id||item.switch||'', 'db-switch')) +
+          dbRow('Commands', '<span style="color:#888;font-size:10px;">' + (item.commands ? item.commands.length : 0) + ' command(s) — edit in Event Editor</span>')
+        );
+      var nameInp = detail.querySelector('.db-name');
+      if (nameInp) nameInp.addEventListener('input', function () {
+        item.name = this.value; dbState.dirty['common_events'] = true;
+        var rows = dbEl('dbList').children;
+        if (rows[idx]) rows[idx].textContent = (idx+1).toString().padStart(3,'0') + ': ' + this.value;
+      });
+    }
+
+    // ── System tab — from System.rxdata fields
+    function dbDetailSystem(detail, item) {
+      // item is the whole system.json object here (not an array element)
+      var keys = Object.keys(item || {});
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">System Settings</div>' +
+        '<table style="border-collapse:collapse;width:100%;">' +
+        keys.map(function (k) {
+          var v = item[k];
+          var vStr = (v === null || v === undefined) ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+          return dbRow(k, '<input type="text" class="db-sys-val" data-key="' + k + '" value="' + vStr.replace(/"/g,'&quot;') + '" style="width:100%;box-sizing:border-box;">');
+        }).join('') +
+        '</table>';
+      detail.querySelectorAll('.db-sys-val').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          item[this.dataset.key] = this.value;
+          dbState.dirty['system'] = true;
+        });
+      });
+    }
+
+    // ── Generic key-value fallback ────────────────────────────────────
+    function dbDetailGeneric(detail, item) {
+      detail.innerHTML =
+        '<div style="font-weight:bold;border-bottom:1px solid #808080;margin-bottom:6px;">Properties</div>' +
+        '<table style="border-collapse:collapse;width:100%;">' +
+        Object.keys(item).map(function (k) {
+          var v = item[k];
+          if (typeof v === 'object') return dbRow(k, '<span style="color:#888;font-size:10px;">[object]</span>');
+          return dbRow(k, '<span>' + String(v).replace(/</g,'&lt;') + '</span>');
+        }).join('') + '</table>';
+    }
+
+    // ── Open/Close ────────────────────────────────────────────────────
+    function openDb() {
+      dbEl('dbModal').style.display = 'flex';
+      dbSwitchTab(dbState.tab);
+    }
+    function closeDb() { dbEl('dbModal').style.display = 'none'; }
+
+    dbEl('dbClose').addEventListener('click', closeDb);
+    dbEl('dbCancel').addEventListener('click', closeDb);
+    dbEl('dbOK').addEventListener('click', closeDb);
+    dbEl('dbApply').addEventListener('click', function () { /* save dirty tabs — future: POST to server */ });
+    dbEl('dbModal').addEventListener('click', function (e) { if (e.target === dbEl('dbModal')) closeDb(); });
+
+    // Wire DB toolbar button (F9)
+    var dbBtn = document.getElementById('dbBtn');
+    if (dbBtn) { dbBtn.removeEventListener('click', soon); dbBtn.addEventListener('click', openDb); }
+    window._openDb = openDb;
+
+    // Wire F9 keyboard shortcut
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'F9') { e.preventDefault(); openDb(); }
+    });
+  })();
+
+  ['scriptBtn', 'soundBtn'].forEach(function (id) {
     var e = $(id); if (e) e.addEventListener('click', soon);
   });
   // Repurpose the Materials (🎨) toolbar button as the character-sprite picker.
