@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Map Editor — Awakened Calamity</title>
+<title>Map Editor -- Awakened Calamity</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* RPG Maker MZ-style light theme */
@@ -51,7 +51,7 @@
   #menubar .mi:hover .key { color:#dfe; }
   #menubar .mi-sep { height:1px; background:var(--line2); margin:3px 4px; }
 
-  /* ── Icon toolbar — HIDDEN (owner removed it; everything is in the menu bar).
+  /* ── Icon toolbar -- HIDDEN (owner removed it; everything is in the menu bar).
      The buttons stay in the DOM so the menu items still drive their handlers. ── */
   #toolbar { display:none !important; }
   #toolbar.show { display:flex; align-items:center; gap:2px; padding:3px 6px;
@@ -84,7 +84,7 @@
   /* Left: map tree + palette */
   #leftCol { width:230px; min-width:230px; flex:0 0 auto; background:var(--panel);
     border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
-  /* Classic RPG Maker map list — separate boxed area at the bottom-left. */
+  /* Classic RPG Maker map list -- separate boxed area at the bottom-left. */
   #treePanel { border-top:2px groove #cfcfcf; display:flex; flex-direction:column;
     height:230px; flex:0 0 auto; background:var(--panel); }
   #treeHead, #palHeadLbl { padding:4px 8px; font-size:11px; font-weight:700; color:#2b4a7a;
@@ -167,23 +167,29 @@
   .ed-head strong { color:#2b4a7a; }
   .ed-body { padding:10px 12px; }
 
-  /* Right: inspector */
-  #sidePanel { width:226px; min-width:226px; flex:0 0 auto; background:var(--panel);
-    border-left:1px solid var(--line); padding:8px; overflow:auto;
-    display:flex; flex-direction:column; gap:10px; }
-
-  /* Responsive: shrink the side panels on smaller screens so the map keeps
-     usable room and nothing is cut off the edges. */
-  @media (max-width:900px) {
-    #leftCol  { width:194px; min-width:194px; }
-    #sidePanel{ width:184px; min-width:184px; }
-  }
+  /* Responsive: shrink the left panel on smaller screens */
+  @media (max-width:900px) { #leftCol { width:194px; min-width:194px; } }
   @media (max-width:600px) {
     #topbar h1 { display:none; }
-    #leftCol  { width:162px; min-width:162px; }
-    #sidePanel{ width:160px; min-width:160px; }
+    #leftCol { width:162px; min-width:162px; }
     .auto-swatch { width:54px; }
   }
+
+  /* ── XP tileset palette: autotile strip (7 slots) + main tiles ── */
+  #xpPaletteWrap { flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  #xpAutotileStrip { display:none; flex-wrap:wrap; gap:2px; padding:4px 6px;
+    background:var(--panel2); border-bottom:1px solid var(--line2); }
+  #xpAutotileStrip.show { display:flex; }
+  .xp-at-slot { width:66px; display:flex; flex-direction:column; align-items:center;
+    gap:1px; cursor:pointer; padding:3px; border:1px solid transparent; border-radius:3px; }
+  .xp-at-slot:hover { background:var(--btnH); }
+  .xp-at-slot.active { background:var(--accent2); border-color:var(--accent); }
+  .xp-at-slot.empty { opacity:.35; cursor:default; }
+  .xp-at-slot canvas { image-rendering:pixelated; border:1px solid var(--line2); }
+  .xp-at-slot span { font-size:9px; color:var(--dim); text-align:center;
+    word-break:break-word; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #xpTileWrap { flex:1; overflow:auto; padding:4px; background:#fafafa; }
+  #xpTileCanvas { display:block; image-rendering:pixelated; cursor:crosshair; touch-action:pan-x pan-y; }
   .card { background:#fafafa; border:1px solid var(--line2); border-radius:5px; padding:7px; }
   .card h3 { margin:0 0 6px; font-size:10px; text-transform:uppercase;
     letter-spacing:.5px; color:#2b4a7a; }
@@ -209,7 +215,7 @@
     <div class="tgrp">
       <button id="newBtn" class="tb" title="New map">📄</button>
       <button id="genBtn" class="tb" title="Generate a map (town / route / forest / dungeon / interior)">🎲</button>
-      <button id="importBtn" class="tb" title="Open / Import…">📂</button>
+      <button id="importBtn" class="tb" title="Open / Import...">📂</button>
       <button id="exportBtn" class="tb" title="Export (save layout+map)">💾</button>
     </div>
     <div class="tsep"></div>
@@ -231,7 +237,7 @@
     <div class="tgrp" id="layerGroup">
       <button class="tb txt mode-layer active" data-layer="ground"  title="Layer 1 (Ground)">1</button>
       <button class="tb txt mode-layer"        data-layer="overlay" title="Layer 2 (Overlay)">2</button>
-      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (Upper) — coming soon">3</button>
+      <button class="tb txt mode-layer"        data-layer="upper"   title="Layer 3 (Upper) -- coming soon">3</button>
       <button id="eventModeBtn" class="tb" title="Event layer (click again to turn off)">◆</button>
     </div>
     <div class="tsep"></div>
@@ -249,9 +255,10 @@
     <div class="tsep"></div>
     <!-- Scale -->
     <div class="tgrp" id="scaleGroup">
-      <button class="tb txt scale active" data-scale="2"   title="Scale 1/1">1/1</button>
-      <button class="tb txt scale"        data-scale="1"   title="Scale 1/2">1/2</button>
-      <button class="tb txt scale"        data-scale="0.5" title="Scale 1/4">1/4</button>
+      <button class="tb txt scale active" data-scale="2"    title="Display the map in 1:1 scale&#10;1/1">1/1</button>
+      <button class="tb txt scale"        data-scale="1"    title="Display the map in 1:2 scale&#10;1/2">1/2</button>
+      <button class="tb txt scale"        data-scale="0.5"  title="Display the map in 1:4 scale&#10;1/4">1/4</button>
+      <button class="tb txt scale"        data-scale="0.25" title="Display the map in 1:8 scale&#10;1/8">1/8</button>
     </div>
     <div class="tsep"></div>
     <!-- Tools -->
@@ -301,38 +308,54 @@
       <div id="palettePanel">
         <div id="palHeadLbl">Tilesets
           <span style="float:right; font-weight:400; text-transform:none;">
-            <button id="tabModeBtn" title="Switch palette layout: MV tabs ⇄ XP single sheet"
-              style="padding:1px 7px; font-size:10px;">MV Tabs</button>
+            <button id="tabModeBtn" title="Switch palette mode: XP (one tileset + autotiles) ⇄ VX Ace tabs"
+              style="padding:1px 7px; font-size:10px;">XP</button>
           </span>
         </div>
-        <div id="palToolRow">
-          <span class="lbl">Set</span>
-          <select id="rmSetSel" style="flex:1; min-width:0;"></select>
+
+        <!-- XP mode: single tileset dropdown with autotile strip -->
+        <div id="xpModeRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid var(--line2); background:var(--panel2);">
+          <span class="lbl">Tileset</span>
+          <select id="xpTilesetSel" style="flex:1; min-width:0;"></select>
         </div>
-        <div id="palTabs"></div>
-        <div id="palToolRow">
-          <span class="lbl">Sheet</span>
-          <select id="tilesetSel" style="flex:1; min-width:0;"></select>
+        <div id="xpPaletteWrap">
+          <div id="xpAutotileStrip"></div>
+          <div id="xpTileWrap">
+            <canvas id="xpTileCanvas"></canvas>
+          </div>
         </div>
-        <div id="paletteHead">
-          <button id="autoToggle" title="Switch autotiles ⇄ raw tiles">🌱 Auto</button>
-          <button id="multiTileBtn" title="Pick more than one tile: when ON, drag a rectangle across the palette to grab a block">▦ 1×1</button>
-          <label class="lbl">Jump</label><input type="number" id="paletteJump" min="0" style="width:48px">
-          <span class="lbl" id="paletteCount"></span>
-        </div>
-        <div id="paletteWrap">
-          <canvas id="paletteCanvas"></canvas>
-          <div id="autoPalette"></div>
+
+        <!-- VX Ace mode (hidden in XP mode) -->
+        <div id="vxModeRows" style="display:none;">
+          <div id="palToolRow" style="padding:4px 6px; display:flex; align-items:center; gap:5px; border-bottom:1px solid var(--line2); background:var(--panel2);">
+            <span class="lbl">Set</span>
+            <select id="rmSetSel" style="flex:1; min-width:0;"></select>
+          </div>
+          <div id="palTabs"></div>
+          <div style="padding:4px 6px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:5px; background:var(--panel2);">
+            <span class="lbl">Sheet</span>
+            <select id="tilesetSel" style="flex:1; min-width:0;"></select>
+          </div>
+          <div id="paletteHead">
+            <button id="autoToggle" title="Switch autotiles ⇄ raw tiles">🌱 Auto</button>
+            <button id="multiTileBtn" title="Pick more than one tile: when ON, drag a rectangle across the palette to grab a block">▦ 1×1</button>
+            <label class="lbl">Jump</label><input type="number" id="paletteJump" min="0" style="width:48px">
+            <span class="lbl" id="paletteCount"></span>
+          </div>
+          <div id="paletteWrap">
+            <canvas id="paletteCanvas"></canvas>
+            <div id="autoPalette"></div>
+          </div>
         </div>
       </div>
       <div id="treePanel">
         <div id="treeHead">Map List <button id="treeAddBtn" title="New top-level map">＋</button></div>
-        <div id="mapTree"><div class="hint" style="padding:6px;">Loading…</div></div>
+        <div id="mapTree"><div class="hint" style="padding:6px;">Loading...</div></div>
       </div>
     </div>
 
     <div id="canvasPanel">
-      <!-- Contextual floating bar (Region #, Shadow/Event hints) — only the
+      <!-- Contextual floating bar (Region #, Shadow/Event hints) -- only the
            active mode's controls show; no docked right panel (matches RM XP). -->
       <div id="modeBar" style="display:none;">
         <span id="regionRow" style="display:none;"><label class="lbl">Region #</label>
@@ -381,7 +404,7 @@
           <label class="lbl">Houses</label><input type="number" id="genHouses" value="12" min="0" max="12" style="width:54px;"></label>
         </div>
         <div class="row" id="genTier" style="display:none;"><label class="lbl">Tier</label><input type="number" id="genTierIn" value="1" min="1" max="4"></div>
-        <div class="row" style="font-size:11px;opacity:.7;">Generates onto the canvas — tweak, then ☁ Save to Repo.</div>
+        <div class="row" style="font-size:11px;opacity:.7;">Generates onto the canvas -- tweak, then ☁ Save to Repo.</div>
       </div>
       <div class="ed-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--line2);">
         <button id="genGo" style="background:#2b6a3a;color:#fff;border-color:#3a8a4f;">Generate</button>
@@ -413,7 +436,7 @@
   <!-- Transfer destination picker: choose a map, click the tile the player lands on -->
   <div id="destPickModal" class="ed-modal" style="display:none;">
     <div class="ed-box" style="width:auto;max-width:94vw;max-height:90vh;">
-      <div class="ed-head"><strong>Transfer — click where the player arrives</strong><button id="destPickClose">✕</button></div>
+      <div class="ed-head"><strong>Transfer -- click where the player arrives</strong><button id="destPickClose">✕</button></div>
       <div class="ed-body" style="overflow:auto;">
         <div class="row"><label class="lbl">Map</label><select id="destMapSel" style="flex:1;min-width:0;"></select>
           <span id="destPickInfo" class="hint"></span></div>
@@ -439,11 +462,11 @@
   </div>
 
   <div id="statusbar">
-    <span id="statCoord">—</span>
-    <span id="statTile">—</span>
-    <span id="statSize">—</span>
-    <span id="statTileset">—</span>
-    <span id="statLayer">—</span>
+    <span id="statCoord">--</span>
+    <span id="statTile">--</span>
+    <span id="statSize">--</span>
+    <span id="statTileset">--</span>
+    <span id="statLayer">--</span>
     <span id="statTool" style="color:#2b4a7a;font-weight:600;">✏ Pencil</span>
     <span id="statBuild" style="margin-left:auto;color:#9a9a9a;">build __CACHE_BUST__</span>
   </div>
@@ -466,7 +489,7 @@
       </div>
       <div id="spriteGrid" style="padding:10px 12px; overflow:auto; flex:1; display:flex;
           flex-wrap:wrap; gap:8px; align-content:flex-start; background:#fafafa;">
-        <div class="hint">Loading…</div>
+        <div class="hint">Loading...</div>
       </div>
       <div style="padding:9px 14px; border-top:1px solid var(--line); display:flex;
           align-items:center; gap:10px;">
@@ -488,7 +511,7 @@
         <button id="repoModalClose">✕</button>
       </div>
       <div id="repoModalBody" style="padding:10px 12px; overflow:auto; flex:1;">
-        <div class="hint">Loading…</div>
+        <div class="hint">Loading...</div>
       </div>
     </div>
   </div>

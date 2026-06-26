@@ -1,8 +1,8 @@
-/* Map Editor — RPG Maker MZ-style metatile editor.
+/* Map Editor -- RPG Maker MZ-style metatile editor.
  *
  * Tileset tabs (one per sheet) + an Auto/Tiles toggle, two paint layers
  * (Ground + Overlay), autotile-on-paint, and a tileset GROUP per layer:
- * each layer can hold tiles from multiple sheets at once (RM A–E model).
+ * each layer can hold tiles from multiple sheets at once (RM A-E model).
  * Cells store GLOBAL ids = sheet.offset + localId; switching the picker to
  * another sheet never repaints the map (existing ids keep their sheet).
  *
@@ -22,9 +22,9 @@
   var META_PER_ROW = 16;       // fallback metatiles-per-row
   var $ = function (id) { return document.getElementById(id); };
 
-  // ── Per-layer record. A layer holds a GROUP of tileset sheets (RM-style):
+  // -- Per-layer record. A layer holds a GROUP of tileset sheets (RM-style):
   // each sheet gets an offset into a shared global id-space, and cells store
-  // global ids. Switching the picker to another sheet does NOT touch the map —
+  // global ids. Switching the picker to another sheet does NOT touch the map --
   // existing cells keep their ids and render from their own sheet.
   //   sheet = { name, img, meta, autotile, offset, count }
   //   data[i] = global id (offset + localId), or -1 for empty (overlay).
@@ -58,15 +58,175 @@
     multiTile: false,            // palette: single tile by default; drag-select a block only when ON
     zoom: 2,
     orient: 0,                   // 0..3 -> 0/90/180/270 deg whole-editor rotation
-    // ── RPG-Maker tab model ──
+    // -- RPG-Maker tab model --
     rmSets: [],                  // loaded from data/tilesets/_rm_sets.json
     activeSet: null,             // current set object {id,name,tile,tabs}
     setTabs: [],                 // [{label, sheet, role}] for the active set
-    tabMode: 'mv'                // 'mv' = A-E tabs (one sheet) | 'xp' = single stacked sheet
+    tabMode: 'xp',               // 'xp' = RPG Maker XP single tileset | 'mv' = VX Ace A-E tabs
+    // -- XP tileset mode --
+    xpTilesets: [],              // loaded from data/tilesets/xp_tilesets.json
+    xpActiveTileset: null,       // {id, name, tileset_name, autotile_names:[7]}
+    xpTileImg: null,             // HTMLImageElement for the main XP tileset PNG
+    xpTileMeta: null,            // JSON metadata for main XP tileset
+    xpAutotileImgs: [],          // [7] HTMLImageElement|null for autotiles
+    xpAutotileMetas: [],         // [7] metadata|null
+    xpActiveAutotile: -1,        // -1 = main tileset; 0-6 = autotile slot
+    xpSelectedTile: 0            // selected tile in xpTileCanvas (gid in main tileset)
   };
 
   // RM tab roles in display order. A2 = ground autotile (terrain brush).
   var RM_ROLE_ORDER = ['A1', 'A2', 'A3', 'A4', 'A5', 'B', 'C', 'D', 'E'];
+
+  // -- XP TILESET MODE --------------------------------------------------------
+  // RPG Maker XP uses: one main tileset PNG (256px wide, 32px tiles, 8/row)
+  // + 7 autotile slots shown as a strip above the main palette.
+  // Selecting an autotile slot stamps the full 48-tile block for that autotile.
+
+  function loadXpTilesets() {
+    return fetch('data/tilesets/xp_tilesets.json')
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(d){
+        state.xpTilesets = Array.isArray(d) ? d : [];
+        var sel = $('xpTilesetSel'); sel.innerHTML = '';
+        state.xpTilesets.forEach(function(ts){
+          var o = document.createElement('option');
+          o.value = ts.tileset_name;
+          o.textContent = ts.id + '. ' + ts.name + ' (' + ts.tileset_name + ')';
+          sel.appendChild(o);
+        });
+      }).catch(function(){ state.xpTilesets = []; });
+  }
+
+  function xpActivate(tilesetName) {
+    var ts = state.xpTilesets.filter(function(t){ return t.tileset_name === tilesetName; })[0];
+    if (!ts) return Promise.resolve();
+    state.xpActiveTileset = ts;
+    state.xpActiveAutotile = -1;
+    state.xpSelectedTile = 0;
+    state.xpAutotileImgs = new Array(7).fill(null);
+    state.xpAutotileMetas = new Array(7).fill(null);
+
+    // Load main tileset image + meta
+    var mainName = 'xp_' + ts.tileset_name;
+    var p1 = Promise.all([
+      loadImg('data/tilesets/' + mainName + '.png'),
+      fetch('data/tilesets/' + mainName + '.json').then(function(r){ return r.ok ? r.json() : null; })
+    ]).then(function(parts){
+      state.xpTileImg = parts[0];
+      state.xpTileMeta = parts[1];
+    }).catch(function(){ state.xpTileImg = null; state.xpTileMeta = null; });
+
+    // Load 7 autotile slots
+    var atPromises = ts.autotile_names.map(function(atName, i){
+      if (!atName) return Promise.resolve();
+      var n = 'xp_at_' + atName;
+      return Promise.all([
+        loadImg('data/tilesets/' + n + '.png'),
+        fetch('data/tilesets/' + n + '.json').then(function(r){ return r.ok ? r.json() : null; })
+      ]).then(function(parts){
+        state.xpAutotileImgs[i] = parts[0];
+        state.xpAutotileMetas[i] = parts[1];
+      }).catch(function(){});
+    });
+
+    return Promise.all([p1].concat(atPromises)).then(function(){
+      // Wire the XP tileset as the active layer's tileset for painting
+      var layer = L();
+      layer.sheets = [];
+      if (state.xpTileImg && state.xpTileMeta) {
+        var sheet = { name: mainName, img: state.xpTileImg, meta: state.xpTileMeta, autotile: null, offset: 0, count: 0 };
+        sheet.count = (state.xpTileMeta.total_metatiles) || Math.ceil(state.xpTileImg.height / 32) * 8;
+        layer.sheets.push(sheet);
+        layer.active = 0;
+        syncActive(layer);
+      }
+      buildXpAutotileStrip();
+      drawXpPalette();
+      updateTilesetStatus();
+      drawMap();
+    });
+  }
+
+  function loadImg(src) {
+    return new Promise(function(res, rej){
+      var img = new Image(); img.onload = function(){ res(img); }; img.onerror = rej;
+      img.src = src;
+    });
+  }
+
+  function buildXpAutotileStrip() {
+    var strip = $('xpAutotileStrip');
+    strip.innerHTML = '';
+    var ts = state.xpActiveTileset;
+    if (!ts) { strip.classList.remove('show'); return; }
+    strip.classList.add('show');
+    ts.autotile_names.forEach(function(atName, i){
+      var slot = document.createElement('div');
+      var img = state.xpAutotileImgs[i];
+      var isEmpty = !atName || !img;
+      slot.className = 'xp-at-slot' + (isEmpty ? ' empty' : '') + (state.xpActiveAutotile === i ? ' active' : '');
+      var c = document.createElement('canvas');
+      c.width = 64; c.height = 64;
+      var cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
+      if (img) {
+        // Draw first frame (96×128), scaled to 64×64
+        cx.drawImage(img, 0, 0, 96, 128, 0, 0, 64, 64);
+      } else {
+        cx.fillStyle = '#ddd'; cx.fillRect(0,0,64,64);
+        if (atName) { cx.fillStyle='#999'; cx.font='10px sans-serif'; cx.textAlign='center'; cx.fillText('?',32,36); }
+      }
+      slot.appendChild(c);
+      var lbl = document.createElement('span');
+      lbl.textContent = atName || '(none)';
+      slot.appendChild(lbl);
+      if (!isEmpty) {
+        slot.addEventListener('click', function(){
+          state.xpActiveAutotile = i;
+          // stamp = autotile (use gid range 8*i..8*i+47 conceptually; for now use tile 0 as placeholder)
+          state.stamp = { w:1, h:1, ids:[0] };
+          buildXpAutotileStrip();
+        });
+      }
+      strip.appendChild(slot);
+    });
+  }
+
+  function drawXpPalette() {
+    var c = $('xpTileCanvas');
+    var img = state.xpTileImg;
+    if (!img) { c.width = 256; c.height = 64; return; }
+    var PAL_S = 2; // display scale (32px tiles → 64px each)
+    var tileSize = 32;
+    var cols = 8;
+    var rows = Math.ceil(img.height / tileSize);
+    c.width = cols * tileSize * PAL_S;
+    c.height = rows * tileSize * PAL_S;
+    var ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, c.width, c.height);
+    // Draw selection highlight
+    var sel = state.xpSelectedTile;
+    if (sel >= 0) {
+      var sx = (sel % cols) * tileSize * PAL_S;
+      var sy = Math.floor(sel / cols) * tileSize * PAL_S;
+      ctx.strokeStyle = '#f00'; ctx.lineWidth = 2;
+      ctx.strokeRect(sx+1, sy+1, tileSize*PAL_S-2, tileSize*PAL_S-2);
+    }
+    // Grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
+    for (var r=0;r<=rows;r++){ ctx.beginPath(); ctx.moveTo(0,r*tileSize*PAL_S); ctx.lineTo(c.width,r*tileSize*PAL_S); ctx.stroke(); }
+    for (var col=0;col<=cols;col++){ ctx.beginPath(); ctx.moveTo(col*tileSize*PAL_S,0); ctx.lineTo(col*tileSize*PAL_S,c.height); ctx.stroke(); }
+  }
+
+  function applyXpTabMode() {
+    var isXp = state.tabMode === 'xp';
+    var xpRow = $('xpModeRow'), xpWrap = $('xpPaletteWrap'), vxRows = $('vxModeRows');
+    if (xpRow) xpRow.style.display = isXp ? '' : 'none';
+    if (xpWrap) xpWrap.style.display = isXp ? '' : 'none';
+    if (vxRows) vxRows.style.display = isXp ? 'none' : '';
+    var btn = $('tabModeBtn');
+    if (btn) btn.textContent = isXp ? 'XP' : 'MV';
+  }
 
   // Orientation modes that MATCH THE GAME (styles.css .orient-*). Index = state.orient.
   // `deg` is the applied CSS rotation (used to inverse-rotate pointer coords);
@@ -79,7 +239,7 @@
   ];
   var ORIENT_CLASSES = ['ed-landscape', 'ed-reverse-portrait', 'ed-reverse-landscape'];
 
-  // ── Map tree model (manual hierarchy, RM-style) ──
+  // -- Map tree model (manual hierarchy, RM-style) --
   // name -> { region, parent (name|null), local (true until saved to repo) }
   var TREE_KEY = 'ac_map_tree_v1';
   var treeModel = {};
@@ -104,7 +264,7 @@
   function srcTile(o) { o = o || L(); return (o.meta && o.meta.tile) || 16; }
   function perRow(o)  { o = o || L(); return (o.meta && o.meta.metatiles_per_row) || META_PER_ROW; }
 
-  // ── Tileset-group helpers ──
+  // -- Tileset-group helpers --
   function aSheet(layer) { layer = layer || L(); return layer.sheets[layer.active] || null; }
   function syncActive(layer) {           // mirror active sheet onto layer.* for palette code
     var s = aSheet(layer);
@@ -128,7 +288,7 @@
     for (var i = 0; i < layer.sheets.length; i++) if (layer.sheets[i].autotile) return layer.sheets[i];
     return null;
   }
-  // The GLOBAL id of the active set's A2 ground tile (grass) — the default fill
+  // The GLOBAL id of the active set's A2 ground tile (grass) -- the default fill
   // for a blank map. Prefers the set's A2 sheet (autotile grass fill if baked,
   // else tile 0), then any autotile sheet, then the first sheet.
   function sheetInLayer(layer, name) {
@@ -147,7 +307,7 @@
     return layer.sheets[0] ? layer.sheets[0].offset : 0;
   }
 
-  // ── Tileset loading (into the ACTIVE layer) ──
+  // -- Tileset loading (into the ACTIVE layer) --
   function loadTilesetList() {
     return fetch('data/tilesets/_index.json')
       .then(function (r) { return r.json(); })
@@ -221,7 +381,7 @@
 
   function updateTilesetStatus() {
     var layer = L();
-    $('statTileset').textContent = 'Tileset: ' + (layer.name || '—') +
+    $('statTileset').textContent = 'Tileset: ' + (layer.name || '--') +
       ' (' + (totalMetatiles(layer) || '?') + ')';
     $('statLayer').textContent = 'Layer: ' + state.active;
   }
@@ -231,7 +391,7 @@
     return s ? s.count : 0;
   }
 
-  // ── Autotiler (author-time edge blob, ground layer) ──
+  // -- Autotiler (author-time edge blob, ground layer) --
   function recomputeTerrainCell(x, y) {
     var layer = state.layers.ground;
     var asheet = autotileSheet(layer);
@@ -290,13 +450,13 @@
       for (var dx = -1; dx <= 1; dx++) recomputeTerrainCell(x + dx, y + dy);
   }
 
-  // ── Palette: A (autotiles) + B (raw tiles) ──
+  // -- Palette: A (autotiles) + B (raw tiles) --
   var paletteCanvas = $('paletteCanvas');
   var pctx = paletteCanvas.getContext('2d');
   var PAL_SCALE = 2;
   var PAL_COLS = 8;
 
-  // ── RPG-Maker tileset SETS (data/tilesets/_rm_sets.json) ──
+  // -- RPG-Maker tileset SETS (data/tilesets/_rm_sets.json) --
   // A "set" groups sheets into RM A1-A5/B/C/D/E roles. Selecting a set loads all
   // its sheets into the active layer's group (offsets), so cells store global ids
   // and tabs just switch which sheet the picker shows. MV mode = A-E tabs (one
@@ -626,7 +786,7 @@
     blitGid(sc, L(), state.selectedTile, 0, 0, 16);
   }
 
-  // ── Map model ──
+  // -- Map model --
   function newMap(w, h, keep) {
     var prev = keep ? state.layers : null;
     var pw = keep ? state.width : 0, ph = keep ? state.height : 0;
@@ -634,7 +794,7 @@
     ['ground', 'overlay', 'upper'].forEach(function (key) {
       var layer = state.layers[key];
       // Ground default fill = the set's A2 GROUND tile (grass), as a GLOBAL id.
-      // (Not sheets[0] — A1/water sorts first in the tab order, so that would
+      // (Not sheets[0] -- A1/water sorts first in the tab order, so that would
       // wrongly default the map to water.)
       var fill = layer.fill;
       if (key === 'ground') fill = groundFillGid(layer);
@@ -679,7 +839,7 @@
     return 'hsla(' + h + ',75%,50%,0.5)';
   }
 
-  // ── Map rendering ──
+  // -- Map rendering --
   var mapCanvas = $('mapCanvas');
   var mctx = mapCanvas.getContext('2d');
   function cell() { return DT * state.zoom; }
@@ -794,7 +954,7 @@
     }
   }
 
-  // ── Undo / Redo (snapshot history) ──
+  // -- Undo / Redo (snapshot history) --
   // Snapshot the editable arrays (all layers' data/collision/terrain + warps +
   // size). Push before each user gesture; restore on undo/redo.
   var undoStack = [], redoStack = [], UNDO_MAX = 60;
@@ -840,7 +1000,7 @@
   function doUndo() { if (!undoStack.length) { toast('Nothing to undo.'); return; } redoStack.push(snapshot()); restore(undoStack.pop()); }
   function doRedo() { if (!redoStack.length) { toast('Nothing to redo.'); return; } undoStack.push(snapshot()); restore(redoStack.pop()); }
 
-  // ── Painting ──
+  // -- Painting --
   var painting = false, rectStart = null;
   var _collidePaint = 1;   // value a collide-drag writes (set at gesture start)
 
@@ -973,7 +1133,7 @@
         }
         if (state.mode === 'region') { state.region[idx(x, y)] = state.eraser ? 0 : state.regionId; continue; }
         // collision lives on the GROUND layer (the only one exported), regardless of
-        // which layer is active — match the single-tile paint + the render overlay.
+        // which layer is active -- match the single-tile paint + the render overlay.
         if (state.mode === 'collide') { state.layers.ground.collision[idx(x, y)] = state.eraser ? 0 : 1; continue; }
         if (auto) { layer.terrain[idx(x, y)] = state.selectedTerrain; continue; }
         // tile the stamp block by relative position
@@ -986,8 +1146,8 @@
       for (var rx2 = x0 - 1; rx2 <= x1 + 1; rx2++) recomputeTerrainCell(rx2, ry2);
   }
 
-  // ── Pan: hold & drag to scroll the map. Active with the Pan tool, the middle
-  // mouse button, or Space held. Scrolls #canvasPanel by the drag delta. ──
+  // -- Pan: hold & drag to scroll the map. Active with the Pan tool, the middle
+  // mouse button, or Space held. Scrolls #canvasPanel by the drag delta. --
   var panState = null;
   var spaceHeld = false;
   window.addEventListener('keydown', function (e) {
@@ -1122,7 +1282,7 @@
     painting = false;
   });
 
-  // ── Selection clipboard (Copy / Cut / Paste / Delete) on the active layer ──
+  // -- Selection clipboard (Copy / Cut / Paste / Delete) on the active layer --
   function clampSel() {
     if (!state.sel) return null;
     var s = state.sel;
@@ -1150,23 +1310,23 @@
   }
   function cutSelection() { copySelection(); clearSelection(); }
   function pasteClipboard() {
-    if (!state.clipboard) { toast('Clipboard empty — Copy a selection first.'); return; }
+    if (!state.clipboard) { toast('Clipboard empty -- Copy a selection first.'); return; }
     // Load the copied block as the current stamp; pencil places it on click.
     state.stamp = { w: state.clipboard.w, h: state.clipboard.h, ids: state.clipboard.ids.slice() };
     state.selectedTile = state.clipboard.ids[0];
     state.eraser = false; $('eraserBtn').classList.remove('active');
     setToolBtn('pencil');
-    toast('Paste armed — click on the map to stamp the copied block.');
+    toast('Paste armed -- click on the map to stamp the copied block.');
   }
 
-  // ── Warps ──
+  // -- Warps --
   function addWarp(x, y) {
     if (state.warps.some(function (w) { return w.x === x && w.y === y; })) return;
     state.warps.push({ x: x, y: y, dest_map: 'MAP_NONE', dest_warp_id: '0' });
     drawMap(); renderWarpList();
   }
   function renderWarpList() {
-    var list = $('warpList'); if (!list) return;   // Warp UI removed — warps are events now
+    var list = $('warpList'); if (!list) return;   // Warp UI removed -- warps are events now
     list.innerHTML = '';
     if (!state.warps.length) { list.innerHTML = '<div class="hint">No warps yet.</div>'; return; }
     state.warps.forEach(function (w, i) {
@@ -1183,7 +1343,7 @@
     });
   }
 
-  // ── Events (RPG-Maker-style map events) ──
+  // -- Events (RPG-Maker-style map events) --
   var EVENT_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
   function eventAt(x, y) {
     for (var i = 0; i < state.events.length; i++) if (state.events[i].x === x && state.events[i].y === y) return state.events[i];
@@ -1263,7 +1423,7 @@
     if (!ev) { props.innerHTML = '<div class="hint">No event selected. Click a tile to place one.</div>'; renderEventList(); return; }
     props.innerHTML =
       '<div class="row"><label class="lbl">Name</label><input type="text" id="evName" value="' + (ev.name || '') + '" style="flex:1;min-width:0;"></div>' +
-      '<div class="row"><label class="lbl">Graphic</label><span id="evGfx" class="hint" style="flex:1;">' + (ev.graphic ? ev.graphic.sprite : '(none)') + '</span><button id="evPick">Choose…</button></div>' +
+      '<div class="row"><label class="lbl">Graphic</label><span id="evGfx" class="hint" style="flex:1;">' + (ev.graphic ? ev.graphic.sprite : '(none)') + '</span><button id="evPick">Choose...</button></div>' +
       '<div class="row"><label class="lbl">Facing</label><select id="evDir"><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select></div>' +
       '<div class="row"><label class="lbl">Trigger</label><select id="evTrig"><option value="action">Action button</option><option value="touch">Player touch</option><option value="auto">Autorun</option><option value="parallel">Parallel</option></select></div>' +
       '<div class="row"><label><input type="checkbox" id="evThrough"> Through (walk past)</label></div>' +
@@ -1281,7 +1441,7 @@
     renderEventList();
   }
 
-  // ── Event command list (RPG-Maker contents) — full Phase A command set ──
+  // -- Event command list (RPG-Maker contents) -- full Phase A command set --
   function mapNameList() {
     var names = Object.keys(treeModel || {});
     if (!names.length && $('mapName')) names = [$('mapName').value];
@@ -1294,13 +1454,13 @@
     ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
     ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
     ['system', '🔮 Open System Shop'], ['shop', '🛒 Off-grid Market'],
-    // run loop (roguelite descent) — fine-grained primitives + the descend macro
+    // run loop (roguelite descent) -- fine-grained primitives + the descend macro
     ['run', '🏔️ Run (start/deeper/end)'], ['gendungeon', '🗺️ Generate+Enter Floor'],
     ['descend', '⛰️ Descend (macro)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
     ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
     ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'], ['hurt', '🗡️ Hurt (trap)'], ['surveil', '👁️ Surveil (+Surveillance)'],
     ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
-    ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script…'],
+    ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script...'],
     ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event'],
     // flow control
     ['loop', '🔁 Loop'], ['break_loop', '⏹️ Break Loop'], ['input_number', '🔢 Input Number'],
@@ -1370,7 +1530,7 @@
       case 'jump': return { type: 'jump', label: '' };
       case 'comment': return { type: 'comment', text: '' };
       case 'exit': return { type: 'exit' };
-      // ── added VX Ace commands ──
+      // -- added VX Ace commands --
       case 'loop': return { type: 'loop', commands: [] };
       case 'break_loop': return { type: 'break_loop' };
       case 'input_number': return { type: 'input_number', prompt: 'Enter a number', digits: 3, variable: '1', initial: 0 };
@@ -1416,7 +1576,7 @@
     });
     var add = el('div', 'margin:3px 0;');
     var sel = el('select'); sel.style.fontSize = '11px';
-    sel.appendChild(el('option', null, '+ Add command…'));
+    sel.appendChild(el('option', null, '+ Add command...'));
     CMD_TYPES.forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
     sel.addEventListener('change', function () {
       if (!this.value) return;
@@ -1444,7 +1604,7 @@
       if (cmd.type === 'text') {            // optional RTP face portrait for this line
         var fr = el('div', 'display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap;');
         fr.innerHTML = lbl('Face') +
-          '<select class="cFaceSheet" style="max-width:120px"><option value="">— none —</option></select>' +
+          '<select class="cFaceSheet" style="max-width:120px"><option value="">-- none --</option></select>' +
           '<input type="number" class="cFaceIdx" min="0" max="7" style="width:46px" title="face index 0-7">' +
           '<span class="cFacePrev" style="width:32px;height:32px;display:inline-block;border:1px solid var(--line2);background-repeat:no-repeat;"></span>';
         body.appendChild(fr);
@@ -1503,7 +1663,7 @@
         '<div class="row">' + lbl('Map') + '<select class="cmMap" style="flex:1;min-width:0;"></select></div>' +
         '<div class="row">' + lbl('X') + '<input type="number" class="cmX" value="' + (cmd.x || 0) + '" style="width:50px;">' + lbl('Y') + '<input type="number" class="cmY" value="' + (cmd.y || 0) + '" style="width:50px;"></div>' +
         '<div class="row">' + lbl('Facing') + '<select class="cmDir"><option value="retain">Retain</option><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select>' +
-        '<button class="cmPick" title="Pick X,Y on the current map">📍 Pick…</button></div>' +
+        '<button class="cmPick" title="Pick X,Y on the current map">📍 Pick...</button></div>' +
         '</div>';
       var cmSys = body.querySelector('.cmSys'), cmManual = body.querySelector('.cmManual');
       function cmSysToggle() { cmManual.style.display = cmSys.checked ? 'none' : ''; }
@@ -1541,7 +1701,7 @@
         cp.querySelector('.kL').value = cmd.cond.letter || 'A'; cp.querySelector('.kL').addEventListener('change', function () { cmd.cond.letter = this.value; });
         cp.querySelector('.kV').value = cmd.cond.value === false ? 'false' : 'true'; cp.querySelector('.kV').addEventListener('change', function () { cmd.cond.value = this.value === 'true'; });
       } else if (cmd.cond.kind === 'quest') {
-        cp.innerHTML = '<select class="kQid" style="max-width:120px"><option value="">— quest —</option></select> is ' +
+        cp.innerHTML = '<select class="kQid" style="max-width:120px"><option value="">-- quest --</option></select> is ' +
           '<select class="kQc"><option value="active">Active</option><option value="done">Done</option><option value="failed">Failed</option><option value="notstarted">Not started</option><option value="stage">At stage ≥</option></select> ' +
           '<input type="number" class="kQs" value="' + (cmd.cond.stage | 0) + '" style="width:42px;display:none;">';
         var kqid = cp.querySelector('.kQid'), kqc = cp.querySelector('.kQc'), kqs = cp.querySelector('.kQs');
@@ -1631,7 +1791,7 @@
       gtId.addEventListener('change', function () { cmd.target = this.value === '' ? gtSel.value : (parseInt(this.value, 10) | 0); });
       body.appendChild(gtr);
       var gr2 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
-      gr2.innerHTML = '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr2.innerHTML = '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose...</button>';
       gr2.querySelector('.cGfxPick').addEventListener('click', function () {
         openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
       });
@@ -1651,7 +1811,7 @@
       kr.querySelector('.cDir').addEventListener('change', function () { cmd.dir = this.value; });
       body.appendChild(kr);
       var gr3 = el('div', 'display:flex;gap:6px;align-items:center;margin-top:4px;');
-      gr3.innerHTML = lbl('Graphic') + '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose…</button>';
+      gr3.innerHTML = lbl('Graphic') + '<span class="cGfx" style="flex:1;font-size:11px;color:#2b4a7a;">' + (cmd.graphic ? cmd.graphic.sprite : '(none)') + '</span><button class="cGfxPick">Choose...</button>';
       gr3.querySelector('.cGfxPick').addEventListener('click', function () {
         openSpriteModalForCmd(function (g) { cmd.graphic = g; renderEventPanel(); });
       });
@@ -1706,11 +1866,11 @@
         });
         this.value = cmd.enemies.map(function (e) { return e.key + ':' + e.level; }).join(', ');
       });
-      br.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'key:level — blank = random test pack'));
+      br.appendChild(el('div', 'font-size:9px;color:#888;margin-top:2px;', 'key:level -- blank = random test pack'));
       body.appendChild(br);
     } else if (cmd.type === 'grantclass') {
       var gc = el('div');
-      gc.innerHTML = '<div class="row">' + lbl('Class') + '<select class="cCls" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+      gc.innerHTML = '<div class="row">' + lbl('Class') + '<select class="cCls" style="flex:1;min-width:0;"><option value="">-- choose --</option></select></div>' +
         '<div class="row"><label class="lbl" style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="cUnlock"> unlock only (don\'t switch to it)</label></div>';
       var clsSel = gc.querySelector('.cCls');
       loadClassList().then(function (list) {
@@ -1727,7 +1887,7 @@
       body.querySelector('.cSp').addEventListener('change', function () { cmd.specId = this.value.trim(); });
     } else if (cmd.type === 'grantskill') {
       var gk = el('div');
-      gk.innerHTML = '<div class="row">' + lbl('Skill') + '<select class="cSk" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>';
+      gk.innerHTML = '<div class="row">' + lbl('Skill') + '<select class="cSk" style="flex:1;min-width:0;"><option value="">-- choose --</option></select></div>';
       var skSel = gk.querySelector('.cSk');
       loadSkillList().then(function (list) {
         list.forEach(function (s2) { var o = el('option', null, s2.name); o.value = s2.id; skSel.appendChild(o); });
@@ -1739,7 +1899,7 @@
       var qd = el('div');
       qd.innerHTML = '<div class="row">' + lbl('Op') +
         '<select class="cQop"><option value="start">Start</option><option value="advance">Advance</option><option value="complete">Complete</option><option value="fail">Fail</option><option value="stage">Set Stage</option></select>' +
-        lbl('Quest') + '<select class="cQid" style="flex:1;min-width:0;"><option value="">— choose —</option></select></div>' +
+        lbl('Quest') + '<select class="cQid" style="flex:1;min-width:0;"><option value="">-- choose --</option></select></div>' +
         '<div class="row cQstageRow" style="display:none;">' + lbl('Stage #') + '<input type="number" class="cQstage" value="' + (cmd.stage | 0) + '" style="width:54px;"></div>';
       var qop = qd.querySelector('.cQop'), qid = qd.querySelector('.cQid'), qstageRow = qd.querySelector('.cQstageRow');
       qop.value = cmd.op || 'start';
@@ -1811,7 +1971,7 @@
     } else if (cmd.type === 'creation') {
       body.appendChild(el('div', 'font-size:9px;color:#888;', 'Launches the Awakening creation screen (name / appearance / affinity / class). Affinities + classes are data.'));
     } else if (cmd.type === 'affinity') {
-      body.innerHTML = '<div class="row">' + lbl('Affinity') + '<input type="text" class="cV" value="' + (cmd.value || '') + '" style="flex:1;min-width:0;" placeholder="ember / tide / stone / untethered…"></div>';
+      body.innerHTML = '<div class="row">' + lbl('Affinity') + '<input type="text" class="cV" value="' + (cmd.value || '') + '" style="flex:1;min-width:0;" placeholder="ember / tide / stone / untethered..."></div>';
       body.querySelector('.cV').addEventListener('change', function () { cmd.value = this.value.trim(); });
     } else if (cmd.type === 'appearance') {
       body.innerHTML = '<div class="row"><label class="lbl"><input type="checkbox" class="cPick"> Picker (live preview + Confirm)</label></div>' +
@@ -1825,7 +1985,7 @@
       body.querySelector('.cC').addEventListener('change', function () { cmd.char = parseInt(this.value, 10) || 0; });
       body.querySelector('.cChars').addEventListener('change', function () { cmd.chars = this.value.split(',').map(function (s) { return parseInt(s, 10) || 0; }); });
     } else if (cmd.type === 'finalize_creation') {
-      body.innerHTML = '<div class="row">' + lbl('Class id') + '<input type="text" class="cI" value="' + (cmd.classId || '') + '" style="flex:1;min-width:0;" placeholder="warrior / rogue / cleric…"></div>';
+      body.innerHTML = '<div class="row">' + lbl('Class id') + '<input type="text" class="cI" value="' + (cmd.classId || '') + '" style="flex:1;min-width:0;" placeholder="warrior / rogue / cleric..."></div>';
       body.querySelector('.cI').addEventListener('change', function () { cmd.classId = this.value.trim(); });
     } else if (cmd.type === 'timer') {
       body.innerHTML = '<div class="row">' + lbl('Op') + '<select class="cO"><option value="start">Start</option><option value="stop">Stop</option></select>' +
@@ -1869,7 +2029,7 @@
       }).catch(function () {});
     } else if (cmd.type === 'scroll_text') {
       var sta = el('textarea'); sta.rows = 3; sta.style.cssText = 'width:100%;box-sizing:border-box;';
-      sta.value = cmd.text || ''; sta.placeholder = 'scrolling credits text…';
+      sta.value = cmd.text || ''; sta.placeholder = 'scrolling credits text...';
       sta.addEventListener('change', function () { cmd.text = this.value; });
       body.appendChild(sta);
       var sf = el('div', 'margin-top:4px;'); sf.innerHTML = lbl('Frames') + '<input type="number" class="cF" value="' + (cmd.frames || 180) + '" style="width:60px;">';
@@ -1887,7 +2047,7 @@
       body.innerHTML = '<div class="row">' + lbl('Action') +
         '<select class="cStart"><option value="start">Start a NEW run (floor 1)</option><option value="deeper">Go DEEPER (next floor / boss → clear)</option></select></div>' +
         '<div class="row cTethRow">' + lbl('Tethered') +
-        '<select class="cTeth"><option value="true">Tethered — System catches you (Surveillance ↑)</option><option value="false">Untethered — death is real (off-grid)</option></select></div>' +
+        '<select class="cTeth"><option value="true">Tethered -- System catches you (Surveillance ↑)</option><option value="false">Untethered -- death is real (off-grid)</option></select></div>' +
         '<div class="row cSeedRow">' + lbl('Seed') + '<input type="number" class="cSeed" value="' + (cmd.seed == null ? '' : (cmd.seed | 0)) + '" placeholder="random" style="width:120px;"></div>' +
         '<div style="font-size:9px;color:#888;margin-top:2px;">Start = begin a fresh descent; Deeper = continue an active run (used by StairsDown). Seed blank = random (honors the run_seed_in variable if set).</div>';
       var dStart = body.querySelector('.cStart'); dStart.value = (cmd.start === false) ? 'deeper' : 'start';
@@ -1903,10 +2063,10 @@
       body.querySelector('.cCount').addEventListener('change', function () { cmd.count = parseInt(this.value, 10) || 3; });
       body.querySelector('.cGuar').addEventListener('change', function () { cmd.guaranteed = this.value.trim(); });
     } else if (cmd.type === 'meta') {
-      body.innerHTML = '<div style="font-size:10px;color:#aaa;">Opens the Remembrance (meta-progression) menu — spend Memory Fragments on permanent unlocks. No parameters.</div>';
+      body.innerHTML = '<div style="font-size:10px;color:#aaa;">Opens the Remembrance (meta-progression) menu -- spend Memory Fragments on permanent unlocks. No parameters.</div>';
     } else if (cmd.type === 'run') {
       body.innerHTML = '<div class="row">' + lbl('Op') +
-        '<select class="cOp"><option value="start">Start — begin a fresh run (floor 1)</option><option value="deeper">Deeper — advance one floor (sets cleared past boss)</option><option value="end">End — finish the run (carry to meta)</option></select></div>' +
+        '<select class="cOp"><option value="start">Start -- begin a fresh run (floor 1)</option><option value="deeper">Deeper -- advance one floor (sets cleared past boss)</option><option value="end">End -- finish the run (carry to meta)</option></select></div>' +
         '<div class="row cTethRow">' + lbl('Tethered') +
         '<select class="cTeth"><option value="true">Tethered (Surveillance ↑)</option><option value="false">Untethered (death is real)</option></select></div>' +
         '<div class="row cSeedRow">' + lbl('Seed') + '<input type="number" class="cSeed" value="' + (cmd.seed == null ? '' : (cmd.seed | 0)) + '" placeholder="random" style="width:120px;"></div>' +
@@ -1961,9 +2121,9 @@
       body.innerHTML = '<div style="font-size:10px;color:#aaa;">' + (notes[cmd.type] || '') + ' No parameters.</div>';
     }
   }
-  // "Pick…" — arm a click on the map to set a transfer's X,Y (and map = current).
+  // "Pick..." -- arm a click on the map to set a transfer's X,Y (and map = current).
   // Transfer destination picker: open the chosen map and click where the player
-  // arrives — captures map + X + Y in one click (no typing).
+  // arrives -- captures map + X + Y in one click (no typing).
   function pickDestination(cmd, ev) { closeEventEditor(); openDestPicker(cmd, ev); }
 
   // Load a layout's tileset groups + data into a throwaway {ground,overlay,upper}
@@ -2005,7 +2165,7 @@
     });
   }
   function loadDestMap(name) {
-    var info = $('destPickInfo'); info.textContent = 'Loading…';
+    var info = $('destPickInfo'); info.textContent = 'Loading...';
     var cur = $('mapName').value, p;
     if (name === cur) { p = Promise.resolve(buildLayout()); }
     else {
@@ -2019,10 +2179,10 @@
       });
     }
     p.then(loadLayoutLayers).then(function (res) {
-      state._destLayers = res; info.textContent = res.width + '×' + res.height + ' — click a tile';
+      state._destLayers = res; info.textContent = res.width + '×' + res.height + ' -- click a tile';
       renderDestCanvas(res);
     }).catch(function () {
-      state._destLayers = null; info.textContent = 'Can’t preview — save that map first (☁), then pick.';
+      state._destLayers = null; info.textContent = 'Cannot preview -- save that map first (☁), then pick.';
       var c = $('destCanvas'); c.width = 1; c.height = 1;
     });
   }
@@ -2051,7 +2211,7 @@
     });
   }
 
-  // ── Export / Import ──
+  // -- Export / Import --
   function hasContent(arr, empty) {
     if (!arr) return false;
     for (var i = 0; i < arr.length; i++) if (arr[i] !== empty) return true;
@@ -2228,7 +2388,7 @@
     e.target.value = '';
   });
 
-  // ── Generate map (in-browser MapGen → applyLayout) ──
+  // -- Generate map (in-browser MapGen → applyLayout) --
   (function () {
     var modal = $('genModal');
     if (!modal) return;
@@ -2274,7 +2434,7 @@
         keep: $('genKeep').checked, pond: $('genPond').checked,
         houses: parseInt($('genHouses').value, 10), tier: parseInt($('genTierIn').value, 10) || 1,
       };
-      var go = $('genGo'); go.disabled = true; go.textContent = 'Generating…';
+      var go = $('genGo'); go.disabled = true; go.textContent = 'Generating...';
       var parent = genParent;
       Promise.resolve().then(function () { return MapGen.generate(opt); })
         .then(function (res) { try { pushUndo(); } catch (_) {} return applyLayout(res.layout, res.map); })
@@ -2291,7 +2451,7 @@
     });
   })();
 
-  // ── Toolbar wiring ──
+  // -- Toolbar wiring --
   function setActiveLayer(key) {
     state.active = key;
     $('layerSel').value = key;
@@ -2324,7 +2484,7 @@
   $('tilesetSel').addEventListener('change', function () { loadTileset(this.value); });
   $('rmSetSel').addEventListener('change', function () { loadSet(this.value); });
 
-  // ── RPG-Maker-XP chrome wiring (menu bar, toolbar groups) ──
+  // -- RPG-Maker-XP chrome wiring (menu bar, toolbar groups) --
   function clickEl(id) { var e = $(id); if (e) e.click(); }
   var _toast = null;
   function toast(msg) {
@@ -2411,8 +2571,8 @@
       state.stamp = { ids: [state.stamp.ids[0]], w: 1, h: 1 };   // collapse back to a single tile
     }
     syncMultiTileBtn();
-    toast(state.multiTile ? 'Multi-tile ON — drag across the palette to grab a block'
-                          : 'Multi-tile OFF — one tile at a time');
+    toast(state.multiTile ? 'Multi-tile ON -- drag across the palette to grab a block'
+                          : 'Multi-tile OFF -- one tile at a time');
   });
   syncMultiTileBtn();
 
@@ -2513,7 +2673,7 @@
       box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
       var inner = document.createElement('div');
       inner.style.cssText = 'background:#fff;border:1px solid #888;border-radius:8px;padding:18px;max-width:440px;width:90%;display:flex;flex-direction:column;gap:10px;font-size:12px;';
-      inner.innerHTML = '<b style="color:#2b4a7a;">📷 Screenshot uploaded — paste this link in chat:</b>' +
+      inner.innerHTML = '<b style="color:#2b4a7a;">📷 Screenshot uploaded -- paste this link in chat:</b>' +
         '<input id="_ssu" readonly value="' + url + '" style="padding:7px;border:1px solid #888;border-radius:4px;width:100%;box-sizing:border-box;font-family:monospace;font-size:11px;">' +
         '<div style="display:flex;gap:8px;"><button id="_ssc" style="flex:1;padding:8px;">📋 Copy</button>' +
         '<button id="_ssx" style="flex:1;padding:8px;">Close</button></div>';
@@ -2528,14 +2688,14 @@
     }).catch(function (e) { toast('Screenshot upload failed: ' + e.message); });
   }
   $('shotBtn').addEventListener('click', function () {
-    toast('Capturing screenshot…');
+    toast('Capturing screenshot...');
     var done = function (canvas) {
       uploadShot(canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''));
     };
     if (window.html2canvas) {
       html2canvas(document.body, { useCORS: true, allowTaint: true, scale: 1 }).then(done)
         .catch(function () { toast('Capture failed (html2canvas).'); });
-    } else { toast('Screenshot library not loaded — check your connection and retry.'); }
+    } else { toast('Screenshot library not loaded -- check your connection and retry.'); }
   });
 
   // Playtest -> open the game on the current map in a new tab.
@@ -2549,79 +2709,96 @@
     window.open(q, '_blank');
   });
 
-  // ── Menu bar (RPG Maker XP menu order) ──
+  // -- Menu bar (RPG Maker XP menu order) --
+  // Menu bar -- exact RPG Maker XP structure from RPGXP.exe string table
   var MENUS = [
     ['File', [
-      ['New', 'Ctrl+N', function () { clickEl('newBtn'); }],
-      ['Open / Import…', 'Ctrl+O', function () { clickEl('importBtn'); }],
-      ['Load from repo…', '', function () { clickEl('repoLoadBtn'); }],
+      ['New Map...',            'Ctrl+N', function () { clickEl('newBtn'); }],
+      ['Open...',               'Ctrl+O', function () { clickEl('importBtn'); }],
+      ['Load from Repo...',     '',       function () { clickEl('repoLoadBtn'); }],
       'sep',
-      ['Map Properties…', '', function () { window._openMapProps(); }],
+      ['Map Properties...',     '',       function () { window._openMapProps(); }],
       'sep',
-      ['Export (layout + map)', 'Ctrl+S', function () { clickEl('exportBtn'); }],
-      ['Save to repo', '', function () { clickEl('repoSaveBtn'); }]
+      ['Save',                'Ctrl+S', function () { clickEl('exportBtn'); }],
+      ['Save to Repo',        '',       function () { clickEl('repoSaveBtn'); }]
     ]],
     ['Edit', [
-      ['Undo', 'Ctrl+Z', function () { doUndo(); }], ['Redo', 'Ctrl+Y', function () { doRedo(); }], 'sep',
-      ['Cut', 'Ctrl+X', function () { cutSelection(); }], ['Copy', 'Ctrl+C', function () { copySelection(); }],
-      ['Paste', 'Ctrl+V', function () { pasteClipboard(); }], ['Delete', 'Del', function () { clearSelection(); }],
+      ['Undo',    'Ctrl+Z', function () { doUndo(); }],
+      ['Redo',    'Ctrl+Y', function () { doRedo(); }],
       'sep',
-      ['Shift Map…', '', function () { shiftMapPrompt(); }]
+      ['Cut',     'Ctrl+X', function () { cutSelection(); }],
+      ['Copy',    'Ctrl+C', function () { copySelection(); }],
+      ['Paste',   'Ctrl+V', function () { pasteClipboard(); }],
+      ['Delete',  'Del',    function () { clearSelection(); }],
+      'sep',
+      ['Select All', 'Ctrl+A', null],
+      'sep',
+      ['Shift Map...', '', function () { shiftMapPrompt(); }]
     ]],
     ['Mode', [
-      ['Layer 1 (Ground)', '1', function () { setLayerBtn('ground'); }, function () { return state.active === 'ground'; }],
-      ['Layer 2 (Overlay)', '2', function () { setLayerBtn('overlay'); }, function () { return state.active === 'overlay'; }],
-      ['Layer 3 (Upper)', '3', function () { setLayerBtn('upper'); }, function () { return state.active === 'upper'; }],
-      ['Event layer', 'F6', function () { setModeBtn(state.mode === 'event' ? 'map' : 'event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
+      ['Layer 1', 'F1', function () { setLayerBtn('ground'); }, function () { return state.active === 'ground'; }],
+      ['Layer 2', 'F2', function () { setLayerBtn('overlay'); }, function () { return state.active === 'overlay'; }],
+      ['Layer 3', 'F3', function () { setLayerBtn('upper'); }, function () { return state.active === 'upper'; }],
+      ['Events',  'F4', function () { setModeBtn(state.mode === 'event' ? 'map' : 'event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
       'sep',
-      ['Collision / Passage', '', function () { setModeBtn(state.mode === 'collide' ? 'map' : 'collide'); syncModeUI(); }, function () { return state.mode === 'collide'; }],
-      ['Tile mode', '', function () { setModeBtn('map'); syncModeUI(); }, function () { return state.mode === 'map'; }],
-      ['Region IDs', '', function () { setModeBtn(state.mode === 'region' ? 'map' : 'region'); syncModeUI(); }, function () { return state.mode === 'region'; }],
-      ['Shadow pen', '', function () { setModeBtn(state.mode === 'shadow' ? 'map' : 'shadow'); syncModeUI(); }, function () { return state.mode === 'shadow'; }]
+      ['Current Layer and Below', '', null],
+      ['All Layers',              '', null],
+      ['Dim Other Layers',        '', null]
     ]],
     ['Draw', [
-      ['Pencil', '', function () { setToolBtn('pencil'); }, function () { return state.tool === 'pencil' && !state.eraser; }],
-      ['Rectangle', '', function () { setToolBtn('rect'); }, function () { return state.tool === 'rect'; }],
-      ['Ellipse', '', function () { setToolBtn('ellipse'); }, function () { return state.tool === 'ellipse'; }],
-      ['Flood Fill', '', function () { setToolBtn('fill'); }, function () { return state.tool === 'fill'; }],
-      ['Select (box)', '', function () { setToolBtn('select'); }, function () { return state.tool === 'select'; }],
-      ['Pick (eyedropper)', '', function () { setToolBtn('pick'); }, function () { return state.tool === 'pick'; }],
-      ['Pan (or tap the active tool off)', '', function () { setToolBtn('pan'); }, function () { return state.tool === 'pan'; }],
-      ['Eraser', '', function () { clickEl('eraserBtn'); }, function () { return state.eraser; }],
+      ['Pencil',      '',  function () { setToolBtn('pencil'); },  function () { return state.tool === 'pencil' && !state.eraser; }],
+      ['Rectangle',   '',  function () { setToolBtn('rect'); },    function () { return state.tool === 'rect'; }],
+      ['Ellipse',     '',  function () { setToolBtn('ellipse'); }, function () { return state.tool === 'ellipse'; }],
+      ['Flood Fill',  '',  function () { setToolBtn('fill'); },    function () { return state.tool === 'fill'; }],
+      ['Select',      '',  function () { setToolBtn('select'); },  function () { return state.tool === 'select'; }],
+      ['Eraser',      '',  function () { clickEl('eraserBtn'); },  function () { return state.eraser; }],
       'sep',
-      ['Multi-tile brush', '', function () {
+      ['Multi-tile Brush', '', function () {
         state.multiTile = !state.multiTile;
-        toast(state.multiTile ? 'Multi-tile brush ON — drag across the palette to grab a block'
-                              : 'Multi-tile brush OFF — one tile at a time');
+        toast(state.multiTile ? 'Multi-tile brush ON' : 'Multi-tile brush OFF');
       }, function () { return state.multiTile; }]
     ]],
     ['Scale', [
-      ['1/1', '', function () { setScaleBtn(2); }, function () { return state.zoom === 2; }],
-      ['1/2', '', function () { setScaleBtn(1); }, function () { return state.zoom === 1; }],
-      ['1/4', '', function () { setScaleBtn(0.5); }, function () { return state.zoom === 0.5; }]
+      ['1:1', '', function () { setScaleBtn(2); },    function () { return state.zoom === 2; }],
+      ['1:2', '', function () { setScaleBtn(1); },    function () { return state.zoom === 1; }],
+      ['1:4', '', function () { setScaleBtn(0.5); },  function () { return state.zoom === 0.5; }],
+      ['1:8', '', function () { setScaleBtn(0.25); }, function () { return state.zoom === 0.25; }]
     ]],
     ['View', [
-      ['Toggle Grid', '', function () { clickEl('gridBtn'); }],
-      ['Screen Orientation…', '', function () { clickEl('orientBtn'); }],
+      ['Grid',                '', function () { clickEl('gridBtn'); }],
+      ['Dim Other Layers',    '', null],
       'sep',
-      ['Palette: MV ⇄ XP', '', function () { clickEl('tabModeBtn'); }]
+      ['Screen Orientation...', '', function () { clickEl('orientBtn'); }],
+      'sep',
+      ['Palette Mode: XP ⇄ MV Tabs', '', function () { clickEl('tabModeBtn'); }]
     ]],
     ['Tools', [
-      ['Generate Map…', '', function () { clickEl('genBtn'); }],
+      ['Database...',       'F9',  null],
+      ['Materials...',      'F10', null],
+      ['Script Editor...',  'F11', null],
+      ['Sound Test...',     '',    null],
       'sep',
-      ['Character Sprites…', '', function () { openSpriteModal('player'); }],
-      ['Character Generator…', '', function () { window.open('generator.html', '_blank'); }]
+      ['Options...',        '',    null],
+      'sep',
+      ['Generate Map...',   '',    function () { clickEl('genBtn'); }],
+      ['Character Sprites...', '', function () { openSpriteModal('player'); }]
     ]],
     ['Game', [
-      ['Playtest', 'F12', function () { clickEl('playBtn'); }],
+      ['Playtest',         'F12', function () { clickEl('playBtn'); }],
       'sep',
-      ['Set Player Start (click a tile)', '', function () {
-        state._settingStart = true; toast('Click a tile to set the player’s start position.');
+      ['Rename Title...',    '',    null],
+      ['Select RTP...',      '',    null],
+      ['Open Game Folder', '',    null],
+      'sep',
+      ['Set Start Position (click tile)', '', function () {
+        state._settingStart = true; toast('Click a tile to set the player start position.');
       }]
     ]],
     ['Help', [
-      ['Send Screenshot…', '', function () { clickEl('shotBtn'); }],
-      ['About', '', function () { toast('Awakened Calamity — RPG-Maker-style map editor.'); }]
+      ['Help Contents',  'F1', null],
+      'sep',
+      ['Send Screenshot...', '', function () { clickEl('shotBtn'); }],
+      ['About RPG Maker XP', '', function () { toast('Awakened Calamity -- Map Editor (RPG Maker XP layout).'); }]
     ]]
   ];
   function setLayerBtn(lyr) {
@@ -2684,12 +2861,43 @@
   document.addEventListener('click', closeMenus);
   buildMenuBar();
   $('tabModeBtn').addEventListener('click', function () {
-    state.tabMode = state.tabMode === 'mv' ? 'xp' : 'mv';
-    this.textContent = state.tabMode === 'mv' ? 'MV Tabs' : 'XP Sheet';
-    // XP mode shows raw tiles only (autotiles still reachable via Auto toggle on A2)
-    if (state.tabMode === 'xp') setAutoMode(false);
-    buildTilesetTabs(); applyPaletteTabVisibility(); drawPalette();
+    state.tabMode = state.tabMode === 'xp' ? 'mv' : 'xp';
+    applyXpTabMode();
+    if (state.tabMode === 'xp') {
+      var sel = $('xpTilesetSel');
+      if (sel && sel.value) xpActivate(sel.value);
+    } else {
+      buildTilesetTabs(); applyPaletteTabVisibility(); drawPalette();
+    }
   });
+
+  // XP tileset selector
+  var _xpSelEl = $('xpTilesetSel');
+  if (_xpSelEl) _xpSelEl.addEventListener('change', function(){ xpActivate(this.value); });
+
+  // XP tile canvas click → select tile
+  (function(){
+    var c = $('xpTileCanvas'); if (!c) return;
+    function xpCanvasClick(e) {
+      if (!state.xpTileImg) return;
+      var r = c.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width * c.width;
+      var py = (e.clientY - r.top) / r.height * c.height;
+      var PAL_S = 2, tileSize = 32, cols = 8;
+      var col = Math.floor(px / (tileSize * PAL_S));
+      var row = Math.floor(py / (tileSize * PAL_S));
+      var gid = row * cols + col;
+      var meta = state.xpTileMeta;
+      var total = meta ? (meta.total_metatiles || 0) : 0;
+      if (gid < 0 || (total && gid >= total)) return;
+      state.xpSelectedTile = gid;
+      state.xpActiveAutotile = -1;
+      state.stamp = { w:1, h:1, ids:[gid] };
+      state.selectedTile = gid;
+      drawXpPalette();
+    }
+    c.addEventListener('click', xpCanvasClick);
+  })();
   $('newBtn').addEventListener('click', function () {
     newMap(parseInt($('mapW').value, 10) || 20, parseInt($('mapH').value, 10) || 18, false);
   });
@@ -2742,7 +2950,7 @@
     drawMap();
   });
   function setZoom(z) {
-    state.zoom = Math.max(0.5, Math.min(6, z));
+    state.zoom = Math.max(0.25, Math.min(6, z));
     $('zoomLabel').textContent = state.zoom + '×';
     drawMap();
   }
@@ -2793,9 +3001,9 @@
   $('orientBtn').addEventListener('click', function (e) { e.stopPropagation(); toggleOrientMenu(); });
   document.addEventListener('click', function () { if (orientMenu) { orientMenu.remove(); orientMenu = null; } });
 
-  // ── Save maps straight to the live `main` branch (same mechanism as
+  // -- Save maps straight to the live `main` branch (same mechanism as
   // cloud-saves.js). Writing to main means an authored map deploys to Pages and
-  // the game can actually load it — everything lives together on one branch. ──
+  // the game can actually load it -- everything lives together on one branch. --
   var GH_REPO   = 'knightdx91-alt/awakened-calamity';
   var GH_BRANCH = 'main';
   var GH_TOKEN  = 'IuWWfaKTQMSVRG5HSKuHBZPvlHq1Vpxp3AlUjYkeeF9Qe9dmQyX6f8RcTyg_w567PxfxUQLJ0QCJO3EC11_tap_buhtig'
@@ -2937,7 +3145,7 @@
     var mapPath    = 'data/maps/' + region + '/' + map.name + '.json';
     var indexPath  = 'data/maps/' + region + '_index.json';
     var stamp = new Date().toISOString();
-    setRepoBtn('☁ Saving…', '#b58900');
+    setRepoBtn('☁ Saving...', '#b58900');
     ghGet(layoutPath)
       .then(function (cur) { return ghPut(layoutPath, layout, 'map-editor: layout ' + layout.id + ' ' + stamp, cur.sha); })
       .then(function () { return ghGet(mapPath); })
@@ -2963,7 +3171,7 @@
   }
   $('repoSaveBtn').addEventListener('click', saveToRepo);
 
-  // ── Load from repo + map tree ──
+  // -- Load from repo + map tree --
   function ghListMaps() {
     var url = 'https://api.github.com/repos/' + GH_REPO + '/git/trees/' + GH_BRANCH + '?recursive=1';
     return fetch(url, { headers: ghHeaders() })
@@ -2979,7 +3187,7 @@
       });
   }
 
-  // ── Tree model persistence + merge ──
+  // -- Tree model persistence + merge --
   function persistTree() {
     try { localStorage.setItem(TREE_KEY, JSON.stringify({ maps: treeModel, expanded: treeExpanded })); }
     catch (e) { /* storage may be unavailable */ }
@@ -3063,7 +3271,7 @@
     (kids[''] || []).forEach(function (n) { row(n, 0); });
   }
 
-  // ── Tree node operations ──
+  // -- Tree node operations --
   function selectNode(name) {
     currentNode = name; renderTree();
     var node = treeModel[name];
@@ -3099,7 +3307,7 @@
     if (currentNode === name) { currentNode = nn; $('mapName').value = nn; $('layoutId').value = layoutIdFor(nn); }
     persistTree(); renderTree();
     if (!wasSaved) return;   // local-only: nothing on the repo to move
-    setRepoBtn('☁ Renaming…', '#b58900');
+    setRepoBtn('☁ Renaming...', '#b58900');
     repoRename(name, nn, region)
       .then(function () { setRepoBtn('✓ Renamed', '#2a9d2a'); setTimeout(function () { setRepoBtn('☁ Save'); }, 2500); })
       .catch(function (e) {
@@ -3141,7 +3349,7 @@
     if (currentNode === name) currentNode = null;
     persistTree(); renderTree();
     if (!wasSaved) return;
-    setRepoBtn('☁ Deleting…', '#b58900');
+    setRepoBtn('☁ Deleting...', '#b58900');
     repoDelete(name, region)
       .then(function () { setRepoBtn('✓ Deleted', '#2a9d2a'); setTimeout(function () { setRepoBtn('☁ Save'); }, 2500); })
       .catch(function (e) {
@@ -3150,17 +3358,17 @@
       });
   }
 
-  // ── Context menu (press-and-hold / right-click) ──
+  // -- Context menu (press-and-hold / right-click) --
   var ctxMenu = $('ctxMenu');
   function openCtx(x, y, name) {
     ctxMenu.innerHTML = '';
     var items;
     if (name) items = [
       ['New Map (child)', function () { newMapNode(name); }],
-      ['Generate child map…', function () { selectNode(name); if (window._openGenModal) window._openGenModal(name); }],
+      ['Generate child map...', function () { selectNode(name); if (window._openGenModal) window._openGenModal(name); }],
       ['Edit', function () { selectNode(name); }],
-      ['Map Properties…', function () { selectNode(name); window._openMapProps(); }],
-      ['Rename…', function () { renameNode(name); }],
+      ['Map Properties...', function () { selectNode(name); window._openMapProps(); }],
+      ['Rename...', function () { renameNode(name); }],
       ['Duplicate', function () { duplicateNode(name); }],
       'sep',
       ['Delete', function () { deleteNode(name); }, 'danger']
@@ -3244,7 +3452,7 @@
   function openRepoModal() {
     $('repoModal').style.display = 'flex';
     var body = $('repoModalBody');
-    body.innerHTML = '<div class="hint">Loading map list…</div>';
+    body.innerHTML = '<div class="hint">Loading map list...</div>';
     ghListMaps().then(function (maps) {
       if (!maps.length) { body.innerHTML = '<div class="hint">No maps saved yet.</div>'; return; }
       body.innerHTML = '';
@@ -3272,7 +3480,7 @@
     if (e.target === $('repoModal')) $('repoModal').style.display = 'none';
   });
 
-  // ── Character sprite picker (XP/MV charsets) ──
+  // -- Character sprite picker (XP/MV charsets) --
   var _spriteIndex = null, _spriteCache = {}, _selectedSprite = null;
   var _faceSheets = null;
   function loadFaceSheets() {
@@ -3388,7 +3596,7 @@
   $('spriteModalClose').addEventListener('click', function () { $('spriteModal').style.display = 'none'; });
   $('spriteModal').addEventListener('click', function (e) { if (e.target === $('spriteModal')) $('spriteModal').style.display = 'none'; });
 
-  // ── Map Properties + Event editor modal wiring (RM XP-style dialogs) ──
+  // -- Map Properties + Event editor modal wiring (RM XP-style dialogs) --
   function openMapProps() {
     state._propsOrig = $('mapName').value || '';   // remember identity to detect a rename
     $('mapPropsModal').style.display = 'flex';
@@ -3418,14 +3626,14 @@
       closeMapProps();
       // remove the old repo files (if it was saved), then write the current content as the new name
       if (wasSaved) {
-        setRepoBtn('☁ Renaming…', '#b58900');
+        setRepoBtn('☁ Renaming...', '#b58900');
         repoDelete(orig, oldRegion).then(saveToRepo).catch(function () { saveToRepo(); });
       } else {
         saveToRepo();
       }
       return;
     }
-    closeMapProps(); saveToRepo();   // no rename — just persist
+    closeMapProps(); saveToRepo();   // no rename -- just persist
   });
   $('mapPropsModal').addEventListener('click', function (e) { if (e.target === $('mapPropsModal')) closeMapProps(); });
   $('eventEditorClose').addEventListener('click', closeEventEditor);
@@ -3475,21 +3683,30 @@
     } catch (err) { toast('Could not save (storage blocked).'); }
   });
 
-  // ── Boot ──
-  // Load tileset names + the "Sheet" dropdown, the RM set manifest, then open the
-  // first set (Outside) so the ground layer's group is defined by the set.
+  // -- Boot --
+  // Apply initial tab mode UI, then load XP tilesets (primary) + VX Ace sets (secondary).
+  applyXpTabMode();
+
   Promise.all([
     fetch('data/tilesets/_index.json').then(function (r) { return r.json(); }),
-    loadRmSets()
+    loadRmSets(),
+    loadXpTilesets()
   ]).then(function (parts) {
     state._tilesetNames = parts[0];
+    // Populate VX Ace sheet dropdown (used in MV mode)
     var sel = $('tilesetSel'); sel.innerHTML = '';
     parts[0].forEach(function (n) {
       var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
     });
-    var firstSet = (state.rmSets[0] && state.rmSets[0].id) || null;
-    var open = firstSet ? loadSet(firstSet) : useTileset(L(), parts[0][0]).then(afterTilesetChange);
-    return open;
+    if (state.tabMode === 'xp') {
+      // XP mode: activate the first XP tileset
+      var firstXp = state.xpTilesets[0];
+      if (firstXp) return xpActivate(firstXp.tileset_name);
+      return Promise.resolve();
+    } else {
+      var firstSet = (state.rmSets[0] && state.rmSets[0].id) || null;
+      return firstSet ? loadSet(firstSet) : useTileset(L(), parts[0][0]).then(afterTilesetChange);
+    }
   }).then(function () {
     try { state.startLoc = JSON.parse(localStorage.getItem('ac_start_location') || 'null'); } catch (e) {}
     newMap(state.width, state.height, false);

@@ -1,13 +1,66 @@
 {
   "_comment": "RPG-Maker tileset SETS for the editor. RPG Maker VX Ace RTP (prototype). A2 = baked seamless ground fills (rtp_*_ground via build_vx_ace_autotiles.py); A2raw = the raw 32px A2 sheet. True edge-blending autotiles are a TODO (needs the RM A2 template port). Older packs (pf_*, xp_*, ac_*) are on the graphics-backup branch.",
   "sets": [
-    { "id": "rtp_outside", "name": "Outside (RTP)", "tile": 32,
-      "tabs": { "A1": "rtp_outside_a1", "A2": "rtp_outside_ground", "A2raw": "rtp_outside_a2", "A3": "rtp_outside_roof", "A3raw": "rtp_outside_a3", "A4": "rtp_outside_wall", "A4face": "rtp_outside_wallface", "A4raw": "rtp_outside_a4", "A5": "rtp_outside_a5", "B": "rtp_outside_b", "C": "rtp_outside_c" } },
-    { "id": "rtp_inside", "name": "Inside (RTP)", "tile": 32,
-      "tabs": { "A1": "rtp_inside_a1", "A2": "rtp_inside_ground", "A2raw": "rtp_inside_a2", "A4": "rtp_inside_wall", "A4face": "rtp_inside_wallface", "A4raw": "rtp_inside_a4", "A5": "rtp_inside_a5", "B": "rtp_inside_b", "C": "rtp_inside_c" } },
-    { "id": "rtp_dungeon", "name": "Dungeon (RTP)", "tile": 32,
-      "tabs": { "A1": "rtp_dungeon_a1", "A2": "rtp_dungeon_ground", "A2raw": "rtp_dungeon_a2", "A4": "rtp_dungeon_wall", "A4face": "rtp_dungeon_wallface", "A4raw": "rtp_dungeon_a4", "A5": "rtp_dungeon_a5", "B": "rtp_dungeon_b", "C": "rtp_dungeon_c" } },
-    { "id": "rtp_world", "name": "World Map (RTP)", "tile": 32,
-      "tabs": { "A1": "rtp_world_a1", "A2": "rtp_world_a2", "B": "rtp_world_b" } }
-  ]
+    {
+      "id": "rtp_outside",
+      "name": "Outside (RTP)",
+      "tile": 32,
+      "tabs": {
+        "A1": "rtp_outside_a1",
+        "A2": "rtp_outside_ground",
+        "A2raw": "rtp_outside_a2",
+        "A3": "rtp_outside_roof",
+        "A3raw": "rtp_outside_a3",
+        "A4": "rtp_outside_wall",
+        "A4face": "rtp_outside_wallface",
+        "A4raw": "rtp_outside_a4",
+        "A5": "rtp_outside_a5",
+        "B": "rtp_outside_b",
+        "C": "rtp_outside_c"
+      }
+    },
+    {
+      "id": "rtp_inside",
+      "name": "Inside (RTP)",
+      "tile": 32,
+      "tabs": {
+        "A1": "rtp_inside_a1",
+        "A2": "rtp_inside_ground",
+        "A2raw": "rtp_inside_a2",
+        "A4": "rtp_inside_wall",
+        "A4face": "rtp_inside_wallface",
+        "A4raw": "rtp_inside_a4",
+        "A5": "rtp_inside_a5",
+        "B": "rtp_inside_b",
+        "C": "rtp_inside_c"
+      }
+    },
+    {
+      "id": "rtp_dungeon",
+      "name": "Dungeon (RTP)",
+      "tile": 32,
+      "tabs": {
+        "A1": "rtp_dungeon_a1",
+        "A2": "rtp_dungeon_ground",
+        "A2raw": "rtp_dungeon_a2",
+        "A4": "rtp_dungeon_wall",
+        "A4face": "rtp_dungeon_wallface",
+        "A4raw": "rtp_dungeon_a4",
+        "A5": "rtp_dungeon_a5",
+        "B": "rtp_dungeon_b",
+        "C": "rtp_dungeon_c"
+      }
+    },
+    {
+      "id": "rtp_world",
+      "name": "World Map (RTP)",
+      "tile": 32,
+      "tabs": {
+        "A1": "rtp_world_a1",
+        "A2": "rtp_world_a2",
+        "B": "rtp_world_b"
+      }
+    }
+  ],
+  "xp_tilesets_db": "data/tilesets/xp_tilesets.json"
 }
