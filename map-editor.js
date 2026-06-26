@@ -4075,15 +4075,37 @@
   }
 
   // ── Canvas contextmenu dispatcher ──
+  // Desktop right-click on canvas
   mapCanvas.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     if (state._settingStart) return;
-    if (state.mode === 'event') {
-      canvasEventCtx(e.clientX, e.clientY);
-    } else {
-      canvasTileCtx(e.clientX, e.clientY);
-    }
+    if (state.mode === 'event') canvasEventCtx(e.clientX, e.clientY);
+    else canvasTileCtx(e.clientX, e.clientY);
   });
+
+  // Mobile long-press on canvas (500ms hold, cancels if finger moves >8px)
+  (function () {
+    var timer = null, sx = 0, sy = 0;
+    mapCanvas.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+      timer = setTimeout(function () {
+        timer = null;
+        if (state._settingStart) return;
+        if (state.mode === 'event') canvasEventCtx(sx, sy);
+        else canvasTileCtx(sx, sy);
+      }, 500);
+    }, { passive: true });
+    mapCanvas.addEventListener('touchmove', function (e) {
+      if (!timer) return;
+      var t = e.touches[0];
+      if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) {
+        clearTimeout(timer); timer = null;
+      }
+    }, { passive: true });
+    mapCanvas.addEventListener('touchend',   function () { if (timer) { clearTimeout(timer); timer = null; } });
+    mapCanvas.addEventListener('touchcancel',function () { if (timer) { clearTimeout(timer); timer = null; } });
+  })();
 
   // ── Helper: attach context menu to a map-tree node element ──
   function attachCtx(el, name) {
