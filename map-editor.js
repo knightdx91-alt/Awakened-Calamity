@@ -824,7 +824,7 @@
     }
     state.region = nr; state.shadow = nsh;
     if (!keep) { state.warps = []; state.events = []; state.selectedEvent = null; }
-    $('statSize').textContent = ($('mapName') ? $('mapName').value : 'Map') + ' (' + w + ' x ' + h + ')';
+    var _mn = ($('mapName') ? $('mapName').value : 'Map'); $('statSize').textContent = _mn + ' (' + w + ' x ' + h + ')';
     drawMap();
     renderWarpList();
   }
@@ -1446,37 +1446,90 @@
     if (!names.length && $('mapName')) names = [$('mapName').value];
     return names.sort();
   }
+  // CMD_TYPES: [type_key, display_label, group]
+  // Names taken directly from RPGXP.exe string table (RT_STRING) and Scripts.rxdata Ruby comments.
   var CMD_TYPES = [
-    ['text', '💬 Show Text'], ['choice', '❓ Show Choices'], ['conditional', '◇ Conditional Branch'],
-    ['switch', '🔘 Control Switch'], ['selfswitch', '🔲 Control Self-Switch'], ['variable', '🔢 Control Variable'],
-    ['transfer', '◈ Transfer Player'], ['move', '🚶 Move Route'], ['setdir', '🧭 Set Direction'],
-    ['setgfx', '🎭 Change Graphic'], ['spawn', '👤 Spawn NPC/Monster'],
-    ['money', '💰 Change Money'], ['item', '🎒 Give/Take Item'], ['battle', '⚔️ Battle Processing'],
-    ['system', '🔮 Open System Shop'], ['shop', '🛒 Off-grid Market'],
-    // run loop (roguelite descent) -- fine-grained primitives + the descend macro
-    ['run', '🏔️ Run (start/deeper/end)'], ['gendungeon', '🗺️ Generate+Enter Floor'],
-    ['descend', '⛰️ Descend (macro)'], ['relic', '💎 Offer Relic'], ['meta', '🕯️ Remembrance (meta)'],
-    ['grantclass', '🎓 Grant Class'], ['grantspec', '✦ Grant Specialization'], ['grantskill', '📖 Grant Skill'],
-    ['quest', '⚑ Quest'], ['heal', '✚ Heal (vitals)'], ['hurt', '🗡️ Hurt (trap)'], ['surveil', '👁️ Surveil (+Surveillance)'],
-    ['fade', '🌑 Fade Screen'], ['shake', '〰️ Shake Screen'],
-    ['wait', '⏳ Wait'], ['se', '🔊 Play SE'], ['script', '📜 Script...'],
-    ['label', '🏷️ Label'], ['jump', '↪️ Jump to Label'], ['comment', '📝 Comment'], ['exit', '⛔ Exit Event'],
-    // flow control
-    ['loop', '🔁 Loop'], ['break_loop', '⏹️ Break Loop'], ['input_number', '🔢 Input Number'],
-    ['common_event', '📑 Common Event'], ['timer', '⏱️ Control Timer'],
-    ['name_input', '⌨️ Name Input'], ['creation', '🧬 Creation Screen'],
-    ['affinity', '🜂 Set Affinity'], ['appearance', '🧍 Set Appearance'], ['finalize_creation', '✅ Finalize Creation'],
-    // audio
-    ['bgm', '🎵 Play/Stop BGM'], ['bgs', '🌊 Play/Stop BGS'], ['me', '🎺 Play ME'], ['stop_se', '🔇 Stop SE'],
-    // screen / camera
-    ['tint', '🎨 Tint Screen'], ['flash', '⚡ Flash Screen'], ['scroll_map', '🎥 Scroll Map'],
-    ['weather', '🌧️ Set Weather Effect'],
-    // character / message
-    ['balloon', '💭 Show Balloon'], ['animation', '✨ Show Animation'], ['scroll_text', '📜 Scrolling Text'], ['location_info', '📍 Get Location Info'],
-    ['setevloc', '📌 Set Event Location'], ['transparency', '👻 Change Transparency'], ['erase_event', '❌ Erase Event'],
-    // scene / system
-    ['openmenu', '☰ Open Menu Screen'], ['opensave', '💾 Open Save Screen'], ['gameover', '💀 Game Over'], ['totitle', '🏁 Return to Title'],
-    ['recover_all', '❤️‍🩹 Recover All'], ['change_level', '⬆️ Change Level'], ['change_exp', '✨ Change EXP'], ['select_item', '🗝️ Select Item']
+    // Message
+    ['text',         'Show Text',              'Message'],
+    ['choice',       'Show Choices',           'Message'],
+    ['input_number', 'Input Number',           'Message'],
+    ['scroll_text',  'Scroll Text',            'Message'],
+    ['comment',      'Comment',                'Message'],
+    // Flow Control
+    ['conditional',  'Conditional Branch',     'Flow Control'],
+    ['loop',         'Loop',                   'Flow Control'],
+    ['break_loop',   'Break Loop',             'Flow Control'],
+    ['exit',         'Exit Event Processing',  'Flow Control'],
+    ['common_event', 'Call Common Event',      'Flow Control'],
+    ['label',        'Label',                  'Flow Control'],
+    ['jump',         'Jump to Label',          'Flow Control'],
+    ['wait',         'Wait',                   'Flow Control'],
+    // Party
+    ['money',        'Change Gold',            'Party'],
+    ['item',         'Change Items',           'Party'],
+    ['recover_all',  'Recover All',            'Party'],
+    ['change_exp',   'Change EXP',             'Party'],
+    ['change_level', 'Change Level',           'Party'],
+    // Game Control
+    ['switch',       'Control Switches',       'Game Control'],
+    ['variable',     'Control Variables',      'Game Control'],
+    ['selfswitch',   'Control Self Switch',    'Game Control'],
+    ['timer',        'Control Timer',          'Game Control'],
+    ['name_input',   'Name Input Processing',  'Game Control'],
+    ['script',       'Script',                 'Game Control'],
+    ['select_item',  'Select Item',            'Game Control'],
+    // Movement
+    ['transfer',     'Transfer Player',        'Movement'],
+    ['setevloc',     'Set Event Location',     'Movement'],
+    ['scroll_map',   'Scroll Map',             'Movement'],
+    ['move',         'Set Move Route',         'Movement'],
+    ['setdir',       'Set Direction',          'Movement'],
+    // Screen
+    ['tint',         'Change Screen Color Tone','Screen'],
+    ['flash',        'Screen Flash',           'Screen'],
+    ['shake',        'Screen Shake',           'Screen'],
+    ['fade',         'Prepare for Transition', 'Screen'],
+    ['weather',      'Set Weather Effects',    'Screen'],
+    ['animation',    'Show Animation',         'Screen'],
+    ['balloon',      'Show Balloon Icon',      'Screen'],
+    // Audio
+    ['bgm',          'Play BGM',               'Audio'],
+    ['bgs',          'Play BGS',               'Audio'],
+    ['me',           'Play ME',                'Audio'],
+    ['se',           'Play SE',                'Audio'],
+    ['stop_se',      'Stop SE',                'Audio'],
+    // Scene Control
+    ['battle',       'Battle Processing',      'Scene Control'],
+    ['shop',         'Shop Processing',        'Scene Control'],
+    ['openmenu',     'Call Menu Screen',       'Scene Control'],
+    ['opensave',     'Call Save Screen',       'Scene Control'],
+    ['gameover',     'Game Over',              'Scene Control'],
+    ['totitle',      'Return to Title Screen', 'Scene Control'],
+    // Character
+    ['setgfx',       'Change Actor Graphic',   'Character'],
+    ['transparency', 'Change Transparent Flag','Character'],
+    ['erase_event',  'Erase Event',            'Character'],
+    ['spawn',        'Spawn NPC/Monster',      'Character'],
+    // Map
+    ['location_info','Get Location Info',      'Map'],
+    // === Awakened Calamity custom ===
+    ['system',       'AC: Open System',        'AC Custom'],
+    ['run',          'AC: Run Loop',           'AC Custom'],
+    ['gendungeon',   'AC: Generate Floor',     'AC Custom'],
+    ['descend',      'AC: Descend',            'AC Custom'],
+    ['relic',        'AC: Offer Relic',        'AC Custom'],
+    ['meta',         'AC: Remembrance',        'AC Custom'],
+    ['quest',        'AC: Quest',              'AC Custom'],
+    ['heal',         'AC: Heal',               'AC Custom'],
+    ['hurt',         'AC: Hurt',               'AC Custom'],
+    ['surveil',      'AC: Surveillance',       'AC Custom'],
+    ['grantclass',   'AC: Grant Class',        'AC Custom'],
+    ['grantspec',    'AC: Grant Spec',         'AC Custom'],
+    ['grantskill',   'AC: Grant Skill',        'AC Custom'],
+    ['creation',     'AC: Creation Screen',    'AC Custom'],
+    ['affinity',     'AC: Set Affinity',       'AC Custom'],
+    ['appearance',   'AC: Set Appearance',     'AC Custom'],
+    ['finalize_creation','AC: Finalize Creation','AC Custom'],
   ];
   function newCmd(type) {
     switch (type) {
@@ -1561,7 +1614,7 @@
   }
   function renderEventCommands(ev) {
     if (!ev.commands) ev.commands = [];
-    var host = el('div', 'margin-top:7px;', '<strong style="font-size:10px;color:#2b4a7a;">CONTENTS</strong>');
+    var host = el('div', 'margin-top:7px;', '<div style="font-size:11px;font-weight:bold;margin-bottom:3px;">Event Commands</div>');
     host.id = 'evCmds';
     renderCmdList(ev.commands, host, 0, ev);
     $('eventProps').appendChild(host);
@@ -1569,14 +1622,29 @@
   function renderCmdList(list, container, depth, ev) {
     var wrap = el('div', depth > 0 ? 'border-left:2px solid var(--accent2);margin:2px 0 2px 6px;padding-left:6px;' : '');
     list.forEach(function (cmd, ci) {
-      var card = el('div', 'background:#fafafa;border:1px solid var(--line2);border-radius:4px;padding:5px;margin:4px 0;');
+      // XP-style: flat white card with sunken border
+      var card = el('div', 'background:#FFFFFF;border:1px solid;border-color:#808080 #FFFFFF #FFFFFF #808080;padding:3px 4px;margin:2px 0;');
       renderCmdEditor(cmd, card, list, ci, ev, depth);
       wrap.appendChild(card);
     });
     var add = el('div', 'margin:3px 0;');
     var sel = el('select'); sel.style.fontSize = '11px';
-    sel.appendChild(el('option', null, '+ Add command...'));
-    CMD_TYPES.forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
+    sel.appendChild(el('option', null, '@ Insert...'));
+    // Group commands by category (XP-style optgroup)
+    var groups = {};
+    CMD_TYPES.forEach(function (o) {
+      var g = o[2] || 'Other';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(o);
+    });
+    Object.keys(groups).forEach(function (gname) {
+      var grp = document.createElement('optgroup');
+      grp.label = gname;
+      groups[gname].forEach(function (o) {
+        var op = el('option', null, o[1]); op.value = o[0]; grp.appendChild(op);
+      });
+      sel.appendChild(grp);
+    });
     sel.addEventListener('change', function () {
       if (!this.value) return;
       list.push(newCmd(this.value));
@@ -1587,9 +1655,12 @@
     container.appendChild(wrap);
   }
   function renderCmdEditor(cmd, card, list, ci, ev, depth) {
-    var label = (CMD_TYPES.filter(function (t) { return t[0] === cmd.type; })[0] || ['', cmd.type])[1];
-    var head = el('div', 'display:flex;align-items:center;gap:6px;',
-      '<b style="color:#2b4a7a;font-size:11px;flex:1;">' + label + '</b><button class="cmdDel" title="Remove">✕</button>');
+    var typeEntry = CMD_TYPES.filter(function (t) { return t[0] === cmd.type; })[0];
+    var label = typeEntry ? typeEntry[1] : cmd.type;
+    var head = el('div', 'display:flex;align-items:center;gap:4px;',
+      '<span style="color:#808080;font-family:monospace;font-size:11px;white-space:nowrap;">@&gt;</span>' +
+      '<span style="color:#000;font-size:11px;flex:1;font-family:Tahoma,sans-serif;">' + label + '</span>' +
+      '<button class="cmdDel" style="border:none;background:none;color:#888;cursor:pointer;font-size:11px;padding:0 2px;" title="Delete">X</button>');
     card.appendChild(head);
     head.querySelector('.cmdDel').addEventListener('click', function () { list.splice(ci, 1); renderEventPanel(); });
     var body = el('div'); card.appendChild(body);
@@ -2349,7 +2420,7 @@
 
       $('mapW').value = w; $('mapH').value = h;
       $('layoutId').value = data.id || 'LAYOUT_IMPORTED';
-      $('statSize').textContent = ($('mapName') ? $('mapName').value : 'Map') + ' (' + w + ' x ' + h + ')';
+      var _mn = ($('mapName') ? $('mapName').value : 'Map'); $('statSize').textContent = _mn + ' (' + w + ' x ' + h + ')';
       if (mapMeta) {
         if (mapMeta.name) $('mapName').value = mapMeta.name;
         if (mapMeta.region) {
