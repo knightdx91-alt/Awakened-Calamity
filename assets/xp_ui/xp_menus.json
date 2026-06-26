@@ -1,0 +1,682 @@
+{
+  "menu_bar": {
+    "File": [
+      {
+        "label": "New Project...",
+        "shortcut": "Ctrl+N"
+      },
+      {
+        "label": "Open Project",
+        "shortcut": "Ctrl+O"
+      },
+      {
+        "label": "Close Project"
+      },
+      {
+        "label": "Save Project",
+        "shortcut": "Ctrl+S"
+      },
+      "---",
+      {
+        "label": "Compress Game Data..."
+      },
+      "---",
+      {
+        "label": "Exit RPG Maker XP"
+      }
+    ],
+    "Edit": [
+      {
+        "label": "Undo",
+        "shortcut": "Ctrl+Z"
+      },
+      {
+        "label": "Redo",
+        "shortcut": "Ctrl+Y"
+      },
+      "---",
+      {
+        "label": "Cut",
+        "shortcut": "Ctrl+X"
+      },
+      {
+        "label": "Copy",
+        "shortcut": "Ctrl+C"
+      },
+      {
+        "label": "Paste",
+        "shortcut": "Ctrl+V"
+      },
+      {
+        "label": "Delete",
+        "shortcut": "Del"
+      },
+      "---",
+      {
+        "label": "Find...",
+        "shortcut": "Ctrl+F"
+      }
+    ],
+    "View": [
+      {
+        "label": "Current Layer and Below",
+        "shortcut": "F2"
+      },
+      {
+        "label": "All Layers",
+        "shortcut": "F3"
+      },
+      {
+        "label": "Dim Other Layers",
+        "shortcut": "F4"
+      }
+    ],
+    "Mode": [
+      {
+        "label": "Layer 1",
+        "shortcut": "F5"
+      },
+      {
+        "label": "Layer 2",
+        "shortcut": "F6"
+      },
+      {
+        "label": "Layer 3",
+        "shortcut": "F7"
+      },
+      {
+        "label": "Events",
+        "shortcut": "F8"
+      }
+    ],
+    "Draw": [
+      {
+        "label": "Pencil"
+      },
+      {
+        "label": "Rectangle"
+      },
+      {
+        "label": "Ellipse"
+      },
+      {
+        "label": "Flood Fill"
+      },
+      {
+        "label": "Select"
+      }
+    ],
+    "Scale": [
+      {
+        "label": "1:1"
+      },
+      {
+        "label": "1:2"
+      },
+      {
+        "label": "1:4"
+      },
+      {
+        "label": "1:8"
+      }
+    ],
+    "Tools": [
+      {
+        "label": "Database...",
+        "shortcut": "F9"
+      },
+      {
+        "label": "Materialbase...",
+        "shortcut": "F10"
+      },
+      {
+        "label": "Script Editor...",
+        "shortcut": "F11"
+      },
+      {
+        "label": "Sound Test..."
+      },
+      "---",
+      {
+        "label": "Options..."
+      }
+    ],
+    "Game": [
+      {
+        "label": "Playtest",
+        "shortcut": "F12"
+      },
+      "---",
+      {
+        "label": "Change Title..."
+      },
+      {
+        "label": "Select RTP..."
+      },
+      {
+        "label": "Open Game Folder"
+      }
+    ],
+    "Help": [
+      {
+        "label": "Contents",
+        "shortcut": "F1"
+      },
+      "---",
+      {
+        "label": "About..."
+      }
+    ]
+  },
+  "context_menus": {
+    "map_tree_right_click": {
+      "description": "Right-click a map in the left-panel map tree",
+      "items": [
+        {
+          "label": "New Map...",
+          "shortcut": "Ins"
+        },
+        {
+          "label": "Map Properties...",
+          "shortcut": "Space"
+        },
+        "---",
+        {
+          "label": "Edit Event...",
+          "shortcut": "Enter"
+        },
+        "---",
+        {
+          "label": "Shift...",
+          "shortcut": "Ctrl+T"
+        },
+        {
+          "label": "Multi-Copy..."
+        },
+        "---",
+        {
+          "label": "Delete...",
+          "shortcut": "Del"
+        }
+      ]
+    },
+    "map_canvas_right_click": {
+      "description": "Right-click on the map canvas (tile mode)",
+      "items": [
+        {
+          "label": "Paste",
+          "shortcut": "Ctrl+V"
+        },
+        "---",
+        {
+          "label": "Player's Starting Position"
+        }
+      ]
+    },
+    "map_canvas_event_mode_right_click": {
+      "description": "Right-click on map canvas in Event mode",
+      "items": [
+        {
+          "label": "New Event...",
+          "shortcut": "Enter"
+        },
+        {
+          "label": "Edit Event...",
+          "shortcut": "Enter"
+        },
+        "---",
+        {
+          "label": "Copy Event"
+        },
+        {
+          "label": "Paste Event"
+        },
+        {
+          "label": "Delete Event",
+          "shortcut": "Del"
+        },
+        "---",
+        {
+          "label": "Player's Starting Position"
+        }
+      ]
+    },
+    "event_page_tabs_right_click": {
+      "description": "Right-click an event page tab in the event editor",
+      "items": [
+        {
+          "label": "New Event Page"
+        },
+        {
+          "label": "Copy Event Page"
+        },
+        {
+          "label": "Paste Event Page"
+        },
+        {
+          "label": "Delete Event Page"
+        },
+        {
+          "label": "Clear Event Page"
+        }
+      ]
+    },
+    "event_command_list_right_click": {
+      "description": "Right-click in the event command list",
+      "items": [
+        {
+          "label": "Insert...",
+          "shortcut": "Ins"
+        },
+        {
+          "label": "Edit...",
+          "shortcut": "Enter"
+        },
+        {
+          "label": "Delete",
+          "shortcut": "Del"
+        },
+        "---",
+        {
+          "label": "Cut",
+          "shortcut": "Ctrl+X"
+        },
+        {
+          "label": "Copy",
+          "shortcut": "Ctrl+C"
+        },
+        {
+          "label": "Paste",
+          "shortcut": "Ctrl+V"
+        },
+        {
+          "label": "Paste Last"
+        },
+        "---",
+        {
+          "label": "Quick Setting"
+        }
+      ]
+    },
+    "move_route_list_right_click": {
+      "description": "Right-click in the Move Route sub-editor",
+      "items": [
+        {
+          "label": "Insert...",
+          "shortcut": "Ins"
+        },
+        {
+          "label": "Edit...",
+          "shortcut": "Enter"
+        },
+        {
+          "label": "Delete",
+          "shortcut": "Del"
+        },
+        "---",
+        {
+          "label": "Cut",
+          "shortcut": "Ctrl+X"
+        },
+        {
+          "label": "Copy",
+          "shortcut": "Ctrl+C"
+        },
+        {
+          "label": "Paste",
+          "shortcut": "Ctrl+V"
+        }
+      ]
+    },
+    "database_list_right_click": {
+      "description": "Right-click an entry in any Database tab list",
+      "items": [
+        {
+          "label": "Change Maximum..."
+        }
+      ]
+    },
+    "script_editor_right_click": {
+      "description": "Right-click in the Script Editor section list",
+      "items": [
+        {
+          "label": "Insert...",
+          "shortcut": "Ins"
+        },
+        {
+          "label": "Edit...",
+          "shortcut": "Enter"
+        },
+        {
+          "label": "Delete",
+          "shortcut": "Del"
+        },
+        "---",
+        {
+          "label": "Cut",
+          "shortcut": "Ctrl+X"
+        },
+        {
+          "label": "Copy",
+          "shortcut": "Ctrl+C"
+        },
+        {
+          "label": "Paste",
+          "shortcut": "Ctrl+V"
+        },
+        "---",
+        {
+          "label": "Move Up"
+        },
+        {
+          "label": "Move Down"
+        }
+      ]
+    },
+    "tileset_autotile_right_click": {
+      "description": "Right-click an autotile slot in Tilesets database tab",
+      "items": [
+        {
+          "label": "Import..."
+        },
+        {
+          "label": "Export..."
+        },
+        "---",
+        {
+          "label": "Delete"
+        }
+      ]
+    },
+    "animation_frame_right_click": {
+      "description": "Right-click a frame in the Animation editor",
+      "items": [
+        {
+          "label": "Copy Frames..."
+        },
+        {
+          "label": "Paste Frames"
+        },
+        {
+          "label": "Clear Frames..."
+        },
+        "---",
+        {
+          "label": "Cell Batch..."
+        }
+      ]
+    },
+    "materialbase_right_click": {
+      "description": "Right-click a file in the Materialbase",
+      "items": [
+        {
+          "label": "Import..."
+        },
+        {
+          "label": "Export..."
+        },
+        {
+          "label": "Delete..."
+        }
+      ]
+    }
+  },
+  "insert_event_command_menu": {
+    "description": "The Insert Event Command dialog \u2014 categorized list",
+    "note": "This is a dialog (not a popup menu), but items are grouped exactly like a menu",
+    "groups": {
+      "Message": [
+        "Show Text",
+        "Show Choices",
+        "Input Number",
+        "Change Text Options",
+        "Button Input Processing",
+        "Scroll Text",
+        "Comment"
+      ],
+      "Game Progression": [
+        "Conditional Branch",
+        "Loop",
+        "Break Loop",
+        "Exit Event Processing",
+        "Erase Event",
+        "Call Common Event",
+        "Label",
+        "Jump to Label",
+        "Wait"
+      ],
+      "Party": [
+        "Change Gold",
+        "Change Items",
+        "Change Weapons",
+        "Change Armor",
+        "Change Party Member",
+        "Change Windowskin",
+        "Change Battle BGM",
+        "Change Battle End ME",
+        "Change Save Access",
+        "Change Menu Access",
+        "Change Encounter",
+        "Change Actor Name",
+        "Change Actor Class",
+        "Change Actor Graphic",
+        "Change HP",
+        "Change SP",
+        "Change State",
+        "Recover All",
+        "Change EXP",
+        "Change Level",
+        "Change Parameters",
+        "Change Skills",
+        "Change Equipment"
+      ],
+      "Movement": [
+        "Transfer Player",
+        "Set Event Location",
+        "Scroll Map",
+        "Change Map Settings",
+        "Change Fog Color Tone",
+        "Change Fog Opacity",
+        "Show Animation",
+        "Change Transparent Flag",
+        "Set Move Route",
+        "Wait for Move's Completion"
+      ],
+      "Screen": [
+        "Prepare for Transition",
+        "Execute Transition",
+        "Change Screen Color Tone",
+        "Screen Flash",
+        "Screen Shake",
+        "Show Picture",
+        "Move Picture",
+        "Rotate Picture",
+        "Change Picture Color Tone",
+        "Erase Picture",
+        "Set Weather Effects"
+      ],
+      "Audio/Video": [
+        "Play BGM",
+        "Fade Out BGM",
+        "Play BGS",
+        "Fade Out BGS",
+        "Memorize BGM/BGS",
+        "Restore BGM/BGS",
+        "Play ME",
+        "Play SE",
+        "Stop SE"
+      ],
+      "Scene Control": [
+        "Battle Processing",
+        "Shop Processing",
+        "Name Input Processing",
+        "Call Menu Screen",
+        "Call Save Screen",
+        "Game Over",
+        "Return to Title Screen"
+      ],
+      "Battle": [
+        "Change Enemy HP",
+        "Change Enemy SP",
+        "Change Enemy State",
+        "Enemy Recover All",
+        "Enemy Appearance",
+        "Enemy Transform",
+        "Show Battle Animation",
+        "Deal Damage",
+        "Force Action",
+        "Abort Battle"
+      ],
+      "Other": [
+        "Script"
+      ]
+    }
+  },
+  "move_route_commands": {
+    "description": "Commands in the Set Move Route sub-editor",
+    "groups": {
+      "Movement": [
+        "Move Down",
+        "Move Left",
+        "Move Right",
+        "Move Up",
+        "Move Lower Left",
+        "Move Lower Right",
+        "Move Upper Left",
+        "Move Upper Right",
+        "Move at Random",
+        "Move toward Player",
+        "Move away from Player",
+        "1 Step Forward",
+        "1 Step Backward",
+        "Jump..."
+      ],
+      "Turn/Direction": [
+        "Turn Down",
+        "Turn Left",
+        "Turn Right",
+        "Turn Up",
+        "Turn 90 Right",
+        "Turn 90 Left",
+        "Turn 180",
+        "Turn 90 Right or Left",
+        "Turn at Random",
+        "Turn toward Player",
+        "Turn away from Player"
+      ],
+      "Flags": [
+        "Switch ON...",
+        "Switch OFF...",
+        "Change Speed...",
+        "Change Freq...",
+        "Move Animation ON",
+        "Move Animation OFF",
+        "Stop Animation ON",
+        "Stop Animation OFF",
+        "Direction Fix ON",
+        "Direction Fix OFF",
+        "Through ON",
+        "Through OFF",
+        "Always on Top ON",
+        "Always on Top OFF"
+      ],
+      "Other": [
+        "Change Graphic...",
+        "Change Opacity...",
+        "Change Blending...",
+        "Play SE...",
+        "Script..."
+      ]
+    }
+  },
+  "event_trigger_types": [
+    "Action Button",
+    "Player Touch",
+    "Event Touch",
+    "Autorun",
+    "Parallel Process"
+  ],
+  "event_move_types": [
+    "Fixed",
+    "Random",
+    "Approach",
+    "Custom"
+  ],
+  "event_move_speeds": [
+    "Slowest",
+    "Slower",
+    "Slow",
+    "Fast",
+    "Faster",
+    "Fastest"
+  ],
+  "event_move_freqs": [
+    "Lowest",
+    "Lower",
+    "Low",
+    "High",
+    "Higher",
+    "Highest"
+  ],
+  "event_priorities": [
+    "Below characters",
+    "Same as characters",
+    "Above characters"
+  ],
+  "weather_types": [
+    "None",
+    "Rain",
+    "Storm",
+    "Snow"
+  ],
+  "self_switches": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "screen_positions": [
+    "Upper Left",
+    "Center"
+  ],
+  "blend_types": [
+    "Normal",
+    "Add",
+    "Sub"
+  ],
+  "graphic_types": [
+    "Animation Graphic",
+    "Autotile Graphic",
+    "Battleback Graphic",
+    "Battler Graphic",
+    "Character Graphic",
+    "Fog Graphic",
+    "Gameover Graphic",
+    "Icon Graphic",
+    "Panorama Graphic",
+    "Picture Graphic",
+    "Tileset Graphic",
+    "Title Graphic",
+    "Transition Graphic",
+    "Windowskin Graphic"
+  ],
+  "audio_types": [
+    "BGM",
+    "BGS",
+    "ME",
+    "SE"
+  ],
+  "battle_result_branches": [
+    "If Win",
+    "If Escape",
+    "If Lose"
+  ],
+  "choice_cancel_handlers": [
+    "Disallow",
+    "Choice 1",
+    "Choice 2",
+    "Choice 3",
+    "Choice 4"
+  ],
+  "source": "RPGXP.exe RT_STRING + RT_MENU UTF-16LE scan + Scripts.rxdata"
+}
