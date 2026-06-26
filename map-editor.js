@@ -662,6 +662,25 @@
       pctx.strokeRect(sc * DT * PAL_SCALE + 1, sr * DT * PAL_SCALE + 1,
         s.w * DT * PAL_SCALE - 2, s.h * DT * PAL_SCALE - 2);
     }
+    // Overlay passage icons for tiles with non-default flags
+    if (state._tilePassage) {
+      var sheet0 = aSheet(L());
+      if (sheet0) {
+        pctx.font = 'bold ' + Math.max(8, DT * PAL_SCALE * 0.5) + 'px sans-serif';
+        pctx.textAlign = 'right'; pctx.textBaseline = 'bottom';
+        for (var gi = 0; gi < n; gi++) {
+          var gid0 = sheet0.offset + gi, flag = state._tilePassage[gid0];
+          if (!flag) continue;
+          var symbols = ['','✕','▲','~','✦','⚡'];
+          var colors  = ['','#ff3030','#4488ff','#22aa22','#ffcc00','#ff6600'];
+          pctx.fillStyle = colors[flag] || '#ffffff';
+          var px0 = (gi % PAL_COLS) * DT * PAL_SCALE + DT * PAL_SCALE - 1;
+          var py0 = ((gi / PAL_COLS) | 0) * DT * PAL_SCALE + DT * PAL_SCALE;
+          pctx.fillText(symbols[flag] || '?', px0, py0);
+        }
+        pctx.textAlign = 'start';
+      }
+    }
     $('paletteCount').textContent = n + ' tiles';
   }
 
@@ -731,6 +750,72 @@
     setStampFromPalette(palDrag.cx, palDrag.cy, p.cx, p.cy);
   });
   window.addEventListener('pointerup', function () { palDrag = null; });
+
+  // ── Palette passage editor: right-click a tile to set its passage flag ──
+  // Flags stored in state._tilePassage[gid]: 0=walkable (default), 1=blocked, 2=overlay (upper-layer passable), 3=bush, 4=counter, 5=damage
+  // Written into the active layer's collision[] array for the tile under the cursor.
+  var PASSAGE_FLAGS = [
+    ['○ Walkable',  0],
+    ['✕ Blocked',   1],
+    ['▲ Overlay',   2],
+    ['~ Bush',      3],
+    ['✦ Counter',   4],
+    ['⚡ Damage',   5],
+  ];
+  function paletteGidAt(e) {
+    var p = palCellFromEvent(e);
+    if (state.tabMode === 'xp') {
+      var view = state.xpView || buildXpView();
+      var k = p.cy * PAL_COLS + p.cx;
+      return view.tiles[k] ? view.tiles[k].gid : -1;
+    }
+    var sheet = aSheet(L()); if (!sheet) return -1;
+    var local = p.cy * PAL_COLS + p.cx;
+    return (local >= 0 && local < sheet.count) ? (sheet.offset + local) : -1;
+  }
+  function openPalettePassageCtx(e) {
+    e.preventDefault();
+    var gid = paletteGidAt(e);
+    if (gid < 0) return;
+    var cur = (state._tilePassage || {})[gid] || 0;
+    showCtxMenu(e.clientX, e.clientY,
+      PASSAGE_FLAGS.map(function (pf) {
+        return [(cur === pf[1] ? '◆ ' : '  ') + pf[0], (function (val) {
+          return function () {
+            if (!state._tilePassage) state._tilePassage = {};
+            state._tilePassage[gid] = val;
+            // Also apply to all cells in the map that use this gid
+            var layer = L();
+            if (layer.data) {
+              for (var i = 0; i < layer.data.length; i++) {
+                if (layer.data[i] === gid) { layer.collision[i] = val > 0 ? 1 : 0; }
+              }
+            }
+            drawPalette(); drawMap();
+            toast('Tile ' + gid + ': ' + PASSAGE_FLAGS.filter(function(f){return f[1]===val;})[0][0]);
+          };
+        })(pf[1])];
+      })
+    );
+  }
+  paletteCanvas.addEventListener('contextmenu', function (e) { openPalettePassageCtx(e); });
+  // Long-press on palette for mobile passage editing
+  (function () {
+    var _lt = null, _lx = 0, _ly = 0, _lid = null;
+    paletteCanvas.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; _lx = t.clientX; _ly = t.clientY; _lid = e.pointerId;
+      _lt = setTimeout(function () {
+        _lt = null;
+        openPalettePassageCtx({ preventDefault: function(){}, clientX: _lx, clientY: _ly });
+      }, 500);
+    }, { passive: true });
+    paletteCanvas.addEventListener('touchmove', function (e) {
+      if (!_lt) return;
+      var t = e.touches[0];
+      if (Math.abs(t.clientX - _lx) > 8 || Math.abs(t.clientY - _ly) > 8) { clearTimeout(_lt); _lt = null; }
+    }, { passive: true });
+    paletteCanvas.addEventListener('touchend', function () { if (_lt) { clearTimeout(_lt); _lt = null; } }, { passive: true });
+  })();
 
   function setStampFromPalette(cx0, cy0, cx1, cy1) {
     var x0 = Math.min(cx0, cx1), x1 = Math.max(cx0, cx1);
@@ -1455,10 +1540,11 @@
   function drawEvents() {
     var cs = cell();
     state.events.forEach(function (ev) {
+      var pg0 = ensurePages(ev)[0];
       var drew = false;
-      if (ev.graphic && ev.graphic.file) {
-        var row = EVENT_DIR_ROW[ev.dir] || 0;
-        drew = blitCharFrame(ev.graphic, row, 1, ev.x * cs, ev.y * cs, cs);
+      if (pg0 && pg0.graphic && pg0.graphic.file) {
+        var row = EVENT_DIR_ROW[pg0.dir] || 0;
+        drew = blitCharFrame(pg0.graphic, row, 1, ev.x * cs, ev.y * cs, cs);
       }
       if (!drew) {                                   // no graphic: a diamond marker
         mctx.fillStyle = 'rgba(120,90,200,0.55)';
@@ -1474,26 +1560,51 @@
     });
   }
   function renderEventPanel() {
+    _evCmdsUndoPushed = false;
     var props = $('eventProps');
     var ev = state.selectedEvent;
     if (!ev) { props.innerHTML = '<div class="hint">No event selected. Click a tile to place one.</div>'; renderEventList(); return; }
-    props.innerHTML =
+    var pages = ensurePages(ev);
+    var pg = _currentPage(ev);
+
+    // ── Page tabs (XP-style) ──
+    var tabsHtml = '<div style="display:flex;align-items:center;gap:2px;margin-bottom:5px;flex-wrap:wrap;">';
+    pages.forEach(function (p, i) {
+      tabsHtml += '<button class="evPageTab" data-pi="' + i + '" style="font-size:10px;padding:1px 6px;cursor:pointer;' +
+        (i === _selectedPage ? 'background:#4e96d8;color:#fff;border:1px solid #2060a0;' : 'background:#ddd;color:#333;border:1px solid #999;') +
+        'border-radius:3px 3px 0 0;">' + (i + 1) + '</button>';
+    });
+    tabsHtml += '<button id="evAddPage" style="font-size:10px;padding:1px 5px;cursor:pointer;background:#555;color:#eee;border:1px solid #333;border-radius:3px;">+ Page</button>';
+    if (pages.length > 1) tabsHtml += '<button id="evDelPage" style="font-size:10px;padding:1px 5px;cursor:pointer;background:#8a1818;color:#eee;border:1px solid #5a0000;border-radius:3px;">✕ Page</button>';
+    tabsHtml += '</div>';
+
+    props.innerHTML = tabsHtml +
       '<div class="row"><label class="lbl">Name</label><input type="text" id="evName" value="' + (ev.name || '') + '" style="flex:1;min-width:0;"></div>' +
-      '<div class="row"><label class="lbl">Graphic</label><span id="evGfx" class="hint" style="flex:1;">' + (ev.graphic ? ev.graphic.sprite : '(none)') + '</span><button id="evPick">Choose...</button></div>' +
+      '<div class="row"><label class="lbl">Graphic</label><span id="evGfx" class="hint" style="flex:1;">' + (pg.graphic ? pg.graphic.sprite : '(none)') + '</span><button id="evPick">Choose...</button></div>' +
       '<div class="row"><label class="lbl">Facing</label><select id="evDir"><option value="down">Down</option><option value="left">Left</option><option value="right">Right</option><option value="up">Up</option></select></div>' +
       '<div class="row"><label class="lbl">Trigger</label><select id="evTrig"><option value="action">Action button</option><option value="touch">Player touch</option><option value="auto">Autorun</option><option value="parallel">Parallel</option></select></div>' +
       '<div class="row"><label><input type="checkbox" id="evThrough"> Through (walk past)</label></div>' +
       '<div class="row"><button id="evDel" style="color:#c02020;">✕ Delete event</button></div>';
+
+    // Page tab clicks
+    props.querySelectorAll('.evPageTab').forEach(function (btn) {
+      btn.addEventListener('click', function () { _selectedPage = parseInt(this.dataset.pi); renderEventPanel(); });
+    });
+    var addPageBtn = $('evAddPage');
+    if (addPageBtn) addPageBtn.addEventListener('click', function () { pushUndo(); _addPage(ev); renderEventPanel(); });
+    var delPageBtn = $('evDelPage');
+    if (delPageBtn) delPageBtn.addEventListener('click', function () { pushUndo(); _deletePage(ev, _selectedPage); renderEventPanel(); });
+
     $('evName').addEventListener('change', function () { ev.name = this.value; renderEventList(); });
-    $('evDir').value = ev.dir || 'down';
-    $('evDir').addEventListener('change', function () { ev.dir = this.value; drawMap(); });
-    $('evTrig').value = ev.trigger || 'action';
-    $('evTrig').addEventListener('change', function () { ev.trigger = this.value; });
-    $('evThrough').checked = !!ev.through;
-    $('evThrough').addEventListener('change', function () { ev.through = this.checked; });
+    $('evDir').value = pg.dir || 'down';
+    $('evDir').addEventListener('change', function () { pg.dir = this.value; drawMap(); });
+    $('evTrig').value = pg.trigger || 'action';
+    $('evTrig').addEventListener('change', function () { pg.trigger = this.value; });
+    $('evThrough').checked = !!pg.through;
+    $('evThrough').addEventListener('change', function () { pg.through = this.checked; });
     $('evPick').addEventListener('click', function () { openSpriteModal('event'); });
     $('evDel').addEventListener('click', function () { deleteEvent(ev); });
-    // Right-click on the name row = XP "Event Page" tab context menu
+    // Right-click on name row = XP "Event Page" tab context menu
     props.querySelector('.row').addEventListener('contextmenu', function (e) {
       e.preventDefault();
       if (window._ctx) window._ctx.eventPageTab(e.clientX, e.clientY);
@@ -1674,11 +1785,47 @@
   function boolSel(val) {
     return '<select class="cBool"><option value="true">ON</option><option value="false">OFF</option><option value="toggle">Toggle</option></select>';
   }
+  // ── Multi-page events (XP-style) ──
+  // Each event now stores pages:[{condition,graphic,dir,trigger,through,commands}].
+  // Old flat {commands:[]} format is migrated on access via ensurePages().
+  var _selectedPage = 0;   // current page index in the event editor
+  function ensurePages(ev) {
+    if (!ev.pages) {
+      // migrate flat format
+      ev.pages = [{ condition: {}, graphic: ev.graphic || null, dir: ev.dir || 'down',
+                    trigger: ev.trigger || 'action', through: !!ev.through,
+                    commands: ev.commands || [] }];
+      delete ev.commands;   // avoid dual-format confusion
+    }
+    return ev.pages;
+  }
+  function _currentPage(ev) {
+    var pages = ensurePages(ev);
+    if (_selectedPage >= pages.length) _selectedPage = pages.length - 1;
+    if (_selectedPage < 0) _selectedPage = 0;
+    return pages[_selectedPage] || pages[0];
+  }
+  function _addPage(ev) {
+    var pages = ensurePages(ev);
+    pages.push({ condition: {}, graphic: null, dir: 'down', trigger: 'action', through: false, commands: [] });
+    _selectedPage = pages.length - 1;
+  }
+  function _deletePage(ev, idx) {
+    var pages = ensurePages(ev);
+    if (pages.length <= 1) { toast('Cannot delete the only page.'); return; }
+    pages.splice(idx, 1);
+    if (_selectedPage >= pages.length) _selectedPage = pages.length - 1;
+  }
+
+  var _evCmdsUndoPushed = false;   // cleared each renderEventPanel; pushes once on first inline field edit
   function renderEventCommands(ev) {
-    if (!ev.commands) ev.commands = [];
+    var page = _currentPage(ev);
+    if (!page.commands) page.commands = [];
     var host = el('div', 'margin-top:7px;', '<div style="font-size:11px;font-weight:bold;margin-bottom:3px;">Event Commands</div>');
     host.id = 'evCmds';
-    renderCmdList(ev.commands, host, 0, ev);
+    // one-shot undo when the user first edits any inline field
+    host.addEventListener('change', function () { if (!_evCmdsUndoPushed) { pushUndo(); _evCmdsUndoPushed = true; } }, true);
+    renderCmdList(page.commands, host, 0, ev);
     $('eventProps').appendChild(host);
   }
   function renderCmdList(list, container, depth, ev) {
@@ -1713,6 +1860,7 @@
     });
     sel.addEventListener('change', function () {
       if (!this.value) return;
+      pushUndo();
       list.push(newCmd(this.value));
       if (this.value === 'transfer' && !ev.trigger) ev.trigger = 'action';
       renderEventPanel();
@@ -1736,7 +1884,7 @@
     head.querySelector('.cmdDn').addEventListener('click', function () {
       if (ci >= list.length-1) return; pushUndo(); var t = list[ci+1]; list[ci+1] = list[ci]; list[ci] = t; renderEventPanel();
     });
-    head.querySelector('.cmdDel').addEventListener('click', function () { list.splice(ci, 1); renderEventPanel(); });
+    head.querySelector('.cmdDel').addEventListener('click', function () { pushUndo(); list.splice(ci, 1); renderEventPanel(); });
     var body = el('div'); card.appendChild(body);
 
     if (cmd.type === 'text' || cmd.type === 'script') {
@@ -2349,7 +2497,8 @@
       var d = document.createElement('div'); d.className = 'warp-item';
       d.style.cursor = 'pointer';
       if (ev === state.selectedEvent) { d.style.background = 'var(--accent2)'; d.style.borderColor = 'var(--accent)'; }
-      d.textContent = ev.name + '  (' + ev.x + ',' + ev.y + ')' + (ev.graphic ? ' · ' + ev.graphic.sprite : '');
+      var _pg0 = ensurePages(ev)[0];
+      d.textContent = ev.name + '  (' + ev.x + ',' + ev.y + ')' + (_pg0 && _pg0.graphic ? ' · ' + _pg0.graphic.sprite : '');
       d.addEventListener('click', function () { state.selectedEvent = ev; openEventEditor(); drawMap(); });
       // Right-click event list row: Edit / Go To / Delete
       d.addEventListener('contextmenu', function (e) {
@@ -2449,9 +2598,15 @@
         return { x: w.x, y: w.y, dest_map: w.dest_map, dest_warp_id: w.dest_warp_id };
       }),
       events: state.events.map(function (ev) {
-        return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
-                 dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through,
-                 commands: ev.commands || [] };
+        var pages = ensurePages(ev);
+        var pg0 = pages[0];
+        return { id: ev.id, name: ev.name, x: ev.x, y: ev.y,
+                 // XP-style pages[] — engine falls back to pages[0] fields
+                 pages: pages,
+                 // flat aliases from page 0 for engine backward-compat
+                 graphic: pg0.graphic || null,
+                 dir: pg0.dir || 'down', trigger: pg0.trigger || 'action', through: !!pg0.through,
+                 commands: pg0.commands || [] };
       }),
       triggers: [], signs: []
     };
@@ -2542,9 +2697,16 @@
           return { x: w2.x, y: w2.y, dest_map: w2.dest_map || 'MAP_NONE', dest_warp_id: w2.dest_warp_id || '0' };
         });
         state.events = (mapMeta.events || []).map(function (ev) {
-          return { id: ev.id, name: ev.name, x: ev.x, y: ev.y, graphic: ev.graphic || null,
-                   dir: ev.dir || 'down', trigger: ev.trigger || 'action', through: !!ev.through,
-                   commands: ev.commands || [] };
+          var base = { id: ev.id, name: ev.name, x: ev.x, y: ev.y };
+          if (ev.pages) {
+            base.pages = ev.pages;   // XP multi-page format — use as-is
+          } else {
+            // flat format — will be migrated lazily by ensurePages()
+            base.graphic = ev.graphic || null;
+            base.dir = ev.dir || 'down'; base.trigger = ev.trigger || 'action'; base.through = !!ev.through;
+            base.commands = ev.commands || [];
+          }
+          return base;
         });
       } else { state.warps = []; state.events = []; }
       state.selectedEvent = null;
@@ -4098,6 +4260,87 @@
   }
 
   // ── 3. CANVAS / EVENT MODE right-click ──
+  function _makeQEEvent(p, overrides) {
+    var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
+    var base = { id: id, name: 'EV' + ('00' + id).slice(-3), x: p.x, y: p.y };
+    // Build in pages[] format directly
+    base.pages = [Object.assign({ condition: {}, graphic: null, dir: 'down', trigger: 'action', through: false, commands: [] }, overrides)];
+    return base;
+  }
+  function quickEventMenu(px, py, p) {
+    var templates = [
+      ['Treasure Chest',  function () {
+        return _makeQEEvent(p, { trigger: 'action', commands: [
+          { type: 'conditional', cond: { kind: 'selfswitch', letter: 'A', value: true }, then: [
+            { type: 'text', text: 'The chest is empty.' }
+          ], else: [
+            { type: 'item', pocket: 'items', id: '', op: '+', qty: 1 },
+            { type: 'text', text: 'Found an item!' },
+            { type: 'selfswitch', letter: 'A', value: true }
+          ]}
+        ]});
+      }],
+      ['Sign / Notice',   function () {
+        return _makeQEEvent(p, { trigger: 'action', commands: [
+          { type: 'text', text: 'It says...' }
+        ]});
+      }],
+      ['NPC (dialogue)',  function () {
+        return _makeQEEvent(p, { dir: 'down', trigger: 'action', commands: [
+          { type: 'text', text: 'Hello, traveller!', face: null }
+        ]});
+      }],
+      ['Warp / Door',     function () {
+        return _makeQEEvent(p, { trigger: 'action', commands: [
+          { type: 'fade', mode: 'out', color: '#000000', frames: 20 },
+          { type: 'transfer', map: $('mapName').value, x: 0, y: 0, dir: 'down' },
+          { type: 'fade', mode: 'in', color: '#000000', frames: 20 }
+        ]});
+      }],
+      ['Inn Counter',     function () {
+        return _makeQEEvent(p, { trigger: 'action', commands: [
+          { type: 'choice', prompt: 'Rest for the night? (50 G)', options: [
+            { label: 'Yes', then: [
+              { type: 'money', op: '-', amount: 50 },
+              { type: 'fade', mode: 'out', color: '#000000', frames: 20 },
+              { type: 'heal', what: 'all', amount: null },
+              { type: 'fade', mode: 'in', color: '#000000', frames: 20 },
+              { type: 'text', text: 'You feel refreshed!' }
+            ]},
+            { label: 'No', then: [] }
+          ]}
+        ]});
+      }],
+      ['Monster (touch)', function () {
+        return _makeQEEvent(p, { trigger: 'touch', commands: [
+          { type: 'battle', enemies: [{ key: 'emberling', level: 3 }] },
+          { type: 'erase_event' }
+        ]});
+      }],
+      ['Shop (off-grid)', function () {
+        return _makeQEEvent(p, { trigger: 'action', commands: [
+          { type: 'text', text: 'Welcome to my shop!' },
+          { type: 'shop', offgrid: true }
+        ]});
+      }],
+      ['Autorun cutscene', function () {
+        return _makeQEEvent(p, { trigger: 'auto', commands: [
+          { type: 'text', text: 'A mysterious voice speaks...' },
+          { type: 'switch', id: '1', value: false }
+        ]});
+      }],
+    ];
+    var subItems = templates.map(function (t) {
+      return [t[0], function () {
+        pushUndo();
+        var ne = t[1]();
+        state.events.push(ne); state.selectedEvent = ne;
+        _selectedPage = 0;
+        openEventEditor(); drawMap();
+      }];
+    });
+    showCtxMenu(px, py, subItems);
+  }
   function canvasEventCtx(px, py) {
     var p = eventCell({ clientX: px, clientY: py });
     var ev = eventAt(p.x, p.y);
@@ -4106,12 +4349,13 @@
       ['New Event',   function () {
         pushUndo();
         var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
-        var ne = { id: id, name: 'EV' + ('00' + id).slice(-3), x: p.x, y: p.y,
-                   graphic: null, dir: 'down', trigger: 'action', through: false, commands: [] };
-        state.events.push(ne); state.selectedEvent = ne;
+        var ne = { id: id, name: 'EV' + ('00' + id).slice(-3), x: p.x, y: p.y };
+        ne.pages = [{ condition: {}, graphic: null, dir: 'down', trigger: 'action', through: false, commands: [] }];
+        state.events.push(ne); state.selectedEvent = ne; _selectedPage = 0;
         openEventEditor(); drawMap();
       }],
-      ['Edit Event',  ev ? function () { state.selectedEvent = ev; openEventEditor(); drawMap(); } : null, ev ? '' : 'disabled'],
+      ['✨ Quick Event...', function () { quickEventMenu(px, py, p); }],
+      ['Edit Event',  ev ? function () { state.selectedEvent = ev; _selectedPage = 0; openEventEditor(); drawMap(); } : null, ev ? '' : 'disabled'],
       'sep',
       ['Copy Event',  ev ? function () { _evtClipboard = JSON.parse(JSON.stringify(ev)); toast('Event copied.'); } : null, ev ? '' : 'disabled'],
       ['Paste Event', canPasteEv ? function () {
@@ -4120,7 +4364,7 @@
         var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
         var ne = JSON.parse(JSON.stringify(_evtClipboard));
         ne.id = id; ne.name = 'EV' + ('00' + id).slice(-3); ne.x = p.x; ne.y = p.y;
-        state.events.push(ne); state.selectedEvent = ne;
+        state.events.push(ne); state.selectedEvent = ne; _selectedPage = 0;
         openEventEditor(); drawMap(); toast('Event pasted.');
       } : null, canPasteEv ? '' : 'disabled'],
       ['Delete Event', ev ? function () { deleteEvent(ev); } : null, ev ? 'danger' : 'disabled'],
@@ -4140,15 +4384,19 @@
   function eventPageTabCtx(px, py) {
     var ev = state.selectedEvent;
     if (!ev) return;
+    var pg = _currentPage(ev);
     showCtxMenu(px, py, [
-      ['New Page',    function () { ev.commands = []; renderEventPanel(); toast('Commands cleared (new page).'); }],
-      ['Copy Page',   function () { _evtClipboard = JSON.parse(JSON.stringify(ev)); toast('Event page copied.'); }],
+      ['New Page',    function () { pushUndo(); _addPage(ev); renderEventPanel(); toast('New page added.'); }],
+      ['Copy Page',   function () { _evtClipboard = JSON.parse(JSON.stringify(pg)); toast('Page copied.'); }],
       ['Paste Page',  _evtClipboard ? function () {
-        ev.commands = JSON.parse(JSON.stringify(_evtClipboard.commands || []));
+        pushUndo();
+        pg.commands = JSON.parse(JSON.stringify((_evtClipboard.commands || _evtClipboard || [])));
         renderEventPanel(); toast('Page pasted.');
       } : null, _evtClipboard ? '' : 'disabled'],
       'sep',
-      ['Clear',       function () { pushUndo(); ev.commands = []; renderEventPanel(); toast('Commands cleared.'); }]
+      ['Delete Page',  ensurePages(ev).length > 1 ? function () { pushUndo(); _deletePage(ev, _selectedPage); renderEventPanel(); } : null,
+                       ensurePages(ev).length > 1 ? 'danger' : 'disabled'],
+      ['Clear Page',  function () { pushUndo(); pg.commands = []; renderEventPanel(); toast('Commands cleared.'); }]
     ]);
   }
 
@@ -4646,7 +4894,8 @@
     }
     if (_spriteTarget === 'event' && state.selectedEvent) {
       pushUndo();
-      state.selectedEvent.graphic = g;
+      var pg = _currentPage(state.selectedEvent);
+      pg.graphic = g;
       state._defaultGraphic = g;                 // reuse for the next placed event
       $('spriteModal').style.display = 'none';
       renderEventPanel(); drawMap();
