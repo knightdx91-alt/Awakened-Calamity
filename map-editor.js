@@ -1436,6 +1436,11 @@
     $('evThrough').addEventListener('change', function () { ev.through = this.checked; });
     $('evPick').addEventListener('click', function () { openSpriteModal('event'); });
     $('evDel').addEventListener('click', function () { deleteEvent(ev); });
+    // Right-click on the name row = XP "Event Page" tab context menu
+    props.querySelector('.row').addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      if (window._ctx) window._ctx.eventPageTab(e.clientX, e.clientY);
+    });
     renderEventCommands(ev);
     renderEventList();
   }
@@ -1624,6 +1629,10 @@
     list.forEach(function (cmd, ci) {
       // XP-style: flat white card with sunken border
       var card = el('div', 'background:#FFFFFF;border:1px solid;border-color:#808080 #FFFFFF #FFFFFF #808080;padding:3px 4px;margin:2px 0;');
+      card.addEventListener('contextmenu', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (window._ctx) window._ctx.cmdList(e.clientX, e.clientY, list, ci, ev);
+      });
       renderCmdEditor(cmd, card, list, ci, ev, depth);
       wrap.appendChild(card);
     });
@@ -3163,7 +3172,13 @@
       ['Paste',   'Ctrl+V', function () { pasteClipboard(); }],
       ['Delete',  'Del',    function () { clearSelection(); }],
       'sep',
-      ['Select All', 'Ctrl+A', null],
+      ['Select All', 'Ctrl+A', function () {
+        var w = state.layers.ground.width, h = state.layers.ground.height;
+        if (!w || !h) return;
+        state.sel = { x0: 0, y0: 0, x1: w - 1, y1: h - 1 };
+        copySelection(); toast('All tiles selected and copied.');
+        drawMap();
+      }],
       'sep',
       ['Shift Map...', '', function () { shiftMapPrompt(); }]
     ]],
@@ -3173,9 +3188,9 @@
       ['Layer 3', 'F3', function () { setLayerBtn('upper'); }, function () { return state.active === 'upper'; }],
       ['Events',  'F4', function () { setModeBtn(state.mode === 'event' ? 'map' : 'event'); syncModeUI(); }, function () { return state.mode === 'event'; }],
       'sep',
-      ['Current Layer and Below', '', null],
-      ['All Layers',              '', null],
-      ['Dim Other Layers',        '', null]
+      ['Current Layer and Below', '', function () { state.layerView = 'below'; toast('Showing current layer and below.'); drawMap(); }],
+      ['All Layers',              '', function () { state.layerView = 'all';   toast('Showing all layers.'); drawMap(); }],
+      ['Dim Other Layers',        '', function () { state.layerView = 'dim';   toast('Dimming other layers.'); drawMap(); }]
     ]],
     ['Draw', [
       ['Pencil',      '',  function () { setToolBtn('pencil'); },  function () { return state.tool === 'pencil' && !state.eraser; }],
@@ -3205,12 +3220,12 @@
       ['Palette Mode: XP ⇄ MV Tabs', '', function () { clickEl('tabModeBtn'); }]
     ]],
     ['Tools', [
-      ['Database...',       'F9',  null],
-      ['Materials...',      'F10', null],
-      ['Script Editor...',  'F11', null],
-      ['Sound Test...',     '',    null],
+      ['Database...',       'F9',  function () { if (window._openDb) window._openDb(); else toast('Database: loading...'); }],
+      ['Materials...',      'F10', function () { openMaterialsDialog(); }],
+      ['Script Editor...',  'F11', function () { openScriptEditor(); }],
+      ['Sound Test...',     '',    function () { openSoundTest(); }],
       'sep',
-      ['Options...',        '',    null],
+      ['Options...',        '',    function () { openEditorOptions(); }],
       'sep',
       ['Generate Map...',   '',    function () { clickEl('genBtn'); }],
       ['Character Sprites...', '', function () { openSpriteModal('player'); }]
@@ -3218,19 +3233,28 @@
     ['Game', [
       ['Playtest',         'F12', function () { clickEl('playBtn'); }],
       'sep',
-      ['Rename Title...',    '',    null],
-      ['Select RTP...',      '',    null],
-      ['Open Game Folder', '',    null],
+      ['Rename Title...',    '',    function () {
+        var t = prompt('Game title:', document.title.replace(' — Map Editor', ''));
+        if (t) { document.title = t + ' — Map Editor'; toast('Title set to: ' + t); }
+      }],
+      ['Select RTP...',      '',    function () {
+        toast('RTP: tilesets live in data/tilesets/. Add new sheets there and rebuild _index.json.');
+      }],
+      ['Open Game Folder', '',    function () {
+        toast('Game folder: ' + (window.location.origin + window.location.pathname.replace('map-editor.html', '')));
+      }],
       'sep',
       ['Set Start Position (click tile)', '', function () {
         state._settingStart = true; toast('Click a tile to set the player start position.');
       }]
     ]],
     ['Help', [
-      ['Help Contents',  'F1', null],
+      ['Help Contents',  'F1', function () {
+        window.open('docs/MAP_EDITING.md', '_blank');
+      }],
       'sep',
       ['Send Screenshot...', '', function () { clickEl('shotBtn'); }],
-      ['About RPG Maker XP', '', function () { toast('Awakened Calamity -- Map Editor (RPG Maker XP layout).'); }]
+      ['About RPG Maker XP', '', function () { toast('Awakened Calamity — Map Editor (RPG Maker XP layout). Binary-verified from RPGXP.exe.'); }]
     ]]
   ];
   function setLayerBtn(lyr) {
@@ -3790,40 +3814,278 @@
       });
   }
 
-  // -- Context menu (press-and-hold / right-click) --
+  // -- Context menu system (all 11 XP-spec right-click menus) --
   var ctxMenu = $('ctxMenu');
-  function openCtx(x, y, name) {
+
+  // Generic renderer: items = ['Label', fn] | 'sep' | ['Label', fn, 'danger'] | ['Label', fn, 'disabled']
+  function showCtxMenu(x, y, items) {
     ctxMenu.innerHTML = '';
-    var items;
-    if (name) items = [
-      ['New Map (child)', function () { newMapNode(name); }],
-      ['Generate child map...', function () { selectNode(name); if (window._openGenModal) window._openGenModal(name); }],
-      ['Edit', function () { selectNode(name); }],
-      ['Map Properties...', function () { selectNode(name); window._openMapProps(); }],
-      ['Rename...', function () { renameNode(name); }],
-      ['Duplicate', function () { duplicateNode(name); }],
-      'sep',
-      ['Delete', function () { deleteNode(name); }, 'danger']
-    ];
-    else items = [['New Map', function () { newMapNode(null); }]];
     items.forEach(function (it) {
-      if (it === 'sep') { var s = document.createElement('div'); s.className = 'ci-sep'; ctxMenu.appendChild(s); return; }
+      if (it === 'sep') {
+        var s = document.createElement('div'); s.className = 'ci-sep'; ctxMenu.appendChild(s); return;
+      }
       var d = document.createElement('div');
-      d.className = 'ci' + (it[2] ? ' ' + it[2] : '');
+      var disabled = it[2] === 'disabled';
+      d.className = 'ci' + (it[2] && it[2] !== 'disabled' ? ' ' + it[2] : '') + (disabled ? ' ci-disabled' : '');
       d.textContent = it[0];
-      d.addEventListener('click', function () { closeCtx(); it[1](); });
+      if (!disabled) d.addEventListener('click', function () { closeCtx(); it[1](); });
       ctxMenu.appendChild(d);
     });
     ctxMenu.style.display = 'block';
-    // clamp to viewport
     var mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
     ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 6) + 'px';
-    ctxMenu.style.top = Math.min(y, window.innerHeight - mh - 6) + 'px';
+    ctxMenu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
   }
   function closeCtx() { ctxMenu.style.display = 'none'; }
   window.addEventListener('mousedown', function (e) { if (!ctxMenu.contains(e.target)) closeCtx(); });
   window.addEventListener('scroll', closeCtx, true);
 
+  // Clipboard for event-level copy/paste (separate from map-section clipboard)
+  var _evtClipboard = null;   // copied event object
+  var _cmdClipboard = [];     // copied command objects
+  var _lastPastedCmds = [];   // "Paste Last" target
+
+  // ── 1. MAP TREE right-click (XP spec: New Map / Map Properties / Shift / Delete) ──
+  function openCtx(x, y, name) {
+    if (name) showCtxMenu(x, y, [
+      ['New Map',             function () { newMapNode(name); }],
+      ['Generate child...',   function () { selectNode(name); if (window._openGenModal) window._openGenModal(name); }],
+      'sep',
+      ['Map Properties...',  function () { selectNode(name); window._openMapProps(); }],
+      ['Rename...',           function () { renameNode(name); }],
+      ['Duplicate',           function () { duplicateNode(name); }],
+      ['Shift Map...',        function () { selectNode(name); shiftMapPrompt && shiftMapPrompt(); }],
+      'sep',
+      ['Delete',              function () { deleteNode(name); }, 'danger']
+    ]);
+    else showCtxMenu(x, y, [['New Map', function () { newMapNode(null); }]]);
+  }
+
+  // ── 2. CANVAS / TILE MODE right-click ──
+  function canvasTileCtx(px, py) {
+    var hasSel = state.sel != null;
+    var canPaste = (state._clipboard && state._clipboard.tiles && state._clipboard.tiles.length > 0);
+    showCtxMenu(px, py, [
+      ['Paste',                  canPaste ? function () { pasteClipboard(); } : null, canPaste ? '' : 'disabled'],
+      'sep',
+      ["Player's Starting Position", function () {
+        var p = eventCell({ clientX: px, clientY: py });
+        state.startLoc = { map: $('mapName').value, region: $('mapRegion').value, x: p.x, y: p.y };
+        try { localStorage.setItem('ac_start_location', JSON.stringify(state.startLoc)); } catch (_) {}
+        toast('Player start set: (' + p.x + ',' + p.y + ')');
+      }]
+    ]);
+  }
+
+  // ── 3. CANVAS / EVENT MODE right-click ──
+  function canvasEventCtx(px, py) {
+    var p = eventCell({ clientX: px, clientY: py });
+    var ev = eventAt(p.x, p.y);
+    var canPasteEv = !!_evtClipboard;
+    var items = [
+      ['New Event',   function () {
+        pushUndo();
+        var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
+        var ne = { id: id, name: 'EV' + ('00' + id).slice(-3), x: p.x, y: p.y,
+                   graphic: null, dir: 'down', trigger: 'action', through: false, commands: [] };
+        state.events.push(ne); state.selectedEvent = ne;
+        openEventEditor(); drawMap();
+      }],
+      ['Edit Event',  ev ? function () { state.selectedEvent = ev; openEventEditor(); drawMap(); } : null, ev ? '' : 'disabled'],
+      'sep',
+      ['Copy Event',  ev ? function () { _evtClipboard = JSON.parse(JSON.stringify(ev)); toast('Event copied.'); } : null, ev ? '' : 'disabled'],
+      ['Paste Event', canPasteEv ? function () {
+        if (!_evtClipboard) return;
+        pushUndo();
+        var id = 1; state.events.forEach(function (e) { if (e.id >= id) id = e.id + 1; });
+        var ne = JSON.parse(JSON.stringify(_evtClipboard));
+        ne.id = id; ne.name = 'EV' + ('00' + id).slice(-3); ne.x = p.x; ne.y = p.y;
+        state.events.push(ne); state.selectedEvent = ne;
+        openEventEditor(); drawMap(); toast('Event pasted.');
+      } : null, canPasteEv ? '' : 'disabled'],
+      ['Delete Event', ev ? function () { deleteEvent(ev); } : null, ev ? 'danger' : 'disabled'],
+      'sep',
+      ["Player's Starting Position", function () {
+        state.startLoc = { map: $('mapName').value, region: $('mapRegion').value, x: p.x, y: p.y };
+        try { localStorage.setItem('ac_start_location', JSON.stringify(state.startLoc)); } catch (_) {}
+        toast('Player start set: (' + p.x + ',' + p.y + ')');
+      }]
+    ];
+    showCtxMenu(px, py, items);
+  }
+
+  // ── 4. EVENT PAGE TABS right-click (shown in event editor modal) ──
+  // XP: pages use "pages" array; our editor uses a single command list per event.
+  // We map "page" to the current event — XP verbs still wired usefully.
+  function eventPageTabCtx(px, py) {
+    var ev = state.selectedEvent;
+    if (!ev) return;
+    showCtxMenu(px, py, [
+      ['New Page',    function () { ev.commands = []; renderEventPanel(); toast('Commands cleared (new page).'); }],
+      ['Copy Page',   function () { _evtClipboard = JSON.parse(JSON.stringify(ev)); toast('Event page copied.'); }],
+      ['Paste Page',  _evtClipboard ? function () {
+        ev.commands = JSON.parse(JSON.stringify(_evtClipboard.commands || []));
+        renderEventPanel(); toast('Page pasted.');
+      } : null, _evtClipboard ? '' : 'disabled'],
+      'sep',
+      ['Clear',       function () { pushUndo(); ev.commands = []; renderEventPanel(); toast('Commands cleared.'); }]
+    ]);
+  }
+
+  // ── 5. EVENT COMMAND LIST right-click ──
+  // Called by right-clicking a .cmdCard element; receives the list, index, and host event
+  function cmdListCtx(px, py, list, ci, ev) {
+    var cmd = list[ci];
+    var hasCopy = _cmdClipboard.length > 0;
+    var hasLast = _lastPastedCmds.length > 0;
+    showCtxMenu(px, py, [
+      ['Insert...', function () {
+        // Show a small inline picker — reuse the existing @ Insert select
+        var s = document.createElement('select');
+        s.style.cssText = 'position:fixed;left:' + px + 'px;top:' + py + 'px;z-index:9999;font-size:12px;';
+        s.appendChild((function () { var o = document.createElement('option'); o.textContent = '@ Insert command...'; return o; })());
+        var groups = {};
+        CMD_TYPES.forEach(function (o) { var g = o[2] || 'Other'; if (!groups[g]) groups[g] = []; groups[g].push(o); });
+        Object.keys(groups).forEach(function (gname) {
+          var grp = document.createElement('optgroup'); grp.label = gname;
+          groups[gname].forEach(function (o) { var op = document.createElement('option'); op.textContent = o[1]; op.value = o[0]; grp.appendChild(op); });
+          s.appendChild(grp);
+        });
+        s.addEventListener('change', function () {
+          if (!this.value) return;
+          pushUndo(); list.splice(ci, 0, newCmd(this.value));
+          document.body.removeChild(s); renderEventPanel();
+        });
+        s.addEventListener('blur', function () { if (document.body.contains(s)) document.body.removeChild(s); });
+        document.body.appendChild(s); s.focus(); s.click();
+      }],
+      ['Edit',   function () { /* card is already expanded inline */ toast('Edit inline above.'); }],
+      ['Delete', function () { pushUndo(); list.splice(ci, 1); renderEventPanel(); }, 'danger'],
+      'sep',
+      ['Cut',    function () { _cmdClipboard = [JSON.parse(JSON.stringify(cmd))]; list.splice(ci, 1); renderEventPanel(); toast('Command cut.'); }],
+      ['Copy',   function () { _cmdClipboard = [JSON.parse(JSON.stringify(cmd))]; toast('Command copied.'); }],
+      ['Paste',  hasCopy ? function () {
+        pushUndo();
+        _lastPastedCmds = JSON.parse(JSON.stringify(_cmdClipboard));
+        list.splice(ci + 1, 0, ..._lastPastedCmds);
+        renderEventPanel(); toast('Command pasted.');
+      } : null, hasCopy ? '' : 'disabled'],
+      ['Paste Last', hasLast ? function () {
+        pushUndo();
+        list.splice(ci + 1, 0, ...JSON.parse(JSON.stringify(_lastPastedCmds)));
+        renderEventPanel(); toast('Last commands pasted.');
+      } : null, hasLast ? '' : 'disabled'],
+      'sep',
+      ['Quick Setting → Move Up', ci > 0 ? function () {
+        pushUndo(); var tmp = list[ci - 1]; list[ci - 1] = list[ci]; list[ci] = tmp; renderEventPanel();
+      } : null, ci > 0 ? '' : 'disabled'],
+      ['Quick Setting → Move Down', ci < list.length - 1 ? function () {
+        pushUndo(); var tmp = list[ci + 1]; list[ci + 1] = list[ci]; list[ci] = tmp; renderEventPanel();
+      } : null, ci < list.length - 1 ? '' : 'disabled']
+    ]);
+  }
+
+  // ── 6. MOVE ROUTE LIST right-click ──
+  var _moveClipboard = [];
+  function moveRouteListCtx(px, py, steps, si) {
+    var step = steps[si];
+    var hasCopy = _moveClipboard.length > 0;
+    showCtxMenu(px, py, [
+      ['Insert Step', function () { steps.splice(si, 0, { type: 'move_down' }); toast('Step inserted.'); }],
+      ['Delete Step', function () { steps.splice(si, 1); toast('Step deleted.'); }, 'danger'],
+      'sep',
+      ['Cut',  function () { _moveClipboard = [JSON.parse(JSON.stringify(step))]; steps.splice(si, 1); toast('Step cut.'); }],
+      ['Copy', function () { _moveClipboard = [JSON.parse(JSON.stringify(step))]; toast('Step copied.'); }],
+      ['Paste', hasCopy ? function () { steps.splice(si + 1, 0, ...JSON.parse(JSON.stringify(_moveClipboard))); toast('Step pasted.'); } : null, hasCopy ? '' : 'disabled']
+    ]);
+  }
+
+  // ── 7. DATABASE LIST right-click ──
+  function dbListCtx(px, py, listEl, onChangeMax) {
+    showCtxMenu(px, py, [
+      ['Change Maximum...', function () {
+        var cur = listEl ? listEl.children.length : 0;
+        var n = parseInt(prompt('Maximum entries (current: ' + cur + '):', cur), 10);
+        if (!isNaN(n) && n > 0 && typeof onChangeMax === 'function') onChangeMax(n);
+      }]
+    ]);
+  }
+
+  // ── 8. SCRIPT EDITOR SECTION LIST right-click ──
+  var _scriptClipboard = null;
+  function scriptSectionCtx(px, py, sections, si, rerender) {
+    var sec = sections[si];
+    var hasCopy = !!_scriptClipboard;
+    showCtxMenu(px, py, [
+      ['Insert Section', function () {
+        var name = prompt('Section name:', 'New Section');
+        if (name) { sections.splice(si, 0, { name: name, code: '' }); rerender(); }
+      }],
+      ['Edit Name',  function () {
+        var name = prompt('Rename section:', sec.name);
+        if (name) { sec.name = name; rerender(); }
+      }],
+      ['Delete',     function () { sections.splice(si, 1); rerender(); }, 'danger'],
+      'sep',
+      ['Cut',   function () { _scriptClipboard = JSON.parse(JSON.stringify(sec)); sections.splice(si, 1); rerender(); toast('Section cut.'); }],
+      ['Copy',  function () { _scriptClipboard = JSON.parse(JSON.stringify(sec)); toast('Section copied.'); }],
+      ['Paste', hasCopy ? function () { sections.splice(si + 1, 0, JSON.parse(JSON.stringify(_scriptClipboard))); rerender(); toast('Section pasted.'); } : null, hasCopy ? '' : 'disabled'],
+      'sep',
+      ['Move Up',   si > 0 ? function () { var t = sections[si - 1]; sections[si - 1] = sections[si]; sections[si] = t; rerender(); } : null, si > 0 ? '' : 'disabled'],
+      ['Move Down', si < sections.length - 1 ? function () { var t = sections[si + 1]; sections[si + 1] = sections[si]; sections[si] = t; rerender(); } : null, si < sections.length - 1 ? '' : 'disabled']
+    ]);
+  }
+
+  // ── 9. TILESET AUTOTILE SLOT right-click ──
+  function autotileSlotCtx(px, py, slotEl, onImport, onExport, onDelete) {
+    showCtxMenu(px, py, [
+      ['Import Autotile...', typeof onImport === 'function' ? onImport : function () { toast('Import: select a PNG file.'); }],
+      ['Export Autotile...', typeof onExport === 'function' ? onExport : function () { toast('Export: not yet implemented.'); }, 'disabled'],
+      'sep',
+      ['Delete', typeof onDelete === 'function' ? onDelete : function () { toast('Delete: not yet implemented.'); }, 'danger']
+    ]);
+  }
+
+  // ── 10. ANIMATION FRAME right-click ──
+  var _animFrameClipboard = null;
+  function animFrameCtx(px, py, frames, fi, rerender) {
+    var fr = frames[fi];
+    var hasCopy = !!_animFrameClipboard;
+    showCtxMenu(px, py, [
+      ['Copy Frame',  function () { _animFrameClipboard = JSON.parse(JSON.stringify(fr)); toast('Frame copied.'); }],
+      ['Paste Frame', hasCopy ? function () { frames.splice(fi, 0, JSON.parse(JSON.stringify(_animFrameClipboard))); rerender(); toast('Frame pasted.'); } : null, hasCopy ? '' : 'disabled'],
+      ['Clear Frame', function () { if (frames[fi]) { frames[fi] = { cells: [] }; rerender(); toast('Frame cleared.'); } }],
+      'sep',
+      ['Cell Batch...', function () { toast('Cell batch: set properties for all cells in this frame.'); }]
+    ]);
+  }
+
+  // ── 11. MATERIALBASE (resource manager) right-click ──
+  function materialCtx(px, py, itemEl, kind) {
+    showCtxMenu(px, py, [
+      ['Import ' + (kind || 'Resource') + '...', function () {
+        var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*,audio/*';
+        inp.onchange = function () { if (inp.files[0]) toast('Import: ' + inp.files[0].name + ' (processing TBD).'); };
+        inp.click();
+      }],
+      ['Export...', function () { toast('Export: not yet implemented.'); }, 'disabled'],
+      'sep',
+      ['Delete', function () { toast('Delete resource: confirm in a future dialog.'); }, 'danger']
+    ]);
+  }
+
+  // ── Canvas contextmenu dispatcher ──
+  mapCanvas.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    if (state._settingStart) return;
+    if (state.mode === 'event') {
+      canvasEventCtx(e.clientX, e.clientY);
+    } else {
+      canvasTileCtx(e.clientX, e.clientY);
+    }
+  });
+
+  // ── Helper: attach context menu to a map-tree node element ──
   function attachCtx(el, name) {
     el.addEventListener('contextmenu', function (e) { e.preventDefault(); openCtx(e.clientX, e.clientY, name); });
     var timer = null, sx = 0, sy = 0;
@@ -3837,6 +4099,21 @@
     }, { passive: true });
     el.addEventListener('touchend', function () { if (timer) { clearTimeout(timer); timer = null; } });
   }
+
+  // Expose context menu helpers for use by DB window and event editor
+  window._ctx = {
+    cmdList: cmdListCtx,
+    moveRoute: moveRouteListCtx,
+    dbList: dbListCtx,
+    scriptSection: scriptSectionCtx,
+    autotileSlot: autotileSlotCtx,
+    animFrame: animFrameCtx,
+    material: materialCtx,
+    eventPageTab: eventPageTabCtx,
+    show: showCtxMenu,
+    close: closeCtx
+  };
+
   // empty-tree-area press-and-hold / right-click -> top-level New Map
   (function () {
     var tree = $('mapTree'), timer = null, sx = 0, sy = 0;
@@ -4171,4 +4448,176 @@
   }).catch(function (err) {
     alert('Failed to load tilesets. Serve over http (not file://).\n' + err);
   });
+
+  // ── Stub dialogs for Tools menu items ──────────────────────────────────────
+
+  // Materials dialog: list tilesets/sprites/audio; supports context menu #11
+  function openMaterialsDialog() {
+    var m = document.getElementById('materialsModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'materialsModal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;';
+      m.innerHTML = '<div style="background:#ECE9D8;border:2px solid #808080;width:560px;max-height:80vh;display:flex;flex-direction:column;font-family:Tahoma,sans-serif;font-size:12px;">' +
+        '<div style="background:#316AC5;color:#fff;padding:3px 8px;display:flex;justify-content:space-between;font-weight:bold;">Materials<button id="matClose" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;">✕</button></div>' +
+        '<div style="display:flex;gap:6px;padding:6px;flex:1;overflow:hidden;">' +
+          '<div style="width:130px;display:flex;flex-direction:column;gap:2px;" id="matCats"></div>' +
+          '<div style="flex:1;overflow-y:auto;background:#fff;border:1px inset #808080;padding:4px;" id="matList"><div class="hint">Select a category.</div></div>' +
+        '</div>' +
+        '<div style="padding:6px;text-align:right;"><button id="matImport">Import...</button> <button id="matClose2">Close</button></div>' +
+      '</div>';
+      document.body.appendChild(m);
+      ['matClose','matClose2'].forEach(function(id){ document.getElementById(id).addEventListener('click', function(){ m.style.display='none'; }); });
+      m.addEventListener('click', function(e){ if(e.target===m) m.style.display='none'; });
+      document.getElementById('matImport').addEventListener('click', function(){
+        var inp = document.createElement('input'); inp.type='file'; inp.accept='image/*,audio/*';
+        inp.onchange = function(){ if(inp.files[0]) toast('Import: '+inp.files[0].name+' (drag-and-drop into data/ folder to deploy).'); };
+        inp.click();
+      });
+      var cats = [['Tilesets','data/tilesets/'],['Sprites','data/sprites/'],['Battlebacks','data/battlebacks/'],['Animations','data/animations/'],['Parallaxes','data/parallaxes/'],['Audio SE','data/audio/se/'],['Audio ME','data/audio/me/'],['Audio BGM','data/audio/bgm/']];
+      var cEl = document.getElementById('matCats'), lEl = document.getElementById('matList');
+      cats.forEach(function(c){
+        var b = document.createElement('div');
+        b.style.cssText = 'padding:3px 6px;cursor:pointer;';
+        b.textContent = c[0];
+        b.addEventListener('contextmenu', function(e){ e.preventDefault(); if(window._ctx) window._ctx.material(e.clientX,e.clientY,b,c[0]); });
+        b.addEventListener('mouseenter', function(){ b.style.background='#316AC5'; b.style.color='#fff'; });
+        b.addEventListener('mouseleave', function(){ b.style.background=''; b.style.color=''; });
+        b.addEventListener('click', function(){
+          lEl.innerHTML = '<div class="hint">Path: '+c[1]+'<br>Right-click items for Import / Export / Delete.</div>';
+        });
+        cEl.appendChild(b);
+      });
+    }
+    m.style.display = 'flex';
+  }
+
+  // Script editor: simple code editor with section list; supports context menu #8
+  var _scriptSections = [];
+  function openScriptEditor() {
+    var m = document.getElementById('scriptEditorModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'scriptEditorModal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;';
+      document.body.appendChild(m);
+    }
+    if (!_scriptSections.length) {
+      _scriptSections = [{ name: 'Main', code: '// Add custom JS here.\n// Use the $ api: $.setSwitch(id, val); $.say(text); etc.\n' }];
+    }
+    function rerenderSE() {
+      var si = m._selIdx || 0;
+      m.innerHTML = '<div style="background:#ECE9D8;border:2px solid #808080;width:700px;max-height:85vh;display:flex;flex-direction:column;font-family:Tahoma,sans-serif;font-size:12px;">' +
+        '<div style="background:#316AC5;color:#fff;padding:3px 8px;display:flex;justify-content:space-between;font-weight:bold;">Script Editor<button id="seClose" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;">✕</button></div>' +
+        '<div style="display:flex;gap:0;flex:1;min-height:0;">' +
+          '<div style="width:160px;overflow-y:auto;background:#f0ede8;border-right:1px solid #808080;" id="seSections"></div>' +
+          '<textarea id="seCode" style="flex:1;font-family:monospace;font-size:12px;border:none;outline:none;padding:6px;resize:none;"></textarea>' +
+        '</div>' +
+        '<div style="padding:6px;text-align:right;"><button id="seSave">Apply</button> <button id="seClose2">Close</button></div>' +
+      '</div>';
+      document.getElementById('seClose').addEventListener('click', function(){ m.style.display='none'; });
+      document.getElementById('seClose2').addEventListener('click', function(){ m.style.display='none'; });
+      m.addEventListener('click', function(e){ if(e.target===m) m.style.display='none'; });
+      var secEl = document.getElementById('seSections'), codeEl = document.getElementById('seCode');
+      function selectSec(i) {
+        m._selIdx = i;
+        codeEl.value = _scriptSections[i].code || '';
+        secEl.querySelectorAll('.seRow').forEach(function(r,ri){ r.style.background = ri===i ? '#316AC5' : ''; r.style.color = ri===i ? '#fff' : ''; });
+      }
+      _scriptSections.forEach(function(sec, i) {
+        var row = document.createElement('div');
+        row.className = 'seRow';
+        row.style.cssText = 'padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        row.textContent = sec.name;
+        row.addEventListener('click', function(){ selectSec(i); });
+        row.addEventListener('contextmenu', function(e){
+          e.preventDefault();
+          if(window._ctx) window._ctx.scriptSection(e.clientX, e.clientY, _scriptSections, i, rerenderSE);
+        });
+        secEl.appendChild(row);
+      });
+      selectSec(Math.min(si, _scriptSections.length - 1));
+      codeEl.addEventListener('input', function(){ _scriptSections[m._selIdx].code = this.value; });
+      document.getElementById('seSave').addEventListener('click', function(){
+        toast('Script saved in memory. Use event command "Script" to invoke sections.'); m.style.display='none';
+      });
+    }
+    rerenderSE(); m.style.display = 'flex';
+  }
+
+  // Sound Test: browse and play audio files
+  function openSoundTest() {
+    var m = document.getElementById('soundTestModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'soundTestModal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;';
+      m.innerHTML = '<div style="background:#ECE9D8;border:2px solid #808080;width:380px;font-family:Tahoma,sans-serif;font-size:12px;">' +
+        '<div style="background:#316AC5;color:#fff;padding:3px 8px;display:flex;justify-content:space-between;font-weight:bold;">Sound Test<button id="stClose" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;">✕</button></div>' +
+        '<div style="padding:10px;">' +
+          '<p>Type a filename from data/audio/ and click Play.</p>' +
+          '<div style="display:flex;gap:4px;margin-bottom:8px;"><select id="stType"><option value="se">SE</option><option value="me">ME</option><option value="bgm">BGM</option><option value="bgs">BGS</option></select>' +
+          '<input id="stName" type="text" placeholder="filename (no .ogg)" style="flex:1;"></div>' +
+          '<div style="text-align:center;"><button id="stPlay">▶ Play</button> <button id="stStop">■ Stop</button></div>' +
+        '</div>' +
+        '<div style="padding:6px;text-align:right;"><button id="stClose2">Close</button></div>' +
+      '</div>';
+      document.body.appendChild(m);
+      var _stAudio = null;
+      ['stClose','stClose2'].forEach(function(id){ document.getElementById(id).addEventListener('click', function(){ m.style.display='none'; }); });
+      m.addEventListener('click', function(e){ if(e.target===m) m.style.display='none'; });
+      document.getElementById('stPlay').addEventListener('click', function(){
+        var type = document.getElementById('stType').value;
+        var name = document.getElementById('stName').value.trim();
+        if (!name) { toast('Enter a filename.'); return; }
+        var path = 'data/audio/' + type + '/' + name + '.ogg';
+        if (_stAudio) { _stAudio.pause(); _stAudio = null; }
+        _stAudio = new Audio(path);
+        _stAudio.onerror = function(){ toast('Not found: ' + path); };
+        _stAudio.play().catch(function(){ toast('Playback blocked — click the page first.'); });
+      });
+      document.getElementById('stStop').addEventListener('click', function(){
+        if (_stAudio) { _stAudio.pause(); _stAudio = null; toast('Stopped.'); }
+      });
+    }
+    m.style.display = 'flex';
+  }
+
+  // Editor Options dialog
+  function openEditorOptions() {
+    var m = document.getElementById('editorOptionsModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'editorOptionsModal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;';
+      m.innerHTML = '<div style="background:#ECE9D8;border:2px solid #808080;width:340px;font-family:Tahoma,sans-serif;font-size:12px;">' +
+        '<div style="background:#316AC5;color:#fff;padding:3px 8px;display:flex;justify-content:space-between;font-weight:bold;">Options<button id="optClose" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;">✕</button></div>' +
+        '<div style="padding:10px;display:flex;flex-direction:column;gap:8px;">' +
+          '<label><input type="checkbox" id="optGrid" ' + (state.showGrid?'checked':'') + '> Show grid</label>' +
+          '<label><input type="checkbox" id="optAuto" ' + (state.autoMode?'checked':'') + '> Auto terrain brush</label>' +
+          '<label>Default zoom: <select id="optZoom"><option value="0.5">1:4</option><option value="1">1:2</option><option value="2">1:1</option><option value="4">2:1</option></select></label>' +
+          '<label>Undo history depth: <input type="number" id="optUndo" value="50" min="10" max="200" style="width:60px;"></label>' +
+        '</div>' +
+        '<div style="padding:6px;text-align:right;"><button id="optOk">OK</button> <button id="optClose2">Cancel</button></div>' +
+      '</div>';
+      document.body.appendChild(m);
+      m.addEventListener('click', function(e){ if(e.target===m) m.style.display='none'; });
+      ['optClose','optClose2'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(){m.style.display='none';}); });
+      document.getElementById('optOk').addEventListener('click', function(){
+        var showG = document.getElementById('optGrid').checked;
+        var autoM = document.getElementById('optAuto').checked;
+        var z = parseFloat(document.getElementById('optZoom').value) || state.zoom;
+        if (showG !== state.showGrid) { state.showGrid = showG; document.getElementById('gridBtn') && document.getElementById('gridBtn').classList.toggle('active', showG); }
+        if (autoM !== state.autoMode) { setAutoMode(autoM); }
+        setZoom(z); drawMap();
+        m.style.display = 'none'; toast('Options saved.');
+      });
+    }
+    // Sync checkbox states each open
+    document.getElementById('optGrid').checked = state.showGrid;
+    document.getElementById('optAuto').checked = state.autoMode;
+    document.getElementById('optZoom').value = String(state.zoom);
+    m.style.display = 'flex';
+  }
+
 })();
