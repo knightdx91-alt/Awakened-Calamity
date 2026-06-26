@@ -4907,6 +4907,317 @@
     } catch (err) { toast('Could not save (storage blocked).'); }
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // CHARACTER GENERATOR
+  // ════════════════════════════════════════════════════════════════
+  var _cgSprites = [];         // all loaded sprites (xp + rtp)
+  var _cgFiltered = [];        // filtered by category + search
+  var _cgSelected = null;      // currently selected sprite entry
+  var _cgImg = null;           // Image for the selected sprite
+  var _cgDir = 0;              // 0=down 1=left 2=right 3=up (row in sheet)
+  var _cgAnimFrame = 0;        // 0,1,2 (col in sheet)
+  var _cgAnimTimer = null;
+  var _cgHue = 0, _cgSat = 100, _cgBri = 100;
+
+  // HSL shift pixel manipulation
+  function _cgHSLShift(imgData, hueDeg, satMult, briMult) {
+    var d = imgData.data;
+    for (var i = 0; i < d.length; i += 4) {
+      if (d[i+3] < 10) continue;
+      // RGB → HSL
+      var r = d[i]/255, g = d[i+1]/255, b = d[i+2]/255;
+      var max = Math.max(r,g,b), min = Math.min(r,g,b), delta = max - min;
+      var h = 0, s = 0, l = (max + min) / 2;
+      if (delta > 0) {
+        s = delta / (1 - Math.abs(2*l - 1));
+        if (max === r) h = ((g - b) / delta) % 6;
+        else if (max === g) h = (b - r) / delta + 2;
+        else h = (r - g) / delta + 4;
+        h = h / 6; if (h < 0) h += 1;
+      }
+      // adjust
+      h = (h + hueDeg / 360) % 1; if (h < 0) h += 1;
+      s = Math.min(1, Math.max(0, s * satMult));
+      l = Math.min(1, Math.max(0, l * briMult));
+      // HSL → RGB
+      var c = (1 - Math.abs(2*l - 1)) * s;
+      var x = c * (1 - Math.abs(((h * 6) % 2) - 1));
+      var m = l - c/2, r1, g1, b1;
+      var seg = (h * 6) | 0;
+      if (seg === 0) { r1=c; g1=x; b1=0; }
+      else if (seg === 1) { r1=x; g1=c; b1=0; }
+      else if (seg === 2) { r1=0; g1=c; b1=x; }
+      else if (seg === 3) { r1=0; g1=x; b1=c; }
+      else if (seg === 4) { r1=x; g1=0; b1=c; }
+      else { r1=c; g1=0; b1=x; }
+      d[i]   = Math.round((r1+m)*255);
+      d[i+1] = Math.round((g1+m)*255);
+      d[i+2] = Math.round((b1+m)*255);
+    }
+  }
+
+  // Draw one animation frame (col) from one direction row onto a destination canvas
+  function _cgDrawFrame(destCtx, img, sprite, dirRow, animCol, scale) {
+    scale = scale || 1;
+    var fw = sprite.frame_w, fh = sprite.frame_h;
+    var sx = animCol * fw, sy = dirRow * fh;
+    var dw = destCtx.canvas.width, dh = destCtx.canvas.height;
+    destCtx.clearRect(0, 0, dw, dh);
+    destCtx.imageSmoothingEnabled = false;
+    destCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw * scale, fh * scale);
+    // apply HSL shift if non-default
+    if (_cgHue !== 0 || _cgSat !== 100 || _cgBri !== 100) {
+      var id = destCtx.getImageData(0, 0, dw, dh);
+      _cgHSLShift(id, _cgHue, _cgSat / 100, _cgBri / 100);
+      destCtx.putImageData(id, 0, 0);
+    }
+  }
+
+  // Animated tick: advance frame, redraw previews
+  var _cgDirRow = [0, 1, 2, 3]; // down, left, right, up — standard XP row order
+  var _cgDirNames = ['cgPrevDown','cgPrevLeft','cgPrevRight','cgPrevUp'];
+  function _cgTick() {
+    if (!_cgSelected || !_cgImg) return;
+    _cgAnimFrame = (_cgAnimFrame + 1) % 3;
+    var s = _cgSelected;
+    // Draw each direction preview
+    _cgDirNames.forEach(function (id, di) {
+      var c = $(id); if (!c) return;
+      var cx = c.getContext('2d');
+      _cgDrawFrame(cx, _cgImg, s, _cgDirRow[di], _cgAnimFrame, 1);
+    });
+    // Big preview: selected direction
+    var big = $('cgBigPrev');
+    if (big) {
+      var bc = big.getContext('2d');
+      _cgDrawFrame(bc, _cgImg, s, _cgDir, _cgAnimFrame, 2);
+    }
+  }
+
+  function _cgStartAnim() {
+    if (_cgAnimTimer) clearInterval(_cgAnimTimer);
+    _cgAnimTimer = setInterval(_cgTick, 150);
+  }
+
+  function _cgSelectSprite(entry) {
+    _cgSelected = entry;
+    _cgAnimFrame = 0;
+    $('cgSelName').textContent = entry.id + '  (' + entry.frame_w + '×' + entry.frame_h + ')';
+    if ($('cgName') && !$('cgName').value) $('cgName').value = entry.id;
+    var img = new Image();
+    img.onload = function () {
+      _cgImg = img;
+      _cgTick();
+      _cgStartAnim();
+    };
+    img.src = 'data/sprites/' + entry.file;
+    // highlight selected thumb
+    var grid = $('cgGrid'); if (!grid) return;
+    grid.querySelectorAll('.cg-thumb').forEach(function (el) {
+      el.style.outline = (el.dataset.id === entry.id) ? '2px solid #ff3030' : '';
+    });
+  }
+
+  function _cgBuildThumb(entry, scale) {
+    // Return a canvas element showing the "down, mid-frame" pose
+    var c = document.createElement('canvas');
+    var fw = entry.frame_w, fh = entry.frame_h;
+    var thumbW = Math.min(fw * (scale||1), 48), thumbH = Math.min(fh * (scale||1), 72);
+    c.width = thumbW; c.height = thumbH;
+    c.style.cssText = 'image-rendering:pixelated;cursor:pointer;border:1px solid transparent;';
+    c.className = 'cg-thumb';
+    c.dataset.id = entry.id;
+    c.title = entry.id;
+    var img = new Image();
+    img.onload = function () {
+      var ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      // draw centre animation frame (col 1), row 0 (down)
+      var s = fw / thumbW;
+      ctx.drawImage(img, fw, 0, fw, fh, 0, 0, thumbW, thumbH);
+    };
+    img.src = 'data/sprites/' + entry.file;
+    c.addEventListener('click', function () { _cgSelectSprite(entry); });
+    return c;
+  }
+
+  function _cgRenderGrid() {
+    var grid = $('cgGrid'); if (!grid) return;
+    grid.innerHTML = '';
+    // Show standard 48×72 sprites first, then others
+    var standard = _cgFiltered.filter(function (s) { return s.frame_w === 48 && s.frame_h === 72; });
+    var other    = _cgFiltered.filter(function (s) { return !(s.frame_w === 48 && s.frame_h === 72); });
+    if (standard.length) {
+      var lbl = document.createElement('div');
+      lbl.style.cssText = 'width:100%;font-size:9px;color:#666;padding:2px 0;';
+      lbl.textContent = 'Standard (48×72) — ' + standard.length;
+      grid.appendChild(lbl);
+      standard.forEach(function (e) { grid.appendChild(_cgBuildThumb(e, 1)); });
+    }
+    if (other.length) {
+      var lbl2 = document.createElement('div');
+      lbl2.style.cssText = 'width:100%;font-size:9px;color:#666;padding:4px 0 2px;border-top:1px solid #999;margin-top:4px;';
+      lbl2.textContent = 'Other sizes — ' + other.length;
+      grid.appendChild(lbl2);
+      other.forEach(function (e) { grid.appendChild(_cgBuildThumb(e, 1)); });
+    }
+  }
+
+  function _cgApplyFilter() {
+    var cat = $('cgCat') ? $('cgCat').value : '(All)';
+    var search = ($('cgSearch') ? $('cgSearch').value : '').trim().toLowerCase();
+    _cgFiltered = _cgSprites.filter(function (s) {
+      if (cat !== '(All)' && !s.id.startsWith(cat)) return false;
+      if (search && s.id.toLowerCase().indexOf(search) < 0) return false;
+      return true;
+    });
+    _cgRenderGrid();
+  }
+
+  function _cgBuildSheet() {
+    // Build a complete sprite sheet for the selected sprite with current HSL settings
+    // Returns a canvas with the full sheet
+    if (!_cgSelected || !_cgImg) return null;
+    var s = _cgSelected, scale = parseFloat(($('cgScale') && $('cgScale').value) || '1');
+    var sw = s.sheet_w, sh = s.sheet_h;
+    var oc = document.createElement('canvas');
+    oc.width = sw * scale; oc.height = sh * scale;
+    var octx = oc.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    octx.drawImage(_cgImg, 0, 0, sw, sh, 0, 0, sw * scale, sh * scale);
+    if (_cgHue !== 0 || _cgSat !== 100 || _cgBri !== 100) {
+      var id = octx.getImageData(0, 0, oc.width, oc.height);
+      _cgHSLShift(id, _cgHue, _cgSat / 100, _cgBri / 100);
+      octx.putImageData(id, 0, 0);
+    }
+    return oc;
+  }
+
+  function openCharGen() {
+    var modal = $('chargenModal'); if (!modal) return;
+    modal.style.display = 'flex';
+    // Load sprite index if not yet loaded
+    if (!_cgSprites.length) {
+      Promise.all([
+        fetch('data/sprites/xp_index.json').then(function (r) { return r.json(); }).catch(function () { return { sprites: [] }; }),
+        fetch('data/sprites/rtp_index.json').then(function (r) { return r.json(); }).catch(function () { return { sprites: [] }; })
+      ]).then(function (results) {
+        _cgSprites = [].concat(results[0].sprites || [], results[1].sprites || []);
+        // Build category list from humanoid-looking sprites
+        var catSet = { '(All)': true };
+        _cgSprites.forEach(function (s) {
+          var m = s.id.match(/^[A-Za-z]+/);
+          if (m) catSet[m[0]] = true;
+        });
+        var cats = Object.keys(catSet).sort();
+        // Move (All) to front
+        cats = ['(All)'].concat(cats.filter(function (c) { return c !== '(All)'; }));
+        var catSel = $('cgCat'); if (!catSel) return;
+        catSel.innerHTML = '';
+        cats.forEach(function (c) {
+          var o = document.createElement('option'); o.value = o.textContent = c; catSel.appendChild(o);
+        });
+        // Default to Fighter category
+        catSel.value = 'Fighter';
+        _cgApplyFilter();
+      });
+    } else {
+      _cgApplyFilter();
+    }
+  }
+
+  // Wire up Character Generator button and controls
+  if ($('chargenBtn')) $('chargenBtn').addEventListener('click', openCharGen);
+  if ($('cgClose')) $('cgClose').addEventListener('click', function () {
+    $('chargenModal').style.display = 'none';
+    if (_cgAnimTimer) { clearInterval(_cgAnimTimer); _cgAnimTimer = null; }
+  });
+  if ($('chargenModal')) $('chargenModal').addEventListener('click', function (e) {
+    if (e.target === $('chargenModal')) {
+      $('chargenModal').style.display = 'none';
+      if (_cgAnimTimer) { clearInterval(_cgAnimTimer); _cgAnimTimer = null; }
+    }
+  });
+  if ($('cgCat')) $('cgCat').addEventListener('change', _cgApplyFilter);
+  if ($('cgSearch')) $('cgSearch').addEventListener('input', _cgApplyFilter);
+
+  // Color controls
+  if ($('cgHue')) $('cgHue').addEventListener('input', function () {
+    _cgHue = parseInt(this.value); $('cgHueLbl').textContent = _cgHue + '°';
+    _cgTick();
+  });
+  if ($('cgSat')) $('cgSat').addEventListener('input', function () {
+    _cgSat = parseInt(this.value); $('cgSatLbl').textContent = _cgSat + '%';
+    _cgTick();
+  });
+  if ($('cgBri')) $('cgBri').addEventListener('input', function () {
+    _cgBri = parseInt(this.value); $('cgBriLbl').textContent = _cgBri + '%';
+    _cgTick();
+  });
+  if ($('cgReset')) $('cgReset').addEventListener('click', function () {
+    _cgHue = 0; _cgSat = 100; _cgBri = 100;
+    $('cgHue').value = 0; $('cgSat').value = 100; $('cgBri').value = 100;
+    $('cgHueLbl').textContent = '0°'; $('cgSatLbl').textContent = '100%'; $('cgBriLbl').textContent = '100%';
+    _cgTick();
+  });
+
+  // Direction previews — click to set facing
+  ['cgPrevDown','cgPrevLeft','cgPrevRight','cgPrevUp'].forEach(function (id, di) {
+    var c = $(id); if (!c) return;
+    c.addEventListener('click', function () {
+      _cgDir = di;
+      // update big preview immediately
+      if (_cgSelected && _cgImg) {
+        var bc = $('cgBigPrev'), bctx = bc && bc.getContext('2d');
+        if (bctx) _cgDrawFrame(bctx, _cgImg, _cgSelected, _cgDir, _cgAnimFrame, 2);
+      }
+    });
+    // hover highlight
+    c.style.cursor = 'pointer';
+    c.addEventListener('mouseenter', function () { this.style.outline = '2px solid #ff9900'; });
+    c.addEventListener('mouseleave', function () { this.style.outline = (_cgDir === di) ? '2px solid #ff3030' : ''; });
+  });
+
+  // "Use as Event Graphic"
+  if ($('cgUseEvent')) $('cgUseEvent').addEventListener('click', function () {
+    if (!_cgSelected) { toast('Select a sprite first.'); return; }
+    var ev = state.selectedEvent; if (!ev) { toast('No event selected.'); return; }
+    var g = { sprite: _cgSelected.id, file: _cgSelected.file,
+              frame_w: _cgSelected.frame_w, frame_h: _cgSelected.frame_h,
+              cols: _cgSelected.cols, rows: _cgSelected.rows, single: true };
+    pushUndo();
+    var pg = _currentPage(ev);
+    pg.graphic = g; pg.dir = ['down','left','right','up'][_cgDir] || 'down';
+    $('chargenModal').style.display = 'none';
+    renderEventPanel(); drawMap();
+    toast('Graphic set on event: ' + _cgSelected.id);
+  });
+
+  // "Set as Player Sprite"
+  if ($('cgUsePlayer')) $('cgUsePlayer').addEventListener('click', function () {
+    if (!_cgSelected) { toast('Select a sprite first.'); return; }
+    var g = { sprite: _cgSelected.id, file: _cgSelected.file,
+              frame_w: _cgSelected.frame_w, frame_h: _cgSelected.frame_h,
+              cols: _cgSelected.cols, rows: _cgSelected.rows, single: true };
+    try { localStorage.setItem('ac_player_sprite', JSON.stringify(g)); } catch (_) {}
+    $('chargenModal').style.display = 'none';
+    toast('Player sprite set to ' + _cgSelected.id + '. Playtest to see it.');
+  });
+
+  // "Download Sheet" — exports the current sprite with HSL adjustments as a PNG
+  if ($('cgExport')) $('cgExport').addEventListener('click', function () {
+    if (!_cgSelected || !_cgImg) { toast('Select a sprite first.'); return; }
+    var oc = _cgBuildSheet(); if (!oc) return;
+    oc.toBlob(function (blob) {
+      var a = document.createElement('a');
+      var name = ($('cgName') && $('cgName').value) || _cgSelected.id;
+      a.download = name + '.png';
+      a.href = URL.createObjectURL(blob);
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+    });
+  });
+
   // -- Boot --
   // Apply initial tab mode UI, then load XP tilesets (primary) + VX Ace sets (secondary).
   applyXpTabMode();

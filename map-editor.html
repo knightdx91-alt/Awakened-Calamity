@@ -488,6 +488,7 @@
     <!-- Playtest + extras — titles from RPGXP.exe string table [33601-33604] -->
     <div class="tgrp">
       <button id="playBtn"  class="tb txt" title="Start a playtest of this game&#10;Playtest">&#9654;</button>
+      <button id="chargenBtn" class="tb txt" title="Character Generator&#10;Character Generator">Chr</button>
       <button id="genBtn"   class="tb txt" title="Generate Map">Gen</button>
       <button id="shotBtn"  class="tb txt" title="Open folder for game currently being edited&#10;Open Game Folder">&#128247;</button>
       <button id="gridToolBtn" class="tb txt active" title="Toggle Grid">&#9638;</button>
@@ -788,6 +789,97 @@
       </div>
       <div id="repoModalBody" style="padding:10px 12px; overflow:auto; flex:1;">
         <div class="hint">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Character Generator modal ── -->
+  <div id="chargenModal" style="display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);
+      align-items:center;justify-content:center;">
+    <div style="width:820px;max-width:98vw;max-height:92vh;background:var(--panel);
+        border:2px solid;border-color:#fff #808080 #808080 #fff;display:flex;flex-direction:column;
+        box-shadow:4px 4px 12px rgba(0,0,0,.5);font-family:Tahoma,sans-serif;font-size:11px;">
+      <!-- title bar -->
+      <div style="background:#000080;color:#fff;padding:3px 6px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <span style="font-weight:bold;">Character Generator</span>
+        <button id="cgClose" style="background:#c0c0c0;border:2px solid;border-color:#fff #808080 #808080 #fff;
+            color:#000;font-size:11px;width:16px;height:14px;padding:0;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <!-- body -->
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+        <!-- LEFT: category + sprite grid -->
+        <div style="width:260px;flex-shrink:0;border-right:1px solid #808080;display:flex;flex-direction:column;background:#c0c0c0;">
+          <div style="padding:4px 6px;border-bottom:1px solid #808080;background:var(--panel2);display:flex;gap:4px;align-items:center;flex-shrink:0;">
+            <label style="font-size:10px;">Category</label>
+            <select id="cgCat" style="flex:1;font-size:10px;"></select>
+            <input id="cgSearch" type="text" placeholder="search…" style="width:70px;font-size:10px;">
+          </div>
+          <div id="cgGrid" style="flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:2px;padding:4px;
+              align-content:flex-start;background:#c0c0c0;"></div>
+        </div>
+        <!-- CENTER: preview + animation -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;background:#333;padding:12px;gap:8px;overflow:auto;">
+          <div style="color:#aaa;font-size:10px;" id="cgSelName">— none selected —</div>
+          <!-- walk preview: 4 directions, animated -->
+          <div id="cgPreviewRow" style="display:flex;gap:12px;align-items:flex-end;">
+            <div style="text-align:center;">
+              <div style="color:#888;font-size:9px;margin-bottom:2px;">↓ Down</div>
+              <canvas id="cgPrevDown"  width="48" height="72" style="image-rendering:pixelated;border:1px solid #555;"></canvas>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#888;font-size:9px;margin-bottom:2px;">← Left</div>
+              <canvas id="cgPrevLeft"  width="48" height="72" style="image-rendering:pixelated;border:1px solid #555;"></canvas>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#888;font-size:9px;margin-bottom:2px;">→ Right</div>
+              <canvas id="cgPrevRight" width="48" height="72" style="image-rendering:pixelated;border:1px solid #555;"></canvas>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#888;font-size:9px;margin-bottom:2px;">↑ Up</div>
+              <canvas id="cgPrevUp"    width="48" height="72" style="image-rendering:pixelated;border:1px solid #555;"></canvas>
+            </div>
+          </div>
+          <!-- Large 2× preview of selected direction (walking) -->
+          <canvas id="cgBigPrev" width="96" height="144" style="image-rendering:pixelated;border:2px solid #666;background:#222;"></canvas>
+          <div style="color:#aaa;font-size:9px;">Click a direction above to set default facing</div>
+        </div>
+        <!-- RIGHT: controls -->
+        <div style="width:220px;flex-shrink:0;border-left:1px solid #808080;display:flex;flex-direction:column;background:var(--panel);padding:8px;gap:8px;overflow-y:auto;">
+          <div style="font-weight:bold;border-bottom:1px solid #808080;padding-bottom:3px;">Color Adjust</div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><label>Hue Shift</label><span id="cgHueLbl">0°</span></div>
+            <input type="range" id="cgHue" min="-180" max="180" value="0" style="width:100%">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><label>Saturation</label><span id="cgSatLbl">100%</span></div>
+            <input type="range" id="cgSat" min="0" max="200" value="100" style="width:100%">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><label>Brightness</label><span id="cgBriLbl">100%</span></div>
+            <input type="range" id="cgBri" min="0" max="200" value="100" style="width:100%">
+          </div>
+          <button id="cgReset" style="font-size:10px;padding:2px 6px;">Reset Color</button>
+
+          <div style="font-weight:bold;border-bottom:1px solid #808080;padding-bottom:3px;margin-top:4px;">Name / Output</div>
+          <div>
+            <label style="display:block;margin-bottom:2px;">Sprite Name</label>
+            <input type="text" id="cgName" style="width:100%;box-sizing:border-box;font-size:10px;" placeholder="MyCharacter">
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:2px;">Scale</label>
+            <select id="cgScale" style="width:100%;font-size:10px;">
+              <option value="1">1× (48×72)</option>
+              <option value="0.5">½ (24×36)</option>
+              <option value="2" selected>2× (96×144)</option>
+            </select>
+          </div>
+
+          <div style="border-top:1px solid #808080;padding-top:6px;display:flex;flex-direction:column;gap:4px;margin-top:auto;">
+            <button id="cgUseEvent" style="padding:3px;font-size:11px;cursor:pointer;" title="Set as the current event's graphic">◆ Use as Event Graphic</button>
+            <button id="cgUsePlayer" style="padding:3px;font-size:11px;cursor:pointer;" title="Set as the player walk sprite">★ Set as Player Sprite</button>
+            <button id="cgExport" style="padding:3px;font-size:11px;cursor:pointer;" title="Download as PNG sprite sheet">⬇ Download Sheet</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
