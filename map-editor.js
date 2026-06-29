@@ -3743,6 +3743,7 @@
       ['Ellipse',     '',  function () { setToolBtn('ellipse'); }, function () { return state.tool === 'ellipse'; }],
       ['Flood Fill',  '',  function () { setToolBtn('fill'); },    function () { return state.tool === 'fill'; }],
       ['Select',      '',  function () { setToolBtn('select'); },  function () { return state.tool === 'select'; }],
+      ['Pan (move map)', '', function () { setToolBtn('pan'); },   function () { return state.tool === 'pan'; }],
       ['Eraser',      '',  function () { clickEl('eraserBtn'); },  function () { return state.eraser; }],
       'sep',
       ['Multi-tile Brush', '', function () {
@@ -3757,6 +3758,8 @@
       ['1:8', '', function () { setScaleBtn(0.25); }, function () { return state.zoom === 0.25; }]
     ]],
     ['View', [
+      ['Show Toolbar', '', function () { toggleToolbar(); }, function () { var t = document.getElementById('toolbar'); return !!t && !t.classList.contains('hidden'); }],
+      'sep',
       ['Grid',                '', function () { clickEl('gridBtn'); }],
       ['Dim Other Layers',    '', null],
       'sep',
@@ -3773,7 +3776,8 @@
       ['Options...',        '',    function () { openEditorOptions(); }],
       'sep',
       ['Generate Map...',   '',    function () { clickEl('genBtn'); }],
-      ['Character Sprites...', '', function () { openSpriteModal('player'); }]
+      ['Character Sprites...', '', function () { openSpriteModal('player'); }],
+      ['Character Generator...', '', function () { clickEl('chargenBtn'); }]
     ]],
     ['Game', [
       ['Playtest',         'F12', function () { clickEl('playBtn'); }],
@@ -3861,6 +3865,21 @@
   }
   document.addEventListener('click', closeMenus);
   buildMenuBar();
+
+  // Ribbon (toolbar) is hidden by default; every ribbon action also lives in the top
+  // menus (File/Edit/Mode/Draw/Scale/View/Tools/Game/Help). View → Show Toolbar toggles
+  // it; the choice is remembered across reloads.
+  function toggleToolbar() {
+    var tb = document.getElementById('toolbar'); if (!tb) return;
+    var hide = !tb.classList.contains('hidden');
+    tb.classList.toggle('hidden', hide);
+    try { localStorage.setItem('ac_ed_toolbar', hide ? 'hidden' : 'shown'); } catch (e) {}
+  }
+  (function () {
+    var tb = document.getElementById('toolbar');
+    var pref = null; try { pref = localStorage.getItem('ac_ed_toolbar'); } catch (e) {}
+    if (tb && pref !== 'shown') tb.classList.add('hidden');   // default: hidden
+  })();
   $('tabModeBtn').addEventListener('click', function () {
     state.tabMode = state.tabMode === 'xp' ? 'mv' : 'xp';
     applyXpTabMode();
